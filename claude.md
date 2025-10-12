@@ -125,3 +125,25 @@ Proyecto inicializado con estructura base. Pendiente implementación de funciona
 - Revisión de carpeta 'ingest': cada 1 segundo.
 - Al asociar imagen a usuario que ya tiene una: pedir confirmación.
 - Formatos de imagen aceptados desde carpeta externa: JPG
+
+## Exportación de datos
+- Exportar lista en CSV para carnets:
+    - Nombre del archivo: carnets.csv
+    - Campos:
+        - id: NIA para alumnos, DNI para docentes y no docentes
+        - password: NIA para alumnos, DNI para docentes y no docentes
+        - userlevel: Alumno para alumnos Profesor para el resto
+        - nombre
+        - apellido1
+        - apellido2
+        - apellidos: suma de apellido1 y apellido2
+        - centro: no rellenar
+        - foto: para alumnos NIA.jpg. Para el resto DNI.jpg (sustituir NIA Y DNI por el valor correspondiente)
+        - grupo: no rellenar
+        - direccion: no rellenar
+        - telefono: no rellenar
+        - departamento: no rellenar
+        - DNI
+        - edad: para alumnos mayor.jpg si es mayor de edad (18 años), si no menor.jpg. Para el resto profesor.jpg
+        - fechaNacimiento
+        - nombreApellidos: nombre + apellido1 + apellido2

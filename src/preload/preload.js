@@ -57,5 +57,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-toggle-duplicates', (event, enabled) => callback(enabled));
   },
 
+  onMenuExportCSV: (callback) => {
+    ipcRenderer.on('menu-export-csv', callback);
+  },
+
+  exportCSV: (folderPath, users) => ipcRenderer.invoke('export-csv', folderPath, users),
+
   unlinkImageFromUser: (userId) => ipcRenderer.invoke('unlink-image-user', userId)
 });

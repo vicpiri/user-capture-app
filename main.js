@@ -68,6 +68,18 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'Exportar',
+          submenu: [
+            {
+              label: 'Lista en CSV para carnets',
+              click: () => {
+                mainWindow.webContents.send('menu-export-csv');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
           label: 'Salir',
           accelerator: 'CmdOrCtrl+Q',
           role: 'quit'
@@ -170,7 +182,7 @@ function createMenu() {
   // Add View menu in development mode
   if (process.argv.includes('--dev')) {
     template.push({
-      label: 'Ver',
+      label: 'Developers',
       submenu: [
         { label: 'Recargar', accelerator: 'CmdOrCtrl+R', role: 'reload' },
         { label: 'Forzar recarga', accelerator: 'CmdOrCtrl+Shift+R', role: 'forceReload' },
@@ -596,6 +608,90 @@ ipcMain.handle('unlink-image-user', async (event, userId) => {
     return { success: true };
   } catch (error) {
     console.error('Error unlinking image:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Export CSV
+ipcMain.handle('export-csv', async (event, folderPath, users) => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    // Use provided users or get all users if not provided
+    if (!users || users.length === 0) {
+      users = await dbManager.getUsers({});
+    }
+
+    // Helper function to calculate age
+    const calculateAge = (birthDate) => {
+      if (!birthDate) return 0;
+      const today = new Date();
+      const birth = new Date(birthDate);
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      return age;
+    };
+
+    // Create CSV content with exact field order from claude.md
+    const csvHeader = 'id,password,userlevel,nombre,apellido1,apellido2,apellidos,centro,foto,grupo,direccion,telefono,departamento,DNI,edad,fechaNacimiento,nombreApellidos\n';
+    const csvRows = users.map(user => {
+      const isStudent = user.type === 'student';
+      const nombre = user.first_name || '';
+      const apellido1 = user.last_name1 || '';
+      const apellido2 = user.last_name2 || '';
+      const apellidos = `${apellido1} ${apellido2}`.trim();
+      const documento = user.document || '';
+      const nia = user.nia || '';
+      const fechaNacimiento = user.birth_date || '';
+      const nombreApellidos = `${nombre} ${apellido1} ${apellido2}`.trim();
+
+      // id and password: NIA for students, DNI for others
+      const id = isStudent ? nia : documento;
+      const password = isStudent ? nia : documento;
+
+      // userlevel: Alumno for students, Profesor for others
+      const userlevel = isStudent ? 'Alumno' : 'Profesor';
+
+      // foto: NIA.jpg for students, DNI.jpg for others
+      const foto = isStudent ? `${nia}.jpg` : `${documento}.jpg`;
+
+      // edad: mayor.jpg/menor.jpg for students (18+ or not), profesor.jpg for others
+      let edad;
+      if (isStudent) {
+        const age = calculateAge(fechaNacimiento);
+        edad = age >= 18 ? 'mayor.jpg' : 'menor.jpg';
+      } else {
+        edad = 'profesor.jpg';
+      }
+
+      // Fields to leave empty: centro, grupo, direccion, telefono, departamento
+      const centro = '';
+      const grupo = '';
+      const direccion = '';
+      const telefono = '';
+      const departamento = '';
+      const DNI = documento;
+
+      return `"${id}","${password}","${userlevel}","${nombre}","${apellido1}","${apellido2}","${apellidos}","${centro}","${foto}","${grupo}","${direccion}","${telefono}","${departamento}","${DNI}","${edad}","${fechaNacimiento}","${nombreApellidos}"`;
+    }).join('\n');
+
+    const csvContent = csvHeader + csvRows;
+
+    // Fixed filename: carnets.csv
+    const filename = 'carnets.csv';
+    const filePath = path.join(folderPath, filename);
+
+    // Write file
+    fs.writeFileSync(filePath, csvContent, 'utf8');
+
+    return { success: true, filename };
+  } catch (error) {
+    console.error('Error exporting CSV:', error);
     return { success: false, error: error.message };
   }
 });

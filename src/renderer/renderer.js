@@ -521,4 +521,46 @@ function setupMenuListeners() {
     duplicatesFilter.checked = enabled;
     displayUsers(currentUsers, allUsers);
   });
+
+  window.electronAPI.onMenuExportCSV(() => {
+    handleExportCSV();
+  });
+}
+
+// Export CSV
+async function handleExportCSV() {
+  if (!projectOpen) {
+    alert('Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  // Get users to export based on current view
+  let usersToExport = currentUsers;
+
+  // If showing duplicates only, get all duplicates from database
+  if (showDuplicatesOnly && allUsers) {
+    const imageCount = {};
+    allUsers.forEach(user => {
+      if (user.image_path) {
+        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
+      }
+    });
+    usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
+  }
+
+  const result = await window.electronAPI.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Seleccionar carpeta para guardar el CSV'
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const folderPath = result.filePaths[0];
+    const exportResult = await window.electronAPI.exportCSV(folderPath, usersToExport);
+
+    if (exportResult.success) {
+      alert(`CSV exportado correctamente: ${exportResult.filename}\n${usersToExport.length} usuarios exportados.`);
+    } else {
+      alert('Error al exportar el CSV: ' + exportResult.error);
+    }
+  }
 }
