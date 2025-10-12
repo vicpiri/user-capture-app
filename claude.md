@@ -94,7 +94,7 @@ Proyecto inicializado con estructura base. Pendiente implementación de funciona
 - Archivo base de datos: En la carpeta del proyecto en la subcarpeta 'data'.
 
 ## Estructura de usuarios (desde XML)
-- El archivo XML está estructurado con distintos conjuntos de datos con las siguientes etiquetas: grupos, alumnos, no_docentes y docentes.
+- El archivo XML está estructurado con distintos conjuntos de datos con las siguientes etiquetas: grupos, alumnos, no_docentes y docentes (estas etiquetas se deben utilizar literalmente. No se pueden traducir a otro idioma).
 - Los campos necesarios de los grupos son: código y nombre
 - Para el resto los campos son: nombre, apellido1, apellido2, fecha_nac y documento.
 - En el caso de 'alumnos' también se extrae el grupo y el NIA.

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captura de Imágenes del Alumnado</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Menu Bar -->
+  <div class="menu-bar">
+    <div class="menu-item" id="menu-archivo">Archivo</div>
+    <div class="menu-item" id="menu-edicion">Edición</div>
+    <div class="menu-item" id="menu-ayuda">Ayuda</div>
+  </div>
+
+  <!-- Menu Archivo Dropdown -->
+  <div class="menu-dropdown" id="dropdown-archivo">
+    <div class="menu-dropdown-item" id="new-project">Nuevo Proyecto...</div>
+    <div class="menu-dropdown-item" id="open-project">Abrir Proyecto...</div>
+    <div class="menu-dropdown-divider"></div>
+    <div class="menu-dropdown-item" id="exit-app">Salir</div>
+  </div>
+
+  <div class="container">
+    <!-- Left Panel: User List -->
+    <div class="left-panel">
+      <div class="panel-header">
+        <h2>Listado de Alumnos</h2>
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Buscar alumno...">
+        </div>
+        <select id="group-filter" class="group-filter">
+          <option value="">Todos los grupos</option>
+        </select>
+      </div>
+
+      <div class="table-container">
+        <table class="user-table">
+          <thead>
+            <tr>
+              <th>NOMBRE</th>
+              <th>APELLIDOS</th>
+              <th>NIA</th>
+              <th>GRUPO</th>
+              <th>FOTO</th>
+            </tr>
+          </thead>
+          <tbody id="user-table-body">
+            <!-- Users will be populated here -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel-footer">
+        <div class="selection-info">
+          <strong>Selecciona un alumno</strong>
+          <div id="selected-user-info" class="selected-user-name">-</div>
+        </div>
+        <div class="status-bar">
+          <span id="user-count">Listo. 0 alumnos cargados.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Image Capture -->
+    <div class="right-panel">
+      <!-- Camera Preview -->
+      <div class="camera-container">
+        <video id="camera-preview" autoplay></video>
+        <canvas id="capture-canvas" style="display: none;"></canvas>
+        <div id="image-preview-container" class="image-preview-container">
+          <img id="current-image" src="" alt="">
+          <div class="image-navigation">
+            <button id="prev-image" class="nav-button">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button id="next-image" class="nav-button">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button id="capture-btn" class="btn btn-primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          Capturar
+        </button>
+        <button id="link-btn" class="btn btn-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          Enlazar
+        </button>
+      </div>
+
+      <!-- Additional Actions -->
+      <div class="additional-actions">
+        <h3>Acciones Adicionales</h3>
+        <button id="pay-oria-btn" class="btn btn-warning">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          Pagar Oria
+        </button>
+        <button id="import-receipt-btn" class="btn btn-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          Imp. Recibo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for New Project -->
+  <div id="new-project-modal" class="modal">
+    <div class="modal-content">
+      <h2>Nuevo Proyecto</h2>
+      <div class="form-group">
+        <label>Carpeta del Proyecto:</label>
+        <div class="input-with-button">
+          <input type="text" id="project-folder" readonly>
+          <button id="select-folder-btn" class="btn btn-small">Seleccionar</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Archivo XML:</label>
+        <div class="input-with-button">
+          <input type="text" id="xml-file" readonly>
+          <button id="select-xml-btn" class="btn btn-small">Seleccionar</button>
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button id="create-project-btn" class="btn btn-primary">Crear</button>
+        <button id="cancel-new-project-btn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Confirmation -->
+  <div id="confirm-modal" class="modal">
+    <div class="modal-content">
+      <h2>Confirmar</h2>
+      <p id="confirm-message"></p>
+      <div class="modal-buttons">
+        <button id="confirm-yes-btn" class="btn btn-primary">Sí</button>
+        <button id="confirm-no-btn" class="btn btn-secondary">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Modal -->
+  <div id="progress-modal" class="modal">
+    <div class="modal-content">
+      <h2 id="progress-title">Procesando...</h2>
+      <p id="progress-message">Por favor, espera...</p>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progress-bar">
+          <span id="progress-percentage">0%</span>
+        </div>
+      </div>
+      <p id="progress-details" class="progress-details"></p>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
