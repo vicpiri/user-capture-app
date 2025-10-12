@@ -31,10 +31,6 @@ body {
   background-color: #1a1f2e;
 }
 
-.panel-header h2 {
-  margin-bottom: 16px;
-  font-size: 20px;
-}
 
 .search-bar {
   display: flex;
