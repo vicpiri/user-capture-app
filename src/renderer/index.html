@@ -13,7 +13,15 @@
       <div class="panel-header">
         <h2>Listado de Usuarios</h2>
         <div class="search-bar">
-          <input type="text" id="search-input" placeholder="Buscar usuario...">
+          <div class="search-input-container">
+            <input type="text" id="search-input" placeholder="Buscar usuario...">
+            <button id="clear-search-btn" class="clear-search-btn" style="display: none;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
           <select id="group-filter" class="group-filter">
             <option value="">Todos los grupos</option>
           </select>

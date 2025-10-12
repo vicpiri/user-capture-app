@@ -477,7 +477,20 @@ ipcMain.handle('get-users', async (event, filters) => {
     if (!dbManager) {
       throw new Error('No hay ningún proyecto abierto');
     }
-    const users = await dbManager.getUsers(filters);
+
+    // Map frontend filters to database filters
+    const dbFilters = {};
+    if (filters.search) {
+      dbFilters.search = filters.search;
+    }
+    if (filters.group) {
+      dbFilters.groupCode = filters.group;
+    }
+    if (filters.type) {
+      dbFilters.type = filters.type;
+    }
+
+    const users = await dbManager.getUsers(dbFilters);
     return { success: true, users };
   } catch (error) {
     console.error('Error getting users:', error);

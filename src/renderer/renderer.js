@@ -8,6 +8,7 @@ let projectOpen = false;
 
 // DOM Elements
 const searchInput = document.getElementById('search-input');
+const clearSearchBtn = document.getElementById('clear-search-btn');
 const groupFilter = document.getElementById('group-filter');
 const userTableBody = document.getElementById('user-table-body');
 const selectedUserInfo = document.getElementById('selected-user-info');
@@ -33,7 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
-  searchInput.addEventListener('input', filterUsers);
+  searchInput.addEventListener('input', () => {
+    toggleClearButton();
+    filterUsers();
+  });
+  clearSearchBtn.addEventListener('click', clearSearch);
   groupFilter.addEventListener('change', filterUsers);
 
   // Action buttons
@@ -232,24 +237,37 @@ function updateUserCount() {
   userCount.textContent = `Listo. ${currentUsers.length} usuarios cargados.`;
 }
 
+// Search functions
+function toggleClearButton() {
+  if (searchInput.value.trim()) {
+    clearSearchBtn.style.display = 'flex';
+  } else {
+    clearSearchBtn.style.display = 'none';
+  }
+}
+
+async function clearSearch() {
+  searchInput.value = '';
+  clearSearchBtn.style.display = 'none';
+  await filterUsers();
+}
+
 // Filter users
-function filterUsers() {
-  const searchTerm = searchInput.value.toLowerCase();
+async function filterUsers() {
+  const searchTerm = searchInput.value.trim();
   const selectedGroup = groupFilter.value;
 
-  const filtered = currentUsers.filter(user => {
-    const matchesSearch =
-      user.first_name.toLowerCase().includes(searchTerm) ||
-      user.last_name1.toLowerCase().includes(searchTerm) ||
-      (user.last_name2 && user.last_name2.toLowerCase().includes(searchTerm)) ||
-      (user.nia && user.nia.includes(searchTerm));
+  const filters = {};
 
-    const matchesGroup = !selectedGroup || user.group_code === selectedGroup;
+  // If there's a search term, search across all users (ignore group)
+  if (searchTerm) {
+    filters.search = searchTerm;
+  } else if (selectedGroup) {
+    // Only apply group filter if there's no search term
+    filters.group = selectedGroup;
+  }
 
-    return matchesSearch && matchesGroup;
-  });
-
-  displayUsers(filtered);
+  await loadUsers(filters);
 }
 
 // Image management
