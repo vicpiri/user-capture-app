@@ -8,8 +8,10 @@
     "dev": "electron . --dev",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
+    "build:win-dir": "electron-builder --win --dir",
     "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux"
+    "build:linux": "electron-builder --linux",
+    "postinstall": "npx @electron/rebuild -f -w sqlite3"
   },
   "keywords": [
     "electron"
@@ -31,16 +33,21 @@
     "appId": "com.usercaptureapp.app",
     "productName": "User Capture",
     "directories": {
-      "output": "dist"
+      "output": "build"
     },
     "files": [
       "**/*",
-      "!**/node_modules/**/*",
-      "!dist/**/*"
+      "!dist/**/*",
+      "!build/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/sqlite3/**/*"
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "sign": null,
+      "verifyUpdateCodeSignature": false
     },
     "mac": {
       "target": "dmg",
