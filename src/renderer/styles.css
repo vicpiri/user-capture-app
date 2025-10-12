@@ -56,6 +56,23 @@ body {
   color: #6ba4ff;
 }
 
+.checkbox-warning {
+  color: #f59e0b;
+}
+
+.checkbox-warning:hover {
+  color: #fbbf24;
+}
+
+.checkbox-warning input[type="checkbox"] {
+  accent-color: #f59e0b;
+}
+
+.warning-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
 
 .search-bar {
   display: flex;

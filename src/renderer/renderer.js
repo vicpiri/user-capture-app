@@ -13,6 +13,7 @@ const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search-btn');
 const groupFilter = document.getElementById('group-filter');
 const duplicatesFilter = document.getElementById('duplicates-filter');
+const filterOptions = document.getElementById('filter-options');
 const userTableBody = document.getElementById('user-table-body');
 const selectedUserInfo = document.getElementById('selected-user-info');
 const userCount = document.getElementById('user-count');
@@ -198,12 +199,10 @@ async function loadUsers(filters = {}) {
   if (result.success) {
     currentUsers = result.users;
 
-    // Always keep all users loaded for duplicate checking
-    if (allUsers.length === 0) {
-      const allResult = await window.electronAPI.getUsers({});
-      if (allResult.success) {
-        allUsers = allResult.users;
-      }
+    // Always reload all users for accurate duplicate checking
+    const allResult = await window.electronAPI.getUsers({});
+    if (allResult.success) {
+      allUsers = allResult.users;
     }
 
     displayUsers(currentUsers, allUsers);
@@ -224,6 +223,21 @@ async function displayUsers(users, allUsers = null) {
       imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
     }
   });
+
+  // Check if there are any duplicates
+  const hasDuplicates = Object.values(imageCount).some(count => count > 1);
+
+  // Show/hide duplicates filter based on whether duplicates exist
+  if (hasDuplicates) {
+    filterOptions.style.display = 'flex';
+  } else {
+    filterOptions.style.display = 'none';
+    // If filter was active and there are no duplicates, deactivate it
+    if (showDuplicatesOnly) {
+      showDuplicatesOnly = false;
+      duplicatesFilter.checked = false;
+    }
+  }
 
   // If showing duplicates only, show all duplicates from entire database
   let usersToDisplay = users;
