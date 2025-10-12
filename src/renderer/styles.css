@@ -11,63 +11,10 @@ body {
   overflow: hidden;
 }
 
-/* Menu Bar */
-.menu-bar {
-  background-color: #0f1419;
-  padding: 8px 16px;
-  display: flex;
-  gap: 20px;
-  border-bottom: 1px solid #2a2f3e;
-}
-
-.menu-item {
-  padding: 4px 12px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.menu-item:hover {
-  background-color: #2a2f3e;
-}
-
-.menu-dropdown {
-  display: none;
-  position: absolute;
-  top: 42px;
-  left: 16px;
-  background-color: #2a2f3e;
-  border: 1px solid #3a3f4e;
-  border-radius: 4px;
-  min-width: 200px;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.menu-dropdown.show {
-  display: block;
-}
-
-.menu-dropdown-item {
-  padding: 10px 16px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.menu-dropdown-item:hover {
-  background-color: #3a3f4e;
-}
-
-.menu-dropdown-divider {
-  height: 1px;
-  background-color: #3a3f4e;
-  margin: 4px 0;
-}
-
 /* Container */
 .container {
   display: flex;
-  height: calc(100vh - 42px);
+  height: 100vh;
 }
 
 /* Left Panel */
@@ -185,11 +132,12 @@ body {
   color: #6ba4ff;
 }
 
-.user-table td.has-image .photo-indicator {
+.user-table td .photo-indicator {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
+  display: block;
 }
 
 .user-table td .photo-placeholder {

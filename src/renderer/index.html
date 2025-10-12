@@ -3,32 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Captura de Imágenes del Alumnado</title>
+  <title>User Capture</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Menu Bar -->
-  <div class="menu-bar">
-    <div class="menu-item" id="menu-archivo">Archivo</div>
-    <div class="menu-item" id="menu-edicion">Edición</div>
-    <div class="menu-item" id="menu-ayuda">Ayuda</div>
-  </div>
-
-  <!-- Menu Archivo Dropdown -->
-  <div class="menu-dropdown" id="dropdown-archivo">
-    <div class="menu-dropdown-item" id="new-project">Nuevo Proyecto...</div>
-    <div class="menu-dropdown-item" id="open-project">Abrir Proyecto...</div>
-    <div class="menu-dropdown-divider"></div>
-    <div class="menu-dropdown-item" id="exit-app">Salir</div>
-  </div>
-
   <div class="container">
     <!-- Left Panel: User List -->
     <div class="left-panel">
       <div class="panel-header">
-        <h2>Listado de Alumnos</h2>
+        <h2>Listado de Usuarios</h2>
         <div class="search-bar">
-          <input type="text" id="search-input" placeholder="Buscar alumno...">
+          <input type="text" id="search-input" placeholder="Buscar usuario...">
         </div>
         <select id="group-filter" class="group-filter">
           <option value="">Todos los grupos</option>
@@ -54,11 +39,11 @@
 
       <div class="panel-footer">
         <div class="selection-info">
-          <strong>Selecciona un alumno</strong>
+          <strong>Selecciona un usuario</strong>
           <div id="selected-user-info" class="selected-user-name">-</div>
         </div>
         <div class="status-bar">
-          <span id="user-count">Listo. 0 alumnos cargados.</span>
+          <span id="user-count">Listo. 0 usuarios cargados.</span>
         </div>
       </div>
     </div>

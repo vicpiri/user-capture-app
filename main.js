@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const DatabaseManager = require('./src/main/database');
@@ -7,12 +7,153 @@ const FolderWatcher = require('./src/main/folderWatcher');
 const ImageManager = require('./src/main/imageManager');
 const { getLogger } = require('./src/main/logger');
 
+// Enable hot reload in development
+if (process.argv.includes('--dev')) {
+  try {
+    require('electron-reloader')(module, {
+      debug: true,
+      watchRenderer: true
+    });
+  } catch (err) {
+    console.log('Error loading electron-reloader:', err);
+  }
+}
+
 let mainWindow;
 let dbManager;
 let folderWatcher;
 let imageManager;
 let projectPath = null;
 let logger = getLogger();
+let cameraEnabled = false;
+let cameraAutoStart = false;
+let recentProjects = [];
+
+function createMenu() {
+  // Build recent projects submenu
+  const recentProjectsSubmenu = recentProjects.length > 0
+    ? recentProjects.map((projectPath, index) => ({
+        label: path.basename(projectPath),
+        accelerator: index < 9 ? `CmdOrCtrl+${index + 1}` : undefined,
+        click: () => {
+          openRecentProject(projectPath);
+        }
+      }))
+    : [{ label: 'No hay proyectos recientes', enabled: false }];
+
+  const template = [
+    {
+      label: 'Archivo',
+      submenu: [
+        {
+          label: 'Nuevo Proyecto...',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            mainWindow.webContents.send('menu-new-project');
+          }
+        },
+        {
+          label: 'Abrir Proyecto...',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => {
+            mainWindow.webContents.send('menu-open-project');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Proyectos Recientes',
+          submenu: recentProjectsSubmenu
+        },
+        { type: 'separator' },
+        {
+          label: 'Salir',
+          accelerator: 'CmdOrCtrl+Q',
+          role: 'quit'
+        }
+      ]
+    },
+    {
+      label: 'Edición',
+      submenu: [
+        { label: 'Deshacer', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+        { label: 'Rehacer', accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo' },
+        { type: 'separator' },
+        { label: 'Cortar', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+        { label: 'Copiar', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+        { label: 'Pegar', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+        { label: 'Seleccionar todo', accelerator: 'CmdOrCtrl+A', role: 'selectAll' }
+      ]
+    },
+    {
+      label: 'Cámara',
+      submenu: [
+        {
+          label: cameraEnabled ? 'Desactivar cámara' : 'Activar cámara',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            cameraEnabled = !cameraEnabled;
+            mainWindow.webContents.send('menu-toggle-camera', cameraEnabled);
+            // Rebuild menu to update label
+            createMenu();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Activar la cámara al iniciar',
+          type: 'checkbox',
+          checked: cameraAutoStart,
+          click: (menuItem) => {
+            cameraAutoStart = menuItem.checked;
+            mainWindow.webContents.send('menu-camera-autostart', cameraAutoStart);
+          }
+        }
+      ]
+    },
+    {
+      label: 'Ayuda',
+      submenu: [
+        {
+          label: 'Acerca de User Capture',
+          click: () => {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'Acerca de User Capture',
+              message: 'User Capture',
+              detail: 'Versión 1.0.0\n\nAplicación de captura de imágenes de usuarios para entornos educativos.',
+              buttons: ['Aceptar']
+            });
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Documentación',
+          click: () => {
+            // Open documentation
+          }
+        }
+      ]
+    }
+  ];
+
+  // Add View menu in development mode
+  if (process.argv.includes('--dev')) {
+    template.push({
+      label: 'Ver',
+      submenu: [
+        { label: 'Recargar', accelerator: 'CmdOrCtrl+R', role: 'reload' },
+        { label: 'Forzar recarga', accelerator: 'CmdOrCtrl+Shift+R', role: 'forceReload' },
+        { label: 'Herramientas de desarrollo', accelerator: 'CmdOrCtrl+Shift+I', role: 'toggleDevTools' },
+        { type: 'separator' },
+        { label: 'Zoom +', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
+        { label: 'Zoom -', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
+        { label: 'Zoom normal', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' }
+      ]
+    });
+  }
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -40,6 +181,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  loadRecentProjects();
+  createMenu();
   createWindow();
 
   app.on('activate', () => {
@@ -188,6 +331,9 @@ ipcMain.handle('create-project', async (event, data) => {
       projectPath: folderPath
     });
 
+    // Add to recent projects
+    addRecentProject(folderPath);
+
     return { success: true, message: 'Proyecto creado exitosamente' };
   } catch (error) {
     logger.error('Error creating project', error);
@@ -244,6 +390,9 @@ ipcMain.handle('open-project', async (event, folderPath) => {
 
     logger.section('PROJECT OPENED SUCCESSFULLY');
     logger.success('Project loaded', { projectPath: folderPath });
+
+    // Add to recent projects
+    addRecentProject(folderPath);
 
     return { success: true, message: 'Proyecto abierto exitosamente' };
   } catch (error) {
@@ -382,4 +531,110 @@ function formatTimestamp(date) {
   const seconds = String(date.getSeconds()).padStart(2, '0');
 
   return `${year}${month}${day}${hours}${minutes}${seconds}`;
+}
+
+// Recent projects management
+function getRecentProjectsPath() {
+  return path.join(app.getPath('userData'), 'recent-projects.json');
+}
+
+function loadRecentProjects() {
+  try {
+    const filePath = getRecentProjectsPath();
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf8');
+      recentProjects = JSON.parse(data);
+
+      // Validate that projects still exist
+      recentProjects = recentProjects.filter(projectPath => {
+        return fs.existsSync(projectPath) && fs.existsSync(path.join(projectPath, 'data', 'users.db'));
+      });
+    }
+  } catch (error) {
+    console.error('Error loading recent projects:', error);
+    recentProjects = [];
+  }
+}
+
+function saveRecentProjects() {
+  try {
+    const filePath = getRecentProjectsPath();
+    fs.writeFileSync(filePath, JSON.stringify(recentProjects, null, 2));
+  } catch (error) {
+    console.error('Error saving recent projects:', error);
+  }
+}
+
+function addRecentProject(projectPath) {
+  // Remove if already exists
+  recentProjects = recentProjects.filter(p => p !== projectPath);
+
+  // Add to beginning
+  recentProjects.unshift(projectPath);
+
+  // Keep only last 5
+  recentProjects = recentProjects.slice(0, 5);
+
+  saveRecentProjects();
+  createMenu();
+}
+
+async function openRecentProject(folderPath) {
+  try {
+    // Initialize logger for this project
+    logger.initialize(folderPath);
+    logger.section('OPENING RECENT PROJECT');
+    logger.info('Recent project selected', { folderPath });
+
+    if (!fs.existsSync(folderPath)) {
+      throw new Error('La carpeta del proyecto no existe');
+    }
+
+    projectPath = folderPath;
+    const dataPath = path.join(folderPath, 'data');
+    const dbPath = path.join(dataPath, 'users.db');
+
+    logger.info('Validating project structure...');
+    if (!fs.existsSync(dbPath)) {
+      throw new Error('No se encontró la base de datos del proyecto');
+    }
+    logger.success('Project structure validated');
+
+    // Initialize database
+    logger.section('LOADING DATABASE');
+    logger.info(`Database path: ${dbPath}`);
+    dbManager = new DatabaseManager(dbPath);
+    await dbManager.initialize();
+    logger.success('Database loaded successfully');
+
+    // Initialize paths
+    const ingestPath = path.join(folderPath, 'ingest');
+    const importsPath = path.join(folderPath, 'imports');
+
+    // Initialize image manager
+    logger.section('INITIALIZING MANAGERS');
+    imageManager = new ImageManager(importsPath);
+    logger.info('Image manager initialized');
+
+    // Start folder watcher
+    folderWatcher = new FolderWatcher(ingestPath, importsPath);
+    folderWatcher.on('image-added', (filename) => {
+      logger.info(`New image detected: ${filename}`);
+      mainWindow.webContents.send('new-image-detected', filename);
+    });
+    folderWatcher.start();
+    logger.success('Folder watcher started', { watchPath: ingestPath });
+
+    logger.section('PROJECT OPENED SUCCESSFULLY');
+    logger.success('Project loaded', { projectPath: folderPath });
+
+    // Add to recent projects
+    addRecentProject(folderPath);
+
+    // Notify renderer
+    mainWindow.webContents.send('project-opened', { success: true });
+  } catch (error) {
+    logger.error('Error opening recent project', error);
+    dialog.showErrorBox('Error', 'Error al abrir el proyecto: ' + error.message);
+  }
 }

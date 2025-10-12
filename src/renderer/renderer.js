@@ -6,12 +6,10 @@ let currentImages = [];
 let currentImageIndex = 0;
 let cameraStream = null;
 let projectOpen = false;
+let cameraEnabled = true;
+let cameraAutoStart = false;
 
 // DOM Elements
-const menuArchivo = document.getElementById('menu-archivo');
-const dropdownArchivo = document.getElementById('dropdown-archivo');
-const newProjectBtn = document.getElementById('new-project');
-const openProjectBtn = document.getElementById('open-project');
 const searchInput = document.getElementById('search-input');
 const groupFilter = document.getElementById('group-filter');
 const userTableBody = document.getElementById('user-table-body');
@@ -33,17 +31,13 @@ const progressModal = document.getElementById('progress-modal');
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   initializeEventListeners();
-  initializeCamera();
+  loadCameraPreferences();
   setupProgressListener();
+  setupMenuListeners();
 });
 
 // Event Listeners
 function initializeEventListeners() {
-  // Menu
-  menuArchivo.addEventListener('click', toggleMenuArchivo);
-  newProjectBtn.addEventListener('click', openNewProjectModal);
-  openProjectBtn.addEventListener('click', handleOpenProject);
-
   // Search and filter
   searchInput.addEventListener('input', filterUsers);
   groupFilter.addEventListener('change', filterUsers);
@@ -69,22 +63,23 @@ function initializeEventListeners() {
   window.electronAPI.onNewImageDetected((filename) => {
     loadImages();
   });
-
-  // Close dropdowns when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!menuArchivo.contains(e.target) && !dropdownArchivo.contains(e.target)) {
-      dropdownArchivo.classList.remove('show');
-    }
-  });
-}
-
-// Menu functions
-function toggleMenuArchivo(e) {
-  e.stopPropagation();
-  dropdownArchivo.classList.toggle('show');
 }
 
 // Camera initialization
+function loadCameraPreferences() {
+  // Load autostart preference
+  const savedAutoStart = localStorage.getItem('cameraAutoStart');
+  cameraAutoStart = savedAutoStart === 'true';
+
+  // Start camera if autostart is enabled
+  if (cameraAutoStart) {
+    cameraEnabled = true;
+    initializeCamera();
+  } else {
+    showCameraPlaceholder('Cámara desactivada');
+  }
+}
+
 async function initializeCamera() {
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -94,14 +89,37 @@ async function initializeCamera() {
       }
     });
     cameraPreview.srcObject = cameraStream;
+    cameraPreview.style.display = 'block';
+
+    // Remove placeholder if it exists
+    const placeholder = document.querySelector('.camera-placeholder');
+    if (placeholder) {
+      placeholder.remove();
+    }
   } catch (error) {
     console.error('Error accessing camera:', error);
     showCameraPlaceholder();
   }
 }
 
-function showCameraPlaceholder() {
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+    cameraPreview.srcObject = null;
+  }
+  showCameraPlaceholder('Cámara desactivada');
+}
+
+function showCameraPlaceholder(message = 'No se pudo acceder a la cámara') {
   cameraPreview.style.display = 'none';
+
+  // Remove existing placeholder
+  const existingPlaceholder = document.querySelector('.camera-placeholder');
+  if (existingPlaceholder) {
+    existingPlaceholder.remove();
+  }
+
   const placeholder = document.createElement('div');
   placeholder.className = 'camera-placeholder';
   placeholder.innerHTML = `
@@ -110,7 +128,7 @@ function showCameraPlaceholder() {
       <line x1="12" y1="8" x2="12" y2="12"></line>
       <line x1="12" y1="16" x2="12.01" y2="16"></line>
     </svg>
-    <p>No se pudo acceder a la cámara</p>
+    <p>${message}</p>
   `;
   document.querySelector('.camera-container').appendChild(placeholder);
 }
@@ -118,7 +136,6 @@ function showCameraPlaceholder() {
 // Project management
 function openNewProjectModal() {
   newProjectModal.classList.add('show');
-  dropdownArchivo.classList.remove('show');
 }
 
 function closeNewProjectModal() {
@@ -187,8 +204,6 @@ async function handleOpenProject() {
       alert('Error al abrir el proyecto: ' + openResult.error);
     }
   }
-
-  dropdownArchivo.classList.remove('show');
 }
 
 // Load project data
@@ -275,7 +290,7 @@ function selectUserRow(row, user) {
 }
 
 function updateUserCount() {
-  userCount.textContent = `Listo. ${currentUsers.length} alumnos cargados.`;
+  userCount.textContent = `Listo. ${currentUsers.length} usuarios cargados.`;
 }
 
 // Filter users
@@ -379,7 +394,7 @@ async function handleCapture() {
 // Link image to user
 async function handleLinkImage() {
   if (!selectedUser) {
-    alert('Debes seleccionar un alumno');
+    alert('Debes seleccionar un usuario');
     return;
   }
 
@@ -400,7 +415,7 @@ async function handleLinkImage() {
     alert('Imagen enlazada correctamente');
   } else if (result.needsConfirmation) {
     showConfirmationModal(
-      'El alumno ya tiene una imagen asignada. ¿Deseas reemplazarla?',
+      'El usuario ya tiene una imagen asignada. ¿Deseas reemplazarla?',
       async () => {
         const confirmResult = await window.electronAPI.confirmLinkImage({
           userId: selectedUser.id,
@@ -482,4 +497,36 @@ function updateProgress(percentage, message = '', details = '') {
 
 function closeProgressModal() {
   progressModal.classList.remove('show');
+}
+
+// Menu listeners
+function setupMenuListeners() {
+  window.electronAPI.onMenuNewProject(() => {
+    openNewProjectModal();
+  });
+
+  window.electronAPI.onMenuOpenProject(() => {
+    handleOpenProject();
+  });
+
+  window.electronAPI.onMenuToggleCamera((enabled) => {
+    cameraEnabled = enabled;
+    if (enabled) {
+      initializeCamera();
+    } else {
+      stopCamera();
+    }
+  });
+
+  window.electronAPI.onMenuCameraAutostart((enabled) => {
+    cameraAutoStart = enabled;
+    localStorage.setItem('cameraAutoStart', enabled);
+  });
+
+  window.electronAPI.onProjectOpened((data) => {
+    if (data.success) {
+      projectOpen = true;
+      loadProjectData();
+    }
+  });
 }

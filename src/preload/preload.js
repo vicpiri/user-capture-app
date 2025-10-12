@@ -27,5 +27,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   onProgress: (callback) => {
     ipcRenderer.on('progress', (event, data) => callback(data));
+  },
+
+  onMenuNewProject: (callback) => {
+    ipcRenderer.on('menu-new-project', callback);
+  },
+
+  onMenuOpenProject: (callback) => {
+    ipcRenderer.on('menu-open-project', callback);
+  },
+
+  onMenuToggleCamera: (callback) => {
+    ipcRenderer.on('menu-toggle-camera', (event, enabled) => callback(enabled));
+  },
+
+  onMenuCameraAutostart: (callback) => {
+    ipcRenderer.on('menu-camera-autostart', (event, enabled) => callback(enabled));
+  },
+
+  onProjectOpened: (callback) => {
+    ipcRenderer.on('project-opened', (event, data) => callback(data));
   }
 });
