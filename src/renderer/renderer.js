@@ -1,15 +1,18 @@
 // State management
 let currentUsers = [];
+let allUsers = []; // All users from database for duplicate checking
 let currentGroups = [];
 let selectedUser = null;
 let currentImages = [];
 let currentImageIndex = 0;
 let projectOpen = false;
+let showDuplicatesOnly = false;
 
 // DOM Elements
 const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search-btn');
 const groupFilter = document.getElementById('group-filter');
+const duplicatesFilter = document.getElementById('duplicates-filter');
 const userTableBody = document.getElementById('user-table-body');
 const selectedUserInfo = document.getElementById('selected-user-info');
 const userCount = document.getElementById('user-count');
@@ -40,6 +43,10 @@ function initializeEventListeners() {
   });
   clearSearchBtn.addEventListener('click', clearSearch);
   groupFilter.addEventListener('change', filterUsers);
+  duplicatesFilter.addEventListener('change', () => {
+    showDuplicatesOnly = duplicatesFilter.checked;
+    displayUsers(currentUsers, allUsers);
+  });
 
   // Action buttons
   linkBtn.addEventListener('click', handleLinkImage);
@@ -170,23 +177,45 @@ async function loadUsers(filters = {}) {
 
   if (result.success) {
     currentUsers = result.users;
-    displayUsers(currentUsers);
+
+    // Always keep all users loaded for duplicate checking
+    if (allUsers.length === 0) {
+      const allResult = await window.electronAPI.getUsers({});
+      if (allResult.success) {
+        allUsers = allResult.users;
+      }
+    }
+
+    displayUsers(currentUsers, allUsers);
     updateUserCount();
   }
 }
 
-async function displayUsers(users) {
+async function displayUsers(users, allUsers = null) {
   userTableBody.innerHTML = '';
+
+  // If checking for duplicates, we need to count against all users in database
+  const usersForCounting = allUsers || users;
 
   // Check for duplicate images
   const imageCount = {};
-  users.forEach(user => {
+  usersForCounting.forEach(user => {
     if (user.image_path) {
       imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
     }
   });
 
-  users.forEach(user => {
+  // If showing duplicates only, show all duplicates from entire database
+  let usersToDisplay = users;
+  if (showDuplicatesOnly && allUsers) {
+    // Show all users with duplicates from the entire database
+    usersToDisplay = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
+  } else if (showDuplicatesOnly) {
+    // Fallback if allUsers not available
+    usersToDisplay = users.filter(user => user.image_path && imageCount[user.image_path] > 1);
+  }
+
+  usersToDisplay.forEach(user => {
     const row = document.createElement('tr');
     row.dataset.userId = user.id;
 
@@ -376,6 +405,39 @@ function updateLinkButtonState() {
   linkBtn.disabled = !(hasImageSelected && hasUserSelected);
 }
 
+// Delete photo link
+async function handleDeletePhoto() {
+  if (!selectedUser) {
+    alert('Debes seleccionar un usuario');
+    return;
+  }
+
+  if (!selectedUser.image_path) {
+    alert('El usuario seleccionado no tiene una fotografía vinculada');
+    return;
+  }
+
+  const userName = `${selectedUser.first_name} ${selectedUser.last_name1} ${selectedUser.last_name2 || ''}`.trim();
+
+  showConfirmationModal(
+    `¿Estás seguro de que deseas eliminar la fotografía vinculada a ${userName}?`,
+    async () => {
+      const result = await window.electronAPI.unlinkImageFromUser(selectedUser.id);
+
+      if (result.success) {
+        await loadUsers();
+        // Update selected user reference
+        const updatedUser = currentUsers.find(u => u.id === selectedUser.id);
+        if (updatedUser) {
+          selectedUser = updatedUser;
+        }
+      } else {
+        alert('Error al eliminar la fotografía: ' + result.error);
+      }
+    }
+  );
+}
+
 // Confirmation modal
 function showConfirmationModal(message, onConfirm) {
   document.getElementById('confirm-message').textContent = message;
@@ -448,5 +510,15 @@ function setupMenuListeners() {
       projectOpen = true;
       loadProjectData();
     }
+  });
+
+  window.electronAPI.onMenuDeletePhoto(() => {
+    handleDeletePhoto();
+  });
+
+  window.electronAPI.onMenuToggleDuplicates((enabled) => {
+    showDuplicatesOnly = enabled;
+    duplicatesFilter.checked = enabled;
+    displayUsers(currentUsers, allUsers);
   });
 }

@@ -29,6 +29,7 @@ let logger = getLogger();
 let cameraEnabled = false;
 let cameraAutoStart = false;
 let recentProjects = [];
+let showDuplicatesOnly = false;
 
 function createMenu() {
   // Build recent projects submenu
@@ -76,13 +77,27 @@ function createMenu() {
     {
       label: 'Edición',
       submenu: [
-        { label: 'Deshacer', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
-        { label: 'Rehacer', accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo' },
-        { type: 'separator' },
-        { label: 'Cortar', accelerator: 'CmdOrCtrl+X', role: 'cut' },
-        { label: 'Copiar', accelerator: 'CmdOrCtrl+C', role: 'copy' },
-        { label: 'Pegar', accelerator: 'CmdOrCtrl+V', role: 'paste' },
-        { label: 'Seleccionar todo', accelerator: 'CmdOrCtrl+A', role: 'selectAll' }
+        {
+          label: 'Eliminar fotografía vinculada',
+          accelerator: 'CmdOrCtrl+Delete',
+          click: () => {
+            mainWindow.webContents.send('menu-delete-photo');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Ver',
+      submenu: [
+        {
+          label: 'Mostrar asignaciones duplicadas',
+          type: 'checkbox',
+          checked: showDuplicatesOnly,
+          click: (menuItem) => {
+            showDuplicatesOnly = menuItem.checked;
+            mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
+          }
+        }
       ]
     },
     {
@@ -566,6 +581,21 @@ ipcMain.handle('confirm-link-image', async (event, data) => {
     return { success: true };
   } catch (error) {
     console.error('Error confirming link:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Unlink image from user
+ipcMain.handle('unlink-image-user', async (event, userId) => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    await dbManager.unlinkImageFromUser(userId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error unlinking image:', error);
     return { success: false, error: error.message };
   }
 });

@@ -205,6 +205,15 @@ class DatabaseManager {
     });
   }
 
+  async unlinkImageFromUser(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.run('UPDATE users SET image_path = NULL WHERE id = ?', [userId], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
   async markExternalImage(userId, exists) {
     return new Promise((resolve, reject) => {
       this.db.run('UPDATE users SET has_external_image = ? WHERE id = ?', [exists ? 1 : 0, userId], (err) => {

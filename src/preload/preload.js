@@ -47,5 +47,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   onProjectOpened: (callback) => {
     ipcRenderer.on('project-opened', (event, data) => callback(data));
-  }
+  },
+
+  onMenuDeletePhoto: (callback) => {
+    ipcRenderer.on('menu-delete-photo', callback);
+  },
+
+  onMenuToggleDuplicates: (callback) => {
+    ipcRenderer.on('menu-toggle-duplicates', (event, enabled) => callback(enabled));
+  },
+
+  unlinkImageFromUser: (userId) => ipcRenderer.invoke('unlink-image-user', userId)
 });
