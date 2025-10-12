@@ -59,17 +59,19 @@ class FolderWatcher extends EventEmitter {
         return;
       }
 
-      // Move file to imports folder
-      const filename = path.basename(filePath);
-      const destinationPath = path.join(this.importsPath, filename);
+      // Generate formatted filename with timestamp
+      const timestamp = new Date();
+      const formattedName = this.formatTimestamp(timestamp);
+      const ext = path.extname(filePath);
+      let newFilename = `${formattedName}${ext}`;
+      let destinationPath = path.join(this.importsPath, newFilename);
 
-      // Handle duplicate filenames
+      // Handle duplicate filenames (same second)
       let finalDestination = destinationPath;
       let counter = 1;
       while (fs.existsSync(finalDestination)) {
-        const nameWithoutExt = path.parse(filename).name;
-        const ext = path.extname(filename);
-        finalDestination = path.join(this.importsPath, `${nameWithoutExt}_${counter}${ext}`);
+        newFilename = `${formattedName}_${counter}${ext}`;
+        finalDestination = path.join(this.importsPath, newFilename);
         counter++;
       }
 
@@ -127,6 +129,17 @@ class FolderWatcher extends EventEmitter {
         resolve(); // Resolve anyway after timeout
       }, timeout);
     });
+  }
+
+  formatTimestamp(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 
   stop() {

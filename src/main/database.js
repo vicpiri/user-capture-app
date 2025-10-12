@@ -187,6 +187,15 @@ class DatabaseManager {
     });
   }
 
+  async getUsersByImagePath(imagePath) {
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT * FROM users WHERE image_path = ?', [imagePath], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
   async linkImageToUser(userId, imagePath) {
     return new Promise((resolve, reject) => {
       this.db.run('UPDATE users SET image_path = ? WHERE id = ?', [imagePath, userId], (err) => {

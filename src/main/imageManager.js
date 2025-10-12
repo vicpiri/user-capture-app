@@ -20,8 +20,8 @@ class ImageManager {
         return ext === '.jpg' || ext === '.jpeg';
       });
 
-      // Sort by filename (which includes timestamp)
-      imageFiles.sort();
+      // Sort by filename descending (newest first)
+      imageFiles.sort().reverse();
 
       // Return full paths
       return imageFiles.map(file => path.join(this.importsPath, file));

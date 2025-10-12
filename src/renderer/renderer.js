@@ -4,10 +4,7 @@ let currentGroups = [];
 let selectedUser = null;
 let currentImages = [];
 let currentImageIndex = 0;
-let cameraStream = null;
 let projectOpen = false;
-let cameraEnabled = true;
-let cameraAutoStart = false;
 
 // DOM Elements
 const searchInput = document.getElementById('search-input');
@@ -15,9 +12,7 @@ const groupFilter = document.getElementById('group-filter');
 const userTableBody = document.getElementById('user-table-body');
 const selectedUserInfo = document.getElementById('selected-user-info');
 const userCount = document.getElementById('user-count');
-const captureBtn = document.getElementById('capture-btn');
 const linkBtn = document.getElementById('link-btn');
-const cameraPreview = document.getElementById('camera-preview');
 const imagePreviewContainer = document.getElementById('image-preview-container');
 const currentImage = document.getElementById('current-image');
 const prevImageBtn = document.getElementById('prev-image');
@@ -31,7 +26,6 @@ const progressModal = document.getElementById('progress-modal');
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   initializeEventListeners();
-  loadCameraPreferences();
   setupProgressListener();
   setupMenuListeners();
 });
@@ -43,7 +37,6 @@ function initializeEventListeners() {
   groupFilter.addEventListener('change', filterUsers);
 
   // Action buttons
-  captureBtn.addEventListener('click', handleCapture);
   linkBtn.addEventListener('click', handleLinkImage);
 
   // Image navigation
@@ -60,77 +53,12 @@ function initializeEventListeners() {
   document.getElementById('confirm-no-btn').addEventListener('click', closeConfirmModal);
 
   // Listen for new images
-  window.electronAPI.onNewImageDetected((filename) => {
-    loadImages();
-  });
-}
-
-// Camera initialization
-function loadCameraPreferences() {
-  // Load autostart preference
-  const savedAutoStart = localStorage.getItem('cameraAutoStart');
-  cameraAutoStart = savedAutoStart === 'true';
-
-  // Start camera if autostart is enabled
-  if (cameraAutoStart) {
-    cameraEnabled = true;
-    initializeCamera();
-  } else {
-    showCameraPlaceholder('Cámara desactivada');
-  }
-}
-
-async function initializeCamera() {
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    });
-    cameraPreview.srcObject = cameraStream;
-    cameraPreview.style.display = 'block';
-
-    // Remove placeholder if it exists
-    const placeholder = document.querySelector('.camera-placeholder');
-    if (placeholder) {
-      placeholder.remove();
+  window.electronAPI.onNewImageDetected(async (filename) => {
+    await loadImages();
+    if (currentImages.length > 0) {
+      showImagePreview();
     }
-  } catch (error) {
-    console.error('Error accessing camera:', error);
-    showCameraPlaceholder();
-  }
-}
-
-function stopCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(track => track.stop());
-    cameraStream = null;
-    cameraPreview.srcObject = null;
-  }
-  showCameraPlaceholder('Cámara desactivada');
-}
-
-function showCameraPlaceholder(message = 'No se pudo acceder a la cámara') {
-  cameraPreview.style.display = 'none';
-
-  // Remove existing placeholder
-  const existingPlaceholder = document.querySelector('.camera-placeholder');
-  if (existingPlaceholder) {
-    existingPlaceholder.remove();
-  }
-
-  const placeholder = document.createElement('div');
-  placeholder.className = 'camera-placeholder';
-  placeholder.innerHTML = `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="12" y1="8" x2="12" y2="12"></line>
-      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-    </svg>
-    <p>${message}</p>
-  `;
-  document.querySelector('.camera-container').appendChild(placeholder);
+  });
 }
 
 // Project management
@@ -227,7 +155,7 @@ function populateGroupFilter() {
   currentGroups.forEach(group => {
     const option = document.createElement('option');
     option.value = group.code;
-    option.textContent = group.name;
+    option.textContent = `${group.code} - ${group.name}`;
     groupFilter.appendChild(option);
   });
 }
@@ -242,15 +170,26 @@ async function loadUsers(filters = {}) {
   }
 }
 
-function displayUsers(users) {
+async function displayUsers(users) {
   userTableBody.innerHTML = '';
+
+  // Check for duplicate images
+  const imageCount = {};
+  users.forEach(user => {
+    if (user.image_path) {
+      imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
+    }
+  });
 
   users.forEach(user => {
     const row = document.createElement('tr');
     row.dataset.userId = user.id;
 
+    const hasDuplicateImage = user.image_path && imageCount[user.image_path] > 1;
+    const duplicateClass = hasDuplicateImage ? 'duplicate-image' : '';
+
     const photoIndicator = user.image_path
-      ? `<img src="file://${user.image_path}" class="photo-indicator" alt="Foto">`
+      ? `<img src="file://${user.image_path}" class="photo-indicator ${duplicateClass}" alt="Foto">`
       : `<div class="photo-placeholder">
            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -318,9 +257,14 @@ async function loadImages() {
   const result = await window.electronAPI.getImages();
 
   if (result.success) {
+    const previousLength = currentImages.length;
     currentImages = result.images;
+
     if (currentImages.length > 0) {
-      currentImageIndex = 0;
+      // If new image was added, show the latest one
+      if (currentImages.length > previousLength) {
+        currentImageIndex = 0; // Newest image is first
+      }
       showImagePreview();
     }
   }
@@ -329,15 +273,8 @@ async function loadImages() {
 function showImagePreview() {
   if (currentImages.length === 0) return;
 
-  cameraPreview.style.display = 'none';
   imagePreviewContainer.classList.add('active');
   currentImage.src = `file://${currentImages[currentImageIndex]}`;
-  updateLinkButtonState();
-}
-
-function showCameraView() {
-  imagePreviewContainer.classList.remove('active');
-  cameraPreview.style.display = 'block';
   updateLinkButtonState();
 }
 
@@ -353,42 +290,6 @@ function navigateImages(direction) {
   }
 
   currentImage.src = `file://${currentImages[currentImageIndex]}`;
-}
-
-// Capture image
-async function handleCapture() {
-  if (!projectOpen) {
-    alert('Debes abrir o crear un proyecto primero');
-    return;
-  }
-
-  if (!cameraStream) {
-    alert('La cámara no está disponible');
-    return;
-  }
-
-  const canvas = document.getElementById('capture-canvas');
-  const context = canvas.getContext('2d');
-
-  // Set canvas size to match video
-  canvas.width = cameraPreview.videoWidth;
-  canvas.height = cameraPreview.videoHeight;
-
-  // Draw current video frame to canvas
-  context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
-
-  // Convert to JPEG blob
-  const imageData = canvas.toDataURL('image/jpeg', 0.9);
-
-  // Save image
-  const result = await window.electronAPI.saveCapturedImage(imageData);
-
-  if (result.success) {
-    await loadImages();
-    showImagePreview();
-  } else {
-    alert('Error al capturar la imagen: ' + result.error);
-  }
 }
 
 // Link image to user
@@ -412,7 +313,23 @@ async function handleLinkImage() {
 
   if (result.success) {
     await loadUsers();
-    alert('Imagen enlazada correctamente');
+  } else if (result.imageAlreadyAssigned) {
+    // Image is already assigned to other user(s)
+    const userList = result.assignedUsers.map(u => `${u.name} (${u.nia || 'Sin NIA'})`).join(', ');
+    const message = `Esta imagen ya está asignada a: ${userList}. ¿Deseas continuar y asignarla también a ${selectedUser.first_name} ${selectedUser.last_name1}?`;
+
+    showConfirmationModal(message, async () => {
+      const confirmResult = await window.electronAPI.confirmLinkImage({
+        userId: selectedUser.id,
+        imagePath
+      });
+
+      if (confirmResult.success) {
+        await loadUsers();
+      } else {
+        alert('Error al enlazar la imagen: ' + confirmResult.error);
+      }
+    });
   } else if (result.needsConfirmation) {
     showConfirmationModal(
       'El usuario ya tiene una imagen asignada. ¿Deseas reemplazarla?',
@@ -424,7 +341,6 @@ async function handleLinkImage() {
 
         if (confirmResult.success) {
           await loadUsers();
-          alert('Imagen enlazada correctamente');
         } else {
           alert('Error al enlazar la imagen: ' + confirmResult.error);
         }
@@ -507,20 +423,6 @@ function setupMenuListeners() {
 
   window.electronAPI.onMenuOpenProject(() => {
     handleOpenProject();
-  });
-
-  window.electronAPI.onMenuToggleCamera((enabled) => {
-    cameraEnabled = enabled;
-    if (enabled) {
-      initializeCamera();
-    } else {
-      stopCamera();
-    }
-  });
-
-  window.electronAPI.onMenuCameraAutostart((enabled) => {
-    cameraAutoStart = enabled;
-    localStorage.setItem('cameraAutoStart', enabled);
   });
 
   window.electronAPI.onProjectOpened((data) => {

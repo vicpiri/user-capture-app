@@ -20,6 +20,7 @@ if (process.argv.includes('--dev')) {
 }
 
 let mainWindow;
+let cameraWindow = null;
 let dbManager;
 let folderWatcher;
 let imageManager;
@@ -92,9 +93,25 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+C',
           click: () => {
             cameraEnabled = !cameraEnabled;
-            mainWindow.webContents.send('menu-toggle-camera', cameraEnabled);
-            // Rebuild menu to update label
+            if (cameraEnabled) {
+              openCameraWindow();
+            } else {
+              closeCameraWindow();
+            }
             createMenu();
+          }
+        },
+        {
+          label: 'Mostrar ventana de cámara',
+          accelerator: 'CmdOrCtrl+Shift+V',
+          enabled: cameraEnabled,
+          click: () => {
+            if (cameraWindow) {
+              cameraWindow.show();
+              cameraWindow.focus();
+            } else {
+              openCameraWindow();
+            }
           }
         },
         { type: 'separator' },
@@ -177,6 +194,59 @@ function createWindow() {
   // Open DevTools in development
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
+  }
+
+  mainWindow.on('closed', () => {
+    if (cameraWindow) {
+      cameraWindow.close();
+    }
+  });
+}
+
+function createCameraWindow() {
+  cameraWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    title: 'Vista de Cámara',
+    webPreferences: {
+      preload: path.join(__dirname, 'src/preload/preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    backgroundColor: '#1a1f2e',
+    show: false,
+    parent: mainWindow
+  });
+
+  cameraWindow.loadFile('src/renderer/camera.html');
+
+  cameraWindow.once('ready-to-show', () => {
+    cameraWindow.show();
+  });
+
+  cameraWindow.on('closed', () => {
+    cameraWindow = null;
+  });
+
+  // Open DevTools in development
+  if (process.argv.includes('--dev')) {
+    cameraWindow.webContents.openDevTools();
+  }
+}
+
+function openCameraWindow() {
+  if (!cameraWindow) {
+    createCameraWindow();
+  } else {
+    cameraWindow.show();
+    cameraWindow.focus();
+  }
+}
+
+function closeCameraWindow() {
+  if (cameraWindow) {
+    cameraWindow.close();
+    cameraWindow = null;
   }
 }
 
@@ -437,6 +507,24 @@ ipcMain.handle('link-image-user', async (event, data) => {
     }
 
     const { userId, imagePath } = data;
+
+    // Check if image is already assigned to other users
+    const usersWithImage = await dbManager.getUsersByImagePath(imagePath);
+    if (usersWithImage.length > 0) {
+      // Check if it's assigned to a different user
+      const otherUsers = usersWithImage.filter(u => u.id !== userId);
+      if (otherUsers.length > 0) {
+        return {
+          success: false,
+          imageAlreadyAssigned: true,
+          assignedUsers: otherUsers.map(u => ({
+            id: u.id,
+            name: `${u.first_name} ${u.last_name1} ${u.last_name2 || ''}`.trim(),
+            nia: u.nia
+          }))
+        };
+      }
+    }
 
     // Check if user already has an image
     const user = await dbManager.getUserById(userId);

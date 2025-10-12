@@ -37,11 +37,13 @@ body {
 }
 
 .search-bar {
+  display: flex;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
 .search-bar input {
-  width: 100%;
+  flex: 1;
   padding: 10px 16px;
   background-color: #2a2f3e;
   border: 1px solid #3a3f4e;
@@ -60,7 +62,7 @@ body {
 }
 
 .group-filter {
-  width: 100%;
+  flex: 0 0 200px;
   padding: 10px 16px;
   background-color: #2a2f3e;
   border: 1px solid #3a3f4e;
@@ -140,6 +142,11 @@ body {
   display: block;
 }
 
+.user-table td .photo-indicator.duplicate-image {
+  border: 2px solid #ef4444;
+  box-sizing: border-box;
+}
+
 .user-table td .photo-placeholder {
   width: 32px;
   height: 32px;
@@ -187,8 +194,8 @@ body {
   background-color: #1a1f2e;
 }
 
-/* Camera Container */
-.camera-container {
+/* Image Container */
+.image-container {
   flex: 1;
   background-color: #2a2f3e;
   border-radius: 12px;
@@ -198,13 +205,6 @@ body {
   margin-bottom: 20px;
   position: relative;
   overflow: hidden;
-}
-
-#camera-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 12px;
 }
 
 .image-preview-container {
@@ -254,7 +254,7 @@ body {
   background-color: rgba(40, 45, 58, 0.9);
 }
 
-.camera-placeholder {
+.no-image-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -262,11 +262,15 @@ body {
   color: #707580;
 }
 
-.camera-placeholder svg {
+.no-image-placeholder svg {
   width: 80px;
   height: 80px;
   margin-bottom: 16px;
   opacity: 0.5;
+}
+
+.image-preview-container.active ~ .no-image-placeholder {
+  display: none;
 }
 
 /* Action Buttons */
@@ -349,12 +353,9 @@ body {
   color: #e0e0e0;
 }
 
-.additional-actions .btn {
-  margin-bottom: 8px;
-}
-
-.additional-actions .btn:last-child {
-  margin-bottom: 0;
+.additional-actions-buttons {
+  display: flex;
+  gap: 12px;
 }
 
 /* Modal */

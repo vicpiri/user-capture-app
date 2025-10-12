@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vista de Cámara</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #1a1f2e;
+      color: #e0e0e0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .camera-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #000;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #camera-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .camera-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #707580;
+    }
+
+    .camera-placeholder svg {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .controls {
+      padding: 16px;
+      background-color: #0f1419;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background-color: #4a7cc7;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #5a8cd7;
+    }
+
+    .btn-primary:disabled {
+      background-color: #3a4f5e;
+      color: #707580;
+      cursor: not-allowed;
+    }
+
+    canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="camera-container">
+    <video id="camera-preview" autoplay></video>
+    <canvas id="capture-canvas"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="capture-btn" class="btn btn-primary">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+      Capturar
+    </button>
+  </div>
+
+  <script src="camera.js"></script>
+</body>
+</html>
