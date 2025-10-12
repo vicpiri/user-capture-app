@@ -71,6 +71,26 @@ function initializeEventListeners() {
       showImagePreview();
     }
   });
+
+  // Keyboard navigation for images
+  document.addEventListener('keydown', (event) => {
+    // Only navigate if there are images and no modal is open
+    if (currentImages.length === 0) return;
+    if (newProjectModal.classList.contains('show') ||
+        confirmModal.classList.contains('show') ||
+        progressModal.classList.contains('show')) return;
+
+    // Left arrow key
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      navigateImages(-1);
+    }
+    // Right arrow key
+    else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      navigateImages(1);
+    }
+  });
 }
 
 // Project management
