@@ -49,6 +49,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('project-opened', (event, data) => callback(data));
   },
 
+  onMenuLinkImage: (callback) => {
+    ipcRenderer.on('menu-link-image', callback);
+  },
+
   onMenuDeletePhoto: (callback) => {
     ipcRenderer.on('menu-delete-photo', callback);
   },

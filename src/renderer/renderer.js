@@ -546,6 +546,10 @@ function setupMenuListeners() {
     }
   });
 
+  window.electronAPI.onMenuLinkImage(() => {
+    handleLinkImage();
+  });
+
   window.electronAPI.onMenuDeletePhoto(() => {
     handleDeletePhoto();
   });

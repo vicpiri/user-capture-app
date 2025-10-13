@@ -90,6 +90,13 @@ function createMenu() {
       label: 'Edición',
       submenu: [
         {
+          label: 'Enlazar imagen',
+          accelerator: 'CmdOrCtrl+L',
+          click: () => {
+            mainWindow.webContents.send('menu-link-image');
+          }
+        },
+        {
           label: 'Eliminar fotografía vinculada',
           accelerator: 'CmdOrCtrl+Delete',
           click: () => {
