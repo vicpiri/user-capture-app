@@ -203,6 +203,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    icon: path.join(__dirname, 'assets/icons/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'src/preload/preload.js'),
       contextIsolation: true,
@@ -235,6 +236,7 @@ function createCameraWindow() {
     width: 800,
     height: 600,
     title: 'Vista de Cámara',
+    icon: path.join(__dirname, 'assets/icons/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'src/preload/preload.js'),
       contextIsolation: true,

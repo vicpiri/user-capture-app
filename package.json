@@ -45,17 +45,17 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico",
+      "icon": "assets/icons/icon.ico",
       "sign": null,
       "verifyUpdateCodeSignature": false
     },
     "mac": {
       "target": "dmg",
-      "icon": "assets/icon.icns"
+      "icon": "assets/icons/icon.icns"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "assets/icon.png"
+      "icon": "assets/icons/icon.png"
     }
   }
 }
