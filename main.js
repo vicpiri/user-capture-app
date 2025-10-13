@@ -30,6 +30,8 @@ let cameraEnabled = false;
 let cameraAutoStart = false;
 let recentProjects = [];
 let showDuplicatesOnly = false;
+let availableCameras = [];
+let selectedCameraId = null;
 
 function createMenu() {
   // Build recent projects submenu
@@ -67,6 +69,17 @@ function createMenu() {
           submenu: recentProjectsSubmenu
         },
         { type: 'separator' },
+        {
+          label: 'Importar',
+          submenu: [
+            {
+              label: 'Imágenes con ID',
+              click: () => {
+                mainWindow.webContents.send('menu-import-images-id');
+              }
+            }
+          ]
+        },
         {
           label: 'Exportar',
           submenu: [
@@ -147,6 +160,24 @@ function createMenu() {
               openCameraWindow();
             }
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Seleccionar cámara',
+          submenu: availableCameras.length > 0
+            ? availableCameras.map(camera => ({
+                label: camera.label,
+                type: 'radio',
+                checked: camera.deviceId === selectedCameraId,
+                click: () => {
+                  selectedCameraId = camera.deviceId;
+                  if (cameraWindow) {
+                    cameraWindow.webContents.send('change-camera', selectedCameraId);
+                  }
+                  createMenu();
+                }
+              }))
+            : [{ label: 'No hay cámaras disponibles', enabled: false }]
         },
         { type: 'separator' },
         {
@@ -251,12 +282,13 @@ function createCameraWindow() {
     },
     backgroundColor: '#1a1f2e',
     show: false,
-    parent: mainWindow
+    autoHideMenuBar: true
   });
 
   cameraWindow.loadFile('src/renderer/camera.html');
 
   cameraWindow.once('ready-to-show', () => {
+    cameraWindow.setMenuBarVisibility(false);
     cameraWindow.show();
   });
 
@@ -527,6 +559,18 @@ ipcMain.handle('get-users', async (event, filters) => {
     }
 
     const users = await dbManager.getUsers(dbFilters);
+
+    // Convert relative image paths to absolute paths
+    const importsPath = path.join(projectPath, 'imports');
+    users.forEach(user => {
+      if (user.image_path) {
+        // If it's a relative path (just filename), convert to absolute
+        if (!path.isAbsolute(user.image_path)) {
+          user.image_path = path.join(importsPath, user.image_path);
+        }
+      }
+    });
+
     return { success: true, users };
   } catch (error) {
     console.error('Error getting users:', error);
@@ -557,8 +601,14 @@ ipcMain.handle('link-image-user', async (event, data) => {
 
     const { userId, imagePath } = data;
 
+    // Convert absolute path to relative path for storage
+    const importsPath = path.join(projectPath, 'imports');
+    const relativeImagePath = path.isAbsolute(imagePath)
+      ? path.basename(imagePath)
+      : imagePath;
+
     // Check if image is already assigned to other users
-    const usersWithImage = await dbManager.getUsersByImagePath(imagePath);
+    const usersWithImage = await dbManager.getUsersByImagePath(relativeImagePath);
     if (usersWithImage.length > 0) {
       // Check if it's assigned to a different user
       const otherUsers = usersWithImage.filter(u => u.id !== userId);
@@ -578,11 +628,14 @@ ipcMain.handle('link-image-user', async (event, data) => {
     // Check if user already has an image
     const user = await dbManager.getUserById(userId);
     if (user.image_path) {
-      // Return confirmation needed
-      return { success: false, needsConfirmation: true, currentImage: user.image_path };
+      // Return confirmation needed (convert to absolute for frontend display)
+      const absolutePath = path.isAbsolute(user.image_path)
+        ? user.image_path
+        : path.join(importsPath, user.image_path);
+      return { success: false, needsConfirmation: true, currentImage: absolutePath };
     }
 
-    await dbManager.linkImageToUser(userId, imagePath);
+    await dbManager.linkImageToUser(userId, relativeImagePath);
     return { success: true };
   } catch (error) {
     console.error('Error linking image:', error);
@@ -598,7 +651,13 @@ ipcMain.handle('confirm-link-image', async (event, data) => {
     }
 
     const { userId, imagePath } = data;
-    await dbManager.linkImageToUser(userId, imagePath);
+
+    // Convert absolute path to relative path for storage
+    const relativeImagePath = path.isAbsolute(imagePath)
+      ? path.basename(imagePath)
+      : imagePath;
+
+    await dbManager.linkImageToUser(userId, relativeImagePath);
     return { success: true };
   } catch (error) {
     console.error('Error confirming link:', error);
@@ -617,6 +676,123 @@ ipcMain.handle('unlink-image-user', async (event, userId) => {
     return { success: true };
   } catch (error) {
     console.error('Error unlinking image:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Move image to ingest folder
+ipcMain.handle('move-image-to-ingest', async (event, sourceImagePath) => {
+  try {
+    if (!projectPath) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    const ingestPath = path.join(projectPath, 'ingest');
+    const fileName = path.basename(sourceImagePath);
+    let destPath = path.join(ingestPath, fileName);
+
+    // Check if file already exists in ingest
+    if (fs.existsSync(destPath)) {
+      // Generate unique filename with timestamp
+      const timestamp = Date.now();
+      const ext = path.extname(fileName);
+      const name = path.basename(fileName, ext);
+      destPath = path.join(ingestPath, `${name}_${timestamp}${ext}`);
+    }
+
+    // Copy file to ingest folder
+    fs.copyFileSync(sourceImagePath, destPath);
+    logger.info(`Image moved to ingest: ${fileName}`);
+
+    return { success: true, filename: path.basename(destPath) };
+  } catch (error) {
+    console.error('Error moving image to ingest:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Import images with ID
+ipcMain.handle('import-images-with-id', async (event, folderPath) => {
+  try {
+    if (!projectPath || !dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    logger.section('IMPORTING IMAGES WITH ID');
+    logger.info(`Import folder: ${folderPath}`);
+
+    const importsPath = path.join(projectPath, 'imports');
+
+    // Get all JPG files from the selected folder
+    const files = fs.readdirSync(folderPath).filter(file => {
+      const ext = path.extname(file).toLowerCase();
+      return ext === '.jpg' || ext === '.jpeg';
+    });
+
+    logger.info(`Found ${files.length} image files`);
+
+    const results = {
+      total: files.length,
+      linked: 0,
+      notFound: [],
+      errors: []
+    };
+
+    // Process each image
+    for (const file of files) {
+      const fileName = path.basename(file, path.extname(file));
+      const sourcePath = path.join(folderPath, file);
+
+      try {
+        // Get all users to search by NIA or document
+        const allUsers = await dbManager.getUsers({});
+
+        // Find user by NIA (students) or document (teachers/non-teaching staff)
+        const user = allUsers.find(u => u.nia === fileName || u.document === fileName);
+
+        if (user) {
+          // Copy image to imports folder
+          const destPath = path.join(importsPath, file);
+
+          // If file exists, generate unique name
+          let finalDestPath = destPath;
+          if (fs.existsSync(destPath)) {
+            const timestamp = Date.now();
+            const ext = path.extname(file);
+            const name = path.basename(file, ext);
+            finalDestPath = path.join(importsPath, `${name}_${timestamp}${ext}`);
+          }
+
+          fs.copyFileSync(sourcePath, finalDestPath);
+
+          // Link image to user
+          const relativeImagePath = path.basename(finalDestPath);
+          await dbManager.linkImageToUser(user.id, relativeImagePath);
+
+          results.linked++;
+          logger.info(`Linked ${file} to user ${user.first_name} ${user.last_name1} (ID: ${fileName})`);
+        } else {
+          results.notFound.push(fileName);
+          logger.warning(`User not found for ID: ${fileName}`);
+        }
+      } catch (error) {
+        results.errors.push({ file: fileName, error: error.message });
+        logger.error(`Error processing ${file}`, error);
+      }
+    }
+
+    logger.section('IMPORT COMPLETED');
+    logger.success(`Linked: ${results.linked}/${results.total}`);
+    if (results.notFound.length > 0) {
+      logger.warning(`Not found: ${results.notFound.length} users`);
+    }
+    if (results.errors.length > 0) {
+      logger.error(`Errors: ${results.errors.length} files`);
+    }
+
+    return { success: true, results };
+  } catch (error) {
+    logger.error('Error importing images with ID', error);
     return { success: false, error: error.message };
   }
 });
@@ -755,6 +931,21 @@ ipcMain.handle('save-captured-image', async (event, imageData) => {
 ipcMain.handle('show-open-dialog', async (event, options) => {
   const result = await dialog.showOpenDialog(mainWindow, options);
   return result;
+});
+
+// Camera handlers
+ipcMain.handle('update-available-cameras', async (event, cameras) => {
+  availableCameras = cameras;
+  // If no camera is selected yet, select the first one
+  if (!selectedCameraId && cameras.length > 0) {
+    selectedCameraId = cameras[0].deviceId;
+  }
+  createMenu();
+  return { success: true, selectedCameraId };
+});
+
+ipcMain.handle('get-selected-camera', async () => {
+  return { success: true, selectedCameraId };
 });
 
 // Helper function to format timestamp

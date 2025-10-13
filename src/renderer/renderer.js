@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeEventListeners();
   setupProgressListener();
   setupMenuListeners();
+  detectAvailableCameras();
 });
 
 // Event Listeners
@@ -72,6 +73,9 @@ function initializeEventListeners() {
       showImagePreview();
     }
   });
+
+  // Drag and drop for image preview
+  setupDragAndDrop();
 
   // Keyboard navigation for images and users
   document.addEventListener('keydown', (event) => {
@@ -620,9 +624,67 @@ function setupMenuListeners() {
     displayUsers(currentUsers, allUsers);
   });
 
+  window.electronAPI.onMenuImportImagesId(() => {
+    handleImportImagesId();
+  });
+
   window.electronAPI.onMenuExportCSV(() => {
     handleExportCSV();
   });
+}
+
+// Import images with ID
+async function handleImportImagesId() {
+  if (!projectOpen) {
+    alert('Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  const result = await window.electronAPI.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Seleccionar carpeta con imágenes (nombradas con ID)'
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const folderPath = result.filePaths[0];
+
+    showProgressModal('Importando Imágenes', 'Procesando archivos...');
+
+    const importResult = await window.electronAPI.importImagesWithId(folderPath);
+
+    closeProgressModal();
+
+    if (importResult.success) {
+      const results = importResult.results;
+      let message = `Importación completada:\n\n`;
+      message += `Total de imágenes: ${results.total}\n`;
+      message += `Enlazadas correctamente: ${results.linked}\n`;
+
+      if (results.notFound.length > 0) {
+        message += `\nUsuarios no encontrados (${results.notFound.length}):\n`;
+        message += results.notFound.slice(0, 10).join(', ');
+        if (results.notFound.length > 10) {
+          message += `\n... y ${results.notFound.length - 10} más`;
+        }
+      }
+
+      if (results.errors.length > 0) {
+        message += `\n\nErrores (${results.errors.length}):\n`;
+        message += results.errors.slice(0, 5).map(e => `${e.file}: ${e.error}`).join('\n');
+        if (results.errors.length > 5) {
+          message += `\n... y ${results.errors.length - 5} más`;
+        }
+      }
+
+      alert(message);
+
+      // Reload users and images to reflect changes
+      await loadUsers();
+      await loadImages();
+    } else {
+      alert('Error al importar imágenes: ' + importResult.error);
+    }
+  }
 }
 
 // Export CSV
@@ -661,4 +723,100 @@ async function handleExportCSV() {
       alert('Error al exportar el CSV: ' + exportResult.error);
     }
   }
+}
+
+// Detect available cameras
+async function detectAvailableCameras() {
+  try {
+    // Request camera permission to get device labels
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+    // Get all video input devices
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices
+      .filter(device => device.kind === 'videoinput')
+      .map(device => ({
+        deviceId: device.deviceId,
+        label: device.label || `Cámara ${device.deviceId.substring(0, 8)}`
+      }));
+
+    // Stop the stream immediately
+    stream.getTracks().forEach(track => track.stop());
+
+    // Send available cameras to main process
+    await window.electronAPI.updateAvailableCameras(cameras);
+  } catch (error) {
+    console.log('No se pudieron detectar las cámaras:', error);
+    // Even if camera access fails, try to get devices without labels
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices
+        .filter(device => device.kind === 'videoinput')
+        .map((device, index) => ({
+          deviceId: device.deviceId,
+          label: device.label || `Cámara ${index + 1}`
+        }));
+      await window.electronAPI.updateAvailableCameras(cameras);
+    } catch (err) {
+      console.error('Error al detectar cámaras:', err);
+    }
+  }
+}
+
+// Setup drag and drop for image preview
+function setupDragAndDrop() {
+  const imageContainer = document.querySelector('.image-container');
+
+  // Prevent default behavior for drag events
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    imageContainer.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Highlight drop area when dragging over
+  ['dragenter', 'dragover'].forEach(eventName => {
+    imageContainer.addEventListener(eventName, () => {
+      imageContainer.classList.add('drag-over');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    imageContainer.addEventListener(eventName, () => {
+      imageContainer.classList.remove('drag-over');
+    }, false);
+  });
+
+  // Handle drop
+  imageContainer.addEventListener('drop', async (e) => {
+    const files = Array.from(e.dataTransfer.files);
+
+    // Filter only image files (jpg, jpeg)
+    const imageFiles = files.filter(file => {
+      const ext = file.name.toLowerCase();
+      return ext.endsWith('.jpg') || ext.endsWith('.jpeg');
+    });
+
+    if (imageFiles.length === 0) {
+      alert('Por favor, arrastra solo archivos de imagen JPG/JPEG');
+      return;
+    }
+
+    // Process each image file
+    for (const file of imageFiles) {
+      const result = await window.electronAPI.moveImageToIngest(file.path);
+      if (!result.success) {
+        alert(`Error al mover ${file.name}: ${result.error}`);
+      }
+    }
+
+    // Show success message
+    if (imageFiles.length > 0) {
+      // Images will be detected automatically by the folder watcher
+      console.log(`${imageFiles.length} imagen(es) movida(s) a la carpeta ingest`);
+    }
+  }, false);
 }

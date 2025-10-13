@@ -271,6 +271,13 @@ body {
   margin-bottom: 20px;
   position: relative;
   overflow: hidden;
+  transition: background-color 0.2s, outline 0.2s;
+}
+
+.image-container.drag-over {
+  outline: 3px dashed #4a7cc7;
+  outline-offset: -10px;
+  background-color: rgba(74, 124, 199, 0.1);
 }
 
 .image-preview-container {

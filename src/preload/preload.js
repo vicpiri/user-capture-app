@@ -61,11 +61,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-toggle-duplicates', (event, enabled) => callback(enabled));
   },
 
+  onMenuImportImagesId: (callback) => {
+    ipcRenderer.on('menu-import-images-id', callback);
+  },
+
   onMenuExportCSV: (callback) => {
     ipcRenderer.on('menu-export-csv', callback);
   },
 
+  importImagesWithId: (folderPath) => ipcRenderer.invoke('import-images-with-id', folderPath),
   exportCSV: (folderPath, users) => ipcRenderer.invoke('export-csv', folderPath, users),
 
-  unlinkImageFromUser: (userId) => ipcRenderer.invoke('unlink-image-user', userId)
+  unlinkImageFromUser: (userId) => ipcRenderer.invoke('unlink-image-user', userId),
+
+  moveImageToIngest: (imagePath) => ipcRenderer.invoke('move-image-to-ingest', imagePath),
+
+  // Camera
+  updateAvailableCameras: (cameras) => ipcRenderer.invoke('update-available-cameras', cameras),
+  getSelectedCamera: () => ipcRenderer.invoke('get-selected-camera'),
+  onChangeCamera: (callback) => {
+    ipcRenderer.on('change-camera', (event, cameraId) => callback(cameraId));
+  }
 });

@@ -35,6 +35,7 @@
       width: 100%;
       height: 100%;
       object-fit: contain;
+      transition: transform 0.3s ease;
     }
 
     .camera-placeholder {
@@ -89,6 +90,24 @@
       cursor: not-allowed;
     }
 
+    .btn-icon {
+      background-color: #3a3f4e;
+      color: #e0e0e0;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .btn-icon:hover {
+      background-color: #4a4f5e;
+    }
+
+    .rotate-control {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+    }
+
     canvas {
       display: none;
     }
@@ -96,6 +115,13 @@
 </head>
 <body>
   <div class="camera-container">
+    <div class="rotate-control">
+      <button id="rotate-btn" class="btn btn-icon" title="Rotar cámara 90°">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+      </button>
+    </div>
     <video id="camera-preview" autoplay></video>
     <canvas id="capture-canvas"></canvas>
   </div>
