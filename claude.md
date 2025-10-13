@@ -147,3 +147,5 @@ Proyecto inicializado con estructura base. Pendiente implementación de funciona
         - edad: para alumnos mayor.jpg si es mayor de edad (18 años), si no menor.jpg. Para el resto profesor.jpg
         - fechaNacimiento
         - nombreApellidos: nombre + apellido1 + apellido2
+## Política de control de versiones.
+- Cada vez que una funcionalidad se de por comprobada y finalizada, se hará un commit en git con la descripción de la funcionalidad en inglés.

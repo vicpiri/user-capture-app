@@ -22,6 +22,7 @@ if (process.argv.includes('--dev')) {
 
 let mainWindow;
 let cameraWindow = null;
+let imageGridWindow = null;
 let dbManager;
 let folderWatcher;
 let imageManager;
@@ -95,6 +96,12 @@ function createMenu() {
               click: () => {
                 mainWindow.webContents.send('menu-export-images');
               }
+            },
+            {
+              label: 'Imágenes como nombre y apellidos',
+              click: () => {
+                mainWindow.webContents.send('menu-export-images-name');
+              }
             }
           ]
         },
@@ -135,6 +142,14 @@ function createMenu() {
           click: (menuItem) => {
             showDuplicatesOnly = menuItem.checked;
             mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Cuadro de imágenes',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => {
+            openImageGridWindow();
           }
         }
       ]
@@ -322,6 +337,58 @@ function closeCameraWindow() {
   if (cameraWindow) {
     cameraWindow.close();
     cameraWindow = null;
+  }
+}
+
+function createImageGridWindow() {
+  imageGridWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    title: 'Cuadro de Imágenes',
+    icon: path.join(__dirname, 'assets/icons/icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'src/preload/preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    backgroundColor: '#1a1f2e',
+    show: false,
+    autoHideMenuBar: true
+  });
+
+  imageGridWindow.loadFile('src/renderer/image-grid.html');
+
+  imageGridWindow.once('ready-to-show', () => {
+    imageGridWindow.setMenuBarVisibility(false);
+    imageGridWindow.show();
+  });
+
+  imageGridWindow.on('closed', () => {
+    imageGridWindow = null;
+  });
+
+  // Open DevTools in development
+  if (process.argv.includes('--dev')) {
+    imageGridWindow.webContents.openDevTools();
+  }
+}
+
+function openImageGridWindow() {
+  if (!dbManager) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Proyecto no abierto',
+      message: 'Debes abrir o crear un proyecto primero',
+      buttons: ['Aceptar']
+    });
+    return;
+  }
+
+  if (!imageGridWindow) {
+    createImageGridWindow();
+  } else {
+    imageGridWindow.show();
+    imageGridWindow.focus();
   }
 }
 
@@ -1092,6 +1159,218 @@ ipcMain.handle('export-images', async (event, folderPath, users, options) => {
   }
 });
 
+// Export images with name format (Apellido1 Apellido2, Nombre)
+ipcMain.handle('export-images-name', async (event, folderPath, users, options) => {
+  try {
+    if (!dbManager || !projectPath) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    // Default options
+    const exportOptions = {
+      copyOriginal: options?.copyOriginal ?? true,
+      resizeEnabled: options?.resizeEnabled ?? false,
+      boxSize: options?.boxSize ?? 800,
+      maxSizeKB: options?.maxSizeKB ?? 500
+    };
+
+    logger.section('EXPORTING IMAGES BY NAME');
+    logger.info(`Export folder: ${folderPath}`);
+    logger.info(`Export options:`, exportOptions);
+
+    const importsPath = path.join(projectPath, 'imports');
+
+    // Use provided users or get all users if not provided
+    if (!users || users.length === 0) {
+      users = await dbManager.getUsers({});
+    }
+
+    // Filter only users with images
+    const usersWithImages = users.filter(user => user.image_path);
+
+    logger.info(`Found ${usersWithImages.length} users with images`);
+
+    // Group users by group_code
+    const usersByGroup = {};
+    for (const user of usersWithImages) {
+      if (!user.group_code) {
+        logger.warning(`User ${user.first_name} ${user.last_name1} has no group_code`);
+        continue;
+      }
+      if (!usersByGroup[user.group_code]) {
+        usersByGroup[user.group_code] = [];
+      }
+      usersByGroup[user.group_code].push(user);
+    }
+
+    const results = {
+      total: usersWithImages.length,
+      exported: 0,
+      errors: [],
+      groupsFolders: Object.keys(usersByGroup).length
+    };
+
+    logger.info(`Exporting images for ${results.groupsFolders} groups`);
+
+    // Track progress
+    let processedCount = 0;
+
+    // Export each group
+    for (const [groupCode, groupUsers] of Object.entries(usersByGroup)) {
+      try {
+        // Create group folder
+        const groupFolderPath = path.join(folderPath, groupCode);
+        if (!fs.existsSync(groupFolderPath)) {
+          fs.mkdirSync(groupFolderPath, { recursive: true });
+          logger.info(`Created folder for group: ${groupCode}`);
+        }
+
+        // Export each user's image in this group
+        for (const user of groupUsers) {
+          try {
+            // Format name as "Apellido1 Apellido2, Nombre"
+            const apellido1 = capitalizeWords(user.last_name1 || '');
+            const apellido2 = capitalizeWords(user.last_name2 || '');
+            const nombre = capitalizeWords(user.first_name || '');
+
+            let apellidos = apellido1;
+            if (apellido2) {
+              apellidos += ` ${apellido2}`;
+            }
+
+            const fullName = `${apellidos}, ${nombre}`;
+
+            if (!fullName.trim() || fullName.trim() === ',') {
+              results.errors.push({
+                user: `${user.first_name} ${user.last_name1}`,
+                error: 'Usuario sin nombre completo'
+              });
+              processedCount++;
+              continue;
+            }
+
+            // Get source image path (relative path in DB)
+            const sourceImagePath = path.isAbsolute(user.image_path)
+              ? user.image_path
+              : path.join(importsPath, user.image_path);
+
+            // Check if source image exists
+            if (!fs.existsSync(sourceImagePath)) {
+              results.errors.push({
+                user: `${user.first_name} ${user.last_name1}`,
+                error: 'Imagen no encontrada'
+              });
+              processedCount++;
+              continue;
+            }
+
+            // Create destination filename with full name in group folder
+            const ext = path.extname(sourceImagePath);
+            const destFileName = `${fullName}${ext}`;
+            const destPath = path.join(groupFolderPath, destFileName);
+
+            // Process image based on options
+            if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
+              // Copy original but correct orientation using sharp
+              await sharp(sourceImagePath)
+                .rotate() // Auto-rotate based on EXIF orientation
+                .toFile(destPath);
+            } else if (exportOptions.resizeEnabled) {
+              // Use sharp to process the image
+              let sharpInstance = sharp(sourceImagePath)
+                .rotate(); // Auto-rotate based on EXIF orientation
+
+              // Get image metadata (after rotation)
+              const metadata = await sharpInstance.metadata();
+
+              // Resize if image is larger than boxSize
+              if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
+                sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+                  fit: 'inside',
+                  withoutEnlargement: true
+                });
+              }
+
+              // Convert to JPEG and apply quality compression
+              // Start with quality 90 and reduce if needed
+              let quality = 90;
+              let outputBuffer;
+              const maxSizeBytes = exportOptions.maxSizeKB * 1024;
+
+              // Try to compress to target size
+              do {
+                outputBuffer = await sharpInstance
+                  .jpeg({ quality })
+                  .toBuffer();
+
+                if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
+                  break;
+                }
+
+                // Reduce quality and retry
+                quality -= 10;
+                sharpInstance = sharp(sourceImagePath)
+                  .rotate(); // Auto-rotate based on EXIF orientation
+                if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
+                  sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+                    fit: 'inside',
+                    withoutEnlargement: true
+                  });
+                }
+              } while (quality > 0);
+
+              // Write the processed image
+              fs.writeFileSync(destPath, outputBuffer);
+
+              logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length/1024)}KB`);
+            }
+
+            results.exported++;
+            processedCount++;
+            logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
+
+            // Send progress update
+            const percentage = Math.round((processedCount / results.total) * 100);
+            mainWindow.webContents.send('progress', {
+              percentage,
+              message: 'Exportando imágenes...',
+              details: `${processedCount} de ${results.total} imágenes procesadas`
+            });
+          } catch (error) {
+            results.errors.push({
+              user: `${user.first_name} ${user.last_name1}`,
+              error: error.message
+            });
+            processedCount++;
+            logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
+          }
+        }
+      } catch (error) {
+        logger.error(`Error creating folder for group ${groupCode}`, error);
+        // Add all users in this group to errors
+        groupUsers.forEach(user => {
+          results.errors.push({
+            user: `${user.first_name} ${user.last_name1}`,
+            error: `Error al crear carpeta del grupo: ${error.message}`
+          });
+          processedCount++;
+        });
+      }
+    }
+
+    logger.section('EXPORT COMPLETED');
+    logger.success(`Exported: ${results.exported}/${results.total} images in ${results.groupsFolders} group folders`);
+    if (results.errors.length > 0) {
+      logger.error(`Errors: ${results.errors.length} images`);
+    }
+
+    return { success: true, results };
+  } catch (error) {
+    logger.error('Error exporting images by name', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Get images from imports folder
 ipcMain.handle('get-images', async () => {
   try {
@@ -1169,6 +1448,14 @@ function formatTimestamp(date) {
   const seconds = String(date.getSeconds()).padStart(2, '0');
 
   return `${year}${month}${day}${hours}${minutes}${seconds}`;
+}
+
+// Helper function to capitalize first letter of each word
+function capitalizeWords(str) {
+  if (!str) return '';
+  return str.toLowerCase().split(' ').map(word => {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(' ');
 }
 
 // Recent projects management

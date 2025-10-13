@@ -635,6 +635,10 @@ function setupMenuListeners() {
   window.electronAPI.onMenuExportImages(() => {
     handleExportImages();
   });
+
+  window.electronAPI.onMenuExportImagesName(() => {
+    handleExportImagesName();
+  });
 }
 
 // Import images with ID
@@ -763,6 +767,40 @@ async function handleExportImages() {
   }
 }
 
+// Export images by name
+async function handleExportImagesName() {
+  if (!projectOpen) {
+    alert('Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  // Get users to export based on current view (only those with images)
+  let usersToExport = currentUsers;
+
+  // If showing duplicates only, get all duplicates from database
+  if (showDuplicatesOnly && allUsers) {
+    const imageCount = {};
+    allUsers.forEach(user => {
+      if (user.image_path) {
+        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
+      }
+    });
+    usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
+  }
+
+  const result = await window.electronAPI.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Seleccionar carpeta para exportar las imágenes'
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const folderPath = result.filePaths[0];
+
+    // Show export options modal
+    showExportOptionsModalName(folderPath, usersToExport);
+  }
+}
+
 // Show export options modal
 function showExportOptionsModal(folderPath, usersToExport) {
   const exportOptionsModal = document.getElementById('export-options-modal');
@@ -794,6 +832,59 @@ function showExportOptionsModal(folderPath, usersToExport) {
 
     // Perform export
     const exportResult = await window.electronAPI.exportImages(folderPath, usersToExport, options);
+
+    closeProgressModal();
+
+    // Only show error if export failed
+    if (!exportResult.success) {
+      alert('Error al exportar imágenes: ' + exportResult.error);
+    }
+  });
+
+  // Cancel button handler
+  newExportCancelBtn.addEventListener('click', () => {
+    exportOptionsModal.classList.remove('show');
+  });
+
+  // Reset to default state (copy original selected)
+  document.getElementById('export-copy-original').checked = true;
+  document.getElementById('export-resize-enabled').checked = false;
+
+  // Show modal
+  exportOptionsModal.classList.add('show');
+}
+
+// Show export options modal for name-based export
+function showExportOptionsModalName(folderPath, usersToExport) {
+  const exportOptionsModal = document.getElementById('export-options-modal');
+  const exportConfirmBtn = document.getElementById('export-confirm-btn');
+  const exportCancelBtn = document.getElementById('export-cancel-btn');
+
+  // Setup event listeners (remove old ones first)
+  const newExportConfirmBtn = exportConfirmBtn.cloneNode(true);
+  exportConfirmBtn.parentNode.replaceChild(newExportConfirmBtn, exportConfirmBtn);
+
+  const newExportCancelBtn = exportCancelBtn.cloneNode(true);
+  exportCancelBtn.parentNode.replaceChild(newExportCancelBtn, exportCancelBtn);
+
+  // Confirm button handler
+  newExportConfirmBtn.addEventListener('click', async () => {
+    // Collect export options
+    const options = {
+      copyOriginal: document.getElementById('export-copy-original').checked,
+      resizeEnabled: document.getElementById('export-resize-enabled').checked,
+      boxSize: parseInt(document.getElementById('export-box-size').value),
+      maxSizeKB: parseInt(document.getElementById('export-max-size').value)
+    };
+
+    // Close modal
+    exportOptionsModal.classList.remove('show');
+
+    // Show progress modal
+    showProgressModal('Exportando Imágenes', 'Procesando archivos...');
+
+    // Perform export
+    const exportResult = await window.electronAPI.exportImagesName(folderPath, usersToExport, options);
 
     closeProgressModal();
 
