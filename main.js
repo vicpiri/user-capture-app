@@ -88,6 +88,12 @@ function createMenu() {
               click: () => {
                 mainWindow.webContents.send('menu-export-csv');
               }
+            },
+            {
+              label: 'Imágenes como ID',
+              click: () => {
+                mainWindow.webContents.send('menu-export-images');
+              }
             }
           ]
         },
@@ -877,6 +883,132 @@ ipcMain.handle('export-csv', async (event, folderPath, users) => {
     return { success: true, filename };
   } catch (error) {
     console.error('Error exporting CSV:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Export images
+ipcMain.handle('export-images', async (event, folderPath, users) => {
+  try {
+    if (!dbManager || !projectPath) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    logger.section('EXPORTING IMAGES');
+    logger.info(`Export folder: ${folderPath}`);
+
+    const importsPath = path.join(projectPath, 'imports');
+
+    // Use provided users or get all users if not provided
+    if (!users || users.length === 0) {
+      users = await dbManager.getUsers({});
+    }
+
+    // Filter only users with images
+    const usersWithImages = users.filter(user => user.image_path);
+
+    logger.info(`Found ${usersWithImages.length} users with images`);
+
+    // Group users by group_code
+    const usersByGroup = {};
+    for (const user of usersWithImages) {
+      if (!user.group_code) {
+        logger.warning(`User ${user.first_name} ${user.last_name1} has no group_code`);
+        continue;
+      }
+      if (!usersByGroup[user.group_code]) {
+        usersByGroup[user.group_code] = [];
+      }
+      usersByGroup[user.group_code].push(user);
+    }
+
+    const results = {
+      total: usersWithImages.length,
+      exported: 0,
+      errors: [],
+      groupsFolders: Object.keys(usersByGroup).length
+    };
+
+    logger.info(`Exporting images for ${results.groupsFolders} groups`);
+
+    // Export each group
+    for (const [groupCode, groupUsers] of Object.entries(usersByGroup)) {
+      try {
+        // Create group folder
+        const groupFolderPath = path.join(folderPath, groupCode);
+        if (!fs.existsSync(groupFolderPath)) {
+          fs.mkdirSync(groupFolderPath, { recursive: true });
+          logger.info(`Created folder for group: ${groupCode}`);
+        }
+
+        // Export each user's image in this group
+        for (const user of groupUsers) {
+          try {
+            // Determine the ID to use for filename: NIA for students, document for others
+            const isStudent = user.type === 'student';
+            const userId = isStudent ? user.nia : user.document;
+
+            if (!userId) {
+              results.errors.push({
+                user: `${user.first_name} ${user.last_name1}`,
+                error: 'Usuario sin identificador (NIA/DNI)'
+              });
+              continue;
+            }
+
+            // Get source image path (relative path in DB)
+            const sourceImagePath = path.isAbsolute(user.image_path)
+              ? user.image_path
+              : path.join(importsPath, user.image_path);
+
+            // Check if source image exists
+            if (!fs.existsSync(sourceImagePath)) {
+              results.errors.push({
+                user: `${user.first_name} ${user.last_name1}`,
+                error: 'Imagen no encontrada'
+              });
+              continue;
+            }
+
+            // Create destination filename with user ID in group folder
+            const ext = path.extname(sourceImagePath);
+            const destFileName = `${userId}${ext}`;
+            const destPath = path.join(groupFolderPath, destFileName);
+
+            // Copy image to export folder
+            fs.copyFileSync(sourceImagePath, destPath);
+
+            results.exported++;
+            logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
+          } catch (error) {
+            results.errors.push({
+              user: `${user.first_name} ${user.last_name1}`,
+              error: error.message
+            });
+            logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
+          }
+        }
+      } catch (error) {
+        logger.error(`Error creating folder for group ${groupCode}`, error);
+        // Add all users in this group to errors
+        groupUsers.forEach(user => {
+          results.errors.push({
+            user: `${user.first_name} ${user.last_name1}`,
+            error: `Error al crear carpeta del grupo: ${error.message}`
+          });
+        });
+      }
+    }
+
+    logger.section('EXPORT COMPLETED');
+    logger.success(`Exported: ${results.exported}/${results.total} images in ${results.groupsFolders} group folders`);
+    if (results.errors.length > 0) {
+      logger.error(`Errors: ${results.errors.length} images`);
+    }
+
+    return { success: true, results };
+  } catch (error) {
+    logger.error('Error exporting images', error);
     return { success: false, error: error.message };
   }
 });

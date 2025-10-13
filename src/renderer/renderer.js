@@ -631,6 +631,10 @@ function setupMenuListeners() {
   window.electronAPI.onMenuExportCSV(() => {
     handleExportCSV();
   });
+
+  window.electronAPI.onMenuExportImages(() => {
+    handleExportImages();
+  });
 }
 
 // Import images with ID
@@ -721,6 +725,63 @@ async function handleExportCSV() {
       alert(`CSV exportado correctamente: ${exportResult.filename}\n${usersToExport.length} usuarios exportados.`);
     } else {
       alert('Error al exportar el CSV: ' + exportResult.error);
+    }
+  }
+}
+
+// Export images
+async function handleExportImages() {
+  if (!projectOpen) {
+    alert('Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  // Get users to export based on current view (only those with images)
+  let usersToExport = currentUsers;
+
+  // If showing duplicates only, get all duplicates from database
+  if (showDuplicatesOnly && allUsers) {
+    const imageCount = {};
+    allUsers.forEach(user => {
+      if (user.image_path) {
+        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
+      }
+    });
+    usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
+  }
+
+  const result = await window.electronAPI.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Seleccionar carpeta para exportar las imágenes'
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const folderPath = result.filePaths[0];
+
+    showProgressModal('Exportando Imágenes', 'Copiando archivos...');
+
+    const exportResult = await window.electronAPI.exportImages(folderPath, usersToExport);
+
+    closeProgressModal();
+
+    if (exportResult.success) {
+      const results = exportResult.results;
+      let message = `Exportación completada:\n\n`;
+      message += `Total de usuarios con imágenes: ${results.total}\n`;
+      message += `Carpetas de grupos creadas: ${results.groupsFolders}\n`;
+      message += `Imágenes exportadas: ${results.exported}\n`;
+
+      if (results.errors.length > 0) {
+        message += `\n\nErrores (${results.errors.length}):\n`;
+        message += results.errors.slice(0, 5).map(e => `${e.user}: ${e.error}`).join('\n');
+        if (results.errors.length > 5) {
+          message += `\n... y ${results.errors.length - 5} más`;
+        }
+      }
+
+      alert(message);
+    } else {
+      alert('Error al exportar imágenes: ' + exportResult.error);
     }
   }
 }
