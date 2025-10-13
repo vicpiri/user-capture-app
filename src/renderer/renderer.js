@@ -73,23 +73,32 @@ function initializeEventListeners() {
     }
   });
 
-  // Keyboard navigation for images
+  // Keyboard navigation for images and users
   document.addEventListener('keydown', (event) => {
-    // Only navigate if there are images and no modal is open
-    if (currentImages.length === 0) return;
+    // Don't handle keyboard events if a modal is open
     if (newProjectModal.classList.contains('show') ||
         confirmModal.classList.contains('show') ||
         progressModal.classList.contains('show')) return;
 
-    // Left arrow key
-    if (event.key === 'ArrowLeft') {
+    // Left arrow key - previous image
+    if (event.key === 'ArrowLeft' && currentImages.length > 0) {
       event.preventDefault();
       navigateImages(-1);
     }
-    // Right arrow key
-    else if (event.key === 'ArrowRight') {
+    // Right arrow key - next image
+    else if (event.key === 'ArrowRight' && currentImages.length > 0) {
       event.preventDefault();
       navigateImages(1);
+    }
+    // Up arrow key - previous user
+    else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      navigateUsers(-1);
+    }
+    // Down arrow key - next user
+    else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      navigateUsers(1);
     }
   });
 }
@@ -371,6 +380,57 @@ function navigateImages(direction) {
   }
 
   currentImage.src = `file://${currentImages[currentImageIndex]}`;
+}
+
+function navigateUsers(direction) {
+  // Get the currently displayed users in the table
+  const userRows = Array.from(document.querySelectorAll('.user-table tbody tr'));
+
+  if (userRows.length === 0) return;
+
+  // Find the currently selected row
+  let currentIndex = userRows.findIndex(row => row.classList.contains('selected'));
+
+  // If no row is selected, select the first one
+  if (currentIndex === -1) {
+    currentIndex = 0;
+  } else {
+    // Move to the next/previous user
+    currentIndex += direction;
+
+    // Wrap around
+    if (currentIndex < 0) {
+      currentIndex = userRows.length - 1;
+    } else if (currentIndex >= userRows.length) {
+      currentIndex = 0;
+    }
+  }
+
+  // Get the user data from the row
+  const selectedRow = userRows[currentIndex];
+  const userId = parseInt(selectedRow.dataset.userId);
+
+  // Find the user in the displayed users list
+  const displayedUsers = showDuplicatesOnly && allUsers
+    ? allUsers.filter(user => {
+        const imageCount = {};
+        allUsers.forEach(u => {
+          if (u.image_path) {
+            imageCount[u.image_path] = (imageCount[u.image_path] || 0) + 1;
+          }
+        });
+        return user.image_path && imageCount[user.image_path] > 1;
+      })
+    : currentUsers;
+
+  const user = displayedUsers.find(u => u.id === userId);
+
+  if (user) {
+    selectUserRow(selectedRow, user);
+
+    // Scroll the row into view if it's not visible
+    selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 // Link image to user
