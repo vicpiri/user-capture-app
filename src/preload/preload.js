@@ -75,7 +75,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   importImagesWithId: (folderPath) => ipcRenderer.invoke('import-images-with-id', folderPath),
   exportCSV: (folderPath, users) => ipcRenderer.invoke('export-csv', folderPath, users),
-  exportImages: (folderPath, users) => ipcRenderer.invoke('export-images', folderPath, users),
+  exportImages: (folderPath, users, options) => ipcRenderer.invoke('export-images', folderPath, users, options),
 
   unlinkImageFromUser: (userId) => ipcRenderer.invoke('unlink-image-user', userId),
 

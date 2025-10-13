@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 const DatabaseManager = require('./src/main/database');
 const XMLParser = require('./src/main/xmlParser');
 const FolderWatcher = require('./src/main/folderWatcher');
@@ -888,14 +889,23 @@ ipcMain.handle('export-csv', async (event, folderPath, users) => {
 });
 
 // Export images
-ipcMain.handle('export-images', async (event, folderPath, users) => {
+ipcMain.handle('export-images', async (event, folderPath, users, options) => {
   try {
     if (!dbManager || !projectPath) {
       throw new Error('No hay ningún proyecto abierto');
     }
 
+    // Default options
+    const exportOptions = {
+      copyOriginal: options?.copyOriginal ?? true,
+      resizeEnabled: options?.resizeEnabled ?? false,
+      boxSize: options?.boxSize ?? 800,
+      maxSizeKB: options?.maxSizeKB ?? 500
+    };
+
     logger.section('EXPORTING IMAGES');
     logger.info(`Export folder: ${folderPath}`);
+    logger.info(`Export options:`, exportOptions);
 
     const importsPath = path.join(projectPath, 'imports');
 
@@ -931,6 +941,9 @@ ipcMain.handle('export-images', async (event, folderPath, users) => {
 
     logger.info(`Exporting images for ${results.groupsFolders} groups`);
 
+    // Track progress
+    let processedCount = 0;
+
     // Export each group
     for (const [groupCode, groupUsers] of Object.entries(usersByGroup)) {
       try {
@@ -953,6 +966,7 @@ ipcMain.handle('export-images', async (event, folderPath, users) => {
                 user: `${user.first_name} ${user.last_name1}`,
                 error: 'Usuario sin identificador (NIA/DNI)'
               });
+              processedCount++;
               continue;
             }
 
@@ -967,6 +981,7 @@ ipcMain.handle('export-images', async (event, folderPath, users) => {
                 user: `${user.first_name} ${user.last_name1}`,
                 error: 'Imagen no encontrada'
               });
+              processedCount++;
               continue;
             }
 
@@ -975,16 +990,79 @@ ipcMain.handle('export-images', async (event, folderPath, users) => {
             const destFileName = `${userId}${ext}`;
             const destPath = path.join(groupFolderPath, destFileName);
 
-            // Copy image to export folder
-            fs.copyFileSync(sourceImagePath, destPath);
+            // Process image based on options
+            if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
+              // Copy original but correct orientation using sharp
+              await sharp(sourceImagePath)
+                .rotate() // Auto-rotate based on EXIF orientation
+                .toFile(destPath);
+            } else if (exportOptions.resizeEnabled) {
+              // Use sharp to process the image
+              let sharpInstance = sharp(sourceImagePath)
+                .rotate(); // Auto-rotate based on EXIF orientation
+
+              // Get image metadata (after rotation)
+              const metadata = await sharpInstance.metadata();
+
+              // Resize if image is larger than boxSize
+              if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
+                sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+                  fit: 'inside',
+                  withoutEnlargement: true
+                });
+              }
+
+              // Convert to JPEG and apply quality compression
+              // Start with quality 90 and reduce if needed
+              let quality = 90;
+              let outputBuffer;
+              const maxSizeBytes = exportOptions.maxSizeKB * 1024;
+
+              // Try to compress to target size
+              do {
+                outputBuffer = await sharpInstance
+                  .jpeg({ quality })
+                  .toBuffer();
+
+                if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
+                  break;
+                }
+
+                // Reduce quality and retry
+                quality -= 10;
+                sharpInstance = sharp(sourceImagePath)
+                  .rotate(); // Auto-rotate based on EXIF orientation
+                if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
+                  sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+                    fit: 'inside',
+                    withoutEnlargement: true
+                  });
+                }
+              } while (quality > 0);
+
+              // Write the processed image
+              fs.writeFileSync(destPath, outputBuffer);
+
+              logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length/1024)}KB`);
+            }
 
             results.exported++;
+            processedCount++;
             logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
+
+            // Send progress update
+            const percentage = Math.round((processedCount / results.total) * 100);
+            mainWindow.webContents.send('progress', {
+              percentage,
+              message: 'Exportando imágenes...',
+              details: `${processedCount} de ${results.total} imágenes procesadas`
+            });
           } catch (error) {
             results.errors.push({
               user: `${user.first_name} ${user.last_name1}`,
               error: error.message
             });
+            processedCount++;
             logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
           }
         }
@@ -996,6 +1074,7 @@ ipcMain.handle('export-images', async (event, folderPath, users) => {
             user: `${user.first_name} ${user.last_name1}`,
             error: `Error al crear carpeta del grupo: ${error.message}`
           });
+          processedCount++;
         });
       }
     }

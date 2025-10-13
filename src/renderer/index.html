@@ -179,6 +179,43 @@
     </div>
   </div>
 
+  <!-- Export Options Modal -->
+  <div id="export-options-modal" class="modal">
+    <div class="modal-content">
+      <h2>Opciones de Exportación</h2>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="radio" name="export-mode" id="export-copy-original" value="copy" checked>
+          <span>Copiar imagen original</span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="radio" name="export-mode" id="export-resize-enabled" value="resize">
+          <span>Redimensionar imágenes</span>
+        </label>
+      </div>
+
+      <div id="resize-options" style="margin-left: 28px; margin-top: 12px;">
+        <div class="form-group">
+          <label>Tamaño del cuadro (píxeles):</label>
+          <input type="number" id="export-box-size" value="800" min="100" max="4000" step="50">
+        </div>
+        <div class="form-group">
+          <label>Tamaño máximo de archivo (KB):</label>
+          <input type="number" id="export-max-size" value="500" min="50" max="5000" step="50">
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="export-confirm-btn" class="btn btn-primary">Exportar</button>
+        <button id="export-cancel-btn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="renderer.js"></script>
 </body>
 </html>

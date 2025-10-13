@@ -45,7 +45,8 @@ body {
   user-select: none;
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type="checkbox"],
+.checkbox-label input[type="radio"] {
   width: 16px;
   height: 16px;
   cursor: pointer;

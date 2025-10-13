@@ -758,32 +758,62 @@ async function handleExportImages() {
   if (!result.canceled && result.filePaths.length > 0) {
     const folderPath = result.filePaths[0];
 
-    showProgressModal('Exportando Imágenes', 'Copiando archivos...');
+    // Show export options modal
+    showExportOptionsModal(folderPath, usersToExport);
+  }
+}
 
-    const exportResult = await window.electronAPI.exportImages(folderPath, usersToExport);
+// Show export options modal
+function showExportOptionsModal(folderPath, usersToExport) {
+  const exportOptionsModal = document.getElementById('export-options-modal');
+  const exportConfirmBtn = document.getElementById('export-confirm-btn');
+  const exportCancelBtn = document.getElementById('export-cancel-btn');
+
+  // Setup event listeners (remove old ones first)
+  const newExportConfirmBtn = exportConfirmBtn.cloneNode(true);
+  exportConfirmBtn.parentNode.replaceChild(newExportConfirmBtn, exportConfirmBtn);
+
+  const newExportCancelBtn = exportCancelBtn.cloneNode(true);
+  exportCancelBtn.parentNode.replaceChild(newExportCancelBtn, exportCancelBtn);
+
+  // Confirm button handler
+  newExportConfirmBtn.addEventListener('click', async () => {
+    // Collect export options
+    const options = {
+      copyOriginal: document.getElementById('export-copy-original').checked,
+      resizeEnabled: document.getElementById('export-resize-enabled').checked,
+      boxSize: parseInt(document.getElementById('export-box-size').value),
+      maxSizeKB: parseInt(document.getElementById('export-max-size').value)
+    };
+
+    // Close modal
+    exportOptionsModal.classList.remove('show');
+
+    // Show progress modal
+    showProgressModal('Exportando Imágenes', 'Procesando archivos...');
+
+    // Perform export
+    const exportResult = await window.electronAPI.exportImages(folderPath, usersToExport, options);
 
     closeProgressModal();
 
-    if (exportResult.success) {
-      const results = exportResult.results;
-      let message = `Exportación completada:\n\n`;
-      message += `Total de usuarios con imágenes: ${results.total}\n`;
-      message += `Carpetas de grupos creadas: ${results.groupsFolders}\n`;
-      message += `Imágenes exportadas: ${results.exported}\n`;
-
-      if (results.errors.length > 0) {
-        message += `\n\nErrores (${results.errors.length}):\n`;
-        message += results.errors.slice(0, 5).map(e => `${e.user}: ${e.error}`).join('\n');
-        if (results.errors.length > 5) {
-          message += `\n... y ${results.errors.length - 5} más`;
-        }
-      }
-
-      alert(message);
-    } else {
+    // Only show error if export failed
+    if (!exportResult.success) {
       alert('Error al exportar imágenes: ' + exportResult.error);
     }
-  }
+  });
+
+  // Cancel button handler
+  newExportCancelBtn.addEventListener('click', () => {
+    exportOptionsModal.classList.remove('show');
+  });
+
+  // Reset to default state (copy original selected)
+  document.getElementById('export-copy-original').checked = true;
+  document.getElementById('export-resize-enabled').checked = false;
+
+  // Show modal
+  exportOptionsModal.classList.add('show');
 }
 
 // Detect available cameras
