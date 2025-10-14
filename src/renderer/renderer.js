@@ -328,8 +328,8 @@ async function clearSearch() {
   await filterUsers();
 }
 
-// Filter users
-async function filterUsers() {
+// Get current filters
+function getCurrentFilters() {
   const searchTerm = searchInput.value.trim();
   const selectedGroup = groupFilter.value;
 
@@ -343,6 +343,12 @@ async function filterUsers() {
     filters.group = selectedGroup;
   }
 
+  return filters;
+}
+
+// Filter users
+async function filterUsers() {
+  const filters = getCurrentFilters();
   await loadUsers(filters);
 }
 
@@ -457,7 +463,7 @@ async function handleLinkImage() {
   });
 
   if (result.success) {
-    await loadUsers();
+    await loadUsers(getCurrentFilters());
   } else if (result.imageAlreadyAssigned) {
     // Image is already assigned to other user(s)
     const userList = result.assignedUsers.map(u => `${u.name} (${u.nia || 'Sin NIA'})`).join(', ');
@@ -470,7 +476,7 @@ async function handleLinkImage() {
       });
 
       if (confirmResult.success) {
-        await loadUsers();
+        await loadUsers(getCurrentFilters());
       } else {
         alert('Error al enlazar la imagen: ' + confirmResult.error);
       }
@@ -485,7 +491,7 @@ async function handleLinkImage() {
         });
 
         if (confirmResult.success) {
-          await loadUsers();
+          await loadUsers(getCurrentFilters());
         } else {
           alert('Error al enlazar la imagen: ' + confirmResult.error);
         }
@@ -523,7 +529,7 @@ async function handleDeletePhoto() {
       const result = await window.electronAPI.unlinkImageFromUser(selectedUser.id);
 
       if (result.success) {
-        await loadUsers();
+        await loadUsers(getCurrentFilters());
         // Update selected user reference
         const updatedUser = currentUsers.find(u => u.id === selectedUser.id);
         if (updatedUser) {
@@ -687,7 +693,7 @@ async function handleImportImagesId() {
       alert(message);
 
       // Reload users and images to reflect changes
-      await loadUsers();
+      await loadUsers(getCurrentFilters());
       await loadImages();
     } else {
       alert('Error al importar imágenes: ' + importResult.error);
