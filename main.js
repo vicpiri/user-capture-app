@@ -114,6 +114,17 @@ function createMenu() {
       ]
     },
     {
+      label: 'Proyecto',
+      submenu: [
+        {
+          label: 'Actualizar archivo XML',
+          click: () => {
+            mainWindow.webContents.send('menu-update-xml');
+          }
+        }
+      ]
+    },
+    {
       label: 'Edición',
       submenu: [
         {
@@ -612,6 +623,360 @@ ipcMain.handle('open-project', async (event, folderPath) => {
     return { success: false, error: error.message };
   }
 });
+
+// Update XML file
+ipcMain.handle('update-xml', async (event, xmlPath) => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    logger.section('UPDATING XML FILE');
+    logger.info(`New XML file: ${xmlPath}`);
+
+    // Validate XML path
+    if (!fs.existsSync(xmlPath)) {
+      throw new Error('El archivo XML no existe');
+    }
+
+    // Progress: 10%
+    mainWindow.webContents.send('progress', {
+      percentage: 10,
+      message: 'Leyendo archivo XML...',
+      details: xmlPath
+    });
+
+    // Parse new XML file
+    const xmlParser = new XMLParser(xmlPath);
+    const newData = await xmlParser.parse();
+
+    const totalNewUsers = newData.students.length + newData.teachers.length + newData.nonTeachingStaff.length;
+    logger.success('XML parsed successfully', {
+      groups: newData.groups.length,
+      students: newData.students.length,
+      teachers: newData.teachers.length,
+      nonTeachingStaff: newData.nonTeachingStaff.length,
+      totalUsers: totalNewUsers
+    });
+
+    // Progress: 30%
+    mainWindow.webContents.send('progress', {
+      percentage: 30,
+      message: 'Comparando usuarios actuales...',
+      details: ''
+    });
+
+    // Get current users from database
+    const currentUsers = await dbManager.getUsers({});
+    logger.info(`Current users in database: ${currentUsers.length}`);
+
+    // Prepare new users map by identifier (NIA for students, document for others)
+    const newUsersMap = new Map();
+
+    // Add students (identified by NIA)
+    newData.students.forEach(student => {
+      if (student.nia) {
+        newUsersMap.set(`student_${student.nia}`, {
+          type: 'student',
+          identifier: student.nia,
+          ...student
+        });
+      }
+    });
+
+    // Add teachers (identified by document)
+    newData.teachers.forEach(teacher => {
+      if (teacher.document) {
+        newUsersMap.set(`teacher_${teacher.document}`, {
+          type: 'teacher',
+          identifier: teacher.document,
+          ...teacher
+        });
+      }
+    });
+
+    // Add non-teaching staff (identified by document)
+    newData.nonTeachingStaff.forEach(staff => {
+      if (staff.document) {
+        newUsersMap.set(`non_teaching_staff_${staff.document}`, {
+          type: 'non_teaching_staff',
+          identifier: staff.document,
+          ...staff
+        });
+      }
+    });
+
+    // Compare and categorize changes
+    const changes = {
+      toAdd: [],
+      toUpdate: [],
+      toDelete: []
+    };
+
+    // Check for users to add or update
+    for (const [key, newUser] of newUsersMap) {
+      const existingUser = currentUsers.find(u => {
+        if (u.type === 'student' && newUser.type === 'student') {
+          // Use == instead of === to handle number vs string comparison
+          return u.nia == newUser.nia;
+        } else if (u.type !== 'student' && newUser.type !== 'student') {
+          // Use == instead of === to handle number vs string comparison
+          return u.document == newUser.document;
+        }
+        return false;
+      });
+
+      if (existingUser) {
+        // User exists - always add to toUpdate (will be marked as updated or skipped in application phase)
+        changes.toUpdate.push({
+          id: existingUser.id,
+          old: existingUser,
+          new: newUser
+        });
+      } else {
+        // New user
+        changes.toAdd.push(newUser);
+      }
+    }
+
+    // Check for users to delete (not in new XML)
+    for (const currentUser of currentUsers) {
+      const key = currentUser.type === 'student'
+        ? `student_${currentUser.nia}`
+        : `${currentUser.type}_${currentUser.document}`;
+
+      if (!newUsersMap.has(key)) {
+        changes.toDelete.push(currentUser);
+      }
+    }
+
+    logger.info('Changes summary', {
+      toAdd: changes.toAdd.length,
+      toUpdate: changes.toUpdate.length,
+      toDelete: changes.toDelete.length
+    });
+
+    // Progress: 50%
+    mainWindow.webContents.send('progress', {
+      percentage: 50,
+      message: 'Análisis completado',
+      details: `${changes.toAdd.length} nuevos, ${changes.toUpdate.length} actualizados, ${changes.toDelete.length} eliminados`
+    });
+
+    // Return summary for confirmation
+    return {
+      success: true,
+      needsConfirmation: true,
+      changes: {
+        toAdd: changes.toAdd.length,
+        toUpdate: changes.toUpdate.length,
+        toDelete: changes.toDelete.length,
+        toDeleteWithImage: changes.toDelete.filter(u => u.image_path).length,
+        toDeleteWithoutImage: changes.toDelete.filter(u => !u.image_path).length
+      },
+      groups: newData.groups,
+      newUsersMap: Array.from(newUsersMap.entries()),
+      deletedUsers: changes.toDelete,
+      currentUsers: currentUsers // Pass current users to avoid reloading
+    };
+  } catch (error) {
+    logger.error('Error analyzing XML update', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Confirm and apply XML update
+ipcMain.handle('confirm-update-xml', async (event, data) => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    const { groups, newUsersMap, deletedUsers, currentUsers } = data;
+
+    logger.section('APPLYING XML UPDATE');
+
+    // Progress: 60%
+    mainWindow.webContents.send('progress', {
+      percentage: 60,
+      message: 'Actualizando grupos...',
+      details: ''
+    });
+
+    // Update groups
+    logger.info('Updating groups...');
+    await dbManager.importUsers({ groups, students: [], teachers: [], nonTeachingStaff: [] });
+    logger.success(`Groups updated: ${groups.length}`);
+
+    // Progress: 70%
+    mainWindow.webContents.send('progress', {
+      percentage: 70,
+      message: 'Procesando usuarios eliminados...',
+      details: ''
+    });
+
+    // Process deleted users
+    const deletedGroup = await ensureDeletedGroup();
+    let movedToDeleted = 0;
+    let permanentlyDeleted = 0;
+
+    for (const user of deletedUsers) {
+      if (user.image_path) {
+        // Move to Eliminados group
+        await dbManager.updateUser(user.id, { group_code: deletedGroup.code });
+        movedToDeleted++;
+        logger.info(`Moved user ${user.first_name} ${user.last_name1} to Eliminados group`);
+      } else {
+        // Delete from database
+        await dbManager.deleteUser(user.id);
+        permanentlyDeleted++;
+        logger.info(`Deleted user ${user.first_name} ${user.last_name1} from database`);
+      }
+    }
+
+    logger.success(`Processed deleted users: ${movedToDeleted} moved to Eliminados, ${permanentlyDeleted} permanently deleted`);
+
+    // Progress: 80%
+    mainWindow.webContents.send('progress', {
+      percentage: 80,
+      message: 'Actualizando y agregando usuarios...',
+      details: ''
+    });
+
+    // Process updates and additions
+    // Note: We use the original currentUsers from the update-xml handler analysis
+    logger.info(`Converting newUsersMap array to Map...`);
+    const usersToProcess = new Map(newUsersMap);
+    let updated = 0;
+    let added = 0;
+    let skipped = 0;
+
+    logger.info(`Processing ${usersToProcess.size} users from XML`);
+    logger.info(`Current users in database (from snapshot): ${currentUsers.length}`);
+
+    for (const [key, newUser] of usersToProcess) {
+      // Find if user existed in original database (before deletions)
+      const existingUser = currentUsers.find(u => {
+        if (newUser.type === 'student') {
+          // Compare with type coercion (== instead of ===) to handle number vs string
+          return u.type === 'student' && u.nia == newUser.nia;
+        } else {
+          // For teachers and non_teaching_staff, match by document and type
+          return u.type === newUser.type && u.document == newUser.document;
+        }
+      });
+
+      if (existingUser) {
+        // Check if this user actually needs updating
+        const needsUpdate =
+          existingUser.first_name !== newUser.first_name ||
+          existingUser.last_name1 !== newUser.last_name1 ||
+          existingUser.last_name2 !== newUser.last_name2 ||
+          existingUser.birth_date !== newUser.birth_date ||
+          existingUser.document !== newUser.document ||
+          existingUser.group_code !== newUser.group_code;
+
+        if (needsUpdate) {
+          // Update existing user (including those moved to Eliminados)
+          await dbManager.updateUser(existingUser.id, {
+            first_name: newUser.first_name,
+            last_name1: newUser.last_name1,
+            last_name2: newUser.last_name2,
+            birth_date: newUser.birth_date,
+            document: newUser.document,
+            group_code: newUser.group_code,
+            nia: newUser.nia
+          });
+          updated++;
+          logger.info(`Updated user ${newUser.first_name} ${newUser.last_name1} (ID: ${existingUser.id})`);
+        } else {
+          // User exists but no changes needed
+          skipped++;
+        }
+      } else {
+        // This is a completely new user - add them
+        logger.info(`Adding new user: ${newUser.first_name} ${newUser.last_name1} (type: ${newUser.type})`);
+
+        // Add new user - convert to format expected by importUsers
+        if (newUser.type === 'student') {
+          await dbManager.importUsers({
+            groups: [],
+            students: [newUser],
+            teachers: [],
+            nonTeachingStaff: []
+          });
+        } else if (newUser.type === 'teacher') {
+          await dbManager.importUsers({
+            groups: [],
+            students: [],
+            teachers: [newUser],
+            nonTeachingStaff: []
+          });
+        } else if (newUser.type === 'non_teaching_staff') {
+          await dbManager.importUsers({
+            groups: [],
+            students: [],
+            teachers: [],
+            nonTeachingStaff: [newUser]
+          });
+        }
+        added++;
+        logger.info(`Added new user ${newUser.first_name} ${newUser.last_name1}`);
+      }
+    }
+
+    logger.success(`Users processed: ${updated} updated, ${added} added, ${skipped} skipped (no changes)`);
+
+    // Calculate total processed (updated + skipped)
+    const totalProcessed = updated + skipped;
+
+    // Progress: 100%
+    mainWindow.webContents.send('progress', {
+      percentage: 100,
+      message: 'Actualización completada',
+      details: `${added} añadidos, ${totalProcessed} actualizados, ${movedToDeleted} movidos a Eliminados, ${permanentlyDeleted} eliminados`
+    });
+
+    logger.section('XML UPDATE COMPLETED');
+    logger.success('XML update completed successfully');
+
+    return {
+      success: true,
+      results: {
+        added,
+        updated: totalProcessed,
+        movedToDeleted,
+        permanentlyDeleted
+      }
+    };
+  } catch (error) {
+    logger.error('Error applying XML update', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Helper function to ensure Eliminados group exists
+async function ensureDeletedGroup() {
+  const deletedGroupCode = 'ELIMINADOS';
+  const deletedGroupName = '¡Eliminados!';
+
+  const groups = await dbManager.getGroups();
+  let deletedGroup = groups.find(g => g.code === deletedGroupCode);
+
+  if (!deletedGroup) {
+    // Create the group
+    await dbManager.importUsers({
+      groups: [{ code: deletedGroupCode, name: deletedGroupName }],
+      students: [],
+      teachers: [],
+      nonTeachingStaff: []
+    });
+    logger.info(`Created Eliminados group: ${deletedGroupCode}`);
+    deletedGroup = { code: deletedGroupCode, name: deletedGroupName };
+  }
+
+  return deletedGroup;
+}
 
 // Get all users
 ipcMain.handle('get-users', async (event, filters) => {

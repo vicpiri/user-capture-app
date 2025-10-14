@@ -91,5 +91,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSelectedCamera: () => ipcRenderer.invoke('get-selected-camera'),
   onChangeCamera: (callback) => {
     ipcRenderer.on('change-camera', (event, cameraId) => callback(cameraId));
+  },
+
+  // XML update
+  updateXML: (xmlPath) => ipcRenderer.invoke('update-xml', xmlPath),
+  confirmUpdateXML: (data) => ipcRenderer.invoke('confirm-update-xml', data),
+  onMenuUpdateXML: (callback) => {
+    ipcRenderer.on('menu-update-xml', callback);
   }
 });

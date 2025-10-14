@@ -89,44 +89,53 @@ class DatabaseManager {
         );
 
         users.students.forEach(student => {
-          insertUser.run(
-            'student',
-            student.first_name,
-            student.last_name1,
-            student.last_name2,
-            student.birth_date,
-            student.document,
-            student.nia,
-            student.group_code
-          );
+          // Only import students with NIA (identifier required for updates)
+          if (student.nia) {
+            insertUser.run(
+              'student',
+              student.first_name,
+              student.last_name1,
+              student.last_name2,
+              student.birth_date,
+              student.document,
+              student.nia,
+              student.group_code
+            );
+          }
         });
 
         // Insert teachers
         users.teachers.forEach(teacher => {
-          insertUser.run(
-            'teacher',
-            teacher.first_name,
-            teacher.last_name1,
-            teacher.last_name2,
-            teacher.birth_date,
-            teacher.document,
-            null,
-            'DOCENTES'
-          );
+          // Only import teachers with document (identifier required for updates)
+          if (teacher.document) {
+            insertUser.run(
+              'teacher',
+              teacher.first_name,
+              teacher.last_name1,
+              teacher.last_name2,
+              teacher.birth_date,
+              teacher.document,
+              null,
+              'DOCENTES'
+            );
+          }
         });
 
         // Insert non-teaching staff
         users.nonTeachingStaff.forEach(staff => {
-          insertUser.run(
-            'non_teaching_staff',
-            staff.first_name,
-            staff.last_name1,
-            staff.last_name2,
-            staff.birth_date,
-            staff.document,
-            null,
-            'NO_DOCENTES'
-          );
+          // Only import staff with document (identifier required for updates)
+          if (staff.document) {
+            insertUser.run(
+              'non_teaching_staff',
+              staff.first_name,
+              staff.last_name1,
+              staff.last_name2,
+              staff.birth_date,
+              staff.document,
+              null,
+              'NO_DOCENTES'
+            );
+          }
         });
 
         insertUser.finalize();
@@ -217,6 +226,65 @@ class DatabaseManager {
   async markExternalImage(userId, exists) {
     return new Promise((resolve, reject) => {
       this.db.run('UPDATE users SET has_external_image = ? WHERE id = ?', [exists ? 1 : 0, userId], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async updateUser(userId, updates) {
+    return new Promise((resolve, reject) => {
+      const fields = [];
+      const values = [];
+
+      // Build update query dynamically based on provided fields
+      if (updates.first_name !== undefined) {
+        fields.push('first_name = ?');
+        values.push(updates.first_name);
+      }
+      if (updates.last_name1 !== undefined) {
+        fields.push('last_name1 = ?');
+        values.push(updates.last_name1);
+      }
+      if (updates.last_name2 !== undefined) {
+        fields.push('last_name2 = ?');
+        values.push(updates.last_name2);
+      }
+      if (updates.birth_date !== undefined) {
+        fields.push('birth_date = ?');
+        values.push(updates.birth_date);
+      }
+      if (updates.document !== undefined) {
+        fields.push('document = ?');
+        values.push(updates.document);
+      }
+      if (updates.group_code !== undefined) {
+        fields.push('group_code = ?');
+        values.push(updates.group_code);
+      }
+      if (updates.nia !== undefined) {
+        fields.push('nia = ?');
+        values.push(updates.nia);
+      }
+
+      if (fields.length === 0) {
+        resolve(); // Nothing to update
+        return;
+      }
+
+      values.push(userId); // Add userId for WHERE clause
+      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+
+      this.db.run(query, values, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async deleteUser(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.run('DELETE FROM users WHERE id = ?', [userId], (err) => {
         if (err) reject(err);
         else resolve();
       });

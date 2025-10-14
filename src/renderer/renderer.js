@@ -645,6 +645,10 @@ function setupMenuListeners() {
   window.electronAPI.onMenuExportImagesName(() => {
     handleExportImagesName();
   });
+
+  window.electronAPI.onMenuUpdateXML(() => {
+    handleUpdateXML();
+  });
 }
 
 // Import images with ID
@@ -1007,4 +1011,86 @@ function setupDragAndDrop() {
       console.log(`${imageFiles.length} imagen(es) movida(s) a la carpeta ingest`);
     }
   }, false);
+}
+
+// Update XML file
+async function handleUpdateXML() {
+  if (!projectOpen) {
+    alert('Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  // Select new XML file
+  const result = await window.electronAPI.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'XML Files', extensions: ['xml'] }],
+    title: 'Seleccionar nuevo archivo XML'
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return;
+  }
+
+  const xmlPath = result.filePaths[0];
+
+  // Show progress modal
+  showProgressModal('Actualizando XML', 'Analizando cambios...');
+
+  // Call update-xml to analyze changes
+  const updateResult = await window.electronAPI.updateXML(xmlPath);
+
+  if (!updateResult.success) {
+    closeProgressModal();
+    alert('Error al analizar el XML: ' + updateResult.error);
+    return;
+  }
+
+  closeProgressModal();
+
+  // Show confirmation dialog with summary
+  const changes = updateResult.changes;
+  let message = 'Se han detectado los siguientes cambios:\n\n';
+  message += `Usuarios nuevos: ${changes.toAdd}\n`;
+  message += `Usuarios actualizados: ${changes.toUpdate}\n`;
+  message += `Usuarios eliminados: ${changes.toDelete}\n\n`;
+
+  if (changes.toDeleteWithImage > 0) {
+    message += `- ${changes.toDeleteWithImage} usuario(s) con imagen serán movidos al grupo "¡Eliminados!"\n`;
+  }
+  if (changes.toDeleteWithoutImage > 0) {
+    message += `- ${changes.toDeleteWithoutImage} usuario(s) sin imagen serán eliminados permanentemente\n`;
+  }
+
+  message += '\n¿Deseas continuar con la actualización?';
+
+  showConfirmationModal(message, async () => {
+    // Show progress modal
+    showProgressModal('Actualizando XML', 'Aplicando cambios...');
+
+    // Apply the update
+    const confirmResult = await window.electronAPI.confirmUpdateXML({
+      groups: updateResult.groups,
+      newUsersMap: updateResult.newUsersMap,
+      deletedUsers: updateResult.deletedUsers,
+      currentUsers: updateResult.currentUsers
+    });
+
+    closeProgressModal();
+
+    if (confirmResult.success) {
+      const results = confirmResult.results;
+      let successMessage = 'Actualización completada exitosamente:\n\n';
+      successMessage += `Usuarios añadidos: ${results.added}\n`;
+      successMessage += `Usuarios actualizados: ${results.updated}\n`;
+      successMessage += `Usuarios movidos a Eliminados: ${results.movedToDeleted}\n`;
+      successMessage += `Usuarios eliminados permanentemente: ${results.permanentlyDeleted}`;
+
+      alert(successMessage);
+
+      // Reload project data
+      await loadProjectData();
+    } else {
+      alert('Error al actualizar el XML: ' + confirmResult.error);
+    }
+  });
 }
