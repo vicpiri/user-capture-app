@@ -27,6 +27,7 @@ const nextImageBtn = document.getElementById('next-image');
 const newProjectModal = document.getElementById('new-project-modal');
 const confirmModal = document.getElementById('confirm-modal');
 const progressModal = document.getElementById('progress-modal');
+const infoModal = document.getElementById('info-modal');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -82,7 +83,8 @@ function initializeEventListeners() {
     // Don't handle keyboard events if a modal is open
     if (newProjectModal.classList.contains('show') ||
         confirmModal.classList.contains('show') ||
-        progressModal.classList.contains('show')) return;
+        progressModal.classList.contains('show') ||
+        infoModal.classList.contains('show')) return;
 
     // Don't prevent default behavior if user is typing in an input field
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
@@ -149,7 +151,7 @@ async function createProject() {
   const xmlPath = document.getElementById('xml-file').value;
 
   if (!folderPath || !xmlPath) {
-    alert('Por favor, selecciona la carpeta del proyecto y el archivo XML');
+    showInfoModal('Error', 'Por favor, selecciona la carpeta del proyecto y el archivo XML');
     return;
   }
 
@@ -164,7 +166,7 @@ async function createProject() {
     projectOpen = true;
     await loadProjectData();
   } else {
-    alert('Error al crear el proyecto: ' + result.error);
+    showInfoModal('Error', 'Error al crear el proyecto: ' + result.error);
   }
 }
 
@@ -180,7 +182,7 @@ async function handleOpenProject() {
       projectOpen = true;
       await loadProjectData();
     } else {
-      alert('Error al abrir el proyecto: ' + openResult.error);
+      showInfoModal('Error', 'Error al abrir el proyecto: ' + openResult.error);
     }
   }
 }
@@ -455,12 +457,12 @@ function navigateUsers(direction) {
 // Link image to user
 async function handleLinkImage() {
   if (!selectedUser) {
-    alert('Debes seleccionar un usuario');
+    showInfoModal('Aviso', 'Debes seleccionar un usuario');
     return;
   }
 
   if (currentImages.length === 0 || !imagePreviewContainer.classList.contains('active')) {
-    alert('Debes seleccionar una imagen');
+    showInfoModal('Aviso', 'Debes seleccionar una imagen');
     return;
   }
 
@@ -487,7 +489,7 @@ async function handleLinkImage() {
       if (confirmResult.success) {
         await loadUsers(getCurrentFilters());
       } else {
-        alert('Error al enlazar la imagen: ' + confirmResult.error);
+        showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
       }
     });
   } else if (result.needsConfirmation) {
@@ -502,12 +504,12 @@ async function handleLinkImage() {
         if (confirmResult.success) {
           await loadUsers(getCurrentFilters());
         } else {
-          alert('Error al enlazar la imagen: ' + confirmResult.error);
+          showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
         }
       }
     );
   } else {
-    alert('Error al enlazar la imagen: ' + result.error);
+    showInfoModal('Error', 'Error al enlazar la imagen: ' + result.error);
   }
 }
 
@@ -521,12 +523,12 @@ function updateLinkButtonState() {
 // Delete photo link
 async function handleDeletePhoto() {
   if (!selectedUser) {
-    alert('Debes seleccionar un usuario');
+    showInfoModal('Aviso', 'Debes seleccionar un usuario');
     return;
   }
 
   if (!selectedUser.image_path) {
-    alert('El usuario seleccionado no tiene una fotografía vinculada');
+    showInfoModal('Aviso', 'El usuario seleccionado no tiene una fotografía vinculada');
     return;
   }
 
@@ -545,7 +547,7 @@ async function handleDeletePhoto() {
           selectedUser = updatedUser;
         }
       } else {
-        alert('Error al eliminar la fotografía: ' + result.error);
+        showInfoModal('Error', 'Error al eliminar la fotografía: ' + result.error);
       }
     }
   );
@@ -568,6 +570,28 @@ function showConfirmationModal(message, onConfirm) {
 
 function closeConfirmModal() {
   confirmModal.classList.remove('show');
+}
+
+// Info/Alert modal
+function showInfoModal(title, message, onClose) {
+  document.getElementById('info-modal-title').textContent = title;
+  document.getElementById('info-modal-message').textContent = message;
+  infoModal.classList.add('show');
+
+  const okBtn = document.getElementById('info-modal-ok-btn');
+  const newOkBtn = okBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+
+  newOkBtn.addEventListener('click', () => {
+    closeInfoModal();
+    if (onClose) onClose();
+  });
+}
+
+function closeInfoModal() {
+  infoModal.classList.remove('show');
+  // Restore focus to search input after closing
+  searchInput.focus();
 }
 
 // Progress modal functions
@@ -663,7 +687,7 @@ function setupMenuListeners() {
 // Import images with ID
 async function handleImportImagesId() {
   if (!projectOpen) {
-    alert('Debes abrir o crear un proyecto primero');
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
     return;
   }
 
@@ -703,13 +727,13 @@ async function handleImportImagesId() {
         }
       }
 
-      alert(message);
+      showInfoModal('Importación completada', message);
 
       // Reload users and images to reflect changes
       await loadUsers(getCurrentFilters());
       await loadImages();
     } else {
-      alert('Error al importar imágenes: ' + importResult.error);
+      showInfoModal('Error', 'Error al importar imágenes: ' + importResult.error);
     }
   }
 }
@@ -717,7 +741,7 @@ async function handleImportImagesId() {
 // Export CSV
 async function handleExportCSV() {
   if (!projectOpen) {
-    alert('Debes abrir o crear un proyecto primero');
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
     return;
   }
 
@@ -745,9 +769,9 @@ async function handleExportCSV() {
     const exportResult = await window.electronAPI.exportCSV(folderPath, usersToExport);
 
     if (exportResult.success) {
-      alert(`CSV exportado correctamente: ${exportResult.filename}\n${usersToExport.length} usuarios exportados.`);
+      showInfoModal('Exportación exitosa', `CSV exportado correctamente: ${exportResult.filename}\n${usersToExport.length} usuarios exportados.`);
     } else {
-      alert('Error al exportar el CSV: ' + exportResult.error);
+      showInfoModal('Error', 'Error al exportar el CSV: ' + exportResult.error);
     }
   }
 }
@@ -755,7 +779,7 @@ async function handleExportCSV() {
 // Export images
 async function handleExportImages() {
   if (!projectOpen) {
-    alert('Debes abrir o crear un proyecto primero');
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
     return;
   }
 
@@ -789,7 +813,7 @@ async function handleExportImages() {
 // Export images by name
 async function handleExportImagesName() {
   if (!projectOpen) {
-    alert('Debes abrir o crear un proyecto primero');
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
     return;
   }
 
@@ -856,7 +880,7 @@ function showExportOptionsModal(folderPath, usersToExport) {
 
     // Only show error if export failed
     if (!exportResult.success) {
-      alert('Error al exportar imágenes: ' + exportResult.error);
+      showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
     }
   });
 
@@ -909,7 +933,7 @@ function showExportOptionsModalName(folderPath, usersToExport) {
 
     // Only show error if export failed
     if (!exportResult.success) {
-      alert('Error al exportar imágenes: ' + exportResult.error);
+      showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
     }
   });
 
@@ -1002,7 +1026,7 @@ function setupDragAndDrop() {
     });
 
     if (imageFiles.length === 0) {
-      alert('Por favor, arrastra solo archivos de imagen JPG/JPEG');
+      showInfoModal('Aviso', 'Por favor, arrastra solo archivos de imagen JPG/JPEG');
       return;
     }
 
@@ -1010,7 +1034,7 @@ function setupDragAndDrop() {
     for (const file of imageFiles) {
       const result = await window.electronAPI.moveImageToIngest(file.path);
       if (!result.success) {
-        alert(`Error al mover ${file.name}: ${result.error}`);
+        showInfoModal('Error', `Error al mover ${file.name}: ${result.error}`);
       }
     }
 
@@ -1025,7 +1049,7 @@ function setupDragAndDrop() {
 // Update XML file
 async function handleUpdateXML() {
   if (!projectOpen) {
-    alert('Debes abrir o crear un proyecto primero');
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
     return;
   }
 
@@ -1050,7 +1074,7 @@ async function handleUpdateXML() {
 
   if (!updateResult.success) {
     closeProgressModal();
-    alert('Error al analizar el XML: ' + updateResult.error);
+    showInfoModal('Error', 'Error al analizar el XML: ' + updateResult.error);
     return;
   }
 
@@ -1097,16 +1121,10 @@ async function handleUpdateXML() {
       // Reload project data first
       await loadProjectData();
 
-      // Show alert after reloading data
-      alert(successMessage);
-
-      // Force focus to search input
-      document.activeElement.blur(); // Remove focus from any element
-      setTimeout(() => {
-        searchInput.focus();
-      }, 50);
+      // Show info modal instead of alert
+      showInfoModal('Actualización completada', successMessage);
     } else {
-      alert('Error al actualizar el XML: ' + confirmResult.error);
+      showInfoModal('Error', 'Error al actualizar el XML: ' + confirmResult.error);
     }
   });
 }

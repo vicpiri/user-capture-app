@@ -1941,6 +1941,14 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
   return result;
 });
 
+// Focus window handler
+ipcMain.handle('focus-window', async () => {
+  if (mainWindow) {
+    mainWindow.focus();
+  }
+  return { success: true };
+});
+
 // Camera handlers
 ipcMain.handle('update-available-cameras', async (event, cameras) => {
   availableCameras = cameras;

@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Dialog
   showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
+  focusWindow: () => ipcRenderer.invoke('focus-window'),
 
   // Events from main process
   onNewImageDetected: (callback) => {
