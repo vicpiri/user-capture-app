@@ -99,5 +99,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   confirmUpdateXML: (data) => ipcRenderer.invoke('confirm-update-xml', data),
   onMenuUpdateXML: (callback) => {
     ipcRenderer.on('menu-update-xml', callback);
-  }
+  },
+
+  // Global configuration
+  getImageRepositoryPath: () => ipcRenderer.invoke('get-image-repository-path'),
+  setImageRepositoryPath: (repositoryPath) => ipcRenderer.invoke('set-image-repository-path', repositoryPath)
 });

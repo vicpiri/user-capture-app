@@ -225,6 +225,38 @@ function createMenu() {
       ]
     },
     {
+      label: 'Configuración',
+      submenu: [
+        {
+          label: 'Depósito imágenes de usuario',
+          click: async () => {
+            const currentPath = getImageRepositoryPath();
+            const result = await dialog.showOpenDialog(mainWindow, {
+              title: 'Seleccionar carpeta del depósito de imágenes',
+              defaultPath: currentPath || undefined,
+              properties: ['openDirectory', 'createDirectory']
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+              const selectedPath = result.filePaths[0];
+              if (setImageRepositoryPath(selectedPath)) {
+                dialog.showMessageBox(mainWindow, {
+                  type: 'info',
+                  title: 'Configuración guardada',
+                  message: 'Depósito de imágenes configurado',
+                  detail: `Ruta: ${selectedPath}`,
+                  buttons: ['Aceptar']
+                });
+                logger.info(`Image repository path set to: ${selectedPath}`);
+              } else {
+                dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       label: 'Ayuda',
       submenu: [
         {
@@ -1964,6 +1996,30 @@ ipcMain.handle('get-selected-camera', async () => {
   return { success: true, selectedCameraId };
 });
 
+// Global configuration handlers
+ipcMain.handle('get-image-repository-path', async () => {
+  try {
+    const repositoryPath = getImageRepositoryPath();
+    return { success: true, path: repositoryPath };
+  } catch (error) {
+    console.error('Error getting image repository path:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('set-image-repository-path', async (event, repositoryPath) => {
+  try {
+    if (setImageRepositoryPath(repositoryPath)) {
+      return { success: true };
+    } else {
+      return { success: false, error: 'No se pudo guardar la configuración' };
+    }
+  } catch (error) {
+    console.error('Error setting image repository path:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Helper function to format timestamp
 function formatTimestamp(date) {
   const year = date.getFullYear();
@@ -1992,6 +2048,46 @@ function updateWindowTitle() {
   } else {
     mainWindow.setTitle('User Capture');
   }
+}
+
+// Global configuration management
+function getConfigPath() {
+  return path.join(app.getPath('userData'), 'config.json');
+}
+
+function loadGlobalConfig() {
+  try {
+    const filePath = getConfigPath();
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading global config:', error);
+  }
+  return {};
+}
+
+function saveGlobalConfig(config) {
+  try {
+    const filePath = getConfigPath();
+    fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving global config:', error);
+    return false;
+  }
+}
+
+function getImageRepositoryPath() {
+  const config = loadGlobalConfig();
+  return config.imageRepositoryPath || null;
+}
+
+function setImageRepositoryPath(repositoryPath) {
+  const config = loadGlobalConfig();
+  config.imageRepositoryPath = repositoryPath;
+  return saveGlobalConfig(config);
 }
 
 // Recent projects management
