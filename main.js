@@ -274,6 +274,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    title: 'User Capture',
     icon: path.join(__dirname, 'assets/icons/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'src/preload/preload.js'),
@@ -651,6 +652,9 @@ ipcMain.handle('create-project', async (event, data) => {
     // Add to recent projects
     addRecentProject(folderPath);
 
+    // Update window title
+    updateWindowTitle();
+
     // Show import report dialog if there are issues
     if (importReport.withoutIdentifier.length > 0 || importReport.withoutGroup.length > 0 || importReport.duplicates.length > 0) {
       let reportMessage = `Se han importado ${importReport.imported} usuarios correctamente.\n\n`;
@@ -744,6 +748,9 @@ ipcMain.handle('open-project', async (event, folderPath) => {
 
     // Add to recent projects
     addRecentProject(folderPath);
+
+    // Update window title
+    updateWindowTitle();
 
     return { success: true, message: 'Proyecto abierto exitosamente' };
   } catch (error) {
@@ -1969,6 +1976,16 @@ function capitalizeWords(str) {
   }).join(' ');
 }
 
+// Helper function to update window title with project name
+function updateWindowTitle() {
+  if (projectPath) {
+    const projectName = path.basename(projectPath);
+    mainWindow.setTitle(`User Capture - ${projectName}`);
+  } else {
+    mainWindow.setTitle('User Capture');
+  }
+}
+
 // Recent projects management
 function getRecentProjectsPath() {
   return path.join(app.getPath('userData'), 'recent-projects.json');
@@ -2066,6 +2083,9 @@ async function openRecentProject(folderPath) {
 
     // Add to recent projects
     addRecentProject(folderPath);
+
+    // Update window title
+    updateWindowTitle();
 
     // Notify renderer
     mainWindow.webContents.send('project-opened', { success: true });
