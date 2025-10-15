@@ -230,6 +230,14 @@ body {
   color: #707580;
 }
 
+.user-table td .repository-check {
+  width: 18px;
+  height: 18px;
+  color: #10b981;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
 /* Panel Footer */
 .panel-footer {
   padding: 20px;

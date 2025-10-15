@@ -289,12 +289,19 @@ async function displayUsers(users, allUsers = null) {
            </svg>
          </div>`;
 
+    const repositoryCheck = user.has_repository_image
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="repository-check">
+           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+           <polyline points="22 4 12 14.01 9 11.01"></polyline>
+         </svg>`
+      : '';
+
     row.innerHTML = `
       <td class="name">${user.first_name}</td>
       <td>${user.last_name1} ${user.last_name2 || ''}</td>
       <td>${user.nia || '-'}</td>
       <td>${user.group_code}</td>
-      <td>${photoIndicator}</td>
+      <td style="display: flex; align-items: center;">${photoIndicator}${repositoryCheck}</td>
     `;
 
     row.addEventListener('click', () => selectUserRow(row, user));
@@ -679,6 +686,10 @@ function setupMenuListeners() {
     handleExportImagesName();
   });
 
+  window.electronAPI.onMenuExportToRepository(() => {
+    handleExportToRepository();
+  });
+
   window.electronAPI.onMenuUpdateXML(() => {
     handleUpdateXML();
   });
@@ -769,7 +780,14 @@ async function handleExportCSV() {
     const exportResult = await window.electronAPI.exportCSV(folderPath, usersToExport);
 
     if (exportResult.success) {
-      showInfoModal('Exportación exitosa', `CSV exportado correctamente: ${exportResult.filename}\n${usersToExport.length} usuarios exportados.`);
+      let message = `CSV exportado correctamente: ${exportResult.filename}\n\n`;
+      message += `${exportResult.exported} usuarios exportados`;
+
+      if (exportResult.ignored > 0) {
+        message += `\n${exportResult.ignored} usuarios ignorados (sin imagen en el depósito)`;
+      }
+
+      showInfoModal('Exportación exitosa', message);
     } else {
       showInfoModal('Error', 'Error al exportar el CSV: ' + exportResult.error);
     }
@@ -880,6 +898,101 @@ function showExportOptionsModal(folderPath, usersToExport) {
 
     // Only show error if export failed
     if (!exportResult.success) {
+      showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
+    }
+  });
+
+  // Cancel button handler
+  newExportCancelBtn.addEventListener('click', () => {
+    exportOptionsModal.classList.remove('show');
+  });
+
+  // Reset to default state (copy original selected)
+  document.getElementById('export-copy-original').checked = true;
+  document.getElementById('export-resize-enabled').checked = false;
+
+  // Show modal
+  exportOptionsModal.classList.add('show');
+}
+
+// Export to repository
+async function handleExportToRepository() {
+  if (!projectOpen) {
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  // Get users to export based on current view (only those with images)
+  let usersToExport = currentUsers;
+
+  // If showing duplicates only, get all duplicates from database
+  if (showDuplicatesOnly && allUsers) {
+    const imageCount = {};
+    allUsers.forEach(user => {
+      if (user.image_path) {
+        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
+      }
+    });
+    usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
+  }
+
+  // Show export options modal
+  showExportToRepositoryModal(usersToExport);
+}
+
+// Show export to repository options modal
+function showExportToRepositoryModal(usersToExport) {
+  const exportOptionsModal = document.getElementById('export-options-modal');
+  const exportConfirmBtn = document.getElementById('export-confirm-btn');
+  const exportCancelBtn = document.getElementById('export-cancel-btn');
+
+  // Setup event listeners (remove old ones first)
+  const newExportConfirmBtn = exportConfirmBtn.cloneNode(true);
+  exportConfirmBtn.parentNode.replaceChild(newExportConfirmBtn, exportConfirmBtn);
+
+  const newExportCancelBtn = exportCancelBtn.cloneNode(true);
+  exportCancelBtn.parentNode.replaceChild(newExportCancelBtn, exportCancelBtn);
+
+  // Confirm button handler
+  newExportConfirmBtn.addEventListener('click', async () => {
+    // Collect export options
+    const options = {
+      copyOriginal: document.getElementById('export-copy-original').checked,
+      resizeEnabled: document.getElementById('export-resize-enabled').checked,
+      boxSize: parseInt(document.getElementById('export-box-size').value),
+      maxSizeKB: parseInt(document.getElementById('export-max-size').value)
+    };
+
+    // Close modal
+    exportOptionsModal.classList.remove('show');
+
+    // Show progress modal
+    showProgressModal('Exportando al Depósito', 'Procesando archivos...');
+
+    // Perform export
+    const exportResult = await window.electronAPI.exportToRepository(usersToExport, options);
+
+    closeProgressModal();
+
+    if (exportResult.success) {
+      const results = exportResult.results;
+      let message = `Exportación completada:\n\n`;
+      message += `Total de usuarios con imágenes: ${results.total}\n`;
+      message += `Imágenes exportadas correctamente: ${results.exported}\n`;
+
+      if (results.errors.length > 0) {
+        message += `\nErrores (${results.errors.length}):\n`;
+        message += results.errors.slice(0, 5).map(e => `${e.user}: ${e.error}`).join('\n');
+        if (results.errors.length > 5) {
+          message += `\n... y ${results.errors.length - 5} más`;
+        }
+      }
+
+      showInfoModal('Exportación completada', message, async () => {
+        // Reload users to refresh the repository check indicators
+        await loadUsers(getCurrentFilters());
+      });
+    } else {
       showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
     }
   });

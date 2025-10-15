@@ -78,10 +78,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-export-images-name', callback);
   },
 
+  onMenuExportToRepository: (callback) => {
+    ipcRenderer.on('menu-export-to-repository', callback);
+  },
+
   importImagesWithId: (folderPath) => ipcRenderer.invoke('import-images-with-id', folderPath),
   exportCSV: (folderPath, users) => ipcRenderer.invoke('export-csv', folderPath, users),
   exportImages: (folderPath, users, options) => ipcRenderer.invoke('export-images', folderPath, users, options),
   exportImagesName: (folderPath, users, options) => ipcRenderer.invoke('export-images-name', folderPath, users, options),
+  exportToRepository: (users, options) => ipcRenderer.invoke('export-to-repository', users, options),
 
   unlinkImageFromUser: (userId) => ipcRenderer.invoke('unlink-image-user', userId),
 

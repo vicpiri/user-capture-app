@@ -102,6 +102,13 @@ function createMenu() {
               click: () => {
                 mainWindow.webContents.send('menu-export-images-name');
               }
+            },
+            { type: 'separator' },
+            {
+              label: 'Imágenes capturadas al depósito',
+              click: () => {
+                mainWindow.webContents.send('menu-export-to-repository');
+              }
             }
           ]
         },
@@ -1186,11 +1193,32 @@ ipcMain.handle('get-users', async (event, filters) => {
 
     // Convert relative image paths to absolute paths
     const importsPath = path.join(projectPath, 'imports');
+
+    // Get image repository path
+    const repositoryPath = getImageRepositoryPath();
+
     users.forEach(user => {
       if (user.image_path) {
         // If it's a relative path (just filename), convert to absolute
         if (!path.isAbsolute(user.image_path)) {
           user.image_path = path.join(importsPath, user.image_path);
+        }
+      }
+
+      // Check if image exists in repository
+      user.has_repository_image = false;
+      if (repositoryPath) {
+        // Determine the identifier (NIA for students, document for others)
+        const identifier = user.type === 'student' ? user.nia : user.document;
+
+        if (identifier) {
+          // Check for .jpg and .jpeg extensions
+          const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
+          const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
+
+          if (fs.existsSync(jpgPath) || fs.existsSync(jpegPath)) {
+            user.has_repository_image = true;
+          }
         }
       }
     });
@@ -1433,16 +1461,70 @@ ipcMain.handle('export-csv', async (event, folderPath, users) => {
       users = await dbManager.getUsers({});
     }
 
+    // Get repository path
+    const repositoryPath = getImageRepositoryPath();
+
+    // Filter users to only include those with images in the repository
+    const usersWithRepositoryImages = users.filter(user => {
+      if (!repositoryPath) return false;
+
+      // Determine the identifier (NIA for students, document for others)
+      const identifier = user.type === 'student' ? user.nia : user.document;
+
+      if (!identifier) return false;
+
+      // Check for .jpg and .jpeg extensions
+      const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
+      const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
+
+      return fs.existsSync(jpgPath) || fs.existsSync(jpegPath);
+    });
+
+    // Log the filtering
+    logger.info(`CSV Export: Total users: ${users.length}, Users with repository images: ${usersWithRepositoryImages.length}`);
+
+    // Use the filtered list for export
+    users = usersWithRepositoryImages;
+
     // Helper function to calculate age
     const calculateAge = (birthDate) => {
       if (!birthDate) return 0;
+
       const today = new Date();
-      const birth = new Date(birthDate);
+      let birth;
+
+      // Parse the birth date - handle multiple formats
+      if (typeof birthDate === 'string') {
+        // Check if it's DD/MM/YYYY format
+        if (birthDate.includes('/')) {
+          const [day, month, year] = birthDate.split('/').map(Number);
+          birth = new Date(year, month - 1, day); // month is 0-indexed
+        }
+        // Check if it's YYYY-MM-DD format (with or without time)
+        else if (birthDate.includes('-')) {
+          const [year, month, day] = birthDate.split(' ')[0].split('-').map(Number);
+          birth = new Date(year, month - 1, day); // month is 0-indexed
+        }
+        else {
+          birth = new Date(birthDate);
+        }
+      } else {
+        birth = new Date(birthDate);
+      }
+
+      // Check for invalid date
+      if (isNaN(birth.getTime())) {
+        logger.warning(`Invalid birth date format: ${birthDate}`);
+        return 0;
+      }
+
       let age = today.getFullYear() - birth.getFullYear();
       const monthDiff = today.getMonth() - birth.getMonth();
+
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
         age--;
       }
+
       return age;
     };
 
@@ -1474,6 +1556,9 @@ ipcMain.handle('export-csv', async (event, folderPath, users) => {
       if (isStudent) {
         const age = calculateAge(fechaNacimiento);
         edad = age >= 18 ? 'mayor.jpg' : 'menor.jpg';
+
+        // Log age calculation for debugging
+        logger.info(`Age calculation for ${nombre} ${apellido1}: birthDate=${fechaNacimiento}, calculatedAge=${age}, result=${edad}`);
       } else {
         edad = 'profesor.jpg';
       }
@@ -1498,7 +1583,16 @@ ipcMain.handle('export-csv', async (event, folderPath, users) => {
     // Write file
     fs.writeFileSync(filePath, csvContent, 'utf8');
 
-    return { success: true, filename };
+    // Calculate statistics for user feedback
+    const totalUsers = usersWithRepositoryImages.length + (users.length - usersWithRepositoryImages.length);
+    const ignoredUsers = totalUsers - usersWithRepositoryImages.length;
+
+    return {
+      success: true,
+      filename,
+      exported: usersWithRepositoryImages.length,
+      ignored: ignoredUsers
+    };
   } catch (error) {
     console.error('Error exporting CSV:', error);
     return { success: false, error: error.message };
@@ -1705,6 +1799,182 @@ ipcMain.handle('export-images', async (event, folderPath, users, options) => {
     return { success: true, results };
   } catch (error) {
     logger.error('Error exporting images', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Export images to repository
+ipcMain.handle('export-to-repository', async (event, users, options) => {
+  try {
+    if (!dbManager || !projectPath) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    // Get repository path
+    const repositoryPath = getImageRepositoryPath();
+    if (!repositoryPath) {
+      return { success: false, error: 'No se ha configurado el depósito de imágenes. Por favor, configúralo en Configuración > Depósito imágenes de usuario' };
+    }
+
+    // Check if repository path exists
+    if (!fs.existsSync(repositoryPath)) {
+      return { success: false, error: `La carpeta del depósito no existe: ${repositoryPath}` };
+    }
+
+    // Default options
+    const exportOptions = {
+      copyOriginal: options?.copyOriginal ?? true,
+      resizeEnabled: options?.resizeEnabled ?? false,
+      boxSize: options?.boxSize ?? 800,
+      maxSizeKB: options?.maxSizeKB ?? 500
+    };
+
+    logger.section('EXPORTING IMAGES TO REPOSITORY');
+    logger.info(`Repository path: ${repositoryPath}`);
+    logger.info(`Export options:`, exportOptions);
+
+    const importsPath = path.join(projectPath, 'imports');
+
+    // Use provided users or get all users if not provided
+    if (!users || users.length === 0) {
+      users = await dbManager.getUsers({});
+    }
+
+    // Filter only users with images
+    const usersWithImages = users.filter(user => user.image_path);
+
+    logger.info(`Found ${usersWithImages.length} users with images`);
+
+    const results = {
+      total: usersWithImages.length,
+      exported: 0,
+      errors: []
+    };
+
+    // Track progress
+    let processedCount = 0;
+
+    // Export each user's image
+    for (const user of usersWithImages) {
+      try {
+        // Determine the ID to use for filename: NIA for students, document for others
+        const isStudent = user.type === 'student';
+        const userId = isStudent ? user.nia : user.document;
+
+        if (!userId) {
+          results.errors.push({
+            user: `${user.first_name} ${user.last_name1}`,
+            error: 'Usuario sin identificador (NIA/DNI)'
+          });
+          processedCount++;
+          continue;
+        }
+
+        // Get source image path (relative path in DB)
+        const sourceImagePath = path.isAbsolute(user.image_path)
+          ? user.image_path
+          : path.join(importsPath, user.image_path);
+
+        // Check if source image exists
+        if (!fs.existsSync(sourceImagePath)) {
+          results.errors.push({
+            user: `${user.first_name} ${user.last_name1}`,
+            error: 'Imagen no encontrada'
+          });
+          processedCount++;
+          continue;
+        }
+
+        // Create destination filename with user ID in repository
+        const destFileName = `${userId}.jpg`;
+        const destPath = path.join(repositoryPath, destFileName);
+
+        // Process image based on options
+        if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
+          // Copy original but correct orientation using sharp
+          await sharp(sourceImagePath)
+            .rotate() // Auto-rotate based on EXIF orientation
+            .toFile(destPath);
+        } else if (exportOptions.resizeEnabled) {
+          // Use sharp to process the image
+          let sharpInstance = sharp(sourceImagePath)
+            .rotate(); // Auto-rotate based on EXIF orientation
+
+          // Get image metadata (after rotation)
+          const metadata = await sharpInstance.metadata();
+
+          // Resize if image is larger than boxSize
+          if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
+            sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+              fit: 'inside',
+              withoutEnlargement: true
+            });
+          }
+
+          // Convert to JPEG and apply quality compression
+          // Start with quality 90 and reduce if needed
+          let quality = 90;
+          let outputBuffer;
+          const maxSizeBytes = exportOptions.maxSizeKB * 1024;
+
+          // Try to compress to target size
+          do {
+            outputBuffer = await sharpInstance
+              .jpeg({ quality })
+              .toBuffer();
+
+            if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
+              break;
+            }
+
+            // Reduce quality and retry
+            quality -= 10;
+            sharpInstance = sharp(sourceImagePath)
+              .rotate(); // Auto-rotate based on EXIF orientation
+            if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
+              sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+                fit: 'inside',
+                withoutEnlargement: true
+              });
+            }
+          } while (quality > 0);
+
+          // Write the processed image
+          fs.writeFileSync(destPath, outputBuffer);
+
+          logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length/1024)}KB`);
+        }
+
+        results.exported++;
+        processedCount++;
+        logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${destFileName}`);
+
+        // Send progress update
+        const percentage = Math.round((processedCount / results.total) * 100);
+        mainWindow.webContents.send('progress', {
+          percentage,
+          message: 'Exportando imágenes al depósito...',
+          details: `${processedCount} de ${results.total} imágenes procesadas`
+        });
+      } catch (error) {
+        results.errors.push({
+          user: `${user.first_name} ${user.last_name1}`,
+          error: error.message
+        });
+        processedCount++;
+        logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
+      }
+    }
+
+    logger.section('EXPORT TO REPOSITORY COMPLETED');
+    logger.success(`Exported: ${results.exported}/${results.total} images to repository`);
+    if (results.errors.length > 0) {
+      logger.error(`Errors: ${results.errors.length} images`);
+    }
+
+    return { success: true, results };
+  } catch (error) {
+    logger.error('Error exporting images to repository', error);
     return { success: false, error: error.message };
   }
 });
