@@ -516,8 +516,102 @@ ipcMain.handle('create-project', async (event, data) => {
 
     logger.section('IMPORTING USERS TO DATABASE');
     logger.info(`Importing ${totalGroups} groups and ${totalUsers} users...`);
-    await dbManager.importUsers(users);
+    const importReport = await dbManager.importUsers(users);
     logger.success('Users imported successfully');
+
+    // Log import report summary
+    logger.info('Import report summary', {
+      imported: importReport.imported,
+      withoutIdentifier: importReport.withoutIdentifier.length,
+      withoutGroup: importReport.withoutGroup.length,
+      duplicates: importReport.duplicates.length
+    });
+
+    // Generate detailed import report log if there are issues
+    if (importReport.withoutIdentifier.length > 0 || importReport.withoutGroup.length > 0 || importReport.duplicates.length > 0) {
+      const reportLogPath = path.join(folderPath, 'import-report.log');
+      let reportContent = '='.repeat(80) + '\n';
+      reportContent += 'INFORME DE IMPORTACIÓN DE USUARIOS\n';
+      reportContent += '='.repeat(80) + '\n\n';
+      reportContent += `Fecha: ${new Date().toLocaleString('es-ES')}\n`;
+      reportContent += `Total de usuarios importados: ${importReport.imported}\n\n`;
+
+      // Users without identifier
+      if (importReport.withoutIdentifier.length > 0) {
+        reportContent += '-'.repeat(80) + '\n';
+        reportContent += `USUARIOS SIN IDENTIFICADOR (${importReport.withoutIdentifier.length})\n`;
+        reportContent += '-'.repeat(80) + '\n';
+        reportContent += 'Estos usuarios NO se han importado porque no tienen identificador válido.\n';
+        reportContent += 'Los estudiantes requieren NIA y los docentes/no docentes requieren documento.\n\n';
+
+        importReport.withoutIdentifier.forEach((user, index) => {
+          reportContent += `${index + 1}. ${user.name}\n`;
+          reportContent += `   Tipo: ${user.type}\n`;
+          reportContent += `   Grupo: ${user.group}\n`;
+          reportContent += `   Documento: ${user.document}\n`;
+          reportContent += `   Razón: ${user.reason}\n\n`;
+        });
+      }
+
+      // Users without group
+      if (importReport.withoutGroup.length > 0) {
+        reportContent += '-'.repeat(80) + '\n';
+        reportContent += `USUARIOS SIN GRUPO (${importReport.withoutGroup.length})\n`;
+        reportContent += '-'.repeat(80) + '\n';
+        reportContent += 'Estos usuarios se han importado pero no tienen grupo asignado.\n\n';
+
+        importReport.withoutGroup.forEach((user, index) => {
+          reportContent += `${index + 1}. ${user.name}\n`;
+          reportContent += `   Tipo: ${user.type}\n`;
+          reportContent += `   Identificador: ${user.identifier}\n`;
+          reportContent += `   Documento: ${user.document}\n`;
+          if (user.note) {
+            reportContent += `   Nota: ${user.note}\n`;
+          }
+          reportContent += '\n';
+        });
+      }
+
+      // Duplicate users
+      if (importReport.duplicates.length > 0) {
+        reportContent += '-'.repeat(80) + '\n';
+        reportContent += `USUARIOS DUPLICADOS (${importReport.duplicates.length})\n`;
+        reportContent += '-'.repeat(80) + '\n';
+        reportContent += 'Estos usuarios tienen el mismo identificador (NIA o documento).\n';
+        reportContent += 'Se prioriza la importación del usuario que tiene grupo asignado.\n\n';
+
+        importReport.duplicates.forEach((dup, index) => {
+          reportContent += `${index + 1}. ${dup.identifier}\n`;
+          reportContent += `   Tipo: ${dup.type}\n`;
+          if (dup.allNames) {
+            reportContent += `   Nombres encontrados: ${dup.allNames}\n`;
+            if (dup.occurrencesCount) {
+              reportContent += `   Ocurrencias: ${dup.occurrencesCount}\n`;
+            }
+          } else {
+            reportContent += `   Primer usuario: ${dup.firstUser}\n`;
+            if (dup.duplicateUser) {
+              reportContent += `   Usuario duplicado: ${dup.duplicateUser}\n`;
+            }
+          }
+          if (dup.allGroups) {
+            reportContent += `   Grupos encontrados: ${dup.allGroups}\n`;
+          }
+          reportContent += `   Grupo importado: ${dup.group}\n`;
+          if (dup.note) {
+            reportContent += `   Nota: ${dup.note}\n`;
+          }
+          reportContent += '\n';
+        });
+      }
+
+      reportContent += '='.repeat(80) + '\n';
+      reportContent += 'FIN DEL INFORME\n';
+      reportContent += '='.repeat(80) + '\n';
+
+      fs.writeFileSync(reportLogPath, reportContent, 'utf8');
+      logger.success(`Import report saved: ${reportLogPath}`);
+    }
 
     // Progress: 80%
     mainWindow.webContents.send('progress', {
@@ -557,7 +651,41 @@ ipcMain.handle('create-project', async (event, data) => {
     // Add to recent projects
     addRecentProject(folderPath);
 
-    return { success: true, message: 'Proyecto creado exitosamente' };
+    // Show import report dialog if there are issues
+    if (importReport.withoutIdentifier.length > 0 || importReport.withoutGroup.length > 0 || importReport.duplicates.length > 0) {
+      let reportMessage = `Se han importado ${importReport.imported} usuarios correctamente.\n\n`;
+
+      if (importReport.withoutIdentifier.length > 0) {
+        reportMessage += `⚠ ${importReport.withoutIdentifier.length} usuarios sin identificador (NO importados)\n`;
+      }
+      if (importReport.withoutGroup.length > 0) {
+        reportMessage += `⚠ ${importReport.withoutGroup.length} usuarios sin grupo\n`;
+      }
+      if (importReport.duplicates.length > 0) {
+        reportMessage += `⚠ ${importReport.duplicates.length} usuarios duplicados (solo se importó el primero)\n`;
+      }
+
+      reportMessage += `\nConsulte el archivo 'import-report.log' en la carpeta del proyecto para más detalles.`;
+
+      dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        title: 'Informe de Importación',
+        message: 'Proyecto creado con advertencias',
+        detail: reportMessage,
+        buttons: ['Aceptar']
+      });
+    }
+
+    return {
+      success: true,
+      message: 'Proyecto creado exitosamente',
+      importReport: {
+        imported: importReport.imported,
+        withoutIdentifier: importReport.withoutIdentifier.length,
+        withoutGroup: importReport.withoutGroup.length,
+        duplicates: importReport.duplicates.length
+      }
+    };
   } catch (error) {
     logger.error('Error creating project', error);
     return { success: false, error: error.message };
@@ -877,6 +1005,24 @@ ipcMain.handle('confirm-update-xml', async (event, data) => {
           existingUser.group_code !== newUser.group_code;
 
         if (needsUpdate) {
+          // Determine final group_code based on user type
+          let finalGroupCode;
+          if (newUser.group_code && newUser.group_code !== '') {
+            // User has a group in the XML
+            finalGroupCode = newUser.group_code;
+          } else {
+            // No group in XML - assign default based on type
+            if (newUser.type === 'student') {
+              finalGroupCode = 'SIN_GRUPO';
+            } else if (newUser.type === 'teacher') {
+              finalGroupCode = 'DOCENTES';
+            } else if (newUser.type === 'non_teaching_staff') {
+              finalGroupCode = 'NO_DOCENTES';
+            } else {
+              finalGroupCode = 'SIN_GRUPO'; // Fallback
+            }
+          }
+
           // Update existing user (including those moved to Eliminados)
           await dbManager.updateUser(existingUser.id, {
             first_name: newUser.first_name,
@@ -884,7 +1030,7 @@ ipcMain.handle('confirm-update-xml', async (event, data) => {
             last_name2: newUser.last_name2,
             birth_date: newUser.birth_date,
             document: newUser.document,
-            group_code: newUser.group_code,
+            group_code: finalGroupCode,
             nia: newUser.nia
           });
           updated++;
@@ -958,7 +1104,7 @@ ipcMain.handle('confirm-update-xml', async (event, data) => {
 // Helper function to ensure Eliminados group exists
 async function ensureDeletedGroup() {
   const deletedGroupCode = 'ELIMINADOS';
-  const deletedGroupName = '¡Eliminados!';
+  const deletedGroupName = '⚠ Eliminados';
 
   const groups = await dbManager.getGroups();
   let deletedGroup = groups.find(g => g.code === deletedGroupCode);

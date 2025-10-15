@@ -84,6 +84,11 @@ function initializeEventListeners() {
         confirmModal.classList.contains('show') ||
         progressModal.classList.contains('show')) return;
 
+    // Don't prevent default behavior if user is typing in an input field
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+      return; // Allow normal typing in inputs
+    }
+
     // Left arrow key - previous image
     if (event.key === 'ArrowLeft' && currentImages.length > 0) {
       event.preventDefault();
@@ -185,6 +190,10 @@ async function loadProjectData() {
   await loadGroups();
   await loadUsers();
   await loadImages();
+
+  // Re-enable search input after data load
+  searchInput.disabled = false;
+  searchInput.readOnly = false;
 }
 
 async function loadGroups() {
@@ -1085,10 +1094,17 @@ async function handleUpdateXML() {
       successMessage += `Usuarios movidos a Eliminados: ${results.movedToDeleted}\n`;
       successMessage += `Usuarios eliminados permanentemente: ${results.permanentlyDeleted}`;
 
+      // Reload project data first
+      await loadProjectData();
+
+      // Show alert after reloading data
       alert(successMessage);
 
-      // Reload project data
-      await loadProjectData();
+      // Force focus to search input
+      document.activeElement.blur(); // Remove focus from any element
+      setTimeout(() => {
+        searchInput.focus();
+      }, 50);
     } else {
       alert('Error al actualizar el XML: ' + confirmResult.error);
     }
