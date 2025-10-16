@@ -121,17 +121,6 @@ function createMenu() {
       ]
     },
     {
-      label: 'Proyecto',
-      submenu: [
-        {
-          label: 'Actualizar archivo XML',
-          click: () => {
-            mainWindow.webContents.send('menu-update-xml');
-          }
-        }
-      ]
-    },
-    {
       label: 'Edición',
       submenu: [
         {
@@ -150,6 +139,17 @@ function createMenu() {
         }
       ]
     },
+      {
+          label: 'Proyecto',
+          submenu: [
+              {
+                  label: 'Actualizar archivo XML',
+                  click: () => {
+                      mainWindow.webContents.send('menu-update-xml');
+                  }
+              }
+          ]
+      },
     {
       label: 'Ver',
       submenu: [
