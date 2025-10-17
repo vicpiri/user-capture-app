@@ -56,10 +56,21 @@ class DatabaseManager {
           )
         `);
 
+        // Image tags table
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS image_tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            image_path TEXT NOT NULL,
+            tag TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
         // Create indexes
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_group ON users(group_code)');
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_type ON users(type)');
-        this.db.run('CREATE INDEX IF NOT EXISTS idx_users_nia ON users(nia)', (err) => {
+        this.db.run('CREATE INDEX IF NOT EXISTS idx_users_nia ON users(nia)');
+        this.db.run('CREATE INDEX IF NOT EXISTS idx_image_tags_path ON image_tags(image_path)', (err) => {
           if (err) reject(err);
           else resolve();
         });
@@ -422,6 +433,46 @@ class DatabaseManager {
       this.db.run('DELETE FROM users WHERE id = ?', [userId], (err) => {
         if (err) reject(err);
         else resolve();
+      });
+    });
+  }
+
+  async addImageTag(imagePath, tag) {
+    return new Promise((resolve, reject) => {
+      this.db.run('INSERT INTO image_tags (image_path, tag) VALUES (?, ?)', [imagePath, tag], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async getImageTags(imagePath) {
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT * FROM image_tags WHERE image_path = ? ORDER BY created_at DESC', [imagePath], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
+  async deleteImageTag(tagId) {
+    return new Promise((resolve, reject) => {
+      this.db.run('DELETE FROM image_tags WHERE id = ?', [tagId], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async getAllImagesWithTags() {
+    return new Promise((resolve, reject) => {
+      this.db.all(`
+        SELECT DISTINCT image_path
+        FROM image_tags
+        ORDER BY image_path
+      `, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
       });
     });
   }

@@ -136,6 +136,14 @@ function createMenu() {
           click: () => {
             mainWindow.webContents.send('menu-delete-photo');
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Agregar etiqueta a imagen',
+          accelerator: 'CmdOrCtrl+T',
+          click: () => {
+            mainWindow.webContents.send('menu-add-image-tag');
+          }
         }
       ]
     },
@@ -168,6 +176,13 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+G',
           click: () => {
             openImageGridWindow();
+          }
+        },
+        {
+          label: 'Listado de imágenes con etiquetas',
+          accelerator: 'CmdOrCtrl+Shift+T',
+          click: () => {
+            mainWindow.webContents.send('menu-show-tagged-images');
           }
         }
       ]
@@ -2468,3 +2483,95 @@ async function openRecentProject(folderPath) {
     dialog.showErrorBox('Error', 'Error al abrir el proyecto: ' + error.message);
   }
 }
+
+// Image tags handlers
+ipcMain.handle('add-image-tag', async (event, data) => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    const { imagePath, tag } = data;
+
+    // Convert absolute path to relative path for storage
+    const relativeImagePath = path.isAbsolute(imagePath)
+      ? path.basename(imagePath)
+      : imagePath;
+
+    await dbManager.addImageTag(relativeImagePath, tag);
+    logger.info(`Tag added to image: ${relativeImagePath} - "${tag}"`);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding image tag:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-image-tags', async (event, imagePath) => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    // Convert absolute path to relative path for storage
+    const relativeImagePath = path.isAbsolute(imagePath)
+      ? path.basename(imagePath)
+      : imagePath;
+
+    const tags = await dbManager.getImageTags(relativeImagePath);
+    return { success: true, tags };
+  } catch (error) {
+    console.error('Error getting image tags:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('delete-image-tag', async (event, tagId) => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    await dbManager.deleteImageTag(tagId);
+    logger.info(`Tag deleted: ${tagId}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting image tag:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-all-images-with-tags', async () => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    const imagesWithTags = await dbManager.getAllImagesWithTags();
+
+    // Convert relative paths to absolute paths and get tags for each image
+    const importsPath = path.join(projectPath, 'imports');
+    const imagesData = await Promise.all(
+      imagesWithTags.map(async (row) => {
+        const absolutePath = path.isAbsolute(row.image_path)
+          ? row.image_path
+          : path.join(importsPath, row.image_path);
+
+        const tags = await dbManager.getImageTags(row.image_path);
+
+        return {
+          path: absolutePath,
+          relativePath: row.image_path,
+          tags: tags
+        };
+      })
+    );
+
+    return { success: true, images: imagesData };
+  } catch (error) {
+    console.error('Error getting images with tags:', error);
+    return { success: false, error: error.message };
+  }
+});

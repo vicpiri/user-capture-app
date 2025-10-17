@@ -388,15 +388,18 @@ async function loadImages() {
   }
 }
 
-function showImagePreview() {
+async function showImagePreview() {
   if (currentImages.length === 0) return;
 
   imagePreviewContainer.classList.add('active');
   currentImage.src = `file://${currentImages[currentImageIndex]}`;
   updateLinkButtonState();
+
+  // Load and display tags for current image
+  await loadImageTags();
 }
 
-function navigateImages(direction) {
+async function navigateImages(direction) {
   if (currentImages.length === 0) return;
 
   currentImageIndex += direction;
@@ -408,6 +411,9 @@ function navigateImages(direction) {
   }
 
   currentImage.src = `file://${currentImages[currentImageIndex]}`;
+
+  // Load and display tags for current image
+  await loadImageTags();
 }
 
 function navigateUsers(direction) {
@@ -692,6 +698,14 @@ function setupMenuListeners() {
 
   window.electronAPI.onMenuUpdateXML(() => {
     handleUpdateXML();
+  });
+
+  window.electronAPI.onMenuAddImageTag(() => {
+    handleAddImageTag();
+  });
+
+  window.electronAPI.onMenuShowTaggedImages(() => {
+    handleShowTaggedImages();
   });
 }
 
@@ -1239,5 +1253,231 @@ async function handleUpdateXML() {
     } else {
       showInfoModal('Error', 'Error al actualizar el XML: ' + confirmResult.error);
     }
+  });
+}
+
+// Add image tag
+async function handleAddImageTag() {
+  if (currentImages.length === 0 || !imagePreviewContainer.classList.contains('active')) {
+    showInfoModal('Aviso', 'Debes seleccionar una imagen primero');
+    return;
+  }
+
+  showAddTagModal();
+}
+
+function showAddTagModal() {
+  const addTagModal = document.getElementById('add-tag-modal');
+  const tagInput = document.getElementById('tag-input');
+  const addTagConfirmBtn = document.getElementById('add-tag-confirm-btn');
+  const addTagCancelBtn = document.getElementById('add-tag-cancel-btn');
+
+  // Clear input
+  tagInput.value = '';
+
+  // Show modal
+  addTagModal.classList.add('show');
+  tagInput.focus();
+
+  // Setup event listeners (remove old ones first)
+  const newAddTagConfirmBtn = addTagConfirmBtn.cloneNode(true);
+  addTagConfirmBtn.parentNode.replaceChild(newAddTagConfirmBtn, addTagConfirmBtn);
+
+  const newAddTagCancelBtn = addTagCancelBtn.cloneNode(true);
+  addTagCancelBtn.parentNode.replaceChild(newAddTagCancelBtn, addTagCancelBtn);
+
+  // Confirm button handler
+  newAddTagConfirmBtn.addEventListener('click', async () => {
+    const tag = tagInput.value.trim();
+
+    if (!tag) {
+      showInfoModal('Aviso', 'Por favor, ingresa un texto para la etiqueta');
+      return;
+    }
+
+    // Get current image path
+    const imagePath = currentImages[currentImageIndex];
+
+    // Close modal
+    addTagModal.classList.remove('show');
+
+    // Add tag to image
+    const result = await window.electronAPI.addImageTag({ imagePath, tag });
+
+    if (result.success) {
+      showInfoModal('Éxito', 'Etiqueta agregada correctamente');
+    } else {
+      showInfoModal('Error', 'Error al agregar la etiqueta: ' + result.error);
+    }
+  });
+
+  // Cancel button handler
+  newAddTagCancelBtn.addEventListener('click', () => {
+    addTagModal.classList.remove('show');
+  });
+
+  // Handle Enter key in input
+  tagInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      newAddTagConfirmBtn.click();
+    }
+  });
+}
+
+// Load and display image tags
+async function loadImageTags() {
+  if (currentImages.length === 0) return;
+
+  const imagePath = currentImages[currentImageIndex];
+  const result = await window.electronAPI.getImageTags(imagePath);
+
+  const tagsContainer = document.getElementById('image-tags-container');
+  const tagsList = document.getElementById('image-tags-list');
+
+  if (result.success && result.tags.length > 0) {
+    // Show tags container
+    tagsContainer.style.display = 'block';
+
+    // Clear existing tags
+    tagsList.innerHTML = '';
+
+    // Add tags
+    result.tags.forEach(tag => {
+      const tagElement = document.createElement('div');
+      tagElement.className = 'image-tag';
+
+      const tagText = document.createElement('span');
+      tagText.className = 'image-tag-text';
+      tagText.textContent = tag.tag;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'image-tag-delete';
+      deleteBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      `;
+
+      deleteBtn.addEventListener('click', async () => {
+        const confirmDelete = confirm(`¿Deseas eliminar la etiqueta "${tag.tag}"?`);
+        if (confirmDelete) {
+          const deleteResult = await window.electronAPI.deleteImageTag(tag.id);
+          if (deleteResult.success) {
+            // Reload tags
+            await loadImageTags();
+          } else {
+            showInfoModal('Error', 'Error al eliminar la etiqueta: ' + deleteResult.error);
+          }
+        }
+      });
+
+      tagElement.appendChild(tagText);
+      tagElement.appendChild(deleteBtn);
+      tagsList.appendChild(tagElement);
+    });
+  } else {
+    // Hide tags container if no tags
+    tagsContainer.style.display = 'none';
+  }
+}
+
+// Show tagged images modal
+async function handleShowTaggedImages() {
+  if (!projectOpen) {
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  const taggedImagesModal = document.getElementById('tagged-images-modal');
+  const taggedImagesContainer = document.getElementById('tagged-images-container');
+  const taggedImagesCloseBtn = document.getElementById('tagged-images-close-btn');
+
+  // Show loading state
+  taggedImagesContainer.innerHTML = '<div class="loading">Cargando imágenes con etiquetas...</div>';
+  taggedImagesModal.classList.add('show');
+
+  // Fetch all images with tags
+  const result = await window.electronAPI.getAllImagesWithTags();
+
+  if (!result.success) {
+    taggedImagesContainer.innerHTML = `<div class="tagged-images-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <p>Error al cargar las imágenes: ${result.error}</p>
+    </div>`;
+    return;
+  }
+
+  // Clear container
+  taggedImagesContainer.innerHTML = '';
+
+  if (result.images.length === 0) {
+    // Show empty state
+    taggedImagesContainer.innerHTML = `<div class="tagged-images-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+        <polyline points="21 15 16 10 5 21"></polyline>
+      </svg>
+      <p>No hay imágenes con etiquetas</p>
+    </div>`;
+  } else {
+    // Display images with tags
+    result.images.forEach(imageData => {
+      const imageItem = document.createElement('div');
+      imageItem.className = 'tagged-image-item';
+
+      // Image preview
+      const imagePreview = document.createElement('img');
+      imagePreview.className = 'tagged-image-preview';
+      imagePreview.src = `file://${imageData.path}`;
+      imagePreview.alt = 'Imagen con etiquetas';
+
+      // Tags container
+      const tagsContainer = document.createElement('div');
+      tagsContainer.className = 'tagged-image-tags';
+
+      imageData.tags.forEach(tag => {
+        const tagElement = document.createElement('div');
+        tagElement.className = 'tagged-image-tag';
+        tagElement.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+          <span>${tag.tag}</span>
+        `;
+        tagsContainer.appendChild(tagElement);
+      });
+
+      // Add elements to item
+      imageItem.appendChild(imagePreview);
+      imageItem.appendChild(tagsContainer);
+
+      // Add click handler to show full image
+      imageItem.addEventListener('click', () => {
+        // Find the image in currentImages
+        const imageIndex = currentImages.indexOf(imageData.path);
+        if (imageIndex !== -1) {
+          currentImageIndex = imageIndex;
+          showImagePreview();
+          taggedImagesModal.classList.remove('show');
+        }
+      });
+
+      taggedImagesContainer.appendChild(imageItem);
+    });
+  }
+
+  // Setup close button
+  const newCloseBtn = taggedImagesCloseBtn.cloneNode(true);
+  taggedImagesCloseBtn.parentNode.replaceChild(newCloseBtn, taggedImagesCloseBtn);
+
+  newCloseBtn.addEventListener('click', () => {
+    taggedImagesModal.classList.remove('show');
   });
 }

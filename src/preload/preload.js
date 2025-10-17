@@ -108,5 +108,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Global configuration
   getImageRepositoryPath: () => ipcRenderer.invoke('get-image-repository-path'),
-  setImageRepositoryPath: (repositoryPath) => ipcRenderer.invoke('set-image-repository-path', repositoryPath)
+  setImageRepositoryPath: (repositoryPath) => ipcRenderer.invoke('set-image-repository-path', repositoryPath),
+
+  // Image tags
+  addImageTag: (data) => ipcRenderer.invoke('add-image-tag', data),
+  getImageTags: (imagePath) => ipcRenderer.invoke('get-image-tags', imagePath),
+  deleteImageTag: (tagId) => ipcRenderer.invoke('delete-image-tag', tagId),
+  getAllImagesWithTags: () => ipcRenderer.invoke('get-all-images-with-tags'),
+  onMenuAddImageTag: (callback) => {
+    ipcRenderer.on('menu-add-image-tag', callback);
+  },
+  onMenuShowTaggedImages: (callback) => {
+    ipcRenderer.on('menu-show-tagged-images', callback);
+  }
 });

@@ -92,6 +92,15 @@
           </svg>
           <p>No hay imágenes</p>
         </div>
+        <!-- Image Tags Display -->
+        <div id="image-tags-container" class="image-tags-container" style="display: none;">
+          <div class="tags-header">
+            <span>Etiquetas:</span>
+          </div>
+          <div id="image-tags-list" class="image-tags-list">
+            <!-- Tags will be populated here -->
+          </div>
+        </div>
       </div>
 
       <!-- Action Buttons -->
@@ -223,6 +232,34 @@
       <div class="modal-buttons">
         <button id="export-confirm-btn" class="btn btn-primary">Exportar</button>
         <button id="export-cancel-btn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Image Tag Modal -->
+  <div id="add-tag-modal" class="modal">
+    <div class="modal-content">
+      <h2>Agregar Etiqueta a Imagen</h2>
+      <div class="form-group">
+        <label>Texto de la etiqueta:</label>
+        <input type="text" id="tag-input" placeholder="Ingrese el texto de la etiqueta...">
+      </div>
+      <div class="modal-buttons">
+        <button id="add-tag-confirm-btn" class="btn btn-primary">Agregar</button>
+        <button id="add-tag-cancel-btn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tagged Images List Modal -->
+  <div id="tagged-images-modal" class="modal">
+    <div class="modal-content modal-large">
+      <h2>Listado de Imágenes con Etiquetas</h2>
+      <div id="tagged-images-container" class="tagged-images-container">
+        <!-- Images with tags will be populated here -->
+      </div>
+      <div class="modal-buttons">
+        <button id="tagged-images-close-btn" class="btn btn-primary">Cerrar</button>
       </div>
     </div>
   </div>
