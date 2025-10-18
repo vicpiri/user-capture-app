@@ -1305,6 +1305,8 @@ function showAddTagModal() {
     const result = await window.electronAPI.addImageTag({ imagePath, tag });
 
     if (result.success) {
+      // Reload tags to show the new tag immediately
+      await loadImageTags();
       showInfoModal('Éxito', 'Etiqueta agregada correctamente');
     } else {
       showInfoModal('Error', 'Error al agregar la etiqueta: ' + result.error);
