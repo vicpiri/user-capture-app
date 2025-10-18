@@ -1222,6 +1222,7 @@ ipcMain.handle('get-users', async (event, filters) => {
 
       // Check if image exists in repository
       user.has_repository_image = false;
+      user.repository_image_path = null;
       if (repositoryPath) {
         // Determine the identifier (NIA for students, document for others)
         const identifier = user.type === 'student' ? user.nia : user.document;
@@ -1231,8 +1232,12 @@ ipcMain.handle('get-users', async (event, filters) => {
           const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
           const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
 
-          if (fs.existsSync(jpgPath) || fs.existsSync(jpegPath)) {
+          if (fs.existsSync(jpgPath)) {
             user.has_repository_image = true;
+            user.repository_image_path = jpgPath;
+          } else if (fs.existsSync(jpegPath)) {
+            user.has_repository_image = true;
+            user.repository_image_path = jpegPath;
           }
         }
       }

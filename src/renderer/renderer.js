@@ -289,19 +289,21 @@ async function displayUsers(users, allUsers = null) {
            </svg>
          </div>`;
 
-    const repositoryCheck = user.has_repository_image
-      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="repository-check">
-           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-           <polyline points="22 4 12 14.01 9 11.01"></polyline>
-         </svg>`
-      : '';
+    const repositoryIndicator = user.repository_image_path
+      ? `<img src="file://${user.repository_image_path}" class="repository-indicator" alt="Foto Depósito">`
+      : `<div class="repository-placeholder">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+             <circle cx="12" cy="7" r="4"></circle>
+           </svg>
+         </div>`;
 
     row.innerHTML = `
       <td class="name">${user.first_name}</td>
       <td>${user.last_name1} ${user.last_name2 || ''}</td>
       <td>${user.nia || '-'}</td>
       <td>${user.group_code}</td>
-      <td style="display: flex; align-items: center;">${photoIndicator}${repositoryCheck}</td>
+      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}</td>
     `;
 
     row.addEventListener('click', () => selectUserRow(row, user));
@@ -312,7 +314,18 @@ async function displayUsers(users, allUsers = null) {
       if (photoIndicatorElement) {
         photoIndicatorElement.addEventListener('dblclick', (e) => {
           e.stopPropagation(); // Prevent row selection
-          showUserImageModal(user);
+          showUserImageModal(user, 'captured');
+        });
+      }
+    }
+
+    // Add double-click event to repository indicator to show full image
+    if (user.repository_image_path) {
+      const repositoryIndicatorElement = row.querySelector('.repository-indicator');
+      if (repositoryIndicatorElement) {
+        repositoryIndicatorElement.addEventListener('dblclick', (e) => {
+          e.stopPropagation(); // Prevent row selection
+          showUserImageModal(user, 'repository');
         });
       }
     }
@@ -1497,18 +1510,20 @@ async function handleShowTaggedImages() {
 }
 
 // Show user image modal
-function showUserImageModal(user) {
+function showUserImageModal(user, imageType = 'captured') {
   const userImageModal = document.getElementById('user-image-modal');
   const userImageModalTitle = document.getElementById('user-image-modal-title');
   const userImagePreview = document.getElementById('user-image-preview');
   const userImageCloseBtn = document.getElementById('user-image-close-btn');
 
-  // Set title with user's name
+  // Set title with user's name and image type
   const fullName = `${user.first_name} ${user.last_name1} ${user.last_name2 || ''}`.trim();
-  userImageModalTitle.textContent = fullName;
+  const imageLabel = imageType === 'repository' ? ' - Depósito' : '';
+  userImageModalTitle.textContent = fullName + imageLabel;
 
-  // Set image
-  userImagePreview.src = `file://${user.image_path}`;
+  // Set image based on type
+  const imagePath = imageType === 'repository' ? user.repository_image_path : user.image_path;
+  userImagePreview.src = `file://${imagePath}`;
 
   // Show modal
   userImageModal.classList.add('show');
