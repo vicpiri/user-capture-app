@@ -305,6 +305,18 @@ async function displayUsers(users, allUsers = null) {
     `;
 
     row.addEventListener('click', () => selectUserRow(row, user));
+
+    // Add double-click event to photo indicator to show full image
+    if (user.image_path) {
+      const photoIndicatorElement = row.querySelector('.photo-indicator');
+      if (photoIndicatorElement) {
+        photoIndicatorElement.addEventListener('dblclick', (e) => {
+          e.stopPropagation(); // Prevent row selection
+          showUserImageModal(user);
+        });
+      }
+    }
+
     userTableBody.appendChild(row);
   });
 }
@@ -1481,5 +1493,31 @@ async function handleShowTaggedImages() {
 
   newCloseBtn.addEventListener('click', () => {
     taggedImagesModal.classList.remove('show');
+  });
+}
+
+// Show user image modal
+function showUserImageModal(user) {
+  const userImageModal = document.getElementById('user-image-modal');
+  const userImageModalTitle = document.getElementById('user-image-modal-title');
+  const userImagePreview = document.getElementById('user-image-preview');
+  const userImageCloseBtn = document.getElementById('user-image-close-btn');
+
+  // Set title with user's name
+  const fullName = `${user.first_name} ${user.last_name1} ${user.last_name2 || ''}`.trim();
+  userImageModalTitle.textContent = fullName;
+
+  // Set image
+  userImagePreview.src = `file://${user.image_path}`;
+
+  // Show modal
+  userImageModal.classList.add('show');
+
+  // Setup close button
+  const newCloseBtn = userImageCloseBtn.cloneNode(true);
+  userImageCloseBtn.parentNode.replaceChild(newCloseBtn, userImageCloseBtn);
+
+  newCloseBtn.addEventListener('click', () => {
+    userImageModal.classList.remove('show');
   });
 }
