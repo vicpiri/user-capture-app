@@ -7,6 +7,8 @@ let currentImages = [];
 let currentImageIndex = 0;
 let projectOpen = false;
 let showDuplicatesOnly = false;
+let showCapturedPhotos = true;
+let showRepositoryPhotos = true;
 
 // DOM Elements
 const searchInput = document.getElementById('search-input');
@@ -280,23 +282,29 @@ async function displayUsers(users, allUsers = null) {
     const hasDuplicateImage = user.image_path && imageCount[user.image_path] > 1;
     const duplicateClass = hasDuplicateImage ? 'duplicate-image' : '';
 
-    const photoIndicator = user.image_path
-      ? `<img src="file://${user.image_path}" class="photo-indicator ${duplicateClass}" alt="Foto">`
-      : `<div class="photo-placeholder">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-             <circle cx="12" cy="7" r="4"></circle>
-           </svg>
-         </div>`;
+    // Show or hide captured photo based on menu option
+    const photoIndicator = showCapturedPhotos
+      ? (user.image_path
+        ? `<img src="file://${user.image_path}" class="photo-indicator ${duplicateClass}" alt="Foto">`
+        : `<div class="photo-placeholder">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+               <circle cx="12" cy="7" r="4"></circle>
+             </svg>
+           </div>`)
+      : '';
 
-    const repositoryIndicator = user.repository_image_path
-      ? `<img src="file://${user.repository_image_path}" class="repository-indicator" alt="Foto Depósito">`
-      : `<div class="repository-placeholder">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-             <circle cx="12" cy="7" r="4"></circle>
-           </svg>
-         </div>`;
+    // Show or hide repository photo based on menu option
+    const repositoryIndicator = showRepositoryPhotos
+      ? (user.repository_image_path
+        ? `<img src="file://${user.repository_image_path}" class="repository-indicator" alt="Foto Depósito">`
+        : `<div class="repository-placeholder">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+               <circle cx="12" cy="7" r="4"></circle>
+             </svg>
+           </div>`)
+      : '';
 
     row.innerHTML = `
       <td class="name">${user.first_name}</td>
@@ -698,6 +706,16 @@ function setupMenuListeners() {
   window.electronAPI.onMenuToggleDuplicates((enabled) => {
     showDuplicatesOnly = enabled;
     duplicatesFilter.checked = enabled;
+    displayUsers(currentUsers, allUsers);
+  });
+
+  window.electronAPI.onMenuToggleCapturedPhotos((enabled) => {
+    showCapturedPhotos = enabled;
+    displayUsers(currentUsers, allUsers);
+  });
+
+  window.electronAPI.onMenuToggleRepositoryPhotos((enabled) => {
+    showRepositoryPhotos = enabled;
     displayUsers(currentUsers, allUsers);
   });
 

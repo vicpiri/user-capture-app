@@ -62,6 +62,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-toggle-duplicates', (event, enabled) => callback(enabled));
   },
 
+  onMenuToggleCapturedPhotos: (callback) => {
+    ipcRenderer.on('menu-toggle-captured-photos', (event, enabled) => callback(enabled));
+  },
+
+  onMenuToggleRepositoryPhotos: (callback) => {
+    ipcRenderer.on('menu-toggle-repository-photos', (event, enabled) => callback(enabled));
+  },
+
   onMenuImportImagesId: (callback) => {
     ipcRenderer.on('menu-import-images-id', callback);
   },

@@ -1,5 +1,7 @@
 {
   "name": "user-capture-app",
+  "appId": "com.usercapture.app",
+  "productName": "User Capture",
   "version": "1.0.0",
   "description": "User Capture - Aplicación de captura de imágenes de usuarios",
   "main": "main.js",
@@ -11,13 +13,16 @@
     "build:win-dir": "electron-builder --win --dir",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
-    "postinstall": "npx @electron/rebuild -f -w sqlite3"
+    "clean": "rimraf node_modules dist",
+    "install:clean": "npm ci",
+    "rebuild:native": "node scripts/rebuild-native.mjs --with-sharp",
+    "dist:win": "npm run rebuild:native && electron-builder --win nsis --x64",
+    "postinstall": "echo skip electron-rebuild"
   },
   "keywords": [
     "electron"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Víctor Pineda Ribes",
   "dependencies": {
     "chokidar": "^3.5.3",
     "fast-xml-parser": "^4.3.4",
@@ -34,21 +39,34 @@
     "appId": "com.usercaptureapp.app",
     "productName": "User Capture",
     "directories": {
-      "output": "build"
+      "output": "dist"
     },
     "files": [
-      "**/*",
+      "main.js",
+      "package.json",
+      "assets/**/*",
+      "src/**/*",
       "!dist/**/*",
-      "!build/**/*"
+      "!build/**/*",
+      "!.vscode/**/*",
+      "!**/*.map",
+      "!**/test{,s}/**/*",
+      "!**/__tests__/**/*"
     ],
+    "asar": true,
     "asarUnpack": [
-      "node_modules/sqlite3/**/*"
+      "**/*.node",
+      "node_modules/sqlite3/**/*",
+      "node_modules/sharp/**/*"
     ],
     "win": {
       "target": "nsis",
       "icon": "assets/icons/icon.ico",
-      "sign": null,
-      "verifyUpdateCodeSignature": false
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     },
     "mac": {
       "target": "dmg",
@@ -58,5 +76,6 @@
       "target": "AppImage",
       "icon": "assets/icons/icon.png"
     }
-  }
+  },
+  "license": "ISC"
 }

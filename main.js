@@ -32,6 +32,8 @@ let cameraEnabled = false;
 let cameraAutoStart = false;
 let recentProjects = [];
 let showDuplicatesOnly = false;
+let showCapturedPhotos = true;
+let showRepositoryPhotos = true;
 let availableCameras = [];
 let selectedCameraId = null;
 
@@ -168,6 +170,25 @@ function createMenu() {
           click: (menuItem) => {
             showDuplicatesOnly = menuItem.checked;
             mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Mostrar fotografías capturadas',
+          type: 'checkbox',
+          checked: showCapturedPhotos,
+          click: (menuItem) => {
+            showCapturedPhotos = menuItem.checked;
+            mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
+          }
+        },
+        {
+          label: 'Mostrar fotografías del depósito',
+          type: 'checkbox',
+          checked: showRepositoryPhotos,
+          click: (menuItem) => {
+            showRepositoryPhotos = menuItem.checked;
+            mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
           }
         },
         { type: 'separator' },
