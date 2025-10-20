@@ -1,30 +1,59 @@
-name: Crear build para Windows
+name: Build & Release (Windows)
 
 on:
   push:
     tags:
-      - 'v*'  # se ejecuta cuando subas una etiqueta (ej. v1.0.0)
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Descargar el código
+      - name: Checkout (full history for tags)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Instalar Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Instalar dependencias
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 👉 Activa Developer Command Prompt (expone MSVC v143 y Windows SDK)
+      - name: Setup MSVC env
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Diagnostics
+        shell: pwsh
+        run: |
+          node -v
+          npm -v
+          python -V
+
+      - name: Install deps
         run: npm ci
 
-      - name: Recompilar librerías nativas
-        run: node scripts/rebuild-native.mjs --with-sharp
+      # 👉 Rebuild de nativos con MSVC y Python correctos
+      - name: Rebuild native modules for Electron
+        shell: pwsh
+        env:
+          GYP_MSVS_VERSION: '2022'
+          msvs_version: '2022'
+        run: node scripts/rebuild-native.mjs --with-sharp --python "${{ env.pythonLocation }}\python.exe"
 
-      - name: Crear y publicar el instalador
+      - name: Build & publish installer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis --x64 --publish always
+        run: npx -y electron-builder --win nsis --x64 --publish always
