@@ -1221,11 +1221,18 @@ async function ensureDeletedGroup() {
 }
 
 // Get all users
-ipcMain.handle('get-users', async (event, filters) => {
+ipcMain.handle('get-users', async (event, filters, options = {}) => {
   try {
     if (!dbManager) {
       throw new Error('No hay ningún proyecto abierto');
     }
+
+    // Default options: load everything unless explicitly disabled
+    const loadOptions = {
+      loadCapturedImages: options.loadCapturedImages !== false,
+      loadRepositoryImages: options.loadRepositoryImages !== false,
+      ...options
+    };
 
     // Map frontend filters to database filters
     const dbFilters = {};
@@ -1241,42 +1248,64 @@ ipcMain.handle('get-users', async (event, filters) => {
 
     const users = await dbManager.getUsers(dbFilters);
 
-    // Convert relative image paths to absolute paths
-    const importsPath = path.join(projectPath, 'imports');
-
-    // Get image repository path
-    const repositoryPath = getImageRepositoryPath();
-
-    users.forEach(user => {
-      if (user.image_path) {
-        // If it's a relative path (just filename), convert to absolute
-        if (!path.isAbsolute(user.image_path)) {
-          user.image_path = path.join(importsPath, user.image_path);
-        }
-      }
-
-      // Check if image exists in repository
-      user.has_repository_image = false;
-      user.repository_image_path = null;
-      if (repositoryPath) {
-        // Determine the identifier (NIA for students, document for others)
-        const identifier = user.type === 'student' ? user.nia : user.document;
-
-        if (identifier) {
-          // Check for .jpg and .jpeg extensions
-          const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
-          const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
-
-          if (fs.existsSync(jpgPath)) {
-            user.has_repository_image = true;
-            user.repository_image_path = jpgPath;
-          } else if (fs.existsSync(jpegPath)) {
-            user.has_repository_image = true;
-            user.repository_image_path = jpegPath;
+    // Only process captured images if needed
+    if (loadOptions.loadCapturedImages) {
+      const importsPath = path.join(projectPath, 'imports');
+      users.forEach(user => {
+        if (user.image_path) {
+          // If it's a relative path (just filename), convert to absolute
+          if (!path.isAbsolute(user.image_path)) {
+            user.image_path = path.join(importsPath, user.image_path);
           }
         }
+      });
+    } else {
+      // Clear image paths if not needed
+      users.forEach(user => {
+        user.image_path = null;
+      });
+    }
+
+    // Only check repository images if needed (for photos or indicators)
+    if (loadOptions.loadRepositoryImages) {
+      const repositoryPath = getImageRepositoryPath();
+
+      if (repositoryPath) {
+        users.forEach(user => {
+          // Check if image exists in repository
+          user.has_repository_image = false;
+          user.repository_image_path = null;
+
+          // Determine the identifier (NIA for students, document for others)
+          const identifier = user.type === 'student' ? user.nia : user.document;
+
+          if (identifier) {
+            // Check for .jpg and .jpeg extensions
+            const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
+            const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
+
+            if (fs.existsSync(jpgPath)) {
+              user.has_repository_image = true;
+              user.repository_image_path = jpgPath;
+            } else if (fs.existsSync(jpegPath)) {
+              user.has_repository_image = true;
+              user.repository_image_path = jpegPath;
+            }
+          }
+        });
+      } else {
+        users.forEach(user => {
+          user.has_repository_image = false;
+          user.repository_image_path = null;
+        });
       }
-    });
+    } else {
+      // Clear repository image data if not needed
+      users.forEach(user => {
+        user.has_repository_image = false;
+        user.repository_image_path = null;
+      });
+    }
 
     return { success: true, users };
   } catch (error) {

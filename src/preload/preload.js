@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openProject: (folderPath) => ipcRenderer.invoke('open-project', folderPath),
 
   // User management
-  getUsers: (filters) => ipcRenderer.invoke('get-users', filters),
+  getUsers: (filters, options) => ipcRenderer.invoke('get-users', filters, options),
   getGroups: () => ipcRenderer.invoke('get-groups'),
 
   // Image management

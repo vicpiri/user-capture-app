@@ -228,13 +228,24 @@ async function loadUsers(filters = {}) {
   userTableBody.innerHTML = '';
 
   try {
-    const result = await window.electronAPI.getUsers(filters);
+    // Determine what data needs to be loaded based on menu settings
+    const loadOptions = {
+      loadCapturedImages: showCapturedPhotos,
+      loadRepositoryImages: showRepositoryPhotos || showRepositoryIndicators
+    };
+
+    const result = await window.electronAPI.getUsers(filters, loadOptions);
 
     if (result.success) {
       currentUsers = result.users;
 
       // Always reload all users for accurate duplicate checking
-      const allResult = await window.electronAPI.getUsers({});
+      // Only load image_path for duplicate checking, no need for repository images
+      const allLoadOptions = {
+        loadCapturedImages: true,
+        loadRepositoryImages: false
+      };
+      const allResult = await window.electronAPI.getUsers({}, allLoadOptions);
       if (allResult.success) {
         allUsers = allResult.users;
       }
