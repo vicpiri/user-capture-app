@@ -12,6 +12,14 @@ let showRepositoryPhotos = true;
 let showRepositoryIndicators = true;
 let imageObserver = null;
 
+// Virtual scrolling state
+const ITEM_HEIGHT = 40; // Height of each row in pixels
+const BUFFER_SIZE = 10; // Extra rows to render above/below viewport
+let visibleStartIndex = 0;
+let visibleEndIndex = 0;
+let displayedUsers = []; // Currently displayed users (filtered/duplicates)
+let isVirtualScrolling = false;
+
 // DOM Elements
 const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search-btn');
@@ -82,6 +90,9 @@ function initializeEventListeners() {
 
   // Drag and drop for image preview
   setupDragAndDrop();
+
+  // Setup virtual scrolling
+  setupVirtualScroll();
 
   // Keyboard navigation for images and users
   document.addEventListener('keydown', (event) => {
@@ -260,8 +271,6 @@ async function loadUsers(filters = {}) {
 }
 
 async function displayUsers(users, allUsers = null) {
-  userTableBody.innerHTML = '';
-
   // If checking for duplicates, we need to count against all users in database
   const usersForCounting = allUsers || users;
 
@@ -298,84 +307,185 @@ async function displayUsers(users, allUsers = null) {
     usersToDisplay = users.filter(user => user.image_path && imageCount[user.image_path] > 1);
   }
 
+  // Store displayed users and image count for virtual scrolling
+  displayedUsers = usersToDisplay;
+
+  // Store imageCount globally for row rendering
+  window._imageCountCache = imageCount;
+
+  // Enable virtual scrolling if more than 50 users
+  if (displayedUsers.length > 50) {
+    isVirtualScrolling = true;
+    renderVirtualizedUsers();
+  } else {
+    isVirtualScrolling = false;
+    renderAllUsers(displayedUsers, imageCount);
+  }
+}
+
+// Render all users (for small lists < 50 users)
+function renderAllUsers(usersToDisplay, imageCount) {
+  const topSpacer = document.getElementById('top-spacer');
+  const bottomSpacer = document.getElementById('bottom-spacer');
+
+  // Hide spacers for non-virtual mode
+  topSpacer.style.height = '0px';
+  bottomSpacer.style.height = '0px';
+
+  // Clear existing rows (except spacers)
+  const existingRows = Array.from(userTableBody.querySelectorAll('tr:not(#top-spacer):not(#bottom-spacer)'));
+  existingRows.forEach(row => row.remove());
+
+  // Render all users
   usersToDisplay.forEach(user => {
-    const row = document.createElement('tr');
-    row.dataset.userId = user.id;
-
-    const hasDuplicateImage = user.image_path && imageCount[user.image_path] > 1;
-    const duplicateClass = hasDuplicateImage ? 'duplicate-image' : '';
-
-    // Show or hide captured photo based on menu option (with lazy loading)
-    const photoIndicator = showCapturedPhotos
-      ? (user.image_path
-        ? `<img data-src="file://${user.image_path}" class="photo-indicator lazy-image ${duplicateClass}" alt="Foto" style="background-color: #f0f0f0">`
-        : `<div class="photo-placeholder">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-               <circle cx="12" cy="7" r="4"></circle>
-             </svg>
-           </div>`)
-      : '';
-
-    // Show or hide repository photo based on menu option (with lazy loading)
-    const repositoryIndicator = showRepositoryPhotos
-      ? (user.repository_image_path
-        ? `<img data-src="file://${user.repository_image_path}" class="repository-indicator lazy-image" alt="Foto Depósito" style="background-color: #f0f0f0">`
-        : `<div class="repository-placeholder">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-               <circle cx="12" cy="7" r="4"></circle>
-             </svg>
-           </div>`)
-      : '';
-
-    // Show repository check indicator if enabled (always reserve space for alignment)
-    const repositoryCheckIndicator = showRepositoryIndicators
-      ? (user.repository_image_path
-        ? `<svg class="repository-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-             <polyline points="22 4 12 14.01 9 11.01"></polyline>
-           </svg>`
-        : `<div class="repository-check-placeholder"></div>`)
-      : '';
-
-    row.innerHTML = `
-      <td class="name">${user.first_name}</td>
-      <td>${user.last_name1} ${user.last_name2 || ''}</td>
-      <td>${user.nia || '-'}</td>
-      <td>${user.group_code}</td>
-      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}</td>
-    `;
-
-    row.addEventListener('click', () => selectUserRow(row, user));
-
-    // Add double-click event to photo indicator to show full image
-    if (user.image_path) {
-      const photoIndicatorElement = row.querySelector('.photo-indicator');
-      if (photoIndicatorElement) {
-        photoIndicatorElement.addEventListener('dblclick', (e) => {
-          e.stopPropagation(); // Prevent row selection
-          showUserImageModal(user, 'captured');
-        });
-      }
-    }
-
-    // Add double-click event to repository indicator to show full image
-    if (user.repository_image_path) {
-      const repositoryIndicatorElement = row.querySelector('.repository-indicator');
-      if (repositoryIndicatorElement) {
-        repositoryIndicatorElement.addEventListener('dblclick', (e) => {
-          e.stopPropagation(); // Prevent row selection
-          showUserImageModal(user, 'repository');
-        });
-      }
-    }
-
-    userTableBody.appendChild(row);
+    const row = createUserRow(user, imageCount);
+    bottomSpacer.parentNode.insertBefore(row, bottomSpacer);
   });
 
   // Observe lazy images after rendering
   observeLazyImages();
+}
+
+// Render virtualized users (for large lists >= 50 users)
+function renderVirtualizedUsers() {
+  const container = document.getElementById('table-container');
+  const containerHeight = container.clientHeight;
+  const scrollTop = container.scrollTop;
+
+  // Calculate visible range
+  const visibleCount = Math.ceil(containerHeight / ITEM_HEIGHT);
+  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER_SIZE);
+  const endIndex = Math.min(displayedUsers.length, startIndex + visibleCount + (BUFFER_SIZE * 2));
+
+  // Only re-render if range changed significantly
+  if (startIndex === visibleStartIndex && endIndex === visibleEndIndex) {
+    return;
+  }
+
+  visibleStartIndex = startIndex;
+  visibleEndIndex = endIndex;
+
+  // Update spacers
+  const topSpacer = document.getElementById('top-spacer');
+  const bottomSpacer = document.getElementById('bottom-spacer');
+
+  topSpacer.style.height = `${startIndex * ITEM_HEIGHT}px`;
+  bottomSpacer.style.height = `${(displayedUsers.length - endIndex) * ITEM_HEIGHT}px`;
+
+  // Clear existing rows (except spacers)
+  const existingRows = Array.from(userTableBody.querySelectorAll('tr:not(#top-spacer):not(#bottom-spacer)'));
+  existingRows.forEach(row => row.remove());
+
+  // Render visible rows
+  const visibleUsers = displayedUsers.slice(startIndex, endIndex);
+  const imageCount = window._imageCountCache || {};
+
+  visibleUsers.forEach(user => {
+    const row = createUserRow(user, imageCount);
+    bottomSpacer.parentNode.insertBefore(row, bottomSpacer);
+  });
+
+  // Observe lazy images after rendering
+  observeLazyImages();
+}
+
+// Create a user row element
+function createUserRow(user, imageCount) {
+  const row = document.createElement('tr');
+  row.dataset.userId = user.id;
+
+  const hasDuplicateImage = user.image_path && imageCount[user.image_path] > 1;
+  const duplicateClass = hasDuplicateImage ? 'duplicate-image' : '';
+
+  // Show or hide captured photo based on menu option (with lazy loading)
+  const photoIndicator = showCapturedPhotos
+    ? (user.image_path
+      ? `<img data-src="file://${user.image_path}" class="photo-indicator lazy-image ${duplicateClass}" alt="Foto" style="background-color: #f0f0f0">`
+      : `<div class="photo-placeholder">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+             <circle cx="12" cy="7" r="4"></circle>
+           </svg>
+         </div>`)
+    : '';
+
+  // Show or hide repository photo based on menu option (with lazy loading)
+  const repositoryIndicator = showRepositoryPhotos
+    ? (user.repository_image_path
+      ? `<img data-src="file://${user.repository_image_path}" class="repository-indicator lazy-image" alt="Foto Depósito" style="background-color: #f0f0f0">`
+      : `<div class="repository-placeholder">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+             <circle cx="12" cy="7" r="4"></circle>
+           </svg>
+         </div>`)
+    : '';
+
+  // Show repository check indicator if enabled (always reserve space for alignment)
+  const repositoryCheckIndicator = showRepositoryIndicators
+    ? (user.repository_image_path
+      ? `<svg class="repository-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+           <polyline points="22 4 12 14.01 9 11.01"></polyline>
+         </svg>`
+      : `<div class="repository-check-placeholder"></div>`)
+    : '';
+
+  row.innerHTML = `
+    <td class="name">${user.first_name}</td>
+    <td>${user.last_name1} ${user.last_name2 || ''}</td>
+    <td>${user.nia || '-'}</td>
+    <td>${user.group_code}</td>
+    <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}</td>
+  `;
+
+  row.addEventListener('click', () => selectUserRow(row, user));
+
+  // Add double-click event to photo indicator to show full image
+  if (user.image_path) {
+    const photoIndicatorElement = row.querySelector('.photo-indicator');
+    if (photoIndicatorElement) {
+      photoIndicatorElement.addEventListener('dblclick', (e) => {
+        e.stopPropagation(); // Prevent row selection
+        showUserImageModal(user, 'captured');
+      });
+    }
+  }
+
+  // Add double-click event to repository indicator to show full image
+  if (user.repository_image_path) {
+    const repositoryIndicatorElement = row.querySelector('.repository-indicator');
+    if (repositoryIndicatorElement) {
+      repositoryIndicatorElement.addEventListener('dblclick', (e) => {
+        e.stopPropagation(); // Prevent row selection
+        showUserImageModal(user, 'repository');
+      });
+    }
+  }
+
+  return row;
+}
+
+// Setup virtual scrolling event listener
+function setupVirtualScroll() {
+  const container = document.getElementById('table-container');
+  let scrollTimeout = null;
+
+  container.addEventListener('scroll', () => {
+    // Only handle scroll if virtualization is active
+    if (!isVirtualScrolling || displayedUsers.length === 0) {
+      return;
+    }
+
+    // Debounce scroll events for better performance
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
+    }
+
+    scrollTimeout = setTimeout(() => {
+      renderVirtualizedUsers();
+    }, 10); // 10ms debounce
+  });
 }
 
 function selectUserRow(row, user) {

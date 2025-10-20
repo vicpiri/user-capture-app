@@ -38,7 +38,7 @@
         </div>
       </div>
 
-      <div class="table-container">
+      <div class="table-container" id="table-container">
         <!-- Loading spinner -->
         <div id="loading-spinner" class="loading-spinner" style="display: none;">
           <div class="spinner"></div>
@@ -56,7 +56,15 @@
             </tr>
           </thead>
           <tbody id="user-table-body">
-            <!-- Users will be populated here -->
+            <!-- Top spacer for virtual scrolling -->
+            <tr id="top-spacer" style="height: 0px;">
+              <td colspan="5" style="padding: 0; border: none;"></td>
+            </tr>
+            <!-- Visible users will be populated here -->
+            <!-- Bottom spacer for virtual scrolling -->
+            <tr id="bottom-spacer" style="height: 0px;">
+              <td colspan="5" style="padding: 0; border: none;"></td>
+            </tr>
           </tbody>
         </table>
       </div>
