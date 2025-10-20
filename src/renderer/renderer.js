@@ -25,6 +25,7 @@ const imagePreviewContainer = document.getElementById('image-preview-container')
 const currentImage = document.getElementById('current-image');
 const prevImageBtn = document.getElementById('prev-image');
 const nextImageBtn = document.getElementById('next-image');
+const loadingSpinner = document.getElementById('loading-spinner');
 
 // Modals
 const newProjectModal = document.getElementById('new-project-modal');
@@ -221,19 +222,28 @@ function populateGroupFilter() {
 }
 
 async function loadUsers(filters = {}) {
-  const result = await window.electronAPI.getUsers(filters);
+  // Show loading spinner
+  loadingSpinner.style.display = 'flex';
+  userTableBody.innerHTML = '';
 
-  if (result.success) {
-    currentUsers = result.users;
+  try {
+    const result = await window.electronAPI.getUsers(filters);
 
-    // Always reload all users for accurate duplicate checking
-    const allResult = await window.electronAPI.getUsers({});
-    if (allResult.success) {
-      allUsers = allResult.users;
+    if (result.success) {
+      currentUsers = result.users;
+
+      // Always reload all users for accurate duplicate checking
+      const allResult = await window.electronAPI.getUsers({});
+      if (allResult.success) {
+        allUsers = allResult.users;
+      }
+
+      displayUsers(currentUsers, allUsers);
+      updateUserCount();
     }
-
-    displayUsers(currentUsers, allUsers);
-    updateUserCount();
+  } finally {
+    // Hide loading spinner
+    loadingSpinner.style.display = 'none';
   }
 }
 
