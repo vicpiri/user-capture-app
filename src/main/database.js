@@ -66,10 +66,17 @@ class DatabaseManager {
           )
         `);
 
-        // Create indexes
+        // Create indexes for performance optimization
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_group ON users(group_code)');
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_type ON users(type)');
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_nia ON users(nia)');
+
+        // Composite index for search operations (optimizes LIKE queries on multiple fields)
+        this.db.run('CREATE INDEX IF NOT EXISTS idx_users_search ON users(first_name, last_name1, last_name2, nia)');
+
+        // Index for image path lookups (optimizes linking and unlinking operations)
+        this.db.run('CREATE INDEX IF NOT EXISTS idx_users_image ON users(image_path)');
+
         this.db.run('CREATE INDEX IF NOT EXISTS idx_image_tags_path ON image_tags(image_path)', (err) => {
           if (err) reject(err);
           else resolve();
