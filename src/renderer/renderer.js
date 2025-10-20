@@ -9,6 +9,7 @@ let projectOpen = false;
 let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = true;
+let imageObserver = null;
 
 // DOM Elements
 const searchInput = document.getElementById('search-input');
@@ -282,10 +283,10 @@ async function displayUsers(users, allUsers = null) {
     const hasDuplicateImage = user.image_path && imageCount[user.image_path] > 1;
     const duplicateClass = hasDuplicateImage ? 'duplicate-image' : '';
 
-    // Show or hide captured photo based on menu option
+    // Show or hide captured photo based on menu option (with lazy loading)
     const photoIndicator = showCapturedPhotos
       ? (user.image_path
-        ? `<img src="file://${user.image_path}" class="photo-indicator ${duplicateClass}" alt="Foto">`
+        ? `<img data-src="file://${user.image_path}" class="photo-indicator lazy-image ${duplicateClass}" alt="Foto" style="background-color: #f0f0f0">`
         : `<div class="photo-placeholder">
              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -294,10 +295,10 @@ async function displayUsers(users, allUsers = null) {
            </div>`)
       : '';
 
-    // Show or hide repository photo based on menu option
+    // Show or hide repository photo based on menu option (with lazy loading)
     const repositoryIndicator = showRepositoryPhotos
       ? (user.repository_image_path
-        ? `<img src="file://${user.repository_image_path}" class="repository-indicator" alt="Foto Depósito">`
+        ? `<img data-src="file://${user.repository_image_path}" class="repository-indicator lazy-image" alt="Foto Depósito" style="background-color: #f0f0f0">`
         : `<div class="repository-placeholder">
              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -340,6 +341,9 @@ async function displayUsers(users, allUsers = null) {
 
     userTableBody.appendChild(row);
   });
+
+  // Observe lazy images after rendering
+  observeLazyImages();
 }
 
 function selectUserRow(row, user) {
@@ -1552,5 +1556,51 @@ function showUserImageModal(user, imageType = 'captured') {
 
   newCloseBtn.addEventListener('click', () => {
     userImageModal.classList.remove('show');
+  });
+}
+
+// Initialize lazy loading with IntersectionObserver
+function initLazyLoading() {
+  // Disconnect previous observer if exists
+  if (imageObserver) {
+    imageObserver.disconnect();
+  }
+
+  // Create intersection observer for lazy loading
+  const options = {
+    root: null, // Use viewport as root
+    rootMargin: '50px', // Start loading 50px before entering viewport
+    threshold: 0.01 // Trigger when 1% of image is visible
+  };
+
+  imageObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+
+        // Load the image
+        if (img.dataset.src) {
+          img.src = img.dataset.src;
+          img.removeAttribute('data-src');
+          img.classList.remove('lazy-image');
+          img.classList.add('lazy-loaded');
+
+          // Stop observing this image
+          observer.unobserve(img);
+        }
+      }
+    });
+  }, options);
+}
+
+// Observe all images with lazy-image class
+function observeLazyImages() {
+  if (!imageObserver) {
+    initLazyLoading();
+  }
+
+  const lazyImages = document.querySelectorAll('.lazy-image');
+  lazyImages.forEach(img => {
+    imageObserver.observe(img);
   });
 }

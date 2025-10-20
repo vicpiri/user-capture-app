@@ -2,6 +2,7 @@
 let allUsers = [];
 let currentGroups = [];
 let selectedGroupCode = '';
+let imageObserver = null;
 
 // DOM Elements
 const gridContainer = document.getElementById('grid-container');
@@ -13,6 +14,7 @@ const groupFilter = document.getElementById('group-filter');
 document.addEventListener('DOMContentLoaded', async () => {
   await loadGroups();
   await loadUsers();
+  initLazyLoading();
   displayGrid();
 
   // Add event listener for group filter
@@ -96,6 +98,9 @@ function displayGrid() {
     const gridItem = createGridItem(user);
     gridContainer.appendChild(gridItem);
   });
+
+  // Observe new lazy images after rendering
+  observeLazyImages();
 }
 
 // Create a single grid item
@@ -108,11 +113,15 @@ function createGridItem(user) {
   imageContainer.className = 'grid-item-image-container';
 
   if (user.image_path) {
-    // User has an image
+    // User has an image - use lazy loading
     const img = document.createElement('img');
-    img.className = 'grid-item-image';
-    img.src = `file://${user.image_path}`;
+    img.className = 'grid-item-image lazy-image';
+    // Store the actual path in data attribute
+    img.dataset.src = `file://${user.image_path}`;
     img.alt = `${user.first_name} ${user.last_name1}`;
+
+    // Show placeholder initially
+    img.style.backgroundColor = '#f0f0f0';
 
     // Handle image load errors
     img.onerror = () => {
@@ -170,4 +179,49 @@ function createPlaceholderSVG() {
       </svg>
     </div>
   `;
+}
+
+// Initialize lazy loading with IntersectionObserver
+function initLazyLoading() {
+  // Disconnect previous observer if exists
+  if (imageObserver) {
+    imageObserver.disconnect();
+  }
+
+  // Create intersection observer for lazy loading
+  const options = {
+    root: null, // Use viewport as root
+    rootMargin: '50px', // Start loading 50px before entering viewport
+    threshold: 0.01 // Trigger when 1% of image is visible
+  };
+
+  imageObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+
+        // Load the image
+        if (img.dataset.src) {
+          img.src = img.dataset.src;
+          img.removeAttribute('data-src');
+          img.classList.remove('lazy-image');
+          img.classList.add('lazy-loaded');
+
+          // Stop observing this image
+          observer.unobserve(img);
+        }
+      }
+    });
+  }, options);
+
+  // Observe all lazy images
+  observeLazyImages();
+}
+
+// Observe all images with lazy-image class
+function observeLazyImages() {
+  const lazyImages = document.querySelectorAll('.lazy-image');
+  lazyImages.forEach(img => {
+    imageObserver.observe(img);
+  });
 }
