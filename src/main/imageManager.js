@@ -1,4 +1,5 @@
-const fs = require('fs');
+const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 
 class ImageManager {
@@ -8,11 +9,13 @@ class ImageManager {
 
   async getImages() {
     try {
-      if (!fs.existsSync(this.importsPath)) {
+      // Check if directory exists using sync for simplicity (fast operation)
+      if (!fsSync.existsSync(this.importsPath)) {
         return [];
       }
 
-      const files = fs.readdirSync(this.importsPath);
+      // Use async readdir instead of sync
+      const files = await fs.readdir(this.importsPath);
 
       // Filter for JPG files only
       const imageFiles = files.filter(file => {
@@ -33,12 +36,14 @@ class ImageManager {
 
   async deleteImage(imagePath) {
     try {
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-        return true;
-      }
-      return false;
+      // Use async unlink instead of sync
+      await fs.unlink(imagePath);
+      return true;
     } catch (error) {
+      // If file doesn't exist, ENOENT error is thrown
+      if (error.code === 'ENOENT') {
+        return false;
+      }
       console.error('Error deleting image:', error);
       return false;
     }
@@ -46,11 +51,8 @@ class ImageManager {
 
   async getImageInfo(imagePath) {
     try {
-      if (!fs.existsSync(imagePath)) {
-        return null;
-      }
-
-      const stats = fs.statSync(imagePath);
+      // Use async stat instead of sync
+      const stats = await fs.stat(imagePath);
       return {
         path: imagePath,
         filename: path.basename(imagePath),
@@ -59,6 +61,10 @@ class ImageManager {
         modified: stats.mtime
       };
     } catch (error) {
+      // If file doesn't exist, ENOENT error is thrown
+      if (error.code === 'ENOENT') {
+        return null;
+      }
       console.error('Error getting image info:', error);
       return null;
     }
