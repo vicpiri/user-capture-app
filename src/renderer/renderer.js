@@ -236,7 +236,10 @@ function populateGroupFilter() {
 async function loadUsers(filters = {}) {
   // Show loading spinner
   loadingSpinner.style.display = 'flex';
-  userTableBody.innerHTML = '';
+
+  // Clear rows but preserve spacers
+  const existingRows = Array.from(userTableBody.querySelectorAll('tr:not(#top-spacer):not(#bottom-spacer)'));
+  existingRows.forEach(row => row.remove());
 
   try {
     // Determine what data needs to be loaded based on menu settings
