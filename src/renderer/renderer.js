@@ -716,6 +716,14 @@ function closeProgressModal() {
 
 // Menu listeners
 function setupMenuListeners() {
+  // Load initial display preferences from main process
+  window.electronAPI.onInitialDisplayPreferences((prefs) => {
+    showDuplicatesOnly = prefs.showDuplicatesOnly;
+    showCapturedPhotos = prefs.showCapturedPhotos;
+    showRepositoryPhotos = prefs.showRepositoryPhotos;
+    showRepositoryIndicators = prefs.showRepositoryIndicators;
+  });
+
   window.electronAPI.onMenuNewProject(() => {
     openNewProjectModal();
   });

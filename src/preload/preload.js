@@ -74,6 +74,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-toggle-repository-indicators', (event, enabled) => callback(enabled));
   },
 
+  onInitialDisplayPreferences: (callback) => {
+    ipcRenderer.on('initial-display-preferences', (event, prefs) => callback(prefs));
+  },
+
   onMenuImportImagesId: (callback) => {
     ipcRenderer.on('menu-import-images-id', callback);
   },

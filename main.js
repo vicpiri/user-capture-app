@@ -170,6 +170,7 @@ function createMenu() {
           checked: showDuplicatesOnly,
           click: (menuItem) => {
             showDuplicatesOnly = menuItem.checked;
+            saveDisplayPreferences();
             mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
           }
         },
@@ -180,6 +181,7 @@ function createMenu() {
           checked: showCapturedPhotos,
           click: (menuItem) => {
             showCapturedPhotos = menuItem.checked;
+            saveDisplayPreferences();
             mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
           }
         },
@@ -189,6 +191,7 @@ function createMenu() {
           checked: showRepositoryPhotos,
           click: (menuItem) => {
             showRepositoryPhotos = menuItem.checked;
+            saveDisplayPreferences();
             mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
           }
         },
@@ -198,6 +201,7 @@ function createMenu() {
           checked: showRepositoryIndicators,
           click: (menuItem) => {
             showRepositoryIndicators = menuItem.checked;
+            saveDisplayPreferences();
             mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
           }
         },
@@ -374,6 +378,13 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    // Send initial display preferences to renderer
+    mainWindow.webContents.send('initial-display-preferences', {
+      showDuplicatesOnly,
+      showCapturedPhotos,
+      showRepositoryPhotos,
+      showRepositoryIndicators
+    });
   });
 
   // Open DevTools in development
@@ -490,6 +501,13 @@ function openImageGridWindow() {
 }
 
 app.whenReady().then(() => {
+  // Load display preferences from config
+  const config = loadGlobalConfig();
+  showDuplicatesOnly = config.showDuplicatesOnly ?? false;
+  showCapturedPhotos = config.showCapturedPhotos ?? true;
+  showRepositoryPhotos = config.showRepositoryPhotos ?? true;
+  showRepositoryIndicators = config.showRepositoryIndicators ?? true;
+
   loadRecentProjects();
   createMenu();
   createWindow();
@@ -2431,6 +2449,15 @@ function saveGlobalConfig(config) {
     console.error('Error saving global config:', error);
     return false;
   }
+}
+
+function saveDisplayPreferences() {
+  const config = loadGlobalConfig();
+  config.showDuplicatesOnly = showDuplicatesOnly;
+  config.showCapturedPhotos = showCapturedPhotos;
+  config.showRepositoryPhotos = showRepositoryPhotos;
+  config.showRepositoryIndicators = showRepositoryIndicators;
+  return saveGlobalConfig(config);
 }
 
 function getImageRepositoryPath() {
