@@ -1,0 +1,30 @@
+name: Crear build para Windows
+
+on:
+  push:
+    tags:
+      - 'v*'  # se ejecuta cuando subas una etiqueta (ej. v1.0.0)
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Recompilar librerías nativas
+        run: node scripts/rebuild-native.mjs --with-sharp
+
+      - name: Crear y publicar el instalador
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --x64 --publish always
