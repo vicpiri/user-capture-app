@@ -9,6 +9,7 @@ let projectOpen = false;
 let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = true;
+let showRepositoryIndicators = true;
 let imageObserver = null;
 
 // DOM Elements
@@ -317,12 +318,22 @@ async function displayUsers(users, allUsers = null) {
            </div>`)
       : '';
 
+    // Show repository check indicator if enabled (always reserve space for alignment)
+    const repositoryCheckIndicator = showRepositoryIndicators
+      ? (user.repository_image_path
+        ? `<svg class="repository-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+             <polyline points="22 4 12 14.01 9 11.01"></polyline>
+           </svg>`
+        : `<div class="repository-check-placeholder"></div>`)
+      : '';
+
     row.innerHTML = `
       <td class="name">${user.first_name}</td>
       <td>${user.last_name1} ${user.last_name2 || ''}</td>
       <td>${user.nia || '-'}</td>
       <td>${user.group_code}</td>
-      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}</td>
+      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}</td>
     `;
 
     row.addEventListener('click', () => selectUserRow(row, user));
@@ -730,6 +741,11 @@ function setupMenuListeners() {
 
   window.electronAPI.onMenuToggleRepositoryPhotos((enabled) => {
     showRepositoryPhotos = enabled;
+    displayUsers(currentUsers, allUsers);
+  });
+
+  window.electronAPI.onMenuToggleRepositoryIndicators((enabled) => {
+    showRepositoryIndicators = enabled;
     displayUsers(currentUsers, allUsers);
   });
 

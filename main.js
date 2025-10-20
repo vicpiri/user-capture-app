@@ -34,6 +34,7 @@ let recentProjects = [];
 let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = true;
+let showRepositoryIndicators = true;
 let availableCameras = [];
 let selectedCameraId = null;
 
@@ -189,6 +190,15 @@ function createMenu() {
           click: (menuItem) => {
             showRepositoryPhotos = menuItem.checked;
             mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
+          }
+        },
+        {
+          label: 'Indicadores de foto en el depósito',
+          type: 'checkbox',
+          checked: showRepositoryIndicators,
+          click: (menuItem) => {
+            showRepositoryIndicators = menuItem.checked;
+            mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
           }
         },
         { type: 'separator' },

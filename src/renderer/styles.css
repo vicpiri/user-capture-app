@@ -272,6 +272,13 @@ body {
   flex-shrink: 0;
 }
 
+.user-table td .repository-check-placeholder {
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
 .user-table td .repository-indicator {
   width: 32px;
   height: 32px;
