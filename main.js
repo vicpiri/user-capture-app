@@ -705,6 +705,8 @@ ipcMain.handle('create-project', async (event, data) => {
     folderWatcher = new FolderWatcher(ingestPath, importsPath);
     folderWatcher.on('image-added', (filename) => {
       logger.info(`New image detected: ${filename}`);
+      // Invalidate image cache when new image is added
+      imageManager.invalidateCache();
       mainWindow.webContents.send('new-image-detected', filename);
     });
     folderWatcher.start();
@@ -813,6 +815,8 @@ ipcMain.handle('open-project', async (event, folderPath) => {
     folderWatcher = new FolderWatcher(ingestPath, importsPath);
     folderWatcher.on('image-added', (filename) => {
       logger.info(`New image detected: ${filename}`);
+      // Invalidate image cache when new image is added
+      imageManager.invalidateCache();
       mainWindow.webContents.send('new-image-detected', filename);
     });
     folderWatcher.start();
@@ -2488,6 +2492,8 @@ async function openRecentProject(folderPath) {
     folderWatcher = new FolderWatcher(ingestPath, importsPath);
     folderWatcher.on('image-added', (filename) => {
       logger.info(`New image detected: ${filename}`);
+      // Invalidate image cache when new image is added
+      imageManager.invalidateCache();
       mainWindow.webContents.send('new-image-detected', filename);
     });
     folderWatcher.start();

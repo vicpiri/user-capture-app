@@ -5,12 +5,30 @@ const path = require('path');
 class ImageManager {
   constructor(importsPath) {
     this.importsPath = importsPath;
+    this.imageCache = null;
+    this.cacheTimestamp = null;
   }
 
-  async getImages() {
+  /**
+   * Invalidate the image cache
+   * Should be called when the folder watcher detects changes
+   */
+  invalidateCache() {
+    this.imageCache = null;
+    this.cacheTimestamp = null;
+  }
+
+  async getImages(useCache = true) {
     try {
+      // Return cached images if available and caching is enabled
+      if (useCache && this.imageCache !== null) {
+        return this.imageCache;
+      }
+
       // Check if directory exists using sync for simplicity (fast operation)
       if (!fsSync.existsSync(this.importsPath)) {
+        this.imageCache = [];
+        this.cacheTimestamp = Date.now();
         return [];
       }
 
@@ -27,7 +45,13 @@ class ImageManager {
       imageFiles.sort().reverse();
 
       // Return full paths
-      return imageFiles.map(file => path.join(this.importsPath, file));
+      const imagePaths = imageFiles.map(file => path.join(this.importsPath, file));
+
+      // Update cache
+      this.imageCache = imagePaths;
+      this.cacheTimestamp = Date.now();
+
+      return imagePaths;
     } catch (error) {
       console.error('Error getting images:', error);
       return [];
@@ -38,6 +62,10 @@ class ImageManager {
     try {
       // Use async unlink instead of sync
       await fs.unlink(imagePath);
+
+      // Invalidate cache after deletion
+      this.invalidateCache();
+
       return true;
     } catch (error) {
       // If file doesn't exist, ENOENT error is thrown
