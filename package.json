@@ -2,7 +2,7 @@
   "name": "user-capture-app",
   "appId": "com.usercapture.app",
   "productName": "User Capture",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "User Capture - Aplicación de captura de imágenes de usuarios",
   "main": "main.js",
   "scripts": {
