@@ -326,6 +326,9 @@ async function displayUsers(users, allUsers = null) {
   // Enable virtual scrolling if more than 50 users
   if (displayedUsers.length > 50) {
     isVirtualScrolling = true;
+    // Reset virtual scroll indices to force re-render
+    visibleStartIndex = -1;
+    visibleEndIndex = -1;
     renderVirtualizedUsers();
   } else {
     isVirtualScrolling = false;
