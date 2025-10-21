@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const chokidar = require('chokidar');
 const DatabaseManager = require('./src/main/database');
 const XMLParser = require('./src/main/xmlParser');
 const FolderWatcher = require('./src/main/folderWatcher');
@@ -37,6 +38,7 @@ let showRepositoryPhotos = true;
 let showRepositoryIndicators = true;
 let availableCameras = [];
 let selectedCameraId = null;
+let repositoryWatcher = null;
 
 // Repository file existence cache
 let repositoryFileCache = new Map();
@@ -310,6 +312,11 @@ function createMenu() {
                   buttons: ['Aceptar']
                 });
                 logger.info(`Image repository path set to: ${selectedPath}`);
+
+                // Notify renderer to reload users with new repository path
+                if (mainWindow) {
+                  mainWindow.webContents.send('repository-changed');
+                }
               } else {
                 dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
               }
@@ -516,6 +523,12 @@ app.whenReady().then(() => {
   loadRecentProjects();
   createMenu();
   createWindow();
+
+  // Start repository watcher if repository path is configured
+  const repositoryPath = getImageRepositoryPath();
+  if (repositoryPath) {
+    startRepositoryWatcher(repositoryPath);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1279,6 +1292,79 @@ function checkRepositoryFile(filePath) {
   }
 
   return exists;
+}
+
+// Repository folder watcher management
+function startRepositoryWatcher(repositoryPath) {
+  // Stop existing watcher if any
+  stopRepositoryWatcher();
+
+  if (!repositoryPath || !fs.existsSync(repositoryPath)) {
+    logger.warning('Repository path does not exist, watcher not started');
+    return;
+  }
+
+  try {
+    // Watch for changes in repository folder (only .jpg and .jpeg files)
+    repositoryWatcher = chokidar.watch(repositoryPath, {
+      ignored: /[\/\\]\./,  // ignore dotfiles
+      persistent: true,
+      ignoreInitial: true,  // don't fire events for existing files
+      awaitWriteFinish: {
+        stabilityThreshold: 500,
+        pollInterval: 100
+      },
+      depth: 0  // don't watch subdirectories
+    });
+
+    repositoryWatcher
+      .on('add', (filePath) => {
+        const ext = path.extname(filePath).toLowerCase();
+        if (ext === '.jpg' || ext === '.jpeg') {
+          logger.info(`Repository file added: ${path.basename(filePath)}`);
+          invalidateRepositoryCache();
+          // Notify renderer to refresh user list
+          if (mainWindow) {
+            mainWindow.webContents.send('repository-changed');
+          }
+        }
+      })
+      .on('change', (filePath) => {
+        const ext = path.extname(filePath).toLowerCase();
+        if (ext === '.jpg' || ext === '.jpeg') {
+          logger.info(`Repository file changed: ${path.basename(filePath)}`);
+          invalidateRepositoryCache();
+          if (mainWindow) {
+            mainWindow.webContents.send('repository-changed');
+          }
+        }
+      })
+      .on('unlink', (filePath) => {
+        const ext = path.extname(filePath).toLowerCase();
+        if (ext === '.jpg' || ext === '.jpeg') {
+          logger.info(`Repository file deleted: ${path.basename(filePath)}`);
+          invalidateRepositoryCache();
+          if (mainWindow) {
+            mainWindow.webContents.send('repository-changed');
+          }
+        }
+      })
+      .on('error', (error) => {
+        logger.error('Repository watcher error:', error);
+      });
+
+    logger.success(`Repository watcher started for: ${repositoryPath}`);
+  } catch (error) {
+    logger.error('Error starting repository watcher:', error);
+  }
+}
+
+function stopRepositoryWatcher() {
+  if (repositoryWatcher) {
+    repositoryWatcher.close();
+    repositoryWatcher = null;
+    logger.info('Repository watcher stopped');
+  }
 }
 
 // Get all users
@@ -2520,6 +2606,10 @@ function setImageRepositoryPath(repositoryPath) {
   // Invalidate cache when repository path changes
   invalidateRepositoryCache();
   logger.info('Repository path changed, cache invalidated');
+
+  // Start watching the new repository path
+  startRepositoryWatcher(repositoryPath);
+
   return saveGlobalConfig(config);
 }
 

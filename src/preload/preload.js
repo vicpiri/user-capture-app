@@ -26,6 +26,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('new-image-detected', (event, filename) => callback(filename));
   },
 
+  onRepositoryChanged: (callback) => {
+    ipcRenderer.on('repository-changed', () => callback());
+  },
+
   onProgress: (callback) => {
     ipcRenderer.on('progress', (event, data) => callback(data));
   },
