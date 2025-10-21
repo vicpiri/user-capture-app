@@ -38,6 +38,11 @@ let showRepositoryIndicators = true;
 let availableCameras = [];
 let selectedCameraId = null;
 
+// Repository file existence cache
+let repositoryFileCache = new Map();
+let repositoryCacheTimestamp = null;
+const REPOSITORY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 function createMenu() {
   // Build recent projects submenu
   const recentProjectsSubmenu = recentProjects.length > 0
@@ -1238,6 +1243,44 @@ async function ensureDeletedGroup() {
   return deletedGroup;
 }
 
+// Repository cache management functions
+function invalidateRepositoryCache() {
+  repositoryFileCache.clear();
+  repositoryCacheTimestamp = null;
+  logger.info('Repository file cache invalidated');
+}
+
+function isCacheValid() {
+  if (!repositoryCacheTimestamp) return false;
+  const now = Date.now();
+  return (now - repositoryCacheTimestamp) < REPOSITORY_CACHE_TTL;
+}
+
+function checkRepositoryFile(filePath) {
+  // Check if cache is still valid
+  if (!isCacheValid()) {
+    invalidateRepositoryCache();
+  }
+
+  // Check cache first
+  if (repositoryFileCache.has(filePath)) {
+    return repositoryFileCache.get(filePath);
+  }
+
+  // If not in cache, check filesystem
+  const exists = fs.existsSync(filePath);
+
+  // Store in cache
+  repositoryFileCache.set(filePath, exists);
+
+  // Update cache timestamp
+  if (!repositoryCacheTimestamp) {
+    repositoryCacheTimestamp = Date.now();
+  }
+
+  return exists;
+}
+
 // Get all users
 ipcMain.handle('get-users', async (event, filters, options = {}) => {
   try {
@@ -1298,14 +1341,14 @@ ipcMain.handle('get-users', async (event, filters, options = {}) => {
           const identifier = user.type === 'student' ? user.nia : user.document;
 
           if (identifier) {
-            // Check for .jpg and .jpeg extensions
+            // Check for .jpg and .jpeg extensions using cache
             const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
             const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
 
-            if (fs.existsSync(jpgPath)) {
+            if (checkRepositoryFile(jpgPath)) {
               user.has_repository_image = true;
               user.repository_image_path = jpgPath;
-            } else if (fs.existsSync(jpegPath)) {
+            } else if (checkRepositoryFile(jpegPath)) {
               user.has_repository_image = true;
               user.repository_image_path = jpegPath;
             }
@@ -1575,11 +1618,11 @@ ipcMain.handle('export-csv', async (event, folderPath, users) => {
 
       if (!identifier) return false;
 
-      // Check for .jpg and .jpeg extensions
+      // Check for .jpg and .jpeg extensions using cache
       const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
       const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
 
-      return fs.existsSync(jpgPath) || fs.existsSync(jpegPath);
+      return checkRepositoryFile(jpgPath) || checkRepositoryFile(jpegPath);
     });
 
     // Log the filtering
@@ -2074,6 +2117,12 @@ ipcMain.handle('export-to-repository', async (event, users, options) => {
       logger.error(`Errors: ${results.errors.length} images`);
     }
 
+    // Invalidate repository cache after export
+    if (results.exported > 0) {
+      invalidateRepositoryCache();
+      logger.info('Repository cache invalidated after export');
+    }
+
     return { success: true, results };
   } catch (error) {
     logger.error('Error exporting images to repository', error);
@@ -2468,6 +2517,9 @@ function getImageRepositoryPath() {
 function setImageRepositoryPath(repositoryPath) {
   const config = loadGlobalConfig();
   config.imageRepositoryPath = repositoryPath;
+  // Invalidate cache when repository path changes
+  invalidateRepositoryCache();
+  logger.info('Repository path changed, cache invalidated');
   return saveGlobalConfig(config);
 }
 
