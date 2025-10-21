@@ -124,6 +124,44 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'Configuración',
+          submenu: [
+            {
+              label: 'Depósito imágenes de usuario',
+              click: async () => {
+                const currentPath = getImageRepositoryPath();
+                const result = await dialog.showOpenDialog(mainWindow, {
+                  title: 'Seleccionar carpeta del depósito de imágenes',
+                  defaultPath: currentPath || undefined,
+                  properties: ['openDirectory', 'createDirectory']
+                });
+
+                if (!result.canceled && result.filePaths.length > 0) {
+                  const selectedPath = result.filePaths[0];
+                  if (setImageRepositoryPath(selectedPath)) {
+                    dialog.showMessageBox(mainWindow, {
+                      type: 'info',
+                      title: 'Configuración guardada',
+                      message: 'Depósito de imágenes configurado',
+                      detail: `Ruta: ${selectedPath}`,
+                      buttons: ['Aceptar']
+                    });
+                    logger.info(`Image repository path set to: ${selectedPath}`);
+
+                    // Notify renderer to reload users with new repository path
+                    if (mainWindow) {
+                      mainWindow.webContents.send('repository-changed');
+                    }
+                  } else {
+                    dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
+                  }
+                }
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
           label: 'Salir',
           accelerator: 'CmdOrCtrl+Q',
           role: 'quit'
@@ -168,67 +206,6 @@ function createMenu() {
               }
           ]
       },
-    {
-      label: 'Ver',
-      submenu: [
-        {
-          label: 'Mostrar asignaciones duplicadas',
-          type: 'checkbox',
-          checked: showDuplicatesOnly,
-          click: (menuItem) => {
-            showDuplicatesOnly = menuItem.checked;
-            saveDisplayPreferences();
-            mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Mostrar fotografías capturadas',
-          type: 'checkbox',
-          checked: showCapturedPhotos,
-          click: (menuItem) => {
-            showCapturedPhotos = menuItem.checked;
-            saveDisplayPreferences();
-            mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
-          }
-        },
-        {
-          label: 'Mostrar fotografías del depósito',
-          type: 'checkbox',
-          checked: showRepositoryPhotos,
-          click: (menuItem) => {
-            showRepositoryPhotos = menuItem.checked;
-            saveDisplayPreferences();
-            mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
-          }
-        },
-        {
-          label: 'Indicadores de foto en el depósito',
-          type: 'checkbox',
-          checked: showRepositoryIndicators,
-          click: (menuItem) => {
-            showRepositoryIndicators = menuItem.checked;
-            saveDisplayPreferences();
-            mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Cuadro de imágenes',
-          accelerator: 'CmdOrCtrl+G',
-          click: () => {
-            openImageGridWindow();
-          }
-        },
-        {
-          label: 'Listado de imágenes con etiquetas',
-          accelerator: 'CmdOrCtrl+Shift+T',
-          click: () => {
-            mainWindow.webContents.send('menu-show-tagged-images');
-          }
-        }
-      ]
-    },
     {
       label: 'Cámara',
       submenu: [
@@ -289,42 +266,66 @@ function createMenu() {
       ]
     },
     {
-      label: 'Configuración',
-      submenu: [
-        {
-          label: 'Depósito imágenes de usuario',
-          click: async () => {
-            const currentPath = getImageRepositoryPath();
-            const result = await dialog.showOpenDialog(mainWindow, {
-              title: 'Seleccionar carpeta del depósito de imágenes',
-              defaultPath: currentPath || undefined,
-              properties: ['openDirectory', 'createDirectory']
-            });
-
-            if (!result.canceled && result.filePaths.length > 0) {
-              const selectedPath = result.filePaths[0];
-              if (setImageRepositoryPath(selectedPath)) {
-                dialog.showMessageBox(mainWindow, {
-                  type: 'info',
-                  title: 'Configuración guardada',
-                  message: 'Depósito de imágenes configurado',
-                  detail: `Ruta: ${selectedPath}`,
-                  buttons: ['Aceptar']
-                });
-                logger.info(`Image repository path set to: ${selectedPath}`);
-
-                // Notify renderer to reload users with new repository path
-                if (mainWindow) {
-                  mainWindow.webContents.send('repository-changed');
-                }
-              } else {
-                dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
+      label: 'Ver',
+          submenu: [
+              {
+                  label: 'Mostrar asignaciones duplicadas',
+                  type: 'checkbox',
+                  checked: showDuplicatesOnly,
+                  click: (menuItem) => {
+                      showDuplicatesOnly = menuItem.checked;
+                      saveDisplayPreferences();
+                      mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
+                  }
+              },
+              { type: 'separator' },
+              {
+                  label: 'Mostrar fotografías capturadas',
+                  type: 'checkbox',
+                  checked: showCapturedPhotos,
+                  click: (menuItem) => {
+                      showCapturedPhotos = menuItem.checked;
+                      saveDisplayPreferences();
+                      mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
+                  }
+              },
+              {
+                  label: 'Mostrar fotografías del depósito',
+                  type: 'checkbox',
+                  checked: showRepositoryPhotos,
+                  click: (menuItem) => {
+                      showRepositoryPhotos = menuItem.checked;
+                      saveDisplayPreferences();
+                      mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
+                  }
+              },
+              {
+                  label: 'Indicadores de foto en el depósito',
+                  type: 'checkbox',
+                  checked: showRepositoryIndicators,
+                  click: (menuItem) => {
+                      showRepositoryIndicators = menuItem.checked;
+                      saveDisplayPreferences();
+                      mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
+                  }
+              },
+              { type: 'separator' },
+              {
+                  label: 'Cuadro de imágenes',
+                  accelerator: 'CmdOrCtrl+G',
+                  click: () => {
+                      openImageGridWindow();
+                  }
+              },
+              {
+                  label: 'Listado de imágenes con etiquetas',
+                  accelerator: 'CmdOrCtrl+Shift+T',
+                  click: () => {
+                      mainWindow.webContents.send('menu-show-tagged-images');
+                  }
               }
-            }
-          }
-        }
-      ]
-    },
+          ]
+      },
     {
       label: 'Ayuda',
       submenu: [
