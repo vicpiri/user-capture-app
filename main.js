@@ -1775,7 +1775,7 @@ ipcMain.handle('export-csv', async (event, folderPath, users) => {
     };
 
     // Create CSV content with exact field order from claude.md
-    const csvHeader = 'id,password,userlevel,nombre,apellido1,apellido2,apellidos,centro,foto,grupo,direccion,telefono,departamento,DNI,edad,fechaNacimiento,nombreApellidos\n';
+    const csvHeader = 'id;password;userlevel;nombre;apellido1;apellido2;apellidos;centro;foto;grupo;direccion;telefono;departamento;DNI;edad;fechaNacimiento;nombreApellidos\n';
     const csvRows = users.map(user => {
       const isStudent = user.type === 'student';
       const nombre = user.first_name || '';
@@ -1809,15 +1809,16 @@ ipcMain.handle('export-csv', async (event, folderPath, users) => {
         edad = 'profesor.jpg';
       }
 
-      // Fields to leave empty: centro, grupo, direccion, telefono, departamento
-      const centro = '';
-      const grupo = '';
+      // centro: always "1"
+      const centro = '1';
+      // grupo: group code from user
+      const grupo = user.group_code || '';
       const direccion = '';
       const telefono = '';
-      const departamento = '';
+      const departamento = '1';
       const DNI = documento;
 
-      return `"${id}","${password}","${userlevel}","${nombre}","${apellido1}","${apellido2}","${apellidos}","${centro}","${foto}","${grupo}","${direccion}","${telefono}","${departamento}","${DNI}","${edad}","${fechaNacimiento}","${nombreApellidos}"`;
+      return `${id};${password};${userlevel};${nombre};${apellido1};${apellido2};${apellidos};${centro};${foto};${grupo};${direccion};${telefono};${departamento};${DNI};${edad};${fechaNacimiento};${nombreApellidos}`;
     }).join('\n');
 
     const csvContent = csvHeader + csvRows;
