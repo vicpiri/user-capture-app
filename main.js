@@ -98,6 +98,7 @@ function createMenu() {
           submenu: [
             {
               label: 'Lista en CSV para carnets',
+              accelerator: 'CmdOrCtrl+E',
               click: () => {
                 mainWindow.webContents.send('menu-export-csv');
               }
