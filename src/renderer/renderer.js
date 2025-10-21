@@ -88,6 +88,13 @@ function initializeEventListeners() {
     }
   });
 
+  // Listen for repository changes
+  window.electronAPI.onRepositoryChanged(async () => {
+    // Reload users to update repository indicators
+    const filters = getCurrentFilters();
+    await loadUsers(filters);
+  });
+
   // Drag and drop for image preview
   setupDragAndDrop();
 
