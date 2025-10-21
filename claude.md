@@ -147,5 +147,19 @@ Proyecto inicializado con estructura base. Pendiente implementación de funciona
         - edad: para alumnos mayor.jpg si es mayor de edad (18 años), si no menor.jpg. Para el resto profesor.jpg
         - fechaNacimiento
         - nombreApellidos: nombre + apellido1 + apellido2
-## Política de control de versiones.
+## Política de control de versiones
 - Cada vez que una funcionalidad se de por comprobada y finalizada, se hará un commit en git con la descripción de la funcionalidad en inglés.
+- Los commits NO deben incluir referencias a Claude, herramientas de IA, o co-autoría con Claude.
+- Formato de commits:
+  - Usar conventional commits: `tipo: descripción breve`
+  - Tipos: `feat:`, `fix:`, `perf:`, `refactor:`, `docs:`, `chore:`, etc.
+  - Mensaje principal: descripción concisa en inglés
+  - Cuerpo del commit (opcional): lista de cambios detallados con guiones
+  - Ejemplo:
+    ```
+    feat: implement repository file cache and automatic change detection
+
+    - Add repository folder watcher using chokidar to detect image additions, changes, and deletions
+    - Implement file existence cache with 5-minute TTL to reduce filesystem operations
+    - Add IPC event 'repository-changed' to notify renderer when repository contents change
+    ```
