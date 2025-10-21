@@ -12,6 +12,10 @@ let showRepositoryPhotos = true;
 let showRepositoryIndicators = true;
 let imageObserver = null;
 
+// Selection mode state
+let selectionMode = false;
+let selectedUsers = new Set(); // Store selected user IDs
+
 // Virtual scrolling state
 const ITEM_HEIGHT = 40; // Height of each row in pixels
 const BUFFER_SIZE = 10; // Extra rows to render above/below viewport
@@ -444,7 +448,15 @@ function createUserRow(user, imageCount) {
       : `<div class="repository-check-placeholder"></div>`)
     : '';
 
+  // Checkbox for selection mode
+  const checkboxCell = selectionMode
+    ? `<td class="checkbox-cell">
+         <input type="checkbox" class="user-checkbox" ${selectedUsers.has(user.id) ? 'checked' : ''}>
+       </td>`
+    : '';
+
   row.innerHTML = `
+    ${checkboxCell}
     <td class="name">${user.first_name}</td>
     <td>${user.last_name1} ${user.last_name2 || ''}</td>
     <td>${user.nia || '-'}</td>
@@ -452,7 +464,22 @@ function createUserRow(user, imageCount) {
     <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}</td>
   `;
 
+  // Handle checkbox clicks in selection mode
+  if (selectionMode) {
+    const checkbox = row.querySelector('.user-checkbox');
+    checkbox.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent row selection
+      toggleUserSelection(user.id, checkbox.checked);
+    });
+  }
+
   row.addEventListener('click', () => selectUserRow(row, user));
+
+  // Add context menu
+  row.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showContextMenu(e, user, row);
+  });
 
   // Add double-click event to photo indicator to show full image
   if (user.image_path) {
@@ -978,14 +1005,14 @@ async function handleImportImagesId() {
   }
 }
 
-// Export CSV
-async function handleExportCSV() {
-  if (!projectOpen) {
-    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
-    return;
+// Helper function to get users to export based on selection or current view
+function getUsersToExport() {
+  // If in selection mode and there are selected users, export only those
+  if (selectionMode && selectedUsers.size > 0) {
+    return displayedUsers.filter(user => selectedUsers.has(user.id));
   }
 
-  // Get users to export based on current view
+  // Otherwise, use current view
   let usersToExport = currentUsers;
 
   // If showing duplicates only, get all duplicates from database
@@ -998,6 +1025,19 @@ async function handleExportCSV() {
     });
     usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
   }
+
+  return usersToExport;
+}
+
+// Export CSV
+async function handleExportCSV() {
+  if (!projectOpen) {
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  // Get users to export based on selection or current view
+  const usersToExport = getUsersToExport();
 
   const result = await window.electronAPI.showOpenDialog({
     properties: ['openDirectory'],
@@ -1030,19 +1070,8 @@ async function handleExportImages() {
     return;
   }
 
-  // Get users to export based on current view (only those with images)
-  let usersToExport = currentUsers;
-
-  // If showing duplicates only, get all duplicates from database
-  if (showDuplicatesOnly && allUsers) {
-    const imageCount = {};
-    allUsers.forEach(user => {
-      if (user.image_path) {
-        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
-      }
-    });
-    usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
-  }
+  // Get users to export based on selection or current view
+  const usersToExport = getUsersToExport();
 
   const result = await window.electronAPI.showOpenDialog({
     properties: ['openDirectory'],
@@ -1064,19 +1093,8 @@ async function handleExportImagesName() {
     return;
   }
 
-  // Get users to export based on current view (only those with images)
-  let usersToExport = currentUsers;
-
-  // If showing duplicates only, get all duplicates from database
-  if (showDuplicatesOnly && allUsers) {
-    const imageCount = {};
-    allUsers.forEach(user => {
-      if (user.image_path) {
-        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
-      }
-    });
-    usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
-  }
+  // Get users to export based on selection or current view
+  const usersToExport = getUsersToExport();
 
   const result = await window.electronAPI.showOpenDialog({
     properties: ['openDirectory'],
@@ -1151,19 +1169,8 @@ async function handleExportToRepository() {
     return;
   }
 
-  // Get users to export based on current view (only those with images)
-  let usersToExport = currentUsers;
-
-  // If showing duplicates only, get all duplicates from database
-  if (showDuplicatesOnly && allUsers) {
-    const imageCount = {};
-    allUsers.forEach(user => {
-      if (user.image_path) {
-        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
-      }
-    });
-    usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
-  }
+  // Get users to export based on selection or current view
+  const usersToExport = getUsersToExport();
 
   // Show export options modal
   showExportToRepositoryModal(usersToExport);
@@ -1771,4 +1778,148 @@ function observeLazyImages() {
   lazyImages.forEach(img => {
     imageObserver.observe(img);
   });
+}
+
+// Context menu functionality
+function showContextMenu(event, user, row) {
+  // Remove any existing context menu
+  const existingMenu = document.querySelector('.context-menu');
+  if (existingMenu) {
+    existingMenu.remove();
+  }
+
+  // Create context menu
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+  menu.style.position = 'fixed';
+  menu.style.left = `${event.clientX}px`;
+  menu.style.top = `${event.clientY}px`;
+
+  // If not in selection mode, show "Seleccionar" option
+  if (!selectionMode) {
+    const selectOption = document.createElement('div');
+    selectOption.className = 'context-menu-item';
+    selectOption.textContent = 'Seleccionar';
+    selectOption.addEventListener('click', () => {
+      enableSelectionMode(user.id);
+      menu.remove();
+    });
+    menu.appendChild(selectOption);
+  } else {
+    // If in selection mode, show "Deseleccionar todo" option
+    const deselectAllOption = document.createElement('div');
+    deselectAllOption.className = 'context-menu-item';
+    deselectAllOption.textContent = 'Deseleccionar todo';
+    deselectAllOption.addEventListener('click', () => {
+      disableSelectionMode();
+      menu.remove();
+    });
+    menu.appendChild(deselectAllOption);
+  }
+
+  document.body.appendChild(menu);
+
+  // Close menu when clicking outside
+  const closeMenu = (e) => {
+    if (!menu.contains(e.target)) {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+
+  // Use setTimeout to avoid immediate removal
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu);
+  }, 0);
+}
+
+// Enable selection mode
+function enableSelectionMode(initialUserId) {
+  selectionMode = true;
+  selectedUsers.clear();
+
+  // Add the initial user to selection
+  if (initialUserId) {
+    selectedUsers.add(initialUserId);
+  }
+
+  // Update table header to include checkbox column
+  updateTableHeader();
+
+  // Re-render users to show checkboxes
+  displayUsers(currentUsers, allUsers);
+}
+
+// Disable selection mode
+function disableSelectionMode() {
+  selectionMode = false;
+  selectedUsers.clear();
+
+  // Update table header to remove checkbox column
+  updateTableHeader();
+
+  // Re-render users to hide checkboxes
+  displayUsers(currentUsers, allUsers);
+}
+
+// Toggle user selection
+function toggleUserSelection(userId, isChecked) {
+  if (isChecked) {
+    selectedUsers.add(userId);
+  } else {
+    selectedUsers.delete(userId);
+  }
+
+  // Update selection info
+  updateSelectionInfo();
+
+  // Exit selection mode if no users are selected
+  if (selectedUsers.size === 0) {
+    disableSelectionMode();
+  }
+}
+
+// Update selection info display
+function updateSelectionInfo() {
+  if (selectionMode && selectedUsers.size > 0) {
+    selectedUserInfo.textContent = `${selectedUsers.size} usuario(s) seleccionado(s)`;
+  } else if (selectedUser) {
+    const fullName = `${selectedUser.first_name} ${selectedUser.last_name1} ${selectedUser.last_name2 || ''}`;
+    selectedUserInfo.textContent = fullName;
+  } else {
+    selectedUserInfo.textContent = '-';
+  }
+}
+
+// Update table header based on selection mode
+function updateTableHeader() {
+  const thead = document.querySelector('.user-table thead tr');
+  const existingCheckboxTh = thead.querySelector('.checkbox-header');
+
+  if (selectionMode && !existingCheckboxTh) {
+    // Add checkbox column header
+    const checkboxTh = document.createElement('th');
+    checkboxTh.className = 'checkbox-header';
+    checkboxTh.innerHTML = `<input type="checkbox" id="select-all-checkbox">`;
+    thead.insertBefore(checkboxTh, thead.firstChild);
+
+    // Handle select all checkbox
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    selectAllCheckbox.addEventListener('change', (e) => {
+      const isChecked = e.target.checked;
+      if (isChecked) {
+        // Select all displayed users
+        displayedUsers.forEach(user => selectedUsers.add(user.id));
+      } else {
+        // Deselect all
+        selectedUsers.clear();
+      }
+      // Re-render to update checkboxes
+      displayUsers(currentUsers, allUsers);
+      updateSelectionInfo();
+    });
+  } else if (!selectionMode && existingCheckboxTh) {
+    // Remove checkbox column header
+    existingCheckboxTh.remove();
+  }
 }
