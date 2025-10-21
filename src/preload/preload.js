@@ -140,5 +140,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onMenuShowTaggedImages: (callback) => {
     ipcRenderer.on('menu-show-tagged-images', callback);
+  },
+
+  onMenuToggleAdditionalActions: (callback) => {
+    ipcRenderer.on('menu-toggle-additional-actions', (event, enabled) => callback(enabled));
   }
 });

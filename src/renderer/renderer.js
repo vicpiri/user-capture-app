@@ -872,6 +872,12 @@ function setupMenuListeners() {
     showCapturedPhotos = prefs.showCapturedPhotos;
     showRepositoryPhotos = prefs.showRepositoryPhotos;
     showRepositoryIndicators = prefs.showRepositoryIndicators;
+
+    // Set initial visibility of Additional Actions section
+    const additionalActionsSection = document.querySelector('.additional-actions');
+    if (additionalActionsSection) {
+      additionalActionsSection.style.display = prefs.showAdditionalActions ? 'block' : 'none';
+    }
   });
 
   window.electronAPI.onMenuNewProject(() => {
@@ -948,6 +954,13 @@ function setupMenuListeners() {
 
   window.electronAPI.onMenuShowTaggedImages(() => {
     handleShowTaggedImages();
+  });
+
+  window.electronAPI.onMenuToggleAdditionalActions((enabled) => {
+    const additionalActionsSection = document.querySelector('.additional-actions');
+    if (additionalActionsSection) {
+      additionalActionsSection.style.display = enabled ? 'block' : 'none';
+    }
   });
 }
 

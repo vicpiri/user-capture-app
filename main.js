@@ -36,6 +36,7 @@ let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = true;
 let showRepositoryIndicators = true;
+let showAdditionalActions = true;
 let availableCameras = [];
 let selectedCameraId = null;
 let repositoryWatcher = null;
@@ -311,6 +312,17 @@ function createMenu() {
               },
               { type: 'separator' },
               {
+                  label: 'Mostrar acciones adicionales',
+                  type: 'checkbox',
+                  checked: showAdditionalActions,
+                  click: (menuItem) => {
+                      showAdditionalActions = menuItem.checked;
+                      saveDisplayPreferences();
+                      mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
+                  }
+              },
+              { type: 'separator' },
+              {
                   label: 'Cuadro de imágenes',
                   accelerator: 'CmdOrCtrl+G',
                   click: () => {
@@ -396,7 +408,8 @@ function createWindow() {
       showDuplicatesOnly,
       showCapturedPhotos,
       showRepositoryPhotos,
-      showRepositoryIndicators
+      showRepositoryIndicators,
+      showAdditionalActions
     });
   });
 
@@ -520,6 +533,7 @@ app.whenReady().then(() => {
   showCapturedPhotos = config.showCapturedPhotos ?? true;
   showRepositoryPhotos = config.showRepositoryPhotos ?? true;
   showRepositoryIndicators = config.showRepositoryIndicators ?? true;
+  showAdditionalActions = config.showAdditionalActions ?? true;
 
   loadRecentProjects();
   createMenu();
@@ -2593,6 +2607,7 @@ function saveDisplayPreferences() {
   config.showCapturedPhotos = showCapturedPhotos;
   config.showRepositoryPhotos = showRepositoryPhotos;
   config.showRepositoryIndicators = showRepositoryIndicators;
+  config.showAdditionalActions = showAdditionalActions;
   return saveGlobalConfig(config);
 }
 
