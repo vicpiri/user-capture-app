@@ -1,0 +1,15 @@
+id;password;userlevel;nombre;apellido1;apellido2;apellidos;centro;foto;grupo;direccion;telefono;departamento;DNI;edad;fechaNacimiento;nombreApellidos
+11129056;11129056;Alumno;Iván;Núñez;Gallardo;Núñez Gallardo;1;11129056.jpg;ESO4EP;;;1;010234223M;menor.jpg;12/11/2009;Iván Núñez Gallardo
+10990064;10990064;Alumno;Cristina;Garrido;Peris;Garrido Peris;1;10990064.jpg;ESO4EP;;;1;044932561Z;menor.jpg;20/11/2008;Cristina Garrido Peris
+11126620;11126620;Alumno;Laura;La Torre;Concha;La Torre Concha;1;11126620.jpg;ESO4EP;;;1;053893920K;menor.jpg;26/11/2009;Laura La Torre Concha
+11029452;11029452;Alumno;Ramón;Pastor;Azcárate;Pastor Azcárate;1;11029452.jpg;ESO4EP;;;1;010233886J;menor.jpg;21/01/2008;Ramón Pastor Azcárate
+11187247;11187247;Alumno;Tania;Benito;García;Benito García;1;11187247.jpg;ESO4EP;;;1;053891209R;menor.jpg;29/12/2010;Tania Benito García
+11125583;11125583;Alumno;Romeo Jose;Fernández;Saez;Fernández Saez;1;11125583.jpg;ESO4EP;;;1;026896576P;menor.jpg;30/07/2009;Romeo Jose Fernández Saez
+11090061;11090061;Alumno;Pablo;Romero;Muñoz;Romero Muñoz;1;11090061.jpg;ESO4EP;;;1;053884307E;menor.jpg;01/10/2009;Pablo Romero Muñoz
+11197558;11197558;Alumno;Joan Enric;Portet;Martín;Portet Martín;1;11197558.jpg;ESO4EP;;;1;053889009D;menor.jpg;31/10/2010;Joan Enric Portet Martín
+11183988;11183988;Alumno;Adrián;Meneses;García;Meneses García;1;11183988.jpg;ESO4EP;;;1;055448882E;menor.jpg;13/11/2010;Adrián Meneses García
+11031998;11031998;Alumno;Manuel;Mbela;Garrigosa;Mbela Garrigosa;1;11031998.jpg;ESO4EP;;;1;021802805R;menor.jpg;01/02/2008;Manuel Mbela Garrigosa
+12921042;12921042;Alumno;Pavlo;Zaikin;null;Zaikin;1;12921042.jpg;ESO4EP;;;1;Y09422591B;menor.jpg;13/03/2009;Pavlo Zaikin
+13361729;13361729;Alumno;Ysabella Angeline;Salina;Medina;Salina Medina;1;13361729.jpg;ESO4EP;;;1;Z01912187H;menor.jpg;27/03/2009;Ysabella Angeline Salina Medina
+13286529;13286529;Alumno;Vayoleth Jasbleidy;Imbachi;Gutierrez;Imbachi Gutierrez;1;13286529.jpg;ESO4EP;;;1;Z02231819L;menor.jpg;14/06/2009;Vayoleth Jasbleidy Imbachi Gutierrez
+13288869;13288869;Alumno;Valery Michelle;Lasprilla;Zuñiga;Lasprilla Zuñiga;1;13288869.jpg;ESO4EP;;;1;00az028404T;menor.jpg;09/11/2010;Valery Michelle Lasprilla Zuñiga
