@@ -50,11 +50,14 @@ jobs:
           where cl
           # Show Visual Studio installations
           vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64
+          # Check environment variables
+          Write-Host "VSINSTALLDIR: $env:VSINSTALLDIR"
+          Write-Host "VCToolsInstallDir: $env:VCToolsInstallDir"
 
       - name: Install deps
         run: npm ci
 
-      # 👉 Rebuild de nativos usando electron-builder install-app-deps
+      # 👉 Rebuild de nativos manualmente para tener más control
       - name: Rebuild native modules for Electron
         shell: pwsh
         env:
@@ -64,15 +67,31 @@ jobs:
           # Set Python path explicitly
           PYTHON: python
           npm_config_python: python
-          # Use GitHub Actions' VS installation
-          GYP_DEFINES: 'target_arch=x64'
+          # Configure for Electron build
+          npm_config_runtime: electron
+          npm_config_target: 28.0.0
+          npm_config_disturl: https://electronjs.org/headers
+          npm_config_build_from_source: true
         run: |
           # Verify environment
           Write-Host "Python: $(python -c 'import sys; print(sys.executable)')"
           Write-Host "VS Version: $env:VisualStudioVersion"
+          Write-Host "Node version: $(node -v)"
 
-          # Use electron-builder to rebuild native modules (more reliable than manual rebuild)
-          npx -y electron-builder install-app-deps --platform=win32 --arch=x64
+          # Get exact Electron version
+          $electronVersion = (Get-Content package.json | ConvertFrom-Json).devDependencies.electron -replace '\^', ''
+          Write-Host "Electron version: $electronVersion"
+
+          # Set npm to verbose mode
+          npm config set loglevel verbose
+
+          # Rebuild sqlite3 for Electron with verbose output
+          Write-Host "=== Rebuilding sqlite3 for Electron ==="
+          npm rebuild sqlite3 --runtime=electron --target=$electronVersion --dist-url=https://electronjs.org/headers --build-from-source --verbose
+
+          # Rebuild sharp for Electron
+          Write-Host "=== Rebuilding sharp for Electron ==="
+          npm rebuild sharp --runtime=electron --target=$electronVersion --dist-url=https://electronjs.org/headers --build-from-source --verbose
 
       - name: Build & publish installer
         env:
