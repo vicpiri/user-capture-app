@@ -2,9 +2,10 @@ name: Build & Release (Windows)
 
 on:
   workflow_dispatch: {}
-  push:
-    tags:
-      - 'v*'
+  # Automatic builds disabled temporarily - SDK compilation issues
+  # push:
+  #   tags:
+  #     - 'v*'
 
 permissions:
   contents: write
