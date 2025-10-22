@@ -72,7 +72,7 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # 👉 Rebuild de nativos manualmente para tener más control
+      # 👉 Rebuild de nativos usando electron-rebuild (más robusto)
       - name: Rebuild native modules for Electron
         shell: pwsh
         env:
@@ -81,12 +81,6 @@ jobs:
           npm_config_msvs_version: '2022'
           # Set Python path explicitly
           PYTHON: python
-          npm_config_python: python
-          # Configure for Electron build
-          npm_config_runtime: electron
-          npm_config_target: 28.0.0
-          npm_config_disturl: https://electronjs.org/headers
-          npm_config_build_from_source: true
         run: |
           # Verify environment
           Write-Host "Python: $(python -c 'import sys; print(sys.executable)')"
@@ -97,16 +91,13 @@ jobs:
           $electronVersion = (Get-Content package.json | ConvertFrom-Json).devDependencies.electron -replace '\^', ''
           Write-Host "Electron version: $electronVersion"
 
-          # Set npm to verbose mode
-          npm config set loglevel verbose
+          # Install electron-rebuild globally
+          Write-Host "Installing electron-rebuild..."
+          npm install -g electron-rebuild
 
-          # Rebuild sqlite3 for Electron with verbose output
-          Write-Host "=== Rebuilding sqlite3 for Electron ==="
-          npm rebuild sqlite3 --runtime=electron --target=$electronVersion --dist-url=https://electronjs.org/headers --build-from-source --verbose
-
-          # Rebuild sharp for Electron
-          Write-Host "=== Rebuilding sharp for Electron ==="
-          npm rebuild sharp --runtime=electron --target=$electronVersion --dist-url=https://electronjs.org/headers --build-from-source --verbose
+          # Use electron-rebuild (more reliable than npm rebuild)
+          Write-Host "=== Rebuilding all native modules for Electron ==="
+          electron-rebuild -f -v $electronVersion
 
       - name: Build & publish installer
         env:
