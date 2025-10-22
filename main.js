@@ -540,11 +540,14 @@ app.whenReady().then(() => {
   createMenu();
   createWindow();
 
-  // Start repository watcher if repository path is configured
-  const repositoryPath = getImageRepositoryPath();
-  if (repositoryPath) {
-    startRepositoryWatcher(repositoryPath);
-  }
+  // Defer repository watcher initialization to avoid blocking startup
+  // (especially important if repository is on Google Drive or network path)
+  setTimeout(() => {
+    const repositoryPath = getImageRepositoryPath();
+    if (repositoryPath) {
+      startRepositoryWatcher(repositoryPath);
+    }
+  }, 1000); // Wait 1 second after window is created
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1285,29 +1288,65 @@ function isCacheValid() {
   return (now - repositoryCacheTimestamp) < REPOSITORY_CACHE_TTL;
 }
 
-function checkRepositoryFile(filePath) {
-  // Check if cache is still valid
-  if (!isCacheValid()) {
-    invalidateRepositoryCache();
+/**
+ * Load all files from repository folder asynchronously
+ * Returns a Set of lowercase filenames for fast lookups
+ */
+async function loadRepositoryFileList(repositoryPath) {
+  try {
+    if (!repositoryPath) {
+      return new Set();
+    }
+
+    // Check if path exists (using async)
+    try {
+      await fs.promises.access(repositoryPath);
+    } catch {
+      logger.warning('Repository path does not exist');
+      return new Set();
+    }
+
+    // Read directory asynchronously
+    const files = await fs.promises.readdir(repositoryPath);
+
+    // Filter only .jpg and .jpeg files and convert to lowercase for case-insensitive comparison
+    const imageFiles = files
+      .filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return ext === '.jpg' || ext === '.jpeg';
+      })
+      .map(file => file.toLowerCase());
+
+    logger.info(`Loaded ${imageFiles.length} image files from repository`);
+    return new Set(imageFiles);
+  } catch (error) {
+    logger.error('Error loading repository file list', error);
+    return new Set();
+  }
+}
+
+/**
+ * Check if a file exists in the repository using cached file list
+ * @param {string} identifier - The user identifier (NIA or document)
+ * @param {Set<string>} fileSet - Set of repository filenames
+ * @returns {string|null} - The actual filename if found, null otherwise
+ */
+function findRepositoryFile(identifier, fileSet) {
+  if (!identifier || !fileSet) {
+    return null;
   }
 
-  // Check cache first
-  if (repositoryFileCache.has(filePath)) {
-    return repositoryFileCache.get(filePath);
+  // Check both .jpg and .jpeg extensions (case-insensitive)
+  const jpgFilename = `${identifier}.jpg`.toLowerCase();
+  const jpegFilename = `${identifier}.jpeg`.toLowerCase();
+
+  if (fileSet.has(jpgFilename)) {
+    return `${identifier}.jpg`;
+  } else if (fileSet.has(jpegFilename)) {
+    return `${identifier}.jpeg`;
   }
 
-  // If not in cache, check filesystem
-  const exists = fs.existsSync(filePath);
-
-  // Store in cache
-  repositoryFileCache.set(filePath, exists);
-
-  // Update cache timestamp
-  if (!repositoryCacheTimestamp) {
-    repositoryCacheTimestamp = Date.now();
-  }
-
-  return exists;
+  return null;
 }
 
 // Repository folder watcher management
@@ -1434,6 +1473,10 @@ ipcMain.handle('get-users', async (event, filters, options = {}) => {
       const repositoryPath = getImageRepositoryPath();
 
       if (repositoryPath) {
+        // Load repository file list ONCE asynchronously
+        const repositoryFiles = await loadRepositoryFileList(repositoryPath);
+
+        // Now check each user against the Set (fast in-memory lookup)
         users.forEach(user => {
           // Check if image exists in repository
           user.has_repository_image = false;
@@ -1443,16 +1486,12 @@ ipcMain.handle('get-users', async (event, filters, options = {}) => {
           const identifier = user.type === 'student' ? user.nia : user.document;
 
           if (identifier) {
-            // Check for .jpg and .jpeg extensions using cache
-            const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
-            const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
+            // Check for .jpg and .jpeg extensions using in-memory Set
+            const filename = findRepositoryFile(identifier, repositoryFiles);
 
-            if (checkRepositoryFile(jpgPath)) {
+            if (filename) {
               user.has_repository_image = true;
-              user.repository_image_path = jpgPath;
-            } else if (checkRepositoryFile(jpegPath)) {
-              user.has_repository_image = true;
-              user.repository_image_path = jpegPath;
+              user.repository_image_path = path.join(repositoryPath, filename);
             }
           }
         });
