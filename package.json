@@ -17,9 +17,9 @@
     "dist:mac": "npm run rebuild:native && electron-builder --mac dmg --x64",
     "dist:linux": "npm run rebuild:native && electron-builder --linux AppImage --x64",
     "postinstall": "echo skip electron-rebuild",
-    "release": "standard-version",
-    "release:minor": "standard-version --release-as minor",
-    "release:major": "standard-version --release-as major"
+    "release": "standard-version && npm run dist:win",
+    "release:minor": "standard-version --release-as minor && npm run dist:win",
+    "release:major": "standard-version --release-as major && npm run dist:win"
   },
   "keywords": [
     "electron"
