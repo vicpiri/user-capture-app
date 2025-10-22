@@ -82,12 +82,16 @@ Para Windows (NSIS installer):
 npm run dist:win
 ```
 
-Para otras plataformas:
+Para macOS (DMG):
 
 ```bash
-npm run build:win    # Windows
-npm run build:mac    # macOS
-npm run build:linux  # Linux
+npm run dist:mac
+```
+
+Para Linux (AppImage):
+
+```bash
+npm run dist:linux
 ```
 
 Los instaladores se generarán en la carpeta `dist/`.
@@ -166,29 +170,27 @@ La base de datos se almacena en `[proyecto]/data/users.db`
 ## Scripts NPM
 
 ### Desarrollo
-- `npm start` - Inicia la aplicación
-- `npm run dev` - Modo desarrollo con hot reload y DevTools
+- `npm start` - Inicia la aplicación en modo producción
+- `npm run dev` - Inicia la aplicación en modo desarrollo (con hot reload y DevTools)
 
-### Build
-- `npm run build` - Build para plataforma actual
-- `npm run build:win` - Build para Windows
-- `npm run build:win-dir` - Build para Windows sin empaquetar
-- `npm run build:mac` - Build para macOS
-- `npm run build:linux` - Build para Linux
-
-### Distribución (con rebuild automático)
-- `npm run dist:win` - Crear distribución completa para Windows (NSIS)
-- `npm run dist:mac` - Crear distribución completa para macOS (DMG)
-- `npm run dist:linux` - Crear distribución completa para Linux (AppImage)
+### Distribución
+- `npm run dist:win` - Crear distribución completa para Windows (NSIS x64)
+- `npm run dist:mac` - Crear distribución completa para macOS (DMG x64)
+- `npm run dist:linux` - Crear distribución completa para Linux (AppImage x64)
 
 ### Módulos nativos
-- `npm run rebuild:native` - Reconstruir SQLite3 y Sharp para Electron
+- `npm run rebuild:native` - Reconstruir módulos nativos (SQLite3 y Sharp) para Electron
 - `npm run rebuild:native:sqlite` - Reconstruir solo SQLite3 para Electron
 
 ### Limpieza
-- `npm run clean` - Eliminar node_modules, dist y build
-- `npm run clean:dist` - Eliminar solo dist y build
-- `npm run install:clean` - Limpieza completa y reinstalación de dependencias
+- `npm run clean` - Eliminar node_modules, dist y build completamente
+- `npm run clean:dist` - Eliminar solo carpetas dist y build
+- `npm run install:clean` - Limpieza completa y reinstalación limpia de dependencias (con npm ci)
+
+### Versionado
+- `npm run release` - Crear nueva versión patch con standard-version
+- `npm run release:minor` - Crear nueva versión minor
+- `npm run release:major` - Crear nueva versión major
 
 ## Formato de Imágenes
 
@@ -213,7 +215,7 @@ La aplicación almacena configuración global en:
 
 ## Autor
 
-Víctor Pineda Ribes
+Victor Pineda Ribes
 
 ## Licencia
 

@@ -8,11 +8,6 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:win-dir": "electron-builder --win --dir",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
     "clean": "node -e \"require('fs').rmSync('node_modules', {recursive:true, force:true}); require('fs').rmSync('dist', {recursive:true, force:true}); require('fs').rmSync('build', {recursive:true, force:true})\"",
     "clean:dist": "node -e \"require('fs').rmSync('dist', {recursive:true, force:true}); require('fs').rmSync('build', {recursive:true, force:true})\"",
     "install:clean": "npm run clean && npm ci",

@@ -47,12 +47,28 @@ user-capture-app/
 
 ## Scripts Disponibles
 
-- `npm start` - Inicia la aplicación
-- `npm run dev` - Modo desarrollo
-- `npm run build` - Build para plataforma actual
-- `npm run build:win` - Build para Windows
-- `npm run build:mac` - Build para macOS
-- `npm run build:linux` - Build para Linux
+### Ejecución
+- `npm start` - Inicia la aplicación en modo producción
+- `npm run dev` - Inicia la aplicación en modo desarrollo
+
+### Mantenimiento
+- `npm run clean` - Limpia node_modules, dist y build completamente
+- `npm run clean:dist` - Limpia solo carpetas dist y build
+- `npm run install:clean` - Limpia y reinstala dependencias con npm ci
+
+### Módulos nativos
+- `npm run rebuild:native` - Reconstruye módulos nativos (sqlite3 y sharp)
+- `npm run rebuild:native:sqlite` - Reconstruye solo módulos nativos de sqlite3
+
+### Distribución
+- `npm run dist:win` - Build para Windows (NSIS instalador x64)
+- `npm run dist:mac` - Build para macOS (DMG x64)
+- `npm run dist:linux` - Build para Linux (AppImage x64)
+
+### Versionado
+- `npm run release` - Crea nueva versión (patch) con standard-version
+- `npm run release:minor` - Crea nueva versión minor
+- `npm run release:major` - Crea nueva versión major
 
 ## Estado Actual
 
