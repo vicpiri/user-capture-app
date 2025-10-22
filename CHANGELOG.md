@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.2](https://github.com/vicpiri/user-capture-app/compare/v1.1.1...v1.1.2) (2025-10-22)
+
+
+### Bug Fixes
+
+* configure native module rebuild with explicit Electron settings ([45882b8](https://github.com/vicpiri/user-capture-app/commit/45882b870e07a73d7270fcc804ef8fbdce41d2d3))
+
 ### [1.1.1](https://github.com/vicpiri/user-capture-app/compare/v1.1.0...v1.1.1) (2025-10-22)
 
 
