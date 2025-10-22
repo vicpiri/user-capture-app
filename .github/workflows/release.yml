@@ -30,6 +30,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Install Windows SDK (required by node-gyp)
+      - name: Install Windows SDK
+        shell: pwsh
+        run: |
+          Write-Host "Installing Windows 10 SDK..."
+          choco install windows-sdk-10.0 -y
+          Write-Host "Windows SDK installed"
+
       # Add msbuild to PATH (Visual Studio is pre-installed on windows-latest)
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -53,6 +61,13 @@ jobs:
           # Check environment variables
           Write-Host "VSINSTALLDIR: $env:VSINSTALLDIR"
           Write-Host "VCToolsInstallDir: $env:VCToolsInstallDir"
+          Write-Host "WindowsSdkDir: $env:WindowsSdkDir"
+          Write-Host "WindowsSDKVersion: $env:WindowsSDKVersion"
+          # List Windows SDK installations
+          Write-Host "`nInstalled Windows SDKs:"
+          if (Test-Path "C:\Program Files (x86)\Windows Kits\10\Include") {
+            Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Include" | Select-Object Name
+          }
 
       - name: Install deps
         run: npm ci
