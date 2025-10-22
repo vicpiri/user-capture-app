@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.3](https://github.com/vicpiri/user-capture-app/compare/v1.1.2...v1.1.3) (2025-10-22)
+
+
+### Bug Fixes
+
+* install Windows SDK to fix node-gyp compilation ([11ea1bb](https://github.com/vicpiri/user-capture-app/commit/11ea1bb70e4e705fbc9e1d20e9a85856ca4629e0))
+
 ### [1.1.2](https://github.com/vicpiri/user-capture-app/compare/v1.1.1...v1.1.2) (2025-10-22)
 
 
