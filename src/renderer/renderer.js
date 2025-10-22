@@ -39,6 +39,7 @@ const currentImage = document.getElementById('current-image');
 const prevImageBtn = document.getElementById('prev-image');
 const nextImageBtn = document.getElementById('next-image');
 const loadingSpinner = document.getElementById('loading-spinner');
+const noProjectPlaceholder = document.getElementById('no-project-placeholder');
 
 // Modals
 const newProjectModal = document.getElementById('new-project-modal');
@@ -52,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupProgressListener();
   setupMenuListeners();
   detectAvailableCameras();
+  // Show no project placeholder initially
+  updateNoProjectPlaceholder();
 });
 
 // Event Listeners
@@ -223,6 +226,18 @@ async function loadProjectData() {
   // Re-enable search input after data load
   searchInput.disabled = false;
   searchInput.readOnly = false;
+
+  // Update placeholder visibility
+  updateNoProjectPlaceholder();
+}
+
+// Update no project placeholder visibility
+function updateNoProjectPlaceholder() {
+  if (projectOpen) {
+    noProjectPlaceholder.style.display = 'none';
+  } else {
+    noProjectPlaceholder.style.display = 'flex';
+  }
 }
 
 async function loadGroups() {
