@@ -66,9 +66,13 @@ user-capture-app/
 - `npm run dist:linux` - Build para Linux (AppImage x64)
 
 ### Versionado
-- `npm run release` - Crea nueva versión (patch) con standard-version
-- `npm run release:minor` - Crea nueva versión minor
-- `npm run release:major` - Crea nueva versión major
+- `npm run release` - Crea nueva versión (patch) y genera instalador Windows
+- `npm run release:minor` - Crea nueva versión minor y genera instalador Windows
+- `npm run release:major` - Crea nueva versión major y genera instalador Windows
+
+Cada comando de release ejecuta automáticamente:
+1. `standard-version` - Actualiza versión, genera CHANGELOG y crea tag git
+2. `dist:win` - Reconstruye módulos nativos y genera instalador NSIS en carpeta `dist/`
 
 ## Estado Actual
 
