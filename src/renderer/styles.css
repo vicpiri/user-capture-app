@@ -443,8 +443,14 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--bg-secondary);
+  background-color: #1a1f2e;
   z-index: 10;
+  pointer-events: none;
+}
+
+.no-project-placeholder.visible {
+  display: flex;
+  pointer-events: auto;
 }
 
 .no-project-placeholder svg {

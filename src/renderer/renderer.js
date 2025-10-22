@@ -233,10 +233,15 @@ async function loadProjectData() {
 
 // Update no project placeholder visibility
 function updateNoProjectPlaceholder() {
+  if (!noProjectPlaceholder) {
+    console.error('No project placeholder element not found');
+    return;
+  }
+
   if (projectOpen) {
-    noProjectPlaceholder.style.display = 'none';
+    noProjectPlaceholder.classList.remove('visible');
   } else {
-    noProjectPlaceholder.style.display = 'flex';
+    noProjectPlaceholder.classList.add('visible');
   }
 }
 
