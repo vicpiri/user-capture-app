@@ -188,9 +188,13 @@ La base de datos se almacena en `[proyecto]/data/users.db`
 - `npm run install:clean` - Limpieza completa y reinstalación limpia de dependencias (con npm ci)
 
 ### Versionado
-- `npm run release` - Crear nueva versión patch con standard-version
-- `npm run release:minor` - Crear nueva versión minor
-- `npm run release:major` - Crear nueva versión major
+- `npm run release` - Crear nueva versión patch y generar instalador Windows
+- `npm run release:minor` - Crear nueva versión minor y generar instalador Windows
+- `npm run release:major` - Crear nueva versión major y generar instalador Windows
+
+Los comandos de release ejecutan automáticamente:
+1. `standard-version` - Actualiza versión, genera CHANGELOG y crea tag git
+2. `dist:win` - Reconstruye módulos nativos y genera instalador NSIS
 
 ## Formato de Imágenes
 
