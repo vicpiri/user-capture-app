@@ -30,6 +30,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Add msbuild to PATH (Visual Studio is pre-installed on windows-latest)
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
       # 👉 Activa Developer Command Prompt (expone MSVC v143 y Windows SDK)
       - name: Setup MSVC env
         uses: ilammy/msvc-dev-cmd@v1
@@ -42,17 +46,33 @@ jobs:
           node -v
           npm -v
           python -V
+          msbuild -version
+          where cl
+          # Show Visual Studio installations
+          vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64
 
       - name: Install deps
         run: npm ci
 
-      # 👉 Rebuild de nativos con MSVC y Python correctos
+      # 👉 Rebuild de nativos usando electron-builder install-app-deps
       - name: Rebuild native modules for Electron
         shell: pwsh
         env:
+          # Force node-gyp to find Visual Studio 2022
           GYP_MSVS_VERSION: '2022'
-          msvs_version: '2022'
-        run: node scripts/rebuild-native.mjs --with-sharp --python "${{ env.pythonLocation }}\python.exe"
+          npm_config_msvs_version: '2022'
+          # Set Python path explicitly
+          PYTHON: python
+          npm_config_python: python
+          # Use GitHub Actions' VS installation
+          GYP_DEFINES: 'target_arch=x64'
+        run: |
+          # Verify environment
+          Write-Host "Python: $(python -c 'import sys; print(sys.executable)')"
+          Write-Host "VS Version: $env:VisualStudioVersion"
+
+          # Use electron-builder to rebuild native modules (more reliable than manual rebuild)
+          npx -y electron-builder install-app-deps --platform=win32 --arch=x64
 
       - name: Build & publish installer
         env:
