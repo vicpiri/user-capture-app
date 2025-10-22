@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.4](https://github.com/vicpiri/user-capture-app/compare/v1.1.3...v1.1.4) (2025-10-22)
+
+
+### Bug Fixes
+
+* install Windows SDK via Visual Studio installer ([95c7a21](https://github.com/vicpiri/user-capture-app/commit/95c7a213b1382fb93a9fa0074e45c9555d83d4ac))
+
 ### [1.1.3](https://github.com/vicpiri/user-capture-app/compare/v1.1.2...v1.1.3) (2025-10-22)
 
 
