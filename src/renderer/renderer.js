@@ -52,7 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeEventListeners();
   setupProgressListener();
   setupMenuListeners();
-  detectAvailableCameras();
+  // Defer camera detection to not block UI
+  setTimeout(() => detectAvailableCameras(), 100);
   // Show no project placeholder initially
   updateNoProjectPlaceholder();
 });
