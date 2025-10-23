@@ -66,7 +66,17 @@ function initializeEventListeners() {
     filterUsers();
   });
   clearSearchBtn.addEventListener('click', clearSearch);
-  groupFilter.addEventListener('change', filterUsers);
+  groupFilter.addEventListener('change', async () => {
+    // Save filter selection and broadcast to other windows
+    await window.electronAPI.setSelectedGroupFilter(groupFilter.value);
+    await filterUsers();
+  });
+
+  // Listen for group filter changes from other windows
+  window.electronAPI.onGroupFilterChanged(async (groupCode) => {
+    groupFilter.value = groupCode;
+    await filterUsers();
+  });
   duplicatesFilter.addEventListener('change', () => {
     showDuplicatesOnly = duplicatesFilter.checked;
     displayUsers(currentUsers, allUsers);
@@ -221,6 +231,13 @@ async function handleOpenProject() {
 // Load project data
 async function loadProjectData() {
   await loadGroups();
+
+  // Load saved group filter
+  const filterResult = await window.electronAPI.getSelectedGroupFilter();
+  if (filterResult.success && filterResult.groupCode) {
+    groupFilter.value = filterResult.groupCode;
+  }
+
   await loadUsers();
   await loadImages();
 
