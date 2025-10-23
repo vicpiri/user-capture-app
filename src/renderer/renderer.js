@@ -8,8 +8,8 @@ let currentImageIndex = 0;
 let projectOpen = false;
 let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
-let showRepositoryPhotos = true;
-let showRepositoryIndicators = true;
+let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
+let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
 let imageObserver = null;
 
 // Selection mode state
@@ -311,10 +311,10 @@ async function loadUsers(filters = {}) {
   existingRows.forEach(row => row.remove());
 
   try {
-    // Determine what data needs to be loaded based on menu settings
+    // Load users WITHOUT repository images for fast initial display
     const loadOptions = {
       loadCapturedImages: showCapturedPhotos,
-      loadRepositoryImages: showRepositoryPhotos || showRepositoryIndicators
+      loadRepositoryImages: false // Always false for initial load
     };
 
     const result = await window.electronAPI.getUsers(filters, loadOptions);
@@ -335,11 +335,109 @@ async function loadUsers(filters = {}) {
 
       displayUsers(currentUsers, allUsers);
       updateUserCount();
+
+      // Load repository data in background if needed
+      if (showRepositoryPhotos || showRepositoryIndicators) {
+        loadRepositoryDataInBackground(currentUsers);
+      }
     }
   } finally {
     // Hide loading spinner
     loadingSpinner.style.display = 'none';
   }
+}
+
+// Load repository data in background (non-blocking)
+async function loadRepositoryDataInBackground(users) {
+  try {
+    console.log('Loading repository data in background...');
+    const result = await window.electronAPI.loadRepositoryImages(users);
+
+    if (result.success) {
+      console.log(`Repository data loaded for ${Object.keys(result.repositoryData).length} users`);
+
+      // Merge repository data into currentUsers
+      currentUsers.forEach(user => {
+        const repoData = result.repositoryData[user.id];
+        if (repoData) {
+          user.has_repository_image = repoData.has_repository_image;
+          user.repository_image_path = repoData.repository_image_path;
+        }
+      });
+
+      // Update the display with repository data
+      updateRepositoryDataInDisplay();
+    } else {
+      console.error('Error loading repository data:', result.error);
+    }
+  } catch (error) {
+    console.error('Error loading repository data in background:', error);
+  }
+}
+
+// Update repository data in the displayed rows
+function updateRepositoryDataInDisplay() {
+  // Get all user rows currently in the table
+  const userRows = userTableBody.querySelectorAll('tr[data-user-id]');
+
+  userRows.forEach(row => {
+    const userId = parseInt(row.dataset.userId);
+    const user = currentUsers.find(u => u.id === userId);
+
+    if (!user) return;
+
+    // Find the cell containing indicators (last td)
+    const indicatorCell = row.querySelector('td:last-child');
+    if (!indicatorCell) return;
+
+    // Update repository photo indicator if enabled
+    if (showRepositoryPhotos) {
+      const repositoryIndicator = indicatorCell.querySelector('.repository-indicator, .repository-placeholder');
+      if (repositoryIndicator) {
+        if (user.repository_image_path) {
+          // Replace placeholder with actual image
+          const img = document.createElement('img');
+          img.className = 'repository-indicator lazy-image';
+          img.dataset.src = `file://${user.repository_image_path}`;
+          img.alt = 'Foto Depósito';
+          img.style.backgroundColor = '#f0f0f0';
+          repositoryIndicator.replaceWith(img);
+
+          // Add double-click handler
+          img.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            showUserImageModal(user, 'repository');
+          });
+
+          // Observe for lazy loading
+          if (imageObserver) {
+            imageObserver.observe(img);
+          }
+        }
+      }
+    }
+
+    // Update repository check indicator if enabled
+    if (showRepositoryIndicators) {
+      const repositoryCheck = indicatorCell.querySelector('.repository-check, .repository-check-placeholder');
+      if (repositoryCheck && user.repository_image_path) {
+        // Replace placeholder with checkmark
+        const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        checkSvg.setAttribute('class', 'repository-check');
+        checkSvg.setAttribute('viewBox', '0 0 24 24');
+        checkSvg.setAttribute('fill', 'none');
+        checkSvg.setAttribute('stroke', 'currentColor');
+        checkSvg.setAttribute('stroke-width', '2');
+        checkSvg.innerHTML = `
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        `;
+        repositoryCheck.replaceWith(checkSvg);
+      }
+    }
+  });
+
+  console.log('Repository data updated in display');
 }
 
 async function displayUsers(users, allUsers = null) {
@@ -974,11 +1072,25 @@ function setupMenuListeners() {
 
   window.electronAPI.onMenuToggleRepositoryPhotos((enabled) => {
     showRepositoryPhotos = enabled;
+    // Load repository data if enabling and not already loaded
+    if (enabled && currentUsers.length > 0) {
+      const hasRepositoryData = currentUsers.some(u => u.hasOwnProperty('repository_image_path'));
+      if (!hasRepositoryData) {
+        loadRepositoryDataInBackground(currentUsers);
+      }
+    }
     displayUsers(currentUsers, allUsers);
   });
 
   window.electronAPI.onMenuToggleRepositoryIndicators((enabled) => {
     showRepositoryIndicators = enabled;
+    // Load repository data if enabling and not already loaded
+    if (enabled && currentUsers.length > 0) {
+      const hasRepositoryData = currentUsers.some(u => u.hasOwnProperty('repository_image_path'));
+      if (!hasRepositoryData) {
+        loadRepositoryDataInBackground(currentUsers);
+      }
+    }
     displayUsers(currentUsers, allUsers);
   });
 

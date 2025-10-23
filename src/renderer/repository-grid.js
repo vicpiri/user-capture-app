@@ -3,6 +3,8 @@ let allUsers = [];
 let currentGroups = [];
 let selectedGroupCode = '';
 let imageObserver = null;
+let isSyncing = false;  // Track if repository is currently syncing
+let initialSyncCompleted = false;  // Track if initial mirror sync has completed
 
 // DOM Elements
 const gridContainer = document.getElementById('grid-container');
@@ -12,18 +14,41 @@ const groupFilter = document.getElementById('group-filter');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[SYNC] DOM loaded, starting initialization...');
+  const startTime = performance.now();
+
   await loadGroups();
+  console.log(`[SYNC] loadGroups() took ${(performance.now() - startTime).toFixed(2)}ms`);
 
   // Load saved group filter
+  const filterStart = performance.now();
   const filterResult = await window.electronAPI.getSelectedGroupFilter();
+  console.log(`[SYNC] getSelectedGroupFilter() took ${(performance.now() - filterStart).toFixed(2)}ms`);
   if (filterResult.success && filterResult.groupCode) {
     selectedGroupCode = filterResult.groupCode;
     groupFilter.value = filterResult.groupCode;
   }
 
+  // Load users immediately to show the grid structure
+  console.log('[SYNC] Loading users for initial display...');
+  const usersStart = performance.now();
   await loadUsers();
+  console.log(`[SYNC] loadUsers() took ${(performance.now() - usersStart).toFixed(2)}ms`);
+
+  // Mark as syncing to show spinners while mirror initializes
+  isSyncing = true;
+  updateSyncStatus('Cargando imágenes del depósito...');
+
   initLazyLoading();
   displayGrid();
+  console.log(`[SYNC] Total init time: ${(performance.now() - startTime).toFixed(2)}ms`);
+
+  console.log('[SYNC] Waiting for initial mirror sync to complete...');
+
+  // Give browser a chance to paint the grid with spinners before loading repository data
+  if (isSyncing) {
+    console.log('[SYNC] Waiting for browser to paint before loading data...');
+  }
 
   // Add event listener for group filter
   groupFilter.addEventListener('change', async () => {
@@ -46,6 +71,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.electronAPI.onRepositoryChanged(async () => {
     await loadUsers();
     displayGrid();
+  });
+
+  // Listen for sync progress events
+  window.electronAPI.onSyncProgress((data) => {
+    if (data.phase === 'syncing') {
+      isSyncing = true;
+      updateSyncStatus(`Sincronizando: ${data.current}/${data.total} archivos`);
+    }
+  });
+
+  // Listen for sync completion
+  window.electronAPI.onSyncCompleted(async (result) => {
+    console.log('[SYNC] sync-completed event received:', result);
+
+    if (result.success) {
+      if (!initialSyncCompleted) {
+        // First sync completed - now load repository images
+        console.log('[SYNC] Initial sync completed, loading repository images...');
+        initialSyncCompleted = true;
+
+        // Load repository data now that mirror is ready
+        isSyncing = true;
+        updateSyncStatus('Cargando imágenes del depósito...');
+        await loadRepositoryDataInBackground(allUsers);
+      } else {
+        // Subsequent syncs - just reload repository data
+        console.log('[SYNC] Reloading repository images after sync completed');
+        isSyncing = true;
+        updateSyncStatus('Actualizando imágenes...');
+        await loadRepositoryDataInBackground(allUsers);
+      }
+    } else {
+      isSyncing = false;
+      updateSyncStatus(`Error en sincronización: ${result.error}`);
+      if (!initialSyncCompleted) {
+        updateSyncStatus('Error al cargar el depósito');
+      }
+    }
   });
 });
 
@@ -76,7 +139,7 @@ function populateGroupFilter() {
   });
 }
 
-// Load users from main process
+// Load users from main process (WITHOUT repository images)
 async function loadUsers() {
   try {
     // Build filters based on selected group
@@ -85,15 +148,16 @@ async function loadUsers() {
       filters.group = selectedGroupCode;
     }
 
-    // Request users with repository images loaded
+    // Load users WITHOUT repository images for fast initial display
     const result = await window.electronAPI.getUsers(filters, {
-      loadRepositoryImages: true,
+      loadRepositoryImages: false, // Always false - repository data loaded separately
       loadCapturedImages: false
     });
 
     if (result.success) {
       // Show ALL users (with or without repository image)
       allUsers = result.users;
+      console.log(`[SYNC] Loaded ${allUsers.length} users`);
     } else {
       console.error('Error loading users:', result.error);
       loadingElement.textContent = 'Error al cargar usuarios';
@@ -104,8 +168,48 @@ async function loadUsers() {
   }
 }
 
+// Load repository data in background (non-blocking)
+async function loadRepositoryDataInBackground(users) {
+  try {
+    console.log('[SYNC] Loading repository data in background...');
+
+    const result = await window.electronAPI.loadRepositoryImages(users);
+
+    console.log('[SYNC] loadRepositoryImages finished');
+    if (result.success) {
+      console.log(`[SYNC] Repository data loaded for ${Object.keys(result.repositoryData).length} users`);
+
+      // Merge repository data into allUsers
+      allUsers.forEach(user => {
+        const repoData = result.repositoryData[user.id];
+        if (repoData) {
+          user.has_repository_image = repoData.has_repository_image;
+          user.repository_image_path = repoData.repository_image_path;
+        }
+      });
+
+      console.log('[SYNC] Setting isSyncing = false');
+      isSyncing = false;
+      updateSyncStatus(null);
+
+      // Re-display grid with repository data
+      displayGrid();
+    } else {
+      console.error('Error loading repository data:', result.error);
+      isSyncing = false;
+      updateSyncStatus(null);
+    }
+  } catch (error) {
+    console.error('Error loading repository data in background:', error);
+    isSyncing = false;
+    updateSyncStatus(null);
+  }
+}
+
 // Display grid
 function displayGrid() {
+  console.log('[SYNC] displayGrid() called, isSyncing =', isSyncing);
+
   if (allUsers.length === 0) {
     loadingElement.textContent = 'No hay usuarios para mostrar';
     return;
@@ -115,9 +219,12 @@ function displayGrid() {
   loadingElement.style.display = 'none';
   gridContainer.style.display = 'grid';
 
-  // Update stats - count users with repository images
-  const usersWithImages = allUsers.filter(u => u.repository_image_path).length;
-  statsElement.textContent = `${allUsers.length} usuarios (${usersWithImages} con imagen en depósito)`;
+  // Update stats only if not syncing (otherwise keep the sync status message)
+  console.log('[SYNC] Checking if should update stats, isSyncing =', isSyncing);
+  if (!isSyncing) {
+    const usersWithImages = allUsers.filter(u => u.repository_image_path).length;
+    statsElement.textContent = `${allUsers.length} usuarios (${usersWithImages} con imagen en depósito)`;
+  }
 
   // Clear grid
   gridContainer.innerHTML = '';
@@ -155,13 +262,14 @@ function createGridItem(user) {
 
     // Handle image load errors
     img.onerror = () => {
-      imageContainer.innerHTML = createPlaceholderSVG();
+      imageContainer.innerHTML = createPlaceholderSVG(false);
     };
 
     imageContainer.appendChild(img);
   } else {
-    // User has no image in repository - show placeholder
-    imageContainer.innerHTML = createPlaceholderSVG();
+    // User has no image in repository - show placeholder or spinner
+    const showSpinner = isSyncing;
+    imageContainer.innerHTML = createPlaceholderSVG(showSpinner);
   }
 
   // User info
@@ -200,15 +308,44 @@ function createGridItem(user) {
 }
 
 // Create placeholder SVG for users without images
-function createPlaceholderSVG() {
-  return `
-    <div class="grid-item-placeholder">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-      </svg>
-    </div>
-  `;
+function createPlaceholderSVG(showSpinner = false) {
+  if (showSpinner) {
+    // Show spinner during sync
+    return `
+      <div class="grid-item-spinner">
+        <div class="spinner"></div>
+      </div>
+    `;
+  } else {
+    // Show static user icon
+    return `
+      <div class="grid-item-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </div>
+    `;
+  }
+}
+
+// Update sync status in the header
+function updateSyncStatus(message) {
+  const statsElement = document.getElementById('stats');
+
+  if (message) {
+    // Show sync status with spinner
+    statsElement.innerHTML = `
+      <div class="sync-status">
+        <div class="spinner-small"></div>
+        <span>${message}</span>
+      </div>
+    `;
+  } else {
+    // Show normal stats
+    const usersWithImages = allUsers.filter(u => u.repository_image_path).length;
+    statsElement.textContent = `${allUsers.length} usuarios (${usersWithImages} con imagen en depósito)`;
+  }
 }
 
 // Initialize lazy loading with IntersectionObserver
