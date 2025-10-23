@@ -1,4 +1,4 @@
-// Image Grid functionality
+// Repository Grid functionality - Shows users with images from repository
 let allUsers = [];
 let currentGroups = [];
 let selectedGroupCode = '';
@@ -41,6 +41,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadUsers();
     displayGrid();
   });
+
+  // Listen for repository changes
+  window.electronAPI.onRepositoryChanged(async () => {
+    await loadUsers();
+    displayGrid();
+  });
 });
 
 // Load groups from main process
@@ -79,9 +85,14 @@ async function loadUsers() {
       filters.group = selectedGroupCode;
     }
 
-    const result = await window.electronAPI.getUsers(filters);
+    // Request users with repository images loaded
+    const result = await window.electronAPI.getUsers(filters, {
+      loadRepositoryImages: true,
+      loadCapturedImages: false
+    });
 
     if (result.success) {
+      // Show ALL users (with or without repository image)
       allUsers = result.users;
     } else {
       console.error('Error loading users:', result.error);
@@ -104,9 +115,9 @@ function displayGrid() {
   loadingElement.style.display = 'none';
   gridContainer.style.display = 'grid';
 
-  // Update stats
-  const usersWithImages = allUsers.filter(u => u.image_path).length;
-  statsElement.textContent = `${allUsers.length} usuarios (${usersWithImages} con imagen)`;
+  // Update stats - count users with repository images
+  const usersWithImages = allUsers.filter(u => u.repository_image_path).length;
+  statsElement.textContent = `${allUsers.length} usuarios (${usersWithImages} con imagen en depósito)`;
 
   // Clear grid
   gridContainer.innerHTML = '';
@@ -130,12 +141,13 @@ function createGridItem(user) {
   const imageContainer = document.createElement('div');
   imageContainer.className = 'grid-item-image-container';
 
-  if (user.image_path) {
-    // User has an image - use lazy loading
+  // Check if user has repository image
+  if (user.repository_image_path) {
+    // User has an image in repository - use lazy loading
     const img = document.createElement('img');
     img.className = 'grid-item-image lazy-image';
     // Store the actual path in data attribute
-    img.dataset.src = `file://${user.image_path}`;
+    img.dataset.src = `file://${user.repository_image_path}`;
     img.alt = `${user.first_name} ${user.last_name1}`;
 
     // Show placeholder initially
@@ -148,7 +160,7 @@ function createGridItem(user) {
 
     imageContainer.appendChild(img);
   } else {
-    // User has no image - show placeholder
+    // User has no image in repository - show placeholder
     imageContainer.innerHTML = createPlaceholderSVG();
   }
 

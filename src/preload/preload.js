@@ -129,6 +129,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Global configuration
   getImageRepositoryPath: () => ipcRenderer.invoke('get-image-repository-path'),
   setImageRepositoryPath: (repositoryPath) => ipcRenderer.invoke('set-image-repository-path', repositoryPath),
+  getSelectedGroupFilter: () => ipcRenderer.invoke('get-selected-group-filter'),
+  setSelectedGroupFilter: (groupCode) => ipcRenderer.invoke('set-selected-group-filter', groupCode),
+  onGroupFilterChanged: (callback) => {
+    ipcRenderer.on('group-filter-changed', (event, groupCode) => callback(groupCode));
+  },
 
   // Image tags
   addImageTag: (data) => ipcRenderer.invoke('add-image-tag', data),

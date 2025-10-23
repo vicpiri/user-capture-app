@@ -24,6 +24,7 @@ if (process.argv.includes('--dev')) {
 let mainWindow;
 let cameraWindow = null;
 let imageGridWindow = null;
+let repositoryGridWindow = null;
 let dbManager;
 let folderWatcher;
 let imageManager;
@@ -324,10 +325,17 @@ function createMenu() {
               },
               { type: 'separator' },
               {
-                  label: 'Cuadro de imágenes',
+                  label: 'Cuadro de imágenes capturadas',
                   accelerator: 'CmdOrCtrl+G',
                   click: () => {
                       openImageGridWindow();
+                  }
+              },
+              {
+                  label: 'Cuadro de imágenes en depósito',
+                  accelerator: 'CmdOrCtrl+Shift+G',
+                  click: () => {
+                      openRepositoryGridWindow();
                   }
               },
               {
@@ -479,7 +487,7 @@ function createImageGridWindow() {
   imageGridWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: 'Cuadro de Imágenes',
+    title: 'Cuadro de Imágenes Capturadas',
     icon: path.join(__dirname, 'assets/icons/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'src/preload/preload.js'),
@@ -524,6 +532,70 @@ function openImageGridWindow() {
   } else {
     imageGridWindow.show();
     imageGridWindow.focus();
+  }
+}
+
+function createRepositoryGridWindow() {
+  repositoryGridWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    title: 'Cuadro de Imágenes en Depósito',
+    icon: path.join(__dirname, 'assets/icons/icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'src/preload/preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    backgroundColor: '#1a1f2e',
+    show: false,
+    autoHideMenuBar: true
+  });
+
+  repositoryGridWindow.loadFile('src/renderer/repository-grid.html');
+
+  repositoryGridWindow.once('ready-to-show', () => {
+    repositoryGridWindow.setMenuBarVisibility(false);
+    repositoryGridWindow.show();
+  });
+
+  repositoryGridWindow.on('closed', () => {
+    repositoryGridWindow = null;
+  });
+
+  // Open DevTools in development
+  if (process.argv.includes('--dev')) {
+    repositoryGridWindow.webContents.openDevTools();
+  }
+}
+
+function openRepositoryGridWindow() {
+  if (!dbManager) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Proyecto no abierto',
+      message: 'Debes abrir o crear un proyecto primero',
+      buttons: ['Aceptar']
+    });
+    return;
+  }
+
+  // Check if repository path is configured
+  const repositoryPath = getImageRepositoryPath();
+  if (!repositoryPath) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Depósito no configurado',
+      message: 'Debes configurar el depósito de imágenes primero.\n\nVe a Archivo > Configuración > Depósito imágenes de usuario',
+      buttons: ['Aceptar']
+    });
+    return;
+  }
+
+  if (!repositoryGridWindow) {
+    createRepositoryGridWindow();
+  } else {
+    repositoryGridWindow.show();
+    repositoryGridWindow.focus();
   }
 }
 
@@ -2583,6 +2655,40 @@ ipcMain.handle('set-image-repository-path', async (event, repositoryPath) => {
   }
 });
 
+// Group filter synchronization handlers
+ipcMain.handle('get-selected-group-filter', async () => {
+  try {
+    const groupFilter = getSelectedGroupFilter();
+    return { success: true, groupCode: groupFilter };
+  } catch (error) {
+    console.error('Error getting selected group filter:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('set-selected-group-filter', async (event, groupCode) => {
+  try {
+    if (setSelectedGroupFilter(groupCode)) {
+      // Notify all windows about the filter change
+      if (mainWindow) {
+        mainWindow.webContents.send('group-filter-changed', groupCode);
+      }
+      if (imageGridWindow) {
+        imageGridWindow.webContents.send('group-filter-changed', groupCode);
+      }
+      if (repositoryGridWindow) {
+        repositoryGridWindow.webContents.send('group-filter-changed', groupCode);
+      }
+      return { success: true };
+    } else {
+      return { success: false, error: 'No se pudo guardar el filtro' };
+    }
+  } catch (error) {
+    console.error('Error setting selected group filter:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Helper function to format timestamp
 function formatTimestamp(date) {
   const year = date.getFullYear();
@@ -2667,6 +2773,18 @@ function setImageRepositoryPath(repositoryPath) {
   // Start watching the new repository path
   startRepositoryWatcher(repositoryPath);
 
+  return saveGlobalConfig(config);
+}
+
+// Group filter synchronization
+function getSelectedGroupFilter() {
+  const config = loadGlobalConfig();
+  return config.selectedGroupFilter || '';
+}
+
+function setSelectedGroupFilter(groupCode) {
+  const config = loadGlobalConfig();
+  config.selectedGroupFilter = groupCode;
   return saveGlobalConfig(config);
 }
 
