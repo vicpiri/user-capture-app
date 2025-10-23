@@ -98,8 +98,28 @@ function initializeEventListeners() {
   // Confirmation modal
   document.getElementById('confirm-no-btn').addEventListener('click', closeConfirmModal);
 
-  // Listen for new images
+  // Variable to track blinking interval
+  let blinkInterval = null;
+
+  // Listen for image being processed (before it's copied)
+  window.electronAPI.onImageDetecting((filename) => {
+    // Start blinking the image preview container
+    if (!blinkInterval) {
+      blinkInterval = setInterval(() => {
+        imagePreviewContainer.classList.toggle('detecting-image');
+      }, 300); // Blink every 300ms
+    }
+  });
+
+  // Listen for new images (after processing is complete)
   window.electronAPI.onNewImageDetected(async (filename) => {
+    // Stop blinking
+    if (blinkInterval) {
+      clearInterval(blinkInterval);
+      blinkInterval = null;
+      imagePreviewContainer.classList.remove('detecting-image');
+    }
+
     await loadImages();
     if (currentImages.length > 0) {
       showImagePreview();
