@@ -3,6 +3,16 @@ const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
 
+// Patterns to ignore: temporary files from Google Drive, Office, and partial downloads
+const IGNORE_RE = [
+  /(^|[\/\\])\../,           // Hidden files (dotfiles)
+  /\.tmp$/i,                 // Generic temporary files
+  /\.partial$/i,             // Partial downloads
+  /\.crdownload$/i,          // Chrome partial downloads
+  /\.gd(tmp|ownloading)$/i,  // Google Drive temporary files
+  /~\$.*/                    // Office temporary files
+];
+
 class FolderWatcher extends EventEmitter {
   constructor(ingestPath, importsPath) {
     super();
@@ -15,9 +25,10 @@ class FolderWatcher extends EventEmitter {
   start() {
     // Watch the ingest folder for new images
     this.watcher = chokidar.watch(this.ingestPath, {
-      ignored: /(^|[\/\\])\../, // ignore dotfiles
+      ignored: IGNORE_RE,
       persistent: true,
       ignoreInitial: true,
+      depth: 1,
       awaitWriteFinish: {
         stabilityThreshold: 300,
         pollInterval: 50

@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // User management
   getUsers: (filters, options) => ipcRenderer.invoke('get-users', filters, options),
   getGroups: () => ipcRenderer.invoke('get-groups'),
+  loadRepositoryImages: (users) => ipcRenderer.invoke('load-repository-images', users),
 
   // Image management
   getImages: () => ipcRenderer.invoke('get-images'),
@@ -32,6 +33,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   onRepositoryChanged: (callback) => {
     ipcRenderer.on('repository-changed', () => callback());
+  },
+
+  onSyncProgress: (callback) => {
+    ipcRenderer.on('sync-progress', (event, data) => callback(data));
+  },
+
+  onSyncCompleted: (callback) => {
+    ipcRenderer.on('sync-completed', (event, result) => callback(result));
   },
 
   onProgress: (callback) => {

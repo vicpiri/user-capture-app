@@ -7,7 +7,18 @@ const DatabaseManager = require('./src/main/database');
 const XMLParser = require('./src/main/xmlParser');
 const FolderWatcher = require('./src/main/folderWatcher');
 const ImageManager = require('./src/main/imageManager');
+const RepositoryMirror = require('./src/main/repositoryMirror');
 const { getLogger } = require('./src/main/logger');
+
+// Patterns to ignore: temporary files from Google Drive, Office, and partial downloads
+const IGNORE_RE = [
+  /(^|[\/\\])\../,           // Hidden files (dotfiles)
+  /\.tmp$/i,                 // Generic temporary files
+  /\.partial$/i,             // Partial downloads
+  /\.crdownload$/i,          // Chrome partial downloads
+  /\.gd(tmp|ownloading)$/i,  // Google Drive temporary files
+  /~\$.*/                    // Office temporary files
+];
 
 // Enable hot reload in development
 if (process.argv.includes('--dev')) {
@@ -35,17 +46,24 @@ let cameraAutoStart = false;
 let recentProjects = [];
 let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
-let showRepositoryPhotos = true;
-let showRepositoryIndicators = true;
+let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
+let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
 let showAdditionalActions = true;
 let availableCameras = [];
 let selectedCameraId = null;
 let repositoryWatcher = null;
+let repositoryMirror = null; // Repository mirror manager
 
 // Repository file existence cache
 let repositoryFileCache = new Map();
+let repositoryCacheReady = false; // Flag to indicate if cache is ready to use
 let repositoryCacheTimestamp = null;
 const REPOSITORY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Repository watcher event batching/coalescing
+let pendingRepositoryEvents = new Map(); // filePath → {eventType, filePath}
+let repositoryFlushTimer = null;
+const REPOSITORY_BATCH_WINDOW_MS = 600; // 600ms batching window
 
 function createMenu() {
   // Build recent projects submenu
@@ -299,6 +317,10 @@ function createMenu() {
                   click: (menuItem) => {
                       showRepositoryPhotos = menuItem.checked;
                       saveDisplayPreferences();
+                      // Start mirror lazily when enabling repository features
+                      if (showRepositoryPhotos) {
+                        ensureRepositoryMirrorStarted();
+                      }
                       mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
                   }
               },
@@ -309,6 +331,10 @@ function createMenu() {
                   click: (menuItem) => {
                       showRepositoryIndicators = menuItem.checked;
                       saveDisplayPreferences();
+                      // Start mirror lazily when enabling repository features
+                      if (showRepositoryIndicators) {
+                        ensureRepositoryMirrorStarted();
+                      }
                       mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
                   }
               },
@@ -591,6 +617,9 @@ function openRepositoryGridWindow() {
     return;
   }
 
+  // Start mirror lazily when opening repository grid
+  ensureRepositoryMirrorStarted();
+
   if (!repositoryGridWindow) {
     createRepositoryGridWindow();
   } else {
@@ -604,22 +633,18 @@ app.whenReady().then(() => {
   const config = loadGlobalConfig();
   showDuplicatesOnly = config.showDuplicatesOnly ?? false;
   showCapturedPhotos = config.showCapturedPhotos ?? true;
-  showRepositoryPhotos = config.showRepositoryPhotos ?? true;
-  showRepositoryIndicators = config.showRepositoryIndicators ?? true;
+  // Force repository options to false on startup to avoid blocking on Google Drive
+  showRepositoryPhotos = false;
+  showRepositoryIndicators = false;
   showAdditionalActions = config.showAdditionalActions ?? true;
 
   loadRecentProjects();
   createMenu();
   createWindow();
 
-  // Defer repository watcher initialization to avoid blocking startup
-  // (especially important if repository is on Google Drive or network path)
-  setTimeout(() => {
-    const repositoryPath = getImageRepositoryPath();
-    if (repositoryPath) {
-      startRepositoryWatcher(repositoryPath);
-    }
-  }, 1000); // Wait 1 second after window is created
+  // DO NOT start repository watcher automatically on startup
+  // It will be started lazily when needed (when user enables repository options)
+  // This prevents blocking on Google Drive during startup
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1358,6 +1383,7 @@ async function ensureDeletedGroup() {
 // Repository cache management functions
 function invalidateRepositoryCache() {
   repositoryFileCache.clear();
+  repositoryCacheReady = false;
   repositoryCacheTimestamp = null;
   logger.info('Repository file cache invalidated');
 }
@@ -1371,6 +1397,7 @@ function isCacheValid() {
 /**
  * Load all files from repository folder asynchronously
  * Returns a Set of lowercase filenames for fast lookups
+ * Uses repository mirror when available to avoid blocking file system operations
  */
 async function loadRepositoryFileList(repositoryPath) {
   try {
@@ -1378,27 +1405,16 @@ async function loadRepositoryFileList(repositoryPath) {
       return new Set();
     }
 
-    // Check if path exists (using async)
-    try {
-      await fs.promises.access(repositoryPath);
-    } catch {
-      logger.warning('Repository path does not exist');
-      return new Set();
+    // Use mirror if available
+    if (repositoryMirror && repositoryMirror.mirrorIndex.size > 0) {
+      logger.info(`Using repository mirror: ${repositoryMirror.mirrorIndex.size} files`);
+      return new Set(repositoryMirror.getAllFiles());
     }
 
-    // Read directory asynchronously
-    const files = await fs.promises.readdir(repositoryPath);
-
-    // Filter only .jpg and .jpeg files and convert to lowercase for case-insensitive comparison
-    const imageFiles = files
-      .filter(file => {
-        const ext = path.extname(file).toLowerCase();
-        return ext === '.jpg' || ext === '.jpeg';
-      })
-      .map(file => file.toLowerCase());
-
-    logger.info(`Loaded ${imageFiles.length} image files from repository`);
-    return new Set(imageFiles);
+    // Mirror not ready yet - return empty Set
+    // The mirror will populate as sync completes
+    logger.info('Repository mirror not ready yet, returning empty set');
+    return new Set();
   } catch (error) {
     logger.error('Error loading repository file list', error);
     return new Set();
@@ -1429,68 +1445,254 @@ function findRepositoryFile(identifier, fileSet) {
   return null;
 }
 
-// Repository folder watcher management
+// Schedule a flush of pending repository events
+function scheduleRepositoryFlush() {
+  if (repositoryFlushTimer) return; // Already scheduled
+
+  repositoryFlushTimer = setTimeout(() => {
+    flushRepositoryEvents();
+    repositoryFlushTimer = null;
+  }, REPOSITORY_BATCH_WINDOW_MS);
+}
+
+// Flush accumulated repository events
+function flushRepositoryEvents() {
+  if (pendingRepositoryEvents.size === 0) return;
+
+  logger.info(`Flushing ${pendingRepositoryEvents.size} repository events`);
+
+  // Invalidate cache once for all events
+  invalidateRepositoryCache();
+
+  // Send single notification to renderer
+  if (mainWindow) {
+    mainWindow.webContents.send('repository-changed');
+  }
+
+  pendingRepositoryEvents.clear();
+}
+
+// Repository mirror management
+async function ensureRepositoryMirrorStarted() {
+  // Only start if not already running and repository path is set
+  if (repositoryMirror) {
+    return; // Already running
+  }
+
+  const repositoryPath = getImageRepositoryPath();
+  if (!repositoryPath) {
+    return;
+  }
+
+  logger.info('Initializing repository mirror (lazy initialization)...');
+
+  // Create mirror path
+  const mirrorPath = path.join(app.getPath('userData'), 'repository-mirror');
+
+  // Initialize mirror
+  repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, logger);
+
+  // Initialize in background (non-blocking)
+  setImmediate(async () => {
+    const initialized = await repositoryMirror.initialize();
+    if (initialized) {
+      logger.success('Repository mirror initialized');
+
+      // Listen to sync events
+      repositoryMirror.on('sync-started', () => {
+        logger.info('Repository sync started');
+      });
+
+      repositoryMirror.on('sync-progress', (data) => {
+        if (data.phase === 'syncing' && data.current % 50 === 0) {
+          logger.info(`Syncing: ${data.current}/${data.total} files`);
+        }
+        // Send progress to repository grid window
+        if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
+          repositoryGridWindow.webContents.send('sync-progress', data);
+        }
+      });
+
+      repositoryMirror.on('sync-completed', (result) => {
+        if (result.success) {
+          logger.success(`Sync completed: ${result.synced} files synced`);
+          // Notify all windows about repository changes
+          if (mainWindow) {
+            mainWindow.webContents.send('repository-changed');
+          }
+          // Send completion event to repository grid window
+          if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
+            repositoryGridWindow.webContents.send('sync-completed', result);
+          }
+        } else {
+          logger.error(`Sync failed: ${result.error}`);
+          // Send error to repository grid window
+          if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
+            repositoryGridWindow.webContents.send('sync-completed', result);
+          }
+        }
+      });
+
+      repositoryMirror.on('file-synced', (filename) => {
+        // File synced - could update UI here if needed
+      });
+
+      // Start initial sync
+      repositoryMirror.startSync();
+    } else {
+      logger.error('Failed to initialize repository mirror');
+    }
+  });
+}
+
 function startRepositoryWatcher(repositoryPath) {
   // Stop existing watcher if any
   stopRepositoryWatcher();
 
-  if (!repositoryPath || !fs.existsSync(repositoryPath)) {
-    logger.warning('Repository path does not exist, watcher not started');
+  if (!repositoryPath) {
+    logger.warning('Repository path not provided, watcher not started');
     return;
   }
 
-  try {
-    // Watch for changes in repository folder (only .jpg and .jpeg files)
-    repositoryWatcher = chokidar.watch(repositoryPath, {
-      ignored: /[\/\\]\./,  // ignore dotfiles
-      persistent: true,
-      ignoreInitial: true,  // don't fire events for existing files
-      awaitWriteFinish: {
-        stabilityThreshold: 500,
-        pollInterval: 100
-      },
-      depth: 0  // don't watch subdirectories
-    });
+  logger.info('Starting repository watcher with fully non-blocking initialization...');
 
-    repositoryWatcher
-      .on('add', (filePath) => {
-        const ext = path.extname(filePath).toLowerCase();
-        if (ext === '.jpg' || ext === '.jpeg') {
-          logger.info(`Repository file added: ${path.basename(filePath)}`);
-          invalidateRepositoryCache();
-          // Notify renderer to refresh user list
-          if (mainWindow) {
-            mainWindow.webContents.send('repository-changed');
-          }
-        }
-      })
-      .on('change', (filePath) => {
-        const ext = path.extname(filePath).toLowerCase();
-        if (ext === '.jpg' || ext === '.jpeg') {
-          logger.info(`Repository file changed: ${path.basename(filePath)}`);
-          invalidateRepositoryCache();
-          if (mainWindow) {
-            mainWindow.webContents.send('repository-changed');
-          }
-        }
-      })
-      .on('unlink', (filePath) => {
-        const ext = path.extname(filePath).toLowerCase();
-        if (ext === '.jpg' || ext === '.jpeg') {
-          logger.info(`Repository file deleted: ${path.basename(filePath)}`);
-          invalidateRepositoryCache();
-          if (mainWindow) {
-            mainWindow.webContents.send('repository-changed');
-          }
-        }
-      })
-      .on('error', (error) => {
-        logger.error('Repository watcher error:', error);
+  // Mark cache as ready immediately (even if empty) to avoid blocking UI
+  repositoryCacheReady = true;
+
+  // Do ALL initialization in background (including fs.existsSync check)
+  setImmediate(async () => {
+    try {
+      // Check if path exists (in background, non-blocking)
+      const exists = await fs.promises.access(repositoryPath).then(() => true).catch(() => false);
+
+      if (!exists) {
+        logger.warning('Repository path does not exist, watcher not started');
+        return;
+      }
+
+      // Watch for changes in repository folder (only .jpg and .jpeg files)
+      repositoryWatcher = chokidar.watch(repositoryPath, {
+        ignored: IGNORE_RE,
+        persistent: true,
+        ignoreInitial: true,  // don't fire events for existing files
+        awaitWriteFinish: {
+          stabilityThreshold: 300,
+          pollInterval: 50
+        },
+        depth: 0  // don't watch subdirectories
       });
 
-    logger.success(`Repository watcher started for: ${repositoryPath}`);
+      repositoryWatcher
+        .on('add', (filePath) => {
+          const ext = path.extname(filePath).toLowerCase();
+          if (ext === '.jpg' || ext === '.jpeg') {
+            logger.info(`Repository file added: ${path.basename(filePath)}`);
+
+            // Update in-memory cache immediately
+            const filename = path.basename(filePath).toLowerCase();
+            repositoryFileCache.set(filename, true);
+
+            // Accumulate event in pending map for UI update
+            pendingRepositoryEvents.set(filePath, { eventType: 'add', filePath });
+            scheduleRepositoryFlush();
+          }
+        })
+        .on('change', (filePath) => {
+          const ext = path.extname(filePath).toLowerCase();
+          if (ext === '.jpg' || ext === '.jpeg') {
+            logger.info(`Repository file changed: ${path.basename(filePath)}`);
+
+            // File still exists, ensure it's in cache
+            const filename = path.basename(filePath).toLowerCase();
+            repositoryFileCache.set(filename, true);
+
+            // Accumulate event in pending map for UI update
+            pendingRepositoryEvents.set(filePath, { eventType: 'change', filePath });
+            scheduleRepositoryFlush();
+          }
+        })
+        .on('unlink', (filePath) => {
+          const ext = path.extname(filePath).toLowerCase();
+          if (ext === '.jpg' || ext === '.jpeg') {
+            logger.info(`Repository file deleted: ${path.basename(filePath)}`);
+
+            // Remove from in-memory cache immediately
+            const filename = path.basename(filePath).toLowerCase();
+            repositoryFileCache.delete(filename);
+
+            // Accumulate event in pending map for UI update
+            pendingRepositoryEvents.set(filePath, { eventType: 'unlink', filePath });
+            scheduleRepositoryFlush();
+          }
+        })
+        .on('error', (error) => {
+          logger.error('Repository watcher error:', error);
+        });
+
+      logger.success(`Repository watcher started for: ${repositoryPath}`);
+
+      // Scan existing files in background without blocking
+      // This runs AFTER the watcher is set up
+      await scanRepositoryInBackground(repositoryPath);
+    } catch (error) {
+      logger.error('Error starting repository watcher:', error);
+    }
+  });
+}
+
+/**
+ * Scan repository folder in background, processing files in small batches
+ * to avoid blocking the event loop. This is critical for network drives.
+ */
+async function scanRepositoryInBackground(repositoryPath) {
+  const BATCH_SIZE = 100; // Process 100 files at a time
+
+  logger.info('Starting background scan of repository folder...');
+
+  try {
+    // Read directory asynchronously
+    const files = await fs.promises.readdir(repositoryPath);
+
+    // Filter only .jpg and .jpeg files
+    const imageFiles = files.filter(file => {
+      const ext = path.extname(file).toLowerCase();
+      return ext === '.jpg' || ext === '.jpeg';
+    });
+
+    logger.info(`Found ${imageFiles.length} image files in repository, scanning in batches...`);
+
+    // Process files in batches
+    for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
+      const batch = imageFiles.slice(i, i + BATCH_SIZE);
+
+      // Process current batch
+      batch.forEach(file => {
+        const filename = file.toLowerCase();
+        repositoryFileCache.set(filename, true);
+      });
+
+      // Mark cache as ready after first batch
+      if (i === 0) {
+        repositoryCacheReady = true;
+        logger.info('Repository cache ready after first batch');
+      }
+
+      // Yield to event loop between batches to keep UI responsive
+      if (i + BATCH_SIZE < imageFiles.length) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    }
+
+    logger.success(`Repository scan complete: ${imageFiles.length} files cached`);
+
+    // Notify renderer that repository is ready
+    if (mainWindow) {
+      mainWindow.webContents.send('repository-changed');
+    }
   } catch (error) {
-    logger.error('Error starting repository watcher:', error);
+    logger.error('Error scanning repository in background:', error);
+    // Even on error, mark cache as ready (it will just be empty)
+    repositoryCacheReady = true;
   }
 }
 
@@ -1571,7 +1773,9 @@ ipcMain.handle('get-users', async (event, filters, options = {}) => {
 
             if (filename) {
               user.has_repository_image = true;
-              user.repository_image_path = path.join(repositoryPath, filename);
+              // Use mirror path if mirror is available, fallback to repository path
+              const mirrorPath = repositoryMirror ? repositoryMirror.getMirrorPath(filename) : null;
+              user.repository_image_path = mirrorPath || path.join(repositoryPath, filename);
             }
           }
         });
@@ -1606,6 +1810,62 @@ ipcMain.handle('get-groups', async () => {
     return { success: true, groups };
   } catch (error) {
     console.error('Error getting groups:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Load repository images data in background (non-blocking)
+ipcMain.handle('load-repository-images', async (event, users) => {
+  try {
+    if (!dbManager) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+
+    const repositoryPath = getImageRepositoryPath();
+    const repositoryData = {};
+
+    if (!repositoryPath) {
+      // No repository configured, return empty data
+      return { success: true, repositoryData };
+    }
+
+    logger.info(`Loading repository images for ${users.length} users`);
+
+    // Load repository file list ONCE
+    const repositoryFiles = await loadRepositoryFileList(repositoryPath);
+
+    // Check each user against the repository
+    users.forEach(user => {
+      const identifier = user.type === 'student' ? user.nia : user.document;
+
+      if (identifier) {
+        const filename = findRepositoryFile(identifier, repositoryFiles);
+
+        if (filename) {
+          // Use mirror path if mirror is available, fallback to repository path
+          const mirrorPath = repositoryMirror ? repositoryMirror.getMirrorPath(filename) : null;
+          repositoryData[user.id] = {
+            has_repository_image: true,
+            repository_image_path: mirrorPath || path.join(repositoryPath, filename)
+          };
+        } else {
+          repositoryData[user.id] = {
+            has_repository_image: false,
+            repository_image_path: null
+          };
+        }
+      } else {
+        repositoryData[user.id] = {
+          has_repository_image: false,
+          repository_image_path: null
+        };
+      }
+    });
+
+    logger.info(`Repository images loaded: ${Object.keys(repositoryData).length} users processed`);
+    return { success: true, repositoryData };
+  } catch (error) {
+    logger.error('Error loading repository images:', error);
     return { success: false, error: error.message };
   }
 });
