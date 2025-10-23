@@ -19,8 +19,8 @@ class FolderWatcher extends EventEmitter {
       persistent: true,
       ignoreInitial: true,
       awaitWriteFinish: {
-        stabilityThreshold: 500,
-        pollInterval: 100
+        stabilityThreshold: 300,
+        pollInterval: 50
       }
     });
 
@@ -44,6 +44,9 @@ class FolderWatcher extends EventEmitter {
       console.log('Ignoring non-JPG file:', filePath);
       return;
     }
+
+    // Emit event immediately when image is detected (before processing)
+    this.emit('image-detecting', path.basename(filePath));
 
     this.isProcessing.add(filePath);
 
@@ -94,7 +97,7 @@ class FolderWatcher extends EventEmitter {
     return new Promise((resolve, reject) => {
       let lastSize = -1;
       let stableCount = 0;
-      const requiredStableCount = 3;
+      const requiredStableCount = 2;
 
       const interval = setInterval(() => {
         try {
@@ -121,7 +124,7 @@ class FolderWatcher extends EventEmitter {
           clearInterval(interval);
           reject(error);
         }
-      }, 200);
+      }, 100);
 
       // Timeout
       setTimeout(() => {

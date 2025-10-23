@@ -840,6 +840,10 @@ ipcMain.handle('create-project', async (event, data) => {
 
     // Start folder watcher
     folderWatcher = new FolderWatcher(ingestPath, importsPath);
+    folderWatcher.on('image-detecting', (filename) => {
+      logger.info(`Image being processed: ${filename}`);
+      mainWindow.webContents.send('image-detecting', filename);
+    });
     folderWatcher.on('image-added', (filename) => {
       logger.info(`New image detected: ${filename}`);
       // Invalidate image cache when new image is added
@@ -950,6 +954,10 @@ ipcMain.handle('open-project', async (event, folderPath) => {
 
     // Start folder watcher
     folderWatcher = new FolderWatcher(ingestPath, importsPath);
+    folderWatcher.on('image-detecting', (filename) => {
+      logger.info(`Image being processed: ${filename}`);
+      mainWindow.webContents.send('image-detecting', filename);
+    });
     folderWatcher.on('image-added', (filename) => {
       logger.info(`New image detected: ${filename}`);
       // Invalidate image cache when new image is added
@@ -2873,6 +2881,10 @@ async function openRecentProject(folderPath) {
 
     // Start folder watcher
     folderWatcher = new FolderWatcher(ingestPath, importsPath);
+    folderWatcher.on('image-detecting', (filename) => {
+      logger.info(`Image being processed: ${filename}`);
+      mainWindow.webContents.send('image-detecting', filename);
+    });
     folderWatcher.on('image-added', (filename) => {
       logger.info(`New image detected: ${filename}`);
       // Invalidate image cache when new image is added

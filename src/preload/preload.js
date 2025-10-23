@@ -22,6 +22,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   focusWindow: () => ipcRenderer.invoke('focus-window'),
 
   // Events from main process
+  onImageDetecting: (callback) => {
+    ipcRenderer.on('image-detecting', (event, filename) => callback(filename));
+  },
+
   onNewImageDetected: (callback) => {
     ipcRenderer.on('new-image-detected', (event, filename) => callback(filename));
   },
