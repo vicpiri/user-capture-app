@@ -1,27 +1,16 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const sharp = require('sharp');
-const chokidar = require('chokidar');
 const DatabaseManager = require('./src/main/database');
-const XMLParser = require('./src/main/xmlParser');
 const FolderWatcher = require('./src/main/folderWatcher');
 const ImageManager = require('./src/main/imageManager');
 const RepositoryMirror = require('./src/main/repositoryMirror');
 const MenuBuilder = require('./src/main/menu/menuBuilder');
-const MainWindowManager = require('./src/main/window/mainWindow');
-const CameraWindowManager = require('./src/main/window/cameraWindow');
-const ImageGridWindowManager = require('./src/main/window/imageGridWindow');
-const RepositoryGridWindowManager = require('./src/main/window/repositoryGridWindow');
 const { getLogger } = require('./src/main/logger');
-const { formatTimestamp, capitalizeWords } = require('./src/main/utils/formatting');
 const {
   loadGlobalConfig,
-  saveGlobalConfig,
   getImageRepositoryPath,
   setImageRepositoryPath,
-  getSelectedGroupFilter,
-  setSelectedGroupFilter,
   saveDisplayPreferences
 } = require('./src/main/utils/config');
 const {
@@ -37,16 +26,6 @@ const { registerUserGroupImageHandlers } = require('./src/main/ipc/userGroupImag
 const { registerExportHandlers } = require('./src/main/ipc/exportHandlers');
 const { registerMiscHandlers } = require('./src/main/ipc/miscHandlers');
 
-// Patterns to ignore: temporary files from Google Drive, Office, and partial downloads
-const IGNORE_RE = [
-  /(^|[\/\\])\../,           // Hidden files (dotfiles)
-  /\.tmp$/i,                 // Generic temporary files
-  /\.partial$/i,             // Partial downloads
-  /\.crdownload$/i,          // Chrome partial downloads
-  /\.gd(tmp|ownloading)$/i,  // Google Drive temporary files
-  /~\$.*/                    // Office temporary files
-];
-
 // Enable hot reload in development
 if (process.argv.includes('--dev')) {
   try {
@@ -59,13 +38,7 @@ if (process.argv.includes('--dev')) {
   }
 }
 
-// Window managers
-const mainWindowManager = new MainWindowManager();
-const cameraWindowManager = new CameraWindowManager();
-const imageGridWindowManager = new ImageGridWindowManager();
-const repositoryGridWindowManager = new RepositoryGridWindowManager();
-
-// Getter functions for backward compatibility
+// Application state
 let mainWindow;
 let cameraWindow = null;
 let imageGridWindow = null;
@@ -85,7 +58,6 @@ let showRepositoryIndicators = false;  // Default to false to avoid blocking on 
 let showAdditionalActions = true;
 let availableCameras = [];
 let selectedCameraId = null;
-let repositoryWatcher = null;
 let repositoryMirror = null; // Repository mirror manager
 
 // Repository cache manager
