@@ -11,6 +11,7 @@ let showCapturedPhotos = true;
 let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
 let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
 let isLoadingRepositoryPhotos = false;  // Track if repository photos are being loaded
+let isLoadingRepositoryIndicators = false;  // Track if repository indicators are being loaded
 let repositorySyncCompleted = false;  // Track if initial repository sync has completed
 let imageObserver = null;
 
@@ -434,25 +435,33 @@ function updateRepositoryDataInDisplay() {
     // Update repository check indicator if enabled
     if (showRepositoryIndicators) {
       const repositoryCheck = indicatorCell.querySelector('.repository-check, .repository-check-placeholder');
-      if (repositoryCheck && user.repository_image_path) {
-        // Replace placeholder with checkmark
-        const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        checkSvg.setAttribute('class', 'repository-check');
-        checkSvg.setAttribute('viewBox', '0 0 24 24');
-        checkSvg.setAttribute('fill', 'none');
-        checkSvg.setAttribute('stroke', 'currentColor');
-        checkSvg.setAttribute('stroke-width', '2');
-        checkSvg.innerHTML = `
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        `;
-        repositoryCheck.replaceWith(checkSvg);
+      if (repositoryCheck) {
+        if (user.repository_image_path) {
+          // Replace placeholder/spinner with checkmark
+          const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          checkSvg.setAttribute('class', 'repository-check');
+          checkSvg.setAttribute('viewBox', '0 0 24 24');
+          checkSvg.setAttribute('fill', 'none');
+          checkSvg.setAttribute('stroke', 'currentColor');
+          checkSvg.setAttribute('stroke-width', '2');
+          checkSvg.innerHTML = `
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          `;
+          repositoryCheck.replaceWith(checkSvg);
+        } else if (repositoryCheck.classList.contains('loading') && repositorySyncCompleted) {
+          // Only replace spinner with empty placeholder if sync has completed
+          const placeholder = document.createElement('div');
+          placeholder.className = 'repository-check-placeholder';
+          repositoryCheck.replaceWith(placeholder);
+        }
       }
     }
   });
 
-  // Stop loading state
+  // Stop loading states
   isLoadingRepositoryPhotos = false;
+  isLoadingRepositoryIndicators = false;
 }
 
 async function displayUsers(users, allUsers = null) {
@@ -620,7 +629,11 @@ function createUserRow(user, imageCount) {
            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
            <polyline points="22 4 12 14.01 9 11.01"></polyline>
          </svg>`
-      : `<div class="repository-check-placeholder"></div>`)
+      : (isLoadingRepositoryIndicators
+        ? `<div class="repository-check-placeholder loading">
+             <div class="spinner-small"></div>
+           </div>`
+        : `<div class="repository-check-placeholder"></div>`))
     : '';
 
   // Checkbox for selection mode
@@ -1116,12 +1129,25 @@ function setupMenuListeners() {
 
   window.electronAPI.onMenuToggleRepositoryIndicators((enabled) => {
     showRepositoryIndicators = enabled;
+    if (enabled) {
+      // Mark as loading to show spinners and reset sync completed flag
+      isLoadingRepositoryIndicators = true;
+      repositorySyncCompleted = false;
+    }
     // Load repository data if enabling and not already loaded
     if (enabled && currentUsers.length > 0) {
-      const hasRepositoryData = currentUsers.some(u => u.hasOwnProperty('repository_image_path'));
+      // Check if repository data is actually loaded (not just the property exists)
+      const hasRepositoryData = currentUsers.some(u => u.repository_image_path);
       if (!hasRepositoryData) {
         loadRepositoryDataInBackground(currentUsers);
+      } else {
+        // Data already loaded, stop loading state and mark sync as completed
+        isLoadingRepositoryIndicators = false;
+        repositorySyncCompleted = true;
       }
+    } else if (!enabled) {
+      // If disabling, stop loading state
+      isLoadingRepositoryIndicators = false;
     }
     displayUsers(currentUsers, allUsers);
   });
