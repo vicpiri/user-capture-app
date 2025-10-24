@@ -6,6 +6,10 @@ const FolderWatcher = require('./src/main/folderWatcher');
 const ImageManager = require('./src/main/imageManager');
 const RepositoryMirror = require('./src/main/repositoryMirror');
 const MenuBuilder = require('./src/main/menu/menuBuilder');
+const MainWindowManager = require('./src/main/window/mainWindow');
+const CameraWindowManager = require('./src/main/window/cameraWindow');
+const ImageGridWindowManager = require('./src/main/window/imageGridWindow');
+const RepositoryGridWindowManager = require('./src/main/window/repositoryGridWindow');
 const { getLogger } = require('./src/main/logger');
 const {
   loadGlobalConfig,
@@ -39,10 +43,12 @@ if (process.argv.includes('--dev')) {
 }
 
 // Application state
-let mainWindow;
-let cameraWindow = null;
-let imageGridWindow = null;
-let repositoryGridWindow = null;
+// Window managers
+const mainWindowManager = new MainWindowManager();
+const cameraWindowManager = new CameraWindowManager();
+const imageGridWindowManager = new ImageGridWindowManager();
+const repositoryGridWindowManager = new RepositoryGridWindowManager();
+
 let dbManager;
 let folderWatcher;
 let imageManager;
@@ -66,8 +72,8 @@ const repositoryCacheManager = new RepositoryCacheManager();
 function createMenu() {
   const menuBuilder = new MenuBuilder({
     // Windows
-    mainWindow,
-    cameraWindow,
+    mainWindow: mainWindowManager.getWindow(),
+    cameraWindow: cameraWindowManager.getWindow(),
 
     // State
     cameraEnabled,
@@ -101,6 +107,7 @@ function createMenu() {
       openCameraWindow,
       selectCamera: (deviceId) => {
         selectedCameraId = deviceId;
+        const cameraWindow = cameraWindowManager.getWindow();
         if (cameraWindow) {
           cameraWindow.webContents.send('change-camera', selectedCameraId);
         }
@@ -108,7 +115,10 @@ function createMenu() {
       },
       setCameraAutoStart: (checked) => {
         cameraAutoStart = checked;
-        mainWindow.webContents.send('menu-camera-autostart', cameraAutoStart);
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('menu-camera-autostart', cameraAutoStart);
+        }
       },
       toggleDuplicates: (checked) => {
         showDuplicatesOnly = checked;
@@ -119,7 +129,10 @@ function createMenu() {
           showRepositoryIndicators,
           showAdditionalActions
         });
-        mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
+        }
       },
       toggleCapturedPhotos: (checked) => {
         showCapturedPhotos = checked;
@@ -130,7 +143,10 @@ function createMenu() {
           showRepositoryIndicators,
           showAdditionalActions
         });
-        mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
+        }
       },
       toggleRepositoryPhotos: (checked) => {
         showRepositoryPhotos = checked;
@@ -144,7 +160,10 @@ function createMenu() {
         if (showRepositoryPhotos) {
           ensureRepositoryMirrorStarted();
         }
-        mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
+        }
       },
       toggleRepositoryIndicators: (checked) => {
         showRepositoryIndicators = checked;
@@ -158,7 +177,10 @@ function createMenu() {
         if (showRepositoryIndicators) {
           ensureRepositoryMirrorStarted();
         }
-        mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
+        }
       },
       toggleAdditionalActions: (checked) => {
         showAdditionalActions = checked;
@@ -169,7 +191,10 @@ function createMenu() {
           showRepositoryIndicators,
           showAdditionalActions
         });
-        mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
+        }
       },
       openImageGridWindow,
       openRepositoryGridWindow
@@ -180,130 +205,35 @@ function createMenu() {
 }
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    title: 'User Capture',
-    icon: path.join(__dirname, 'assets/icons/icon.png'),
-    webPreferences: {
-      preload: path.join(__dirname, 'src/preload/preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    },
-    backgroundColor: '#1a1f2e',
-    show: false
+  const isDev = process.argv.includes('--dev');
+  const mainWindow = mainWindowManager.create({ isDev });
+
+  // Send initial display preferences to renderer
+  mainWindowManager.sendInitialPreferences({
+    showDuplicatesOnly,
+    showCapturedPhotos,
+    showRepositoryPhotos,
+    showRepositoryIndicators,
+    showAdditionalActions
   });
-
-  mainWindow.loadFile('src/renderer/index.html');
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-    // Send initial display preferences to renderer
-    mainWindow.webContents.send('initial-display-preferences', {
-      showDuplicatesOnly,
-      showCapturedPhotos,
-      showRepositoryPhotos,
-      showRepositoryIndicators,
-      showAdditionalActions
-    });
-  });
-
-  // Open DevTools in development
-  if (process.argv.includes('--dev')) {
-    mainWindow.webContents.openDevTools();
-  }
 
   mainWindow.on('closed', () => {
-    if (cameraWindow) {
-      cameraWindow.close();
-    }
+    cameraWindowManager.close();
   });
-}
-
-function createCameraWindow() {
-  cameraWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-    title: 'Vista de Cámara',
-    icon: path.join(__dirname, 'assets/icons/icon.png'),
-    webPreferences: {
-      preload: path.join(__dirname, 'src/preload/preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    },
-    backgroundColor: '#1a1f2e',
-    show: false,
-    autoHideMenuBar: true
-  });
-
-  cameraWindow.loadFile('src/renderer/camera.html');
-
-  cameraWindow.once('ready-to-show', () => {
-    cameraWindow.setMenuBarVisibility(false);
-    cameraWindow.show();
-  });
-
-  cameraWindow.on('closed', () => {
-    cameraWindow = null;
-  });
-
-  // Open DevTools in development
-  if (process.argv.includes('--dev')) {
-    cameraWindow.webContents.openDevTools();
-  }
 }
 
 function openCameraWindow() {
-  if (!cameraWindow) {
-    createCameraWindow();
-  } else {
-    cameraWindow.show();
-    cameraWindow.focus();
-  }
+  const isDev = process.argv.includes('--dev');
+  cameraWindowManager.open({ isDev });
 }
 
 function closeCameraWindow() {
-  if (cameraWindow) {
-    cameraWindow.close();
-    cameraWindow = null;
-  }
-}
-
-function createImageGridWindow() {
-  imageGridWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    title: 'Cuadro de Imágenes Capturadas',
-    icon: path.join(__dirname, 'assets/icons/icon.png'),
-    webPreferences: {
-      preload: path.join(__dirname, 'src/preload/preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    },
-    backgroundColor: '#1a1f2e',
-    show: false,
-    autoHideMenuBar: true
-  });
-
-  imageGridWindow.loadFile('src/renderer/image-grid.html');
-
-  imageGridWindow.once('ready-to-show', () => {
-    imageGridWindow.setMenuBarVisibility(false);
-    imageGridWindow.show();
-  });
-
-  imageGridWindow.on('closed', () => {
-    imageGridWindow = null;
-  });
-
-  // Open DevTools in development
-  if (process.argv.includes('--dev')) {
-    imageGridWindow.webContents.openDevTools();
-  }
+  cameraWindowManager.close();
 }
 
 function openImageGridWindow() {
   if (!dbManager) {
+    const mainWindow = mainWindowManager.getWindow();
     dialog.showMessageBox(mainWindow, {
       type: 'warning',
       title: 'Proyecto no abierto',
@@ -313,48 +243,13 @@ function openImageGridWindow() {
     return;
   }
 
-  if (!imageGridWindow) {
-    createImageGridWindow();
-  } else {
-    imageGridWindow.show();
-    imageGridWindow.focus();
-  }
-}
-
-function createRepositoryGridWindow() {
-  repositoryGridWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    title: 'Cuadro de Imágenes en Depósito',
-    icon: path.join(__dirname, 'assets/icons/icon.png'),
-    webPreferences: {
-      preload: path.join(__dirname, 'src/preload/preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    },
-    backgroundColor: '#1a1f2e',
-    show: false,
-    autoHideMenuBar: true
-  });
-
-  repositoryGridWindow.loadFile('src/renderer/repository-grid.html');
-
-  repositoryGridWindow.once('ready-to-show', () => {
-    repositoryGridWindow.setMenuBarVisibility(false);
-    repositoryGridWindow.show();
-  });
-
-  repositoryGridWindow.on('closed', () => {
-    repositoryGridWindow = null;
-  });
-
-  // Open DevTools in development
-  if (process.argv.includes('--dev')) {
-    repositoryGridWindow.webContents.openDevTools();
-  }
+  const isDev = process.argv.includes('--dev');
+  imageGridWindowManager.open({ isDev });
 }
 
 function openRepositoryGridWindow() {
+  const mainWindow = mainWindowManager.getWindow();
+
   if (!dbManager) {
     dialog.showMessageBox(mainWindow, {
       type: 'warning',
@@ -380,12 +275,8 @@ function openRepositoryGridWindow() {
   // Start mirror lazily when opening repository grid
   ensureRepositoryMirrorStarted();
 
-  if (!repositoryGridWindow) {
-    createRepositoryGridWindow();
-  } else {
-    repositoryGridWindow.show();
-    repositoryGridWindow.focus();
-  }
+  const isDev = process.argv.includes('--dev');
+  repositoryGridWindowManager.open({ isDev });
 }
 
 // ============================================================================
@@ -451,6 +342,7 @@ async function ensureRepositoryMirrorStarted() {
           logger.info(`Syncing: ${data.current}/${data.total} files`);
         }
         // Send progress to repository grid window
+        const repositoryGridWindow = repositoryGridWindowManager.getWindow();
         if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
           repositoryGridWindow.webContents.send('sync-progress', data);
         }
@@ -460,16 +352,19 @@ async function ensureRepositoryMirrorStarted() {
         if (result.success) {
           logger.success(`Sync completed: ${result.synced} files synced`);
           // Notify all windows about repository changes
+          const mainWindow = mainWindowManager.getWindow();
           if (mainWindow) {
             mainWindow.webContents.send('repository-changed');
           }
           // Send completion event to repository grid window
+          const repositoryGridWindow = repositoryGridWindowManager.getWindow();
           if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
             repositoryGridWindow.webContents.send('sync-completed', result);
           }
         } else {
           logger.error(`Sync failed: ${result.error}`);
           // Send error to repository grid window
+          const repositoryGridWindow = repositoryGridWindowManager.getWindow();
           if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
             repositoryGridWindow.webContents.send('sync-completed', result);
           }
@@ -490,12 +385,7 @@ async function ensureRepositoryMirrorStarted() {
 
 // Helper function to update window title with project name
 function updateWindowTitle() {
-  if (projectPath) {
-    const projectName = path.basename(projectPath);
-    mainWindow.setTitle(`User Capture - ${projectName}`);
-  } else {
-    mainWindow.setTitle('User Capture');
-  }
+  mainWindowManager.updateTitle(projectPath);
 }
 
 // Wrapper for loadRecentProjects to populate global variable
@@ -551,13 +441,19 @@ async function openRecentProject(folderPath) {
     folderWatcher = new FolderWatcher(ingestPath, importsPath);
     folderWatcher.on('image-detecting', (filename) => {
       logger.info(`Image being processed: ${filename}`);
-      mainWindow.webContents.send('image-detecting', filename);
+      const mainWindow = mainWindowManager.getWindow();
+      if (mainWindow) {
+        mainWindow.webContents.send('image-detecting', filename);
+      }
     });
     folderWatcher.on('image-added', (filename) => {
       logger.info(`New image detected: ${filename}`);
       // Invalidate image cache when new image is added
       imageManager.invalidateCache();
-      mainWindow.webContents.send('new-image-detected', filename);
+      const mainWindow = mainWindowManager.getWindow();
+      if (mainWindow) {
+        mainWindow.webContents.send('new-image-detected', filename);
+      }
     });
     folderWatcher.start();
     logger.success('Folder watcher started', { watchPath: ingestPath });
@@ -572,7 +468,10 @@ async function openRecentProject(folderPath) {
     updateWindowTitle();
 
     // Notify renderer
-    mainWindow.webContents.send('project-opened', { success: true });
+    const mainWindow = mainWindowManager.getWindow();
+    if (mainWindow) {
+      mainWindow.webContents.send('project-opened', { success: true });
+    }
   } catch (error) {
     logger.error('Error opening recent project', error);
     dialog.showErrorBox('Error', 'Error al abrir el proyecto: ' + error.message);
@@ -606,13 +505,13 @@ function registerIPCHandlers() {
 
   // Create shared context object for all handlers
   const context = {
-    mainWindow: () => mainWindow,
+    mainWindow: () => mainWindowManager.getWindow(),
     logger,
     state,
     repositoryCacheManager,
     repositoryMirror: () => repositoryMirror,
-    imageGridWindow: () => imageGridWindow,
-    repositoryGridWindow: () => repositoryGridWindow,
+    imageGridWindow: () => imageGridWindowManager.getWindow(),
+    repositoryGridWindow: () => repositoryGridWindowManager.getWindow(),
     createMenu,
     addRecentProject,
     updateWindowTitle,
