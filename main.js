@@ -14,6 +14,22 @@ const CameraWindowManager = require('./src/main/window/cameraWindow');
 const ImageGridWindowManager = require('./src/main/window/imageGridWindow');
 const RepositoryGridWindowManager = require('./src/main/window/repositoryGridWindow');
 const { getLogger } = require('./src/main/logger');
+const { formatTimestamp, capitalizeWords } = require('./src/main/utils/formatting');
+const {
+  loadGlobalConfig,
+  saveGlobalConfig,
+  getImageRepositoryPath,
+  setImageRepositoryPath,
+  getSelectedGroupFilter,
+  setSelectedGroupFilter,
+  saveDisplayPreferences
+} = require('./src/main/utils/config');
+const {
+  loadRecentProjects: loadRecentProjectsUtil,
+  saveRecentProjects: saveRecentProjectsUtil,
+  addRecentProject: addRecentProjectUtil
+} = require('./src/main/utils/recentProjects');
+const { RepositoryCacheManager } = require('./src/main/utils/repositoryCache');
 
 // Patterns to ignore: temporary files from Google Drive, Office, and partial downloads
 const IGNORE_RE = [
@@ -66,16 +82,8 @@ let selectedCameraId = null;
 let repositoryWatcher = null;
 let repositoryMirror = null; // Repository mirror manager
 
-// Repository file existence cache
-let repositoryFileCache = new Map();
-let repositoryCacheReady = false; // Flag to indicate if cache is ready to use
-let repositoryCacheTimestamp = null;
-const REPOSITORY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Repository watcher event batching/coalescing
-let pendingRepositoryEvents = new Map(); // filePath → {eventType, filePath}
-let repositoryFlushTimer = null;
-const REPOSITORY_BATCH_WINDOW_MS = 600; // 600ms batching window
+// Repository cache manager
+const repositoryCacheManager = new RepositoryCacheManager();
 
 function createMenu() {
   const menuBuilder = new MenuBuilder({
@@ -126,17 +134,35 @@ function createMenu() {
       },
       toggleDuplicates: (checked) => {
         showDuplicatesOnly = checked;
-        saveDisplayPreferences();
+        saveDisplayPreferences({
+          showDuplicatesOnly,
+          showCapturedPhotos,
+          showRepositoryPhotos,
+          showRepositoryIndicators,
+          showAdditionalActions
+        });
         mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
       },
       toggleCapturedPhotos: (checked) => {
         showCapturedPhotos = checked;
-        saveDisplayPreferences();
+        saveDisplayPreferences({
+          showDuplicatesOnly,
+          showCapturedPhotos,
+          showRepositoryPhotos,
+          showRepositoryIndicators,
+          showAdditionalActions
+        });
         mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
       },
       toggleRepositoryPhotos: (checked) => {
         showRepositoryPhotos = checked;
-        saveDisplayPreferences();
+        saveDisplayPreferences({
+          showDuplicatesOnly,
+          showCapturedPhotos,
+          showRepositoryPhotos,
+          showRepositoryIndicators,
+          showAdditionalActions
+        });
         if (showRepositoryPhotos) {
           ensureRepositoryMirrorStarted();
         }
@@ -144,7 +170,13 @@ function createMenu() {
       },
       toggleRepositoryIndicators: (checked) => {
         showRepositoryIndicators = checked;
-        saveDisplayPreferences();
+        saveDisplayPreferences({
+          showDuplicatesOnly,
+          showCapturedPhotos,
+          showRepositoryPhotos,
+          showRepositoryIndicators,
+          showAdditionalActions
+        });
         if (showRepositoryIndicators) {
           ensureRepositoryMirrorStarted();
         }
@@ -152,7 +184,13 @@ function createMenu() {
       },
       toggleAdditionalActions: (checked) => {
         showAdditionalActions = checked;
-        saveDisplayPreferences();
+        saveDisplayPreferences({
+          showDuplicatesOnly,
+          showCapturedPhotos,
+          showRepositoryPhotos,
+          showRepositoryIndicators,
+          showAdditionalActions
+        });
         mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
       },
       openImageGridWindow,
@@ -2701,26 +2739,6 @@ ipcMain.handle('set-selected-group-filter', async (event, groupCode) => {
   }
 });
 
-// Helper function to format timestamp
-function formatTimestamp(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-
-  return `${year}${month}${day}${hours}${minutes}${seconds}`;
-}
-
-// Helper function to capitalize first letter of each word
-function capitalizeWords(str) {
-  if (!str) return '';
-  return str.toLowerCase().split(' ').map(word => {
-    return word.charAt(0).toUpperCase() + word.slice(1);
-  }).join(' ');
-}
-
 // Helper function to update window title with project name
 function updateWindowTitle() {
   if (projectPath) {
@@ -2731,118 +2749,15 @@ function updateWindowTitle() {
   }
 }
 
-// Global configuration management
-function getConfigPath() {
-  return path.join(app.getPath('userData'), 'config.json');
-}
-
-function loadGlobalConfig() {
-  try {
-    const filePath = getConfigPath();
-    if (fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath, 'utf8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error('Error loading global config:', error);
-  }
-  return {};
-}
-
-function saveGlobalConfig(config) {
-  try {
-    const filePath = getConfigPath();
-    fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error saving global config:', error);
-    return false;
-  }
-}
-
-function saveDisplayPreferences() {
-  const config = loadGlobalConfig();
-  config.showDuplicatesOnly = showDuplicatesOnly;
-  config.showCapturedPhotos = showCapturedPhotos;
-  config.showRepositoryPhotos = showRepositoryPhotos;
-  config.showRepositoryIndicators = showRepositoryIndicators;
-  config.showAdditionalActions = showAdditionalActions;
-  return saveGlobalConfig(config);
-}
-
-function getImageRepositoryPath() {
-  const config = loadGlobalConfig();
-  return config.imageRepositoryPath || null;
-}
-
-function setImageRepositoryPath(repositoryPath) {
-  const config = loadGlobalConfig();
-  config.imageRepositoryPath = repositoryPath;
-  // Invalidate cache when repository path changes
-  invalidateRepositoryCache();
-  logger.info('Repository path changed, cache invalidated');
-
-  // Start watching the new repository path
-  startRepositoryWatcher(repositoryPath);
-
-  return saveGlobalConfig(config);
-}
-
-// Group filter synchronization
-function getSelectedGroupFilter() {
-  const config = loadGlobalConfig();
-  return config.selectedGroupFilter || '';
-}
-
-function setSelectedGroupFilter(groupCode) {
-  const config = loadGlobalConfig();
-  config.selectedGroupFilter = groupCode;
-  return saveGlobalConfig(config);
-}
-
-// Recent projects management
-function getRecentProjectsPath() {
-  return path.join(app.getPath('userData'), 'recent-projects.json');
-}
-
+// Wrapper for loadRecentProjects to populate global variable
 function loadRecentProjects() {
-  try {
-    const filePath = getRecentProjectsPath();
-    if (fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath, 'utf8');
-      recentProjects = JSON.parse(data);
-
-      // Validate that projects still exist
-      recentProjects = recentProjects.filter(projectPath => {
-        return fs.existsSync(projectPath) && fs.existsSync(path.join(projectPath, 'data', 'users.db'));
-      });
-    }
-  } catch (error) {
-    console.error('Error loading recent projects:', error);
-    recentProjects = [];
-  }
+  recentProjects = loadRecentProjectsUtil();
 }
 
-function saveRecentProjects() {
-  try {
-    const filePath = getRecentProjectsPath();
-    fs.writeFileSync(filePath, JSON.stringify(recentProjects, null, 2));
-  } catch (error) {
-    console.error('Error saving recent projects:', error);
-  }
-}
-
-function addRecentProject(projectPath) {
-  // Remove if already exists
-  recentProjects = recentProjects.filter(p => p !== projectPath);
-
-  // Add to beginning
-  recentProjects.unshift(projectPath);
-
-  // Keep only last 5
-  recentProjects = recentProjects.slice(0, 5);
-
-  saveRecentProjects();
+// Wrapper for addRecentProject with additional logic
+function addRecentProject(folderPath) {
+  recentProjects = addRecentProjectUtil(folderPath, recentProjects);
+  saveRecentProjectsUtil(recentProjects);
   createMenu();
 }
 
