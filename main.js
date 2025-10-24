@@ -8,6 +8,11 @@ const XMLParser = require('./src/main/xmlParser');
 const FolderWatcher = require('./src/main/folderWatcher');
 const ImageManager = require('./src/main/imageManager');
 const RepositoryMirror = require('./src/main/repositoryMirror');
+const MenuBuilder = require('./src/main/menu/menuBuilder');
+const MainWindowManager = require('./src/main/window/mainWindow');
+const CameraWindowManager = require('./src/main/window/cameraWindow');
+const ImageGridWindowManager = require('./src/main/window/imageGridWindow');
+const RepositoryGridWindowManager = require('./src/main/window/repositoryGridWindow');
 const { getLogger } = require('./src/main/logger');
 
 // Patterns to ignore: temporary files from Google Drive, Office, and partial downloads
@@ -32,6 +37,13 @@ if (process.argv.includes('--dev')) {
   }
 }
 
+// Window managers
+const mainWindowManager = new MainWindowManager();
+const cameraWindowManager = new CameraWindowManager();
+const imageGridWindowManager = new ImageGridWindowManager();
+const repositoryGridWindowManager = new RepositoryGridWindowManager();
+
+// Getter functions for backward compatibility
 let mainWindow;
 let cameraWindow = null;
 let imageGridWindow = null;
@@ -66,357 +78,89 @@ let repositoryFlushTimer = null;
 const REPOSITORY_BATCH_WINDOW_MS = 600; // 600ms batching window
 
 function createMenu() {
-  // Build recent projects submenu
-  const recentProjectsSubmenu = recentProjects.length > 0
-    ? recentProjects.map((projectPath, index) => ({
-        label: path.basename(projectPath),
-        accelerator: index < 9 ? `CmdOrCtrl+${index + 1}` : undefined,
-        click: () => {
-          openRecentProject(projectPath);
-        }
-      }))
-    : [{ label: 'No hay proyectos recientes', enabled: false }];
+  const menuBuilder = new MenuBuilder({
+    // Windows
+    mainWindow,
+    cameraWindow,
 
-  const template = [
-    {
-      label: 'Archivo',
-      submenu: [
-        {
-          label: 'Nuevo Proyecto...',
-          accelerator: 'CmdOrCtrl+N',
-          click: () => {
-            mainWindow.webContents.send('menu-new-project');
-          }
-        },
-        {
-          label: 'Abrir Proyecto...',
-          accelerator: 'CmdOrCtrl+O',
-          click: () => {
-            mainWindow.webContents.send('menu-open-project');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Proyectos Recientes',
-          submenu: recentProjectsSubmenu
-        },
-        { type: 'separator' },
-        {
-          label: 'Importar',
-          submenu: [
-            {
-              label: 'Imágenes con ID',
-              click: () => {
-                mainWindow.webContents.send('menu-import-images-id');
-              }
-            }
-          ]
-        },
-        {
-          label: 'Exportar',
-          submenu: [
-            {
-              label: 'Lista en CSV para carnets',
-              accelerator: 'CmdOrCtrl+E',
-              click: () => {
-                mainWindow.webContents.send('menu-export-csv');
-              }
-            },
-            {
-              label: 'Imágenes como ID',
-              click: () => {
-                mainWindow.webContents.send('menu-export-images');
-              }
-            },
-            {
-              label: 'Imágenes como nombre y apellidos',
-              click: () => {
-                mainWindow.webContents.send('menu-export-images-name');
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Imágenes capturadas al depósito',
-              click: () => {
-                mainWindow.webContents.send('menu-export-to-repository');
-              }
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
-          label: 'Configuración',
-          submenu: [
-            {
-              label: 'Depósito imágenes de usuario',
-              click: async () => {
-                const currentPath = getImageRepositoryPath();
-                const result = await dialog.showOpenDialog(mainWindow, {
-                  title: 'Seleccionar carpeta del depósito de imágenes',
-                  defaultPath: currentPath || undefined,
-                  properties: ['openDirectory', 'createDirectory']
-                });
+    // State
+    cameraEnabled,
+    cameraAutoStart,
+    selectedCameraId,
+    availableCameras,
+    showDuplicatesOnly,
+    showCapturedPhotos,
+    showRepositoryPhotos,
+    showRepositoryIndicators,
+    showAdditionalActions,
+    recentProjects,
 
-                if (!result.canceled && result.filePaths.length > 0) {
-                  const selectedPath = result.filePaths[0];
-                  if (setImageRepositoryPath(selectedPath)) {
-                    dialog.showMessageBox(mainWindow, {
-                      type: 'info',
-                      title: 'Configuración guardada',
-                      message: 'Depósito de imágenes configurado',
-                      detail: `Ruta: ${selectedPath}`,
-                      buttons: ['Aceptar']
-                    });
-                    logger.info(`Image repository path set to: ${selectedPath}`);
+    // Logger
+    logger,
 
-                    // Notify renderer to reload users with new repository path
-                    if (mainWindow) {
-                      mainWindow.webContents.send('repository-changed');
-                    }
-                  } else {
-                    dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
-                  }
-                }
-              }
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
-          label: 'Salir',
-          accelerator: 'CmdOrCtrl+Q',
-          role: 'quit'
+    // Callbacks
+    callbacks: {
+      openRecentProject,
+      getImageRepositoryPath,
+      setImageRepositoryPath,
+      toggleCamera: () => {
+        cameraEnabled = !cameraEnabled;
+        if (cameraEnabled) {
+          openCameraWindow();
+        } else {
+          closeCameraWindow();
         }
-      ]
-    },
-    {
-      label: 'Edición',
-      submenu: [
-        {
-          label: 'Enlazar imagen',
-          accelerator: 'CmdOrCtrl+L',
-          click: () => {
-            mainWindow.webContents.send('menu-link-image');
-          }
-        },
-        {
-          label: 'Eliminar fotografía vinculada',
-          accelerator: 'CmdOrCtrl+Delete',
-          click: () => {
-            mainWindow.webContents.send('menu-delete-photo');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Agregar etiqueta a imagen',
-          accelerator: 'CmdOrCtrl+T',
-          click: () => {
-            mainWindow.webContents.send('menu-add-image-tag');
-          }
-        }
-      ]
-    },
-      {
-          label: 'Proyecto',
-          submenu: [
-              {
-                  label: 'Actualizar archivo XML',
-                  click: () => {
-                      mainWindow.webContents.send('menu-update-xml');
-                  }
-              }
-          ]
+        createMenu();
       },
-    {
-      label: 'Cámara',
-      submenu: [
-        {
-          label: cameraEnabled ? 'Desactivar cámara' : 'Activar cámara',
-          accelerator: 'CmdOrCtrl+Shift+C',
-          click: () => {
-            cameraEnabled = !cameraEnabled;
-            if (cameraEnabled) {
-              openCameraWindow();
-            } else {
-              closeCameraWindow();
-            }
-            createMenu();
-          }
-        },
-        {
-          label: 'Mostrar ventana de cámara',
-          accelerator: 'CmdOrCtrl+Shift+V',
-          enabled: cameraEnabled,
-          click: () => {
-            if (cameraWindow) {
-              cameraWindow.show();
-              cameraWindow.focus();
-            } else {
-              openCameraWindow();
-            }
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Seleccionar cámara',
-          submenu: availableCameras.length > 0
-            ? availableCameras.map(camera => ({
-                label: camera.label,
-                type: 'radio',
-                checked: camera.deviceId === selectedCameraId,
-                click: () => {
-                  selectedCameraId = camera.deviceId;
-                  if (cameraWindow) {
-                    cameraWindow.webContents.send('change-camera', selectedCameraId);
-                  }
-                  createMenu();
-                }
-              }))
-            : [{ label: 'No hay cámaras disponibles', enabled: false }]
-        },
-        { type: 'separator' },
-        {
-          label: 'Activar la cámara al iniciar',
-          type: 'checkbox',
-          checked: cameraAutoStart,
-          click: (menuItem) => {
-            cameraAutoStart = menuItem.checked;
-            mainWindow.webContents.send('menu-camera-autostart', cameraAutoStart);
-          }
+      openCameraWindow,
+      selectCamera: (deviceId) => {
+        selectedCameraId = deviceId;
+        if (cameraWindow) {
+          cameraWindow.webContents.send('change-camera', selectedCameraId);
         }
-      ]
-    },
-    {
-      label: 'Ver',
-          submenu: [
-              {
-                  label: 'Mostrar asignaciones duplicadas',
-                  type: 'checkbox',
-                  checked: showDuplicatesOnly,
-                  click: (menuItem) => {
-                      showDuplicatesOnly = menuItem.checked;
-                      saveDisplayPreferences();
-                      mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
-                  }
-              },
-              { type: 'separator' },
-              {
-                  label: 'Mostrar fotografías capturadas',
-                  type: 'checkbox',
-                  checked: showCapturedPhotos,
-                  click: (menuItem) => {
-                      showCapturedPhotos = menuItem.checked;
-                      saveDisplayPreferences();
-                      mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
-                  }
-              },
-              {
-                  label: 'Mostrar fotografías del depósito',
-                  type: 'checkbox',
-                  checked: showRepositoryPhotos,
-                  click: (menuItem) => {
-                      showRepositoryPhotos = menuItem.checked;
-                      saveDisplayPreferences();
-                      // Start mirror lazily when enabling repository features
-                      if (showRepositoryPhotos) {
-                        ensureRepositoryMirrorStarted();
-                      }
-                      mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
-                  }
-              },
-              {
-                  label: 'Indicadores de foto en el depósito',
-                  type: 'checkbox',
-                  checked: showRepositoryIndicators,
-                  click: (menuItem) => {
-                      showRepositoryIndicators = menuItem.checked;
-                      saveDisplayPreferences();
-                      // Start mirror lazily when enabling repository features
-                      if (showRepositoryIndicators) {
-                        ensureRepositoryMirrorStarted();
-                      }
-                      mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
-                  }
-              },
-              { type: 'separator' },
-              {
-                  label: 'Mostrar acciones adicionales',
-                  type: 'checkbox',
-                  checked: showAdditionalActions,
-                  click: (menuItem) => {
-                      showAdditionalActions = menuItem.checked;
-                      saveDisplayPreferences();
-                      mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
-                  }
-              },
-              { type: 'separator' },
-              {
-                  label: 'Cuadro de imágenes capturadas',
-                  accelerator: 'CmdOrCtrl+G',
-                  click: () => {
-                      openImageGridWindow();
-                  }
-              },
-              {
-                  label: 'Cuadro de imágenes en depósito',
-                  accelerator: 'CmdOrCtrl+Shift+G',
-                  click: () => {
-                      openRepositoryGridWindow();
-                  }
-              },
-              {
-                  label: 'Listado de imágenes con etiquetas',
-                  accelerator: 'CmdOrCtrl+Shift+T',
-                  click: () => {
-                      mainWindow.webContents.send('menu-show-tagged-images');
-                  }
-              }
-          ]
+        createMenu();
       },
-    {
-      label: 'Ayuda',
-      submenu: [
-        {
-          label: 'Acerca de User Capture',
-          click: () => {
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'Acerca de User Capture',
-              message: 'User Capture',
-              detail: 'Versión 1.0.0\n\nAplicación de captura de imágenes de usuarios para entornos educativos.',
-              buttons: ['Aceptar']
-            });
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Documentación',
-          click: () => {
-            // Open documentation
-          }
+      setCameraAutoStart: (checked) => {
+        cameraAutoStart = checked;
+        mainWindow.webContents.send('menu-camera-autostart', cameraAutoStart);
+      },
+      toggleDuplicates: (checked) => {
+        showDuplicatesOnly = checked;
+        saveDisplayPreferences();
+        mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
+      },
+      toggleCapturedPhotos: (checked) => {
+        showCapturedPhotos = checked;
+        saveDisplayPreferences();
+        mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
+      },
+      toggleRepositoryPhotos: (checked) => {
+        showRepositoryPhotos = checked;
+        saveDisplayPreferences();
+        if (showRepositoryPhotos) {
+          ensureRepositoryMirrorStarted();
         }
-      ]
+        mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
+      },
+      toggleRepositoryIndicators: (checked) => {
+        showRepositoryIndicators = checked;
+        saveDisplayPreferences();
+        if (showRepositoryIndicators) {
+          ensureRepositoryMirrorStarted();
+        }
+        mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
+      },
+      toggleAdditionalActions: (checked) => {
+        showAdditionalActions = checked;
+        saveDisplayPreferences();
+        mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
+      },
+      openImageGridWindow,
+      openRepositoryGridWindow
     }
-  ];
+  });
 
-  // Add View menu in development mode
-  if (process.argv.includes('--dev')) {
-    template.push({
-      label: 'Developers',
-      submenu: [
-        { label: 'Recargar', accelerator: 'CmdOrCtrl+R', role: 'reload' },
-        { label: 'Forzar recarga', accelerator: 'CmdOrCtrl+Shift+R', role: 'forceReload' },
-        { label: 'Herramientas de desarrollo', accelerator: 'CmdOrCtrl+Shift+I', role: 'toggleDevTools' },
-        { type: 'separator' },
-        { label: 'Zoom +', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
-        { label: 'Zoom -', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
-        { label: 'Zoom normal', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' }
-      ]
-    });
-  }
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
+  menuBuilder.build();
 }
 
 function createWindow() {
