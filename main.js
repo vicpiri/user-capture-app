@@ -31,6 +31,12 @@ const {
 } = require('./src/main/utils/recentProjects');
 const { RepositoryCacheManager } = require('./src/main/utils/repositoryCache');
 
+// IPC handler modules
+const { registerProjectHandlers } = require('./src/main/ipc/projectHandlers');
+const { registerUserGroupImageHandlers } = require('./src/main/ipc/userGroupImageHandlers');
+const { registerExportHandlers } = require('./src/main/ipc/exportHandlers');
+const { registerMiscHandlers } = require('./src/main/ipc/miscHandlers');
+
 // Patterns to ignore: temporary files from Google Drive, Office, and partial downloads
 const IGNORE_RE = [
   /(^|[\/\\])\../,           // Hidden files (dotfiles)
@@ -410,6 +416,48 @@ function openRepositoryGridWindow() {
   }
 }
 
+/**
+ * Register all IPC handlers
+ */
+function registerIPCHandlers() {
+  // Create shared state object accessible by all handlers
+  const state = {
+    get dbManager() { return dbManager; },
+    set dbManager(value) { dbManager = value; },
+    get folderWatcher() { return folderWatcher; },
+    set folderWatcher(value) { folderWatcher = value; },
+    get imageManager() { return imageManager; },
+    set imageManager(value) { imageManager = value; },
+    get projectPath() { return projectPath; },
+    set projectPath(value) { projectPath = value; },
+    get availableCameras() { return availableCameras; },
+    set availableCameras(value) { availableCameras = value; },
+    get selectedCameraId() { return selectedCameraId; },
+    set selectedCameraId(value) { selectedCameraId = value; },
+    invalidateRepositoryCache: () => repositoryCacheManager.invalidateCache()
+  };
+
+  // Create shared context object for all handlers
+  const context = {
+    mainWindow: () => mainWindow,
+    logger,
+    state,
+    repositoryCacheManager,
+    repositoryMirror: () => repositoryMirror,
+    imageGridWindow: () => imageGridWindow,
+    repositoryGridWindow: () => repositoryGridWindow,
+    createMenu,
+    addRecentProject,
+    updateWindowTitle
+  };
+
+  // Register all handler modules
+  registerProjectHandlers(context);
+  registerUserGroupImageHandlers(context);
+  registerExportHandlers(context);
+  registerMiscHandlers(context);
+}
+
 app.whenReady().then(() => {
   // Load display preferences from config
   const config = loadGlobalConfig();
@@ -423,6 +471,9 @@ app.whenReady().then(() => {
   loadRecentProjects();
   createMenu();
   createWindow();
+
+  // Register all IPC handlers
+  registerIPCHandlers();
 
   // DO NOT start repository watcher automatically on startup
   // It will be started lazily when needed (when user enables repository options)
