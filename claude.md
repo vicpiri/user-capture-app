@@ -15,9 +15,33 @@ Aplicación de escritorio desarrollada con Electron para la captura de imágenes
 ```
 user-capture-app/
 ├── src/
-│   ├── main/          # Proceso principal de Electron (Node.js)
-│   ├── renderer/      # Proceso de renderizado (interfaz de usuario)
+│   ├── main/                    # Proceso principal de Electron (Node.js)
+│   │   ├── ipc/                 # Manejadores IPC organizados por funcionalidad
+│   │   │   ├── exportHandlers.js       # Exportación de CSV e imágenes
+│   │   │   ├── miscHandlers.js         # Manejadores misceláneos (tags, diálogos, etc.)
+│   │   │   ├── projectHandlers.js      # Gestión de proyectos y XML
+│   │   │   └── userGroupImageHandlers.js # Usuarios, grupos e imágenes
+│   │   ├── menu/                # Sistema de menús
+│   │   │   └── menuBuilder.js          # Constructor de menús de la aplicación
+│   │   ├── utils/               # Utilidades y helpers
+│   │   │   ├── config.js               # Configuración y preferencias
+│   │   │   ├── formatting.js           # Formateo de fechas y nombres
+│   │   │   ├── recentProjects.js       # Gestión de proyectos recientes
+│   │   │   └── repositoryCache.js      # Caché de existencia de archivos
+│   │   ├── window/              # Gestión de ventanas
+│   │   │   ├── cameraWindow.js         # Ventana de captura de cámara
+│   │   │   ├── imageGridWindow.js      # Grid de imágenes capturadas
+│   │   │   ├── mainWindow.js           # Ventana principal
+│   │   │   └── repositoryGridWindow.js # Grid de imágenes del repositorio
+│   │   ├── database.js          # Gestión de base de datos SQLite
+│   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
+│   │   ├── googleDriveManager.js # Integración con Google Drive API
+│   │   ├── imageManager.js      # Procesamiento y gestión de imágenes
+│   │   ├── logger.js            # Sistema de logging
+│   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
+│   │   └── xmlParser.js         # Parseo de archivos XML de usuarios
 │   ├── preload/       # Scripts preload (comunicación segura entre procesos)
+│   ├── renderer/      # Proceso de renderizado (interfaz de usuario)
 │   └── shared/        # Código compartido (tipos, constantes, utilidades)
 ├── assets/
 │   └── icons/         # Iconos de la aplicación
@@ -74,24 +98,65 @@ Cada comando de release ejecuta automáticamente:
 1. `standard-version` - Actualiza versión, genera CHANGELOG y crea tag git
 2. `dist:win` - Reconstruye módulos nativos y genera instalador NSIS en carpeta `dist/`
 
+## Arquitectura del Proceso Principal
+
+El proceso principal ha sido refactorizado en módulos organizados por responsabilidad:
+
+### Manejadores IPC (ipc/)
+- **exportHandlers.js**: Gestiona exportación de CSV e imágenes con opciones de redimensionamiento
+- **miscHandlers.js**: Diálogos del sistema, etiquetas de imágenes, y utilidades generales
+- **projectHandlers.js**: Creación, apertura y actualización de proyectos y XML
+- **userGroupImageHandlers.js**: CRUD de usuarios, grupos, imágenes y relaciones
+
+### Gestión de Ventanas (window/)
+- **mainWindow.js**: Ventana principal con gestión de usuarios e imágenes
+- **cameraWindow.js**: Ventana de captura desde webcam
+- **imageGridWindow.js**: Visualización en grid de imágenes capturadas
+- **repositoryGridWindow.js**: Visualización en grid de imágenes del repositorio
+
+### Utilidades (utils/)
+- **config.js**: Persistencia de configuración y preferencias de usuario
+- **formatting.js**: Formateo de fechas (ISO a español) y nombres de archivo
+- **recentProjects.js**: Gestión de lista de proyectos recientes
+- **repositoryCache.js**: Caché con TTL para verificación de existencia de archivos
+
+### Menú (menu/)
+- **menuBuilder.js**: Constructor centralizado del menú con gestión de estado y callbacks
+
+### Módulos Core
+- **database.js**: Gestión completa de SQLite (usuarios, grupos, imágenes, tags)
+- **folderWatcher.js**: Vigilancia de carpetas ingest/imports con chokidar
+- **googleDriveManager.js**: Integración con Google Drive API v3
+- **imageManager.js**: Procesamiento de imágenes con sharp (validación, redimensionamiento)
+- **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
+- **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
+- **logger.js**: Sistema de logging centralizado
+
 ## Estado Actual
 
-Proyecto inicializado con estructura base. Pendiente implementación de funcionalidad de captura de imágenes.
+Aplicación completamente funcional con todas las características principales implementadas:
 
-## Próximos Pasos
-
-1. Crear archivo principal (main.js)
-2. Implementar interfaz de usuario (renderer)
-3. Configurar script preload
-4. Implementar funcionalidad de captura de cámara
-5. Añadir gestión de archivos de imagen
+- ✅ Gestión de proyectos (crear, abrir, actualizar XML)
+- ✅ Captura de imágenes desde webcam
+- ✅ Importación automática desde carpeta ingest
+- ✅ Asociación de imágenes a usuarios
+- ✅ Integración con Google Drive para repositorio de imágenes
+- ✅ Mirror local del repositorio con sincronización automática
+- ✅ Exportación de CSV e imágenes (con redimensionamiento)
+- ✅ Sistema de etiquetado de imágenes
+- ✅ Detección de duplicados
+- ✅ Múltiples ventanas (principal, cámara, grids de visualización)
+- ✅ Caché de archivos con TTL para optimización
+- ✅ Arquitectura modular refactorizada
 
 ## Notas de Desarrollo
 
-- La aplicación debe seguir las buenas prácticas de seguridad de Electron
-- Usar `contextIsolation` y `nodeIntegration: false`
-- Comunicación entre procesos mediante IPC
-- Entorno educativo: considerar privacidad y permisos
+- **Seguridad**: Implementa `contextIsolation` y `nodeIntegration: false`
+- **Comunicación IPC**: Separación clara entre main y renderer con preload
+- **Arquitectura modular**: Código organizado por responsabilidad y funcionalidad
+- **Caché optimizado**: Sistema de caché con TTL para reducir operaciones de filesystem
+- **Sincronización**: Mirror local del repositorio Google Drive con actualización automática
+- **Privacidad**: Apropiado para entornos educativos
 
 ## Funcionalidades principales
 - Captura de imágenes desde:
