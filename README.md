@@ -101,20 +101,43 @@ Los instaladores se generarán en la carpeta `dist/`.
 ```
 user-capture-app/
 ├── src/
-│   ├── main/              # Proceso principal de Electron
-│   │   ├── database.js    # Gestión de base de datos SQLite
-│   │   ├── xmlParser.js   # Parser de archivos XML
-│   │   ├── folderWatcher.js # Vigilancia de carpetas
-│   │   ├── imageManager.js  # Gestión de imágenes
-│   │   ├── googleDriveManager.js # Conexión con Google Drive
-│   │   └── logger.js      # Sistema de logs
+│   ├── main/                    # Proceso principal de Electron
+│   │   ├── ipc/                 # Manejadores IPC por funcionalidad
+│   │   │   ├── exportHandlers.js       # Exportación CSV e imágenes
+│   │   │   ├── miscHandlers.js         # Diálogos, tags, utilidades
+│   │   │   ├── projectHandlers.js      # Gestión de proyectos y XML
+│   │   │   └── userGroupImageHandlers.js # CRUD usuarios/grupos/imágenes
+│   │   ├── menu/                # Sistema de menús
+│   │   │   └── menuBuilder.js          # Constructor de menús
+│   │   ├── utils/               # Utilidades y helpers
+│   │   │   ├── config.js               # Configuración y preferencias
+│   │   │   ├── formatting.js           # Formateo de fechas y nombres
+│   │   │   ├── recentProjects.js       # Proyectos recientes
+│   │   │   └── repositoryCache.js      # Caché de archivos (TTL)
+│   │   ├── window/              # Gestión de ventanas
+│   │   │   ├── cameraWindow.js         # Ventana de captura
+│   │   │   ├── imageGridWindow.js      # Grid de imágenes capturadas
+│   │   │   ├── mainWindow.js           # Ventana principal
+│   │   │   └── repositoryGridWindow.js # Grid del repositorio
+│   │   ├── database.js          # Gestión de SQLite
+│   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
+│   │   ├── googleDriveManager.js # Integración con Google Drive API
+│   │   ├── imageManager.js      # Procesamiento de imágenes (Sharp)
+│   │   ├── logger.js            # Sistema de logging
+│   │   ├── repositoryMirror.js  # Mirror local del repositorio
+│   │   └── xmlParser.js         # Parser de archivos XML
 │   ├── renderer/          # Interfaz de usuario
 │   │   ├── index.html     # Ventana principal
 │   │   ├── renderer.js    # Lógica de UI principal
+│   │   ├── styles.css     # Estilos globales
 │   │   ├── camera.html    # Ventana de cámara
-│   │   └── image-grid.html # Cuadro de imágenes
+│   │   ├── camera.js      # Lógica de captura
+│   │   ├── image-grid.html # Grid de imágenes capturadas
+│   │   ├── image-grid.js  # Lógica del grid
+│   │   ├── repository-grid.html # Grid del repositorio
+│   │   └── repository-grid.js # Lógica del grid repositorio
 │   └── preload/           # Scripts preload (puente seguro)
-│       └── preload.js
+│       └── preload.js     # API expuesta al renderer
 ├── scripts/
 │   └── rebuild-native.mjs # Script de rebuild multiplataforma
 ├── assets/
@@ -156,6 +179,51 @@ La base de datos se almacena en `[proyecto]/data/users.db`
 - `ingest/`: Carpeta temporal donde se guardan las capturas
 - `imports/`: Carpeta donde se almacenan las imágenes importadas
 - `data/`: Base de datos SQLite
+- `repository-mirror/`: Mirror local del repositorio Google Drive
+
+## Arquitectura
+
+### Arquitectura Modular del Proceso Principal
+
+El proceso principal ha sido refactorizado en módulos especializados:
+
+#### Manejadores IPC (`ipc/`)
+- **exportHandlers**: Exportación de CSV e imágenes con opciones de procesamiento
+- **miscHandlers**: Diálogos del sistema, etiquetas de imágenes y utilidades generales
+- **projectHandlers**: Gestión completa de proyectos y actualización de XML
+- **userGroupImageHandlers**: Operaciones CRUD sobre usuarios, grupos e imágenes
+
+#### Gestión de Ventanas (`window/`)
+- **mainWindow**: Ventana principal con gestión de usuarios e imágenes
+- **cameraWindow**: Ventana de captura desde webcam con selección de dispositivo
+- **imageGridWindow**: Visualización en cuadrícula de imágenes capturadas
+- **repositoryGridWindow**: Visualización en cuadrícula del repositorio
+
+#### Utilidades (`utils/`)
+- **config**: Persistencia de configuración y preferencias de usuario
+- **formatting**: Formateo de fechas (ISO a español) y nombres de archivo
+- **recentProjects**: Gestión de lista de proyectos recientes
+- **repositoryCache**: Caché con TTL (5 min) para verificación de existencia de archivos
+
+#### Sistema de Menús (`menu/`)
+- **menuBuilder**: Constructor centralizado del menú con gestión de estado y callbacks
+
+#### Módulos Core
+- **database**: Gestión completa de SQLite (usuarios, grupos, imágenes, tags)
+- **folderWatcher**: Vigilancia de carpetas ingest/imports con chokidar
+- **googleDriveManager**: Integración con Google Drive API v3
+- **imageManager**: Procesamiento de imágenes con sharp (validación, redimensionamiento)
+- **repositoryMirror**: Sincronización y mirror local del repositorio Google Drive
+- **xmlParser**: Parseo de XML de usuarios con fast-xml-parser
+- **logger**: Sistema de logging centralizado
+
+### Características Técnicas
+
+- **Comunicación IPC segura**: Separación clara entre procesos con preload
+- **Caché optimizado**: Sistema de caché con TTL para reducir operaciones de filesystem
+- **Sincronización automática**: Mirror local del repositorio Google Drive con detección de cambios
+- **Arquitectura modular**: Código organizado por responsabilidad y funcionalidad
+- **Seguridad**: Implementa `contextIsolation` y `nodeIntegration: false`
 
 ## Tecnologías
 
