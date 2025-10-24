@@ -10,6 +10,8 @@ let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
 let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
+let isLoadingRepositoryPhotos = false;  // Track if repository photos are being loaded
+let repositorySyncCompleted = false;  // Track if initial repository sync has completed
 let imageObserver = null;
 
 // Selection mode state
@@ -128,6 +130,8 @@ function initializeEventListeners() {
 
   // Listen for repository changes
   window.electronAPI.onRepositoryChanged(async () => {
+    // Mark repository sync as completed
+    repositorySyncCompleted = true;
     // Reload users to update repository indicators
     const filters = getCurrentFilters();
     await loadUsers(filters);
@@ -336,8 +340,8 @@ async function loadUsers(filters = {}) {
       displayUsers(currentUsers, allUsers);
       updateUserCount();
 
-      // Load repository data in background if needed
-      if (showRepositoryPhotos || showRepositoryIndicators) {
+      // Load repository data in background if needed (only if not already loading)
+      if ((showRepositoryPhotos || showRepositoryIndicators) && !isLoadingRepositoryPhotos) {
         loadRepositoryDataInBackground(currentUsers);
       }
     }
@@ -350,12 +354,9 @@ async function loadUsers(filters = {}) {
 // Load repository data in background (non-blocking)
 async function loadRepositoryDataInBackground(users) {
   try {
-    console.log('Loading repository data in background...');
     const result = await window.electronAPI.loadRepositoryImages(users);
 
     if (result.success) {
-      console.log(`Repository data loaded for ${Object.keys(result.repositoryData).length} users`);
-
       // Merge repository data into currentUsers
       currentUsers.forEach(user => {
         const repoData = result.repositoryData[user.id];
@@ -380,6 +381,7 @@ function updateRepositoryDataInDisplay() {
   // Get all user rows currently in the table
   const userRows = userTableBody.querySelectorAll('tr[data-user-id]');
 
+  let updatedCount = 0;
   userRows.forEach(row => {
     const userId = parseInt(row.dataset.userId);
     const user = currentUsers.find(u => u.id === userId);
@@ -395,7 +397,7 @@ function updateRepositoryDataInDisplay() {
       const repositoryIndicator = indicatorCell.querySelector('.repository-indicator, .repository-placeholder');
       if (repositoryIndicator) {
         if (user.repository_image_path) {
-          // Replace placeholder with actual image
+          // Replace placeholder/spinner with actual image
           const img = document.createElement('img');
           img.className = 'repository-indicator lazy-image';
           img.dataset.src = `file://${user.repository_image_path}`;
@@ -413,6 +415,18 @@ function updateRepositoryDataInDisplay() {
           if (imageObserver) {
             imageObserver.observe(img);
           }
+          updatedCount++;
+        } else if (repositoryIndicator.classList.contains('loading') && repositorySyncCompleted) {
+          // Only replace spinner with empty placeholder if sync has completed
+          const placeholder = document.createElement('div');
+          placeholder.className = 'repository-placeholder';
+          placeholder.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          `;
+          repositoryIndicator.replaceWith(placeholder);
         }
       }
     }
@@ -437,7 +451,8 @@ function updateRepositoryDataInDisplay() {
     }
   });
 
-  console.log('Repository data updated in display');
+  // Stop loading state
+  isLoadingRepositoryPhotos = false;
 }
 
 async function displayUsers(users, allUsers = null) {
@@ -586,12 +601,16 @@ function createUserRow(user, imageCount) {
   const repositoryIndicator = showRepositoryPhotos
     ? (user.repository_image_path
       ? `<img data-src="file://${user.repository_image_path}" class="repository-indicator lazy-image" alt="Foto Depósito" style="background-color: #f0f0f0">`
-      : `<div class="repository-placeholder">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-             <circle cx="12" cy="7" r="4"></circle>
-           </svg>
-         </div>`)
+      : (isLoadingRepositoryPhotos
+        ? `<div class="repository-placeholder loading">
+             <div class="spinner-small"></div>
+           </div>`
+        : `<div class="repository-placeholder">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+               <circle cx="12" cy="7" r="4"></circle>
+             </svg>
+           </div>`))
     : '';
 
   // Show repository check indicator if enabled (always reserve space for alignment)
@@ -1072,12 +1091,25 @@ function setupMenuListeners() {
 
   window.electronAPI.onMenuToggleRepositoryPhotos((enabled) => {
     showRepositoryPhotos = enabled;
+    if (enabled) {
+      // Mark as loading to show spinners and reset sync completed flag
+      isLoadingRepositoryPhotos = true;
+      repositorySyncCompleted = false;
+    }
     // Load repository data if enabling and not already loaded
     if (enabled && currentUsers.length > 0) {
-      const hasRepositoryData = currentUsers.some(u => u.hasOwnProperty('repository_image_path'));
+      // Check if repository data is actually loaded (not just the property exists)
+      const hasRepositoryData = currentUsers.some(u => u.repository_image_path);
       if (!hasRepositoryData) {
         loadRepositoryDataInBackground(currentUsers);
+      } else {
+        // Data already loaded, stop loading state and mark sync as completed
+        isLoadingRepositoryPhotos = false;
+        repositorySyncCompleted = true;
       }
+    } else if (!enabled) {
+      // If disabling, stop loading state
+      isLoadingRepositoryPhotos = false;
     }
     displayUsers(currentUsers, allUsers);
   });
