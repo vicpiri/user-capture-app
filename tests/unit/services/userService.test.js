@@ -9,7 +9,7 @@ describe('UserService', () => {
   let mockElectronAPI;
 
   beforeEach(() => {
-    // Mock window.electronAPI
+    // Mock window.electronAPI BEFORE creating service instance
     mockElectronAPI = {
       getUsers: jest.fn(),
       getUserById: jest.fn(),
@@ -19,7 +19,13 @@ describe('UserService', () => {
       searchUsers: jest.fn()
     };
 
-    global.window = { electronAPI: mockElectronAPI };
+    // Set global.window.electronAPI before creating UserService
+    if (!global.window) {
+      global.window = {};
+    }
+    global.window.electronAPI = mockElectronAPI;
+
+    // Now create service - it will use the mocked electronAPI
     userService = new UserService();
   });
 
