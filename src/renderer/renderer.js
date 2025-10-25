@@ -1,6 +1,7 @@
 // Import new architecture modules
 const { store } = require('./core');
 const { NewProjectModal, ConfirmModal, InfoModal } = require('./components/modals');
+const { VirtualScrollManager } = require('./components/VirtualScrollManager');
 
 // State management
 let currentUsers = [];
@@ -23,13 +24,9 @@ let imageObserver = null;
 let selectionMode = false;
 let selectedUsers = new Set(); // Store selected user IDs
 
-// Virtual scrolling state
-const ITEM_HEIGHT = 40; // Height of each row in pixels
-const BUFFER_SIZE = 10; // Extra rows to render above/below viewport
-let visibleStartIndex = 0;
-let visibleEndIndex = 0;
+// Virtual scrolling
+let virtualScrollManager = null;
 let displayedUsers = []; // Currently displayed users (filtered/duplicates)
-let isVirtualScrolling = false;
 
 // DOM Elements
 const searchInput = document.getElementById('search-input');
@@ -61,6 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize modal instances
   initializeModals();
 
+  // Initialize virtual scroll manager
+  initializeVirtualScroll();
+
   initializeEventListeners();
   setupProgressListener();
   setupMenuListeners();
@@ -82,6 +82,25 @@ function initializeModals() {
   infoModalInstance.init();
 
   console.log('[Renderer] Modal instances initialized');
+}
+
+// Initialize virtual scroll manager
+function initializeVirtualScroll() {
+  const container = document.getElementById('table-container');
+  const tbody = document.getElementById('user-table-body');
+
+  virtualScrollManager = new VirtualScrollManager({
+    itemHeight: 40,
+    bufferSize: 10,
+    minItemsForVirtualization: 50,
+    container: container,
+    tbody: tbody,
+    createRowCallback: (user) => createUserRow(user, window._imageCountCache || {}),
+    observeImagesCallback: () => observeLazyImages()
+  });
+
+  virtualScrollManager.init();
+  console.log('[Renderer] Virtual scroll manager initialized');
 }
 
 // Event Listeners
@@ -156,9 +175,6 @@ function initializeEventListeners() {
 
   // Drag and drop for image preview
   setupDragAndDrop();
-
-  // Setup virtual scrolling
-  setupVirtualScroll();
 
   // Keyboard navigation for images and users
   document.addEventListener('keydown', (event) => {
@@ -425,83 +441,10 @@ async function displayUsers(users, allUsers = null) {
   // Store imageCount globally for row rendering
   window._imageCountCache = imageCount;
 
-  // Enable virtual scrolling if more than 50 users
-  if (displayedUsers.length > 50) {
-    isVirtualScrolling = true;
-    // Reset virtual scroll indices to force re-render
-    visibleStartIndex = -1;
-    visibleEndIndex = -1;
-    renderVirtualizedUsers();
-  } else {
-    isVirtualScrolling = false;
-    renderAllUsers(displayedUsers, imageCount);
+  // Use virtual scroll manager to render users
+  if (virtualScrollManager) {
+    virtualScrollManager.setItems(displayedUsers);
   }
-}
-
-// Render all users (for small lists < 50 users)
-function renderAllUsers(usersToDisplay, imageCount) {
-  const topSpacer = document.getElementById('top-spacer');
-  const bottomSpacer = document.getElementById('bottom-spacer');
-
-  // Hide spacers for non-virtual mode
-  topSpacer.style.height = '0px';
-  bottomSpacer.style.height = '0px';
-
-  // Clear existing rows (except spacers)
-  const existingRows = Array.from(userTableBody.querySelectorAll('tr:not(#top-spacer):not(#bottom-spacer)'));
-  existingRows.forEach(row => row.remove());
-
-  // Render all users
-  usersToDisplay.forEach(user => {
-    const row = createUserRow(user, imageCount);
-    bottomSpacer.parentNode.insertBefore(row, bottomSpacer);
-  });
-
-  // Observe lazy images after rendering
-  observeLazyImages();
-}
-
-// Render virtualized users (for large lists >= 50 users)
-function renderVirtualizedUsers() {
-  const container = document.getElementById('table-container');
-  const containerHeight = container.clientHeight;
-  const scrollTop = container.scrollTop;
-
-  // Calculate visible range
-  const visibleCount = Math.ceil(containerHeight / ITEM_HEIGHT);
-  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER_SIZE);
-  const endIndex = Math.min(displayedUsers.length, startIndex + visibleCount + (BUFFER_SIZE * 2));
-
-  // Only re-render if range changed significantly
-  if (startIndex === visibleStartIndex && endIndex === visibleEndIndex) {
-    return;
-  }
-
-  visibleStartIndex = startIndex;
-  visibleEndIndex = endIndex;
-
-  // Update spacers
-  const topSpacer = document.getElementById('top-spacer');
-  const bottomSpacer = document.getElementById('bottom-spacer');
-
-  topSpacer.style.height = `${startIndex * ITEM_HEIGHT}px`;
-  bottomSpacer.style.height = `${(displayedUsers.length - endIndex) * ITEM_HEIGHT}px`;
-
-  // Clear existing rows (except spacers)
-  const existingRows = Array.from(userTableBody.querySelectorAll('tr:not(#top-spacer):not(#bottom-spacer)'));
-  existingRows.forEach(row => row.remove());
-
-  // Render visible rows
-  const visibleUsers = displayedUsers.slice(startIndex, endIndex);
-  const imageCount = window._imageCountCache || {};
-
-  visibleUsers.forEach(user => {
-    const row = createUserRow(user, imageCount);
-    bottomSpacer.parentNode.insertBefore(row, bottomSpacer);
-  });
-
-  // Observe lazy images after rendering
-  observeLazyImages();
 }
 
 // Create a user row element
@@ -610,28 +553,6 @@ function createUserRow(user, imageCount) {
   }
 
   return row;
-}
-
-// Setup virtual scrolling event listener
-function setupVirtualScroll() {
-  const container = document.getElementById('table-container');
-  let scrollTimeout = null;
-
-  container.addEventListener('scroll', () => {
-    // Only handle scroll if virtualization is active
-    if (!isVirtualScrolling || displayedUsers.length === 0) {
-      return;
-    }
-
-    // Debounce scroll events for better performance
-    if (scrollTimeout) {
-      clearTimeout(scrollTimeout);
-    }
-
-    scrollTimeout = setTimeout(() => {
-      renderVirtualizedUsers();
-    }, 10); // 10ms debounce
-  });
 }
 
 function selectUserRow(row, user) {
