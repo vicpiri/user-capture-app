@@ -158,6 +158,7 @@ function createMenu() {
           showAdditionalActions
         });
         if (showRepositoryPhotos) {
+          logger.info('[MENU] Mostrar imágenes del depósito activated');
           ensureRepositoryMirrorStarted();
         }
         const mainWindow = mainWindowManager.getWindow();

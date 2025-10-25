@@ -313,6 +313,20 @@ body {
   color: #4a4f5e;
 }
 
+.user-table td .repository-placeholder.loading {
+  opacity: 1;
+  background-color: transparent;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #2a2f3e;
+  border-top-color: #4a7cc7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* Panel Footer */
 .panel-footer {
   padding: 20px;
