@@ -263,7 +263,7 @@ async function loadProjectData() {
     groupFilter.value = filterResult.groupCode;
   }
 
-  await loadUsers();
+  await loadUsers(getCurrentFilters());
   await loadImages();
 
   // Re-enable search input after data load
