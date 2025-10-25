@@ -203,7 +203,10 @@ class BaseModal {
   }
 }
 
-// CommonJS export
+// CommonJS export (for tests)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { BaseModal };
+} else if (typeof window !== 'undefined') {
+  // Browser global export
+  window.BaseModal = BaseModal;
 }

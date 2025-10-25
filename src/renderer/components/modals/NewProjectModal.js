@@ -7,9 +7,7 @@
  * @extends BaseModal
  */
 
-const { BaseModal } = require('../../core/BaseModal');
-const { store } = require('../../core/store');
-const { projectService } = require('../../services');
+// Dependencies: BaseModal, store (loaded from core), window.electronAPI (from preload)
 
 class NewProjectModal extends BaseModal {
   constructor() {
@@ -131,7 +129,7 @@ class NewProjectModal extends BaseModal {
     try {
       this._log('Creating project...');
 
-      const result = await projectService.createProject({
+      const result = await window.electronAPI.createProject({
         folderPath: this.selectedFolder,
         xmlFilePath: this.selectedXmlFile
       });
@@ -252,7 +250,9 @@ class NewProjectModal extends BaseModal {
   }
 }
 
-// Export
+// Export (for tests and browser)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { NewProjectModal };
+} else if (typeof window !== 'undefined') {
+  window.NewProjectModal = NewProjectModal;
 }

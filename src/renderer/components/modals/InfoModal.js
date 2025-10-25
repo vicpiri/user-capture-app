@@ -7,7 +7,7 @@
  * @extends BaseModal
  */
 
-const { BaseModal } = require('../../core/BaseModal');
+// Dependencies: BaseModal (loaded from core)
 
 class InfoModal extends BaseModal {
   constructor() {
@@ -132,7 +132,9 @@ class InfoModal extends BaseModal {
   }
 }
 
-// Export
+// Export (for tests and browser)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { InfoModal };
+} else if (typeof window !== 'undefined') {
+  window.InfoModal = InfoModal;
 }

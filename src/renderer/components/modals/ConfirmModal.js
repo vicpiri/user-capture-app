@@ -7,7 +7,7 @@
  * @extends BaseModal
  */
 
-const { BaseModal } = require('../../core/BaseModal');
+// Dependencies: BaseModal (loaded from core)
 
 class ConfirmModal extends BaseModal {
   constructor() {
@@ -125,7 +125,9 @@ class ConfirmModal extends BaseModal {
   }
 }
 
-// Export
+// Export (for tests and browser)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { ConfirmModal };
+} else if (typeof window !== 'undefined') {
+  window.ConfirmModal = ConfirmModal;
 }
