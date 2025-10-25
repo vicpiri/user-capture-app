@@ -1,5 +1,6 @@
 const { BrowserWindow } = require('electron');
 const path = require('path');
+const VersionManager = require('../utils/version');
 
 /**
  * Main Window Manager
@@ -7,6 +8,7 @@ const path = require('path');
 class MainWindowManager {
   constructor() {
     this.window = null;
+    this.version = VersionManager.getVersion();
   }
 
   /**
@@ -21,7 +23,7 @@ class MainWindowManager {
     this.window = new BrowserWindow({
       width: 1400,
       height: 900,
-      title: 'User Capture',
+      title: `User Capture v${this.version}`,
       icon: path.join(__dirname, '../../../assets/icons/icon.png'),
       webPreferences: {
         preload: path.join(__dirname, '../../preload/preload.js'),
@@ -63,9 +65,9 @@ class MainWindowManager {
 
     if (projectPath) {
       const projectName = path.basename(projectPath);
-      this.window.setTitle(`User Capture - ${projectName}`);
+      this.window.setTitle(`User Capture v${this.version} - ${projectName}`);
     } else {
-      this.window.setTitle('User Capture');
+      this.window.setTitle(`User Capture v${this.version}`);
     }
   }
 
