@@ -1,7 +1,5 @@
-// Import new architecture modules
-const { store } = require('./core');
-const { NewProjectModal, ConfirmModal, InfoModal } = require('./components/modals');
-const { VirtualScrollManager } = require('./components/VirtualScrollManager');
+// Architecture modules are loaded via script tags in index.html
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, VirtualScrollManager
 
 // State management
 let currentUsers = [];

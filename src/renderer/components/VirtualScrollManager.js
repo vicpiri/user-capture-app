@@ -7,6 +7,10 @@
  * @module components/VirtualScrollManager
  */
 
+// IIFE to avoid polluting global scope while making VirtualScrollManager available
+(function(global) {
+  'use strict';
+
 class VirtualScrollManager {
   constructor(config = {}) {
     // Configuration
@@ -259,4 +263,11 @@ class VirtualScrollManager {
   }
 }
 
-module.exports = { VirtualScrollManager };
+// Export for both browser and Node.js (tests)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { VirtualScrollManager };
+} else {
+  global.VirtualScrollManager = VirtualScrollManager;
+}
+
+})(typeof window !== 'undefined' ? window : global);

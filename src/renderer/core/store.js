@@ -246,7 +246,11 @@ if (typeof window !== 'undefined' && process.argv && process.argv.includes('--de
   console.log('[Store] Available at window.__store__ (dev mode)');
 }
 
-// CommonJS export (for renderer)
+// CommonJS export (for tests)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { Store, store };
+} else if (typeof window !== 'undefined') {
+  // Browser global export
+  window.Store = Store;
+  window.store = store;
 }
