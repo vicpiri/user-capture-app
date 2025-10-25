@@ -150,3 +150,6 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# Temp files
+nul
