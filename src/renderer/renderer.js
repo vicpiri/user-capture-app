@@ -1044,8 +1044,20 @@ function setupMenuListeners() {
     displayUsers(currentUsers, allUsers);
   });
 
-  window.electronAPI.onMenuToggleCapturedPhotos((enabled) => {
+  window.electronAPI.onMenuToggleCapturedPhotos(async (enabled) => {
     showCapturedPhotos = enabled;
+    // If enabling, check if captured photo data is loaded
+    if (enabled && currentUsers.length > 0) {
+      // Check if captured photo data was previously loaded
+      // When loadCapturedImages is false, image_path is set to null explicitly
+      // So we need to check if ALL users have null image_path (meaning data wasn't loaded)
+      const allImagesAreNull = currentUsers.every(u => u.image_path === null);
+      if (allImagesAreNull) {
+        // Reload users with captured images
+        await loadUsers(getCurrentFilters());
+        return; // loadUsers already calls displayUsers
+      }
+    }
     displayUsers(currentUsers, allUsers);
   });
 
