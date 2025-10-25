@@ -199,7 +199,13 @@ function createMenu() {
         }
       },
       openImageGridWindow,
-      openRepositoryGridWindow
+      openRepositoryGridWindow,
+      openPOC: () => {
+        const { shell } = require('electron');
+        const pocPath = path.join(__dirname, 'src', 'renderer', '_poc', 'poc-test.html');
+        shell.openPath(pocPath);
+        logger.info('[POC] Abriendo POC test en navegador');
+      }
     }
   });
 

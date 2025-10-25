@@ -402,6 +402,16 @@ class MenuBuilder {
         { label: 'Forzar recarga', accelerator: 'CmdOrCtrl+Shift+R', role: 'forceReload' },
         { label: 'Herramientas de desarrollo', accelerator: 'CmdOrCtrl+Shift+I', role: 'toggleDevTools' },
         { type: 'separator' },
+        {
+          label: 'Abrir POC (Refactor Test)',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            if (this.callbacks.openPOC) {
+              this.callbacks.openPOC();
+            }
+          }
+        },
+        { type: 'separator' },
         { label: 'Zoom +', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
         { label: 'Zoom -', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
         { label: 'Zoom normal', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' }
