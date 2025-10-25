@@ -363,6 +363,9 @@ async function loadUsers(filters = {}) {
 
 // Load repository data in background (non-blocking)
 async function loadRepositoryDataInBackground(users) {
+  const startTime = Date.now();
+  const minDisplayTime = 300; // Minimum time to show spinners (ms)
+
   try {
     const result = await window.electronAPI.loadRepositoryImages(users);
 
@@ -376,8 +379,14 @@ async function loadRepositoryDataInBackground(users) {
         }
       });
 
-      // Update the display with repository data
-      updateRepositoryDataInDisplay();
+      // Ensure spinners are visible for at least minDisplayTime
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
+
+      setTimeout(() => {
+        // Update the display with repository data
+        updateRepositoryDataInDisplay();
+      }, remainingTime);
     } else {
       console.error('Error loading repository data:', result.error);
       // Stop loading states even on error
@@ -1067,6 +1076,8 @@ function setupMenuListeners() {
       // Mark as loading to show spinners and reset sync completed flag
       isLoadingRepositoryPhotos = true;
       repositorySyncCompleted = false;
+      // Display users immediately with loading spinners
+      displayUsers(currentUsers, allUsers);
     }
     // Load repository data if enabling and not already loaded
     if (enabled && currentUsers.length > 0) {
@@ -1078,12 +1089,14 @@ function setupMenuListeners() {
         // Data already loaded, stop loading state and mark sync as completed
         isLoadingRepositoryPhotos = false;
         repositorySyncCompleted = true;
+        // Re-display with actual data (no spinners)
+        displayUsers(currentUsers, allUsers);
       }
     } else if (!enabled) {
       // If disabling, stop loading state
       isLoadingRepositoryPhotos = false;
+      displayUsers(currentUsers, allUsers);
     }
-    displayUsers(currentUsers, allUsers);
   });
 
   window.electronAPI.onMenuToggleRepositoryIndicators((enabled) => {
@@ -1092,6 +1105,8 @@ function setupMenuListeners() {
       // Mark as loading to show spinners and reset sync completed flag
       isLoadingRepositoryIndicators = true;
       repositorySyncCompleted = false;
+      // Display users immediately with loading spinners
+      displayUsers(currentUsers, allUsers);
     }
     // Load repository data if enabling and not already loaded
     if (enabled && currentUsers.length > 0) {
@@ -1103,12 +1118,14 @@ function setupMenuListeners() {
         // Data already loaded, stop loading state and mark sync as completed
         isLoadingRepositoryIndicators = false;
         repositorySyncCompleted = true;
+        // Re-display with actual data (no spinners)
+        displayUsers(currentUsers, allUsers);
       }
     } else if (!enabled) {
       // If disabling, stop loading state
       isLoadingRepositoryIndicators = false;
+      displayUsers(currentUsers, allUsers);
     }
-    displayUsers(currentUsers, allUsers);
   });
 
   window.electronAPI.onMenuImportImagesId(() => {
