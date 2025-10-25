@@ -103,12 +103,14 @@ class ExportOptionsModal extends BaseModal {
     const options = this.getExportOptions();
     this._log('Export options confirmed:', options);
 
-    this.close();
-
     if (this.resolvePromise) {
-      this.resolvePromise(options);
+      const resolve = this.resolvePromise;
       this.resolvePromise = null;
       this.rejectPromise = null;
+      this.close();
+      resolve(options);
+    } else {
+      this.close();
     }
   }
 
@@ -117,12 +119,15 @@ class ExportOptionsModal extends BaseModal {
    */
   handleCancel() {
     this._log('Export cancelled');
-    this.close();
 
     if (this.resolvePromise) {
-      this.resolvePromise(null);
+      const resolve = this.resolvePromise;
       this.resolvePromise = null;
       this.rejectPromise = null;
+      this.close();
+      resolve(null);
+    } else {
+      this.close();
     }
   }
 

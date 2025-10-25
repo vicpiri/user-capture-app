@@ -68,12 +68,15 @@ class ConfirmModal extends BaseModal {
    */
   handleYes() {
     this._log('User selected: Yes');
-    this.close();
 
     if (this.resolvePromise) {
-      this.resolvePromise(true);
+      const resolve = this.resolvePromise;
       this.resolvePromise = null;
       this.rejectPromise = null;
+      this.close();
+      resolve(true);
+    } else {
+      this.close();
     }
   }
 
@@ -82,12 +85,15 @@ class ConfirmModal extends BaseModal {
    */
   handleNo() {
     this._log('User selected: No');
-    this.close();
 
     if (this.resolvePromise) {
-      this.resolvePromise(false);
+      const resolve = this.resolvePromise;
       this.resolvePromise = null;
       this.rejectPromise = null;
+      this.close();
+      resolve(false);
+    } else {
+      this.close();
     }
   }
 
