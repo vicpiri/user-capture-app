@@ -341,9 +341,18 @@ async function loadUsers(filters = {}) {
       displayUsers(currentUsers, allUsers);
       updateUserCount();
 
-      // Load repository data in background if needed (only if not already loading)
-      if ((showRepositoryPhotos || showRepositoryIndicators) && !isLoadingRepositoryPhotos) {
-        loadRepositoryDataInBackground(currentUsers);
+      // Load repository data in background if needed
+      if (showRepositoryPhotos || showRepositoryIndicators) {
+        // Check if repository data is actually loaded
+        const hasRepositoryData = currentUsers.some(u => u.repository_image_path);
+        if (!hasRepositoryData) {
+          loadRepositoryDataInBackground(currentUsers);
+        } else {
+          // Data already loaded, stop loading state
+          isLoadingRepositoryPhotos = false;
+          isLoadingRepositoryIndicators = false;
+          repositorySyncCompleted = true;
+        }
       }
     }
   } finally {
@@ -371,97 +380,25 @@ async function loadRepositoryDataInBackground(users) {
       updateRepositoryDataInDisplay();
     } else {
       console.error('Error loading repository data:', result.error);
+      // Stop loading states even on error
+      updateRepositoryDataInDisplay();
     }
   } catch (error) {
     console.error('Error loading repository data in background:', error);
+    // Stop loading states even on error
+    updateRepositoryDataInDisplay();
   }
 }
 
 // Update repository data in the displayed rows
 function updateRepositoryDataInDisplay() {
-  // Get all user rows currently in the table
-  const userRows = userTableBody.querySelectorAll('tr[data-user-id]');
-
-  let updatedCount = 0;
-  userRows.forEach(row => {
-    const userId = parseInt(row.dataset.userId);
-    const user = currentUsers.find(u => u.id === userId);
-
-    if (!user) return;
-
-    // Find the cell containing indicators (last td)
-    const indicatorCell = row.querySelector('td:last-child');
-    if (!indicatorCell) return;
-
-    // Update repository photo indicator if enabled
-    if (showRepositoryPhotos) {
-      const repositoryIndicator = indicatorCell.querySelector('.repository-indicator, .repository-placeholder');
-      if (repositoryIndicator) {
-        if (user.repository_image_path) {
-          // Replace placeholder/spinner with actual image
-          const img = document.createElement('img');
-          img.className = 'repository-indicator lazy-image';
-          img.dataset.src = `file://${user.repository_image_path}`;
-          img.alt = 'Foto Depósito';
-          img.style.backgroundColor = '#f0f0f0';
-          repositoryIndicator.replaceWith(img);
-
-          // Add double-click handler
-          img.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            showUserImageModal(user, 'repository');
-          });
-
-          // Observe for lazy loading
-          if (imageObserver) {
-            imageObserver.observe(img);
-          }
-          updatedCount++;
-        } else if (repositoryIndicator.classList.contains('loading') && repositorySyncCompleted) {
-          // Only replace spinner with empty placeholder if sync has completed
-          const placeholder = document.createElement('div');
-          placeholder.className = 'repository-placeholder';
-          placeholder.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          `;
-          repositoryIndicator.replaceWith(placeholder);
-        }
-      }
-    }
-
-    // Update repository check indicator if enabled
-    if (showRepositoryIndicators) {
-      const repositoryCheck = indicatorCell.querySelector('.repository-check, .repository-check-placeholder');
-      if (repositoryCheck) {
-        if (user.repository_image_path) {
-          // Replace placeholder/spinner with checkmark
-          const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          checkSvg.setAttribute('class', 'repository-check');
-          checkSvg.setAttribute('viewBox', '0 0 24 24');
-          checkSvg.setAttribute('fill', 'none');
-          checkSvg.setAttribute('stroke', 'currentColor');
-          checkSvg.setAttribute('stroke-width', '2');
-          checkSvg.innerHTML = `
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          `;
-          repositoryCheck.replaceWith(checkSvg);
-        } else if (repositoryCheck.classList.contains('loading') && repositorySyncCompleted) {
-          // Only replace spinner with empty placeholder if sync has completed
-          const placeholder = document.createElement('div');
-          placeholder.className = 'repository-check-placeholder';
-          repositoryCheck.replaceWith(placeholder);
-        }
-      }
-    }
-  });
-
-  // Stop loading states
+  // Stop loading states first
   isLoadingRepositoryPhotos = false;
   isLoadingRepositoryIndicators = false;
+  repositorySyncCompleted = true;
+
+  // Re-render users to update spinners and show actual data
+  displayUsers(currentUsers, allUsers);
 }
 
 async function displayUsers(users, allUsers = null) {
