@@ -177,10 +177,13 @@ function initializeEventListeners() {
   // Keyboard navigation for images and users
   document.addEventListener('keydown', (event) => {
     // Don't handle keyboard events if a modal is open
-    if (newProjectModal.classList.contains('show') ||
-        confirmModal.classList.contains('show') ||
-        progressModal.classList.contains('show') ||
-        infoModal.classList.contains('show')) return;
+    const isModalOpen = (
+      (newProjectModalInstance && newProjectModalInstance.modal && newProjectModalInstance.modal.classList.contains('show')) ||
+      (confirmModalInstance && confirmModalInstance.modal && confirmModalInstance.modal.classList.contains('show')) ||
+      (progressModal && progressModal.classList.contains('show')) ||
+      (infoModalInstance && infoModalInstance.modal && infoModalInstance.modal.classList.contains('show'))
+    );
+    if (isModalOpen) return;
 
     // Don't prevent default behavior if user is typing in an input field
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
