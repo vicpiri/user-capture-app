@@ -7,7 +7,15 @@
  * @extends BaseModal
  */
 
-// Dependencies: BaseModal, store (loaded from core), window.electronAPI (from preload)
+// Dependencies: BaseModal, store (loaded from core in browser, or via require in Node.js)
+let BaseModal, store;
+if (typeof window !== 'undefined' && window.BaseModal) {
+  BaseModal = window.BaseModal;
+  store = window.store;
+} else if (typeof require !== 'undefined') {
+  ({ BaseModal } = require('../../core/BaseModal'));
+  ({ store } = require('../../core/store'));
+}
 
 class NewProjectModal extends BaseModal {
   constructor() {

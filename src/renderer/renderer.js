@@ -1,5 +1,8 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, VirtualScrollManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager
+
+// Component instances
+let userRowRenderer = null;
 
 // State management
 let currentUsers = [];
@@ -56,6 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize modal instances
   initializeModals();
 
+  // Initialize user row renderer
+  initializeUserRowRenderer();
+
   // Initialize virtual scroll manager
   initializeVirtualScroll();
 
@@ -80,6 +86,25 @@ function initializeModals() {
   infoModalInstance.init();
 
   console.log('[Renderer] Modal instances initialized');
+}
+
+// Initialize user row renderer
+function initializeUserRowRenderer() {
+  userRowRenderer = new UserRowRenderer({
+    showCapturedPhotos: showCapturedPhotos,
+    showRepositoryPhotos: showRepositoryPhotos,
+    showRepositoryIndicators: showRepositoryIndicators,
+    isLoadingRepositoryPhotos: isLoadingRepositoryPhotos,
+    isLoadingRepositoryIndicators: isLoadingRepositoryIndicators,
+    selectionMode: selectionMode,
+    selectedUsers: selectedUsers,
+    onUserSelect: (row, user) => selectUserRow(row, user),
+    onUserContextMenu: (e, user, row) => showContextMenu(e, user, row),
+    onImagePreview: (user, type) => showUserImageModal(user, type),
+    onCheckboxToggle: (userId, checked) => toggleUserSelection(userId, checked)
+  });
+
+  console.log('[Renderer] User row renderer initialized');
 }
 
 // Initialize virtual scroll manager
@@ -448,111 +473,27 @@ async function displayUsers(users, allUsers = null) {
   }
 }
 
-// Create a user row element
+// Create a user row element (uses UserRowRenderer)
 function createUserRow(user, imageCount) {
-  const row = document.createElement('tr');
-  row.dataset.userId = user.id;
-
-  const hasDuplicateImage = user.image_path && imageCount[user.image_path] > 1;
-  const duplicateClass = hasDuplicateImage ? 'duplicate-image' : '';
-
-  // Show or hide captured photo based on menu option (with lazy loading)
-  const photoIndicator = showCapturedPhotos
-    ? (user.image_path
-      ? `<img data-src="file://${user.image_path}" class="photo-indicator lazy-image ${duplicateClass}" alt="Foto" style="background-color: #f0f0f0">`
-      : `<div class="photo-placeholder">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-             <circle cx="12" cy="7" r="4"></circle>
-           </svg>
-         </div>`)
-    : '';
-
-  // Show or hide repository photo based on menu option (with lazy loading)
-  const repositoryIndicator = showRepositoryPhotos
-    ? (user.repository_image_path
-      ? `<img data-src="file://${user.repository_image_path}" class="repository-indicator lazy-image" alt="Foto Depósito" style="background-color: #f0f0f0">`
-      : (isLoadingRepositoryPhotos
-        ? `<div class="repository-placeholder loading">
-             <div class="spinner-small"></div>
-           </div>`
-        : `<div class="repository-placeholder">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-               <circle cx="12" cy="7" r="4"></circle>
-             </svg>
-           </div>`))
-    : '';
-
-  // Show repository check indicator if enabled (always reserve space for alignment)
-  const repositoryCheckIndicator = showRepositoryIndicators
-    ? (user.repository_image_path
-      ? `<svg class="repository-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-           <polyline points="22 4 12 14.01 9 11.01"></polyline>
-         </svg>`
-      : (isLoadingRepositoryIndicators
-        ? `<div class="repository-check-placeholder loading">
-             <div class="spinner-small"></div>
-           </div>`
-        : `<div class="repository-check-placeholder"></div>`))
-    : '';
-
-  // Checkbox for selection mode
-  const checkboxCell = selectionMode
-    ? `<td class="checkbox-cell">
-         <input type="checkbox" class="user-checkbox" ${selectedUsers.has(user.id) ? 'checked' : ''}>
-       </td>`
-    : '';
-
-  row.innerHTML = `
-    ${checkboxCell}
-    <td class="name">${user.first_name}</td>
-    <td>${user.last_name1} ${user.last_name2 || ''}</td>
-    <td>${user.nia || '-'}</td>
-    <td>${user.group_code}</td>
-    <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}</td>
-  `;
-
-  // Handle checkbox clicks in selection mode
-  if (selectionMode) {
-    const checkbox = row.querySelector('.user-checkbox');
-    checkbox.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent row selection
-      toggleUserSelection(user.id, checkbox.checked);
+  // Update renderer config with current state
+  if (userRowRenderer) {
+    userRowRenderer.updateConfig({
+      showCapturedPhotos: showCapturedPhotos,
+      showRepositoryPhotos: showRepositoryPhotos,
+      showRepositoryIndicators: showRepositoryIndicators,
+      isLoadingRepositoryPhotos: isLoadingRepositoryPhotos,
+      isLoadingRepositoryIndicators: isLoadingRepositoryIndicators,
+      selectionMode: selectionMode,
+      selectedUsers: selectedUsers
     });
+
+    return userRowRenderer.createRow(user, imageCount);
   }
 
-  row.addEventListener('click', () => selectUserRow(row, user));
-
-  // Add context menu
-  row.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    showContextMenu(e, user, row);
-  });
-
-  // Add double-click event to photo indicator to show full image
-  if (user.image_path) {
-    const photoIndicatorElement = row.querySelector('.photo-indicator');
-    if (photoIndicatorElement) {
-      photoIndicatorElement.addEventListener('dblclick', (e) => {
-        e.stopPropagation(); // Prevent row selection
-        showUserImageModal(user, 'captured');
-      });
-    }
-  }
-
-  // Add double-click event to repository indicator to show full image
-  if (user.repository_image_path) {
-    const repositoryIndicatorElement = row.querySelector('.repository-indicator');
-    if (repositoryIndicatorElement) {
-      repositoryIndicatorElement.addEventListener('dblclick', (e) => {
-        e.stopPropagation(); // Prevent row selection
-        showUserImageModal(user, 'repository');
-      });
-    }
-  }
-
+  // Fallback if renderer not initialized
+  console.warn('[Renderer] UserRowRenderer not initialized');
+  const row = document.createElement('tr');
+  row.textContent = 'Error: Row renderer not initialized';
   return row;
 }
 

@@ -7,7 +7,13 @@
  * @extends BaseModal
  */
 
-// Dependencies: BaseModal (loaded from core)
+// Dependencies: BaseModal (loaded from core in browser, or via require in Node.js)
+let BaseModal;
+if (typeof window !== 'undefined' && window.BaseModal) {
+  BaseModal = window.BaseModal;
+} else if (typeof require !== 'undefined') {
+  ({ BaseModal } = require('../../core/BaseModal'));
+}
 
 class InfoModal extends BaseModal {
   constructor() {
