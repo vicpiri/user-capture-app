@@ -240,8 +240,8 @@ class Store {
 // Export singleton instance
 const store = new Store();
 
-// Expose to window for debugging (development only)
-if (typeof window !== 'undefined' && process.argv && process.argv.includes('--dev')) {
+// Expose to window for debugging (always in browser)
+if (typeof window !== 'undefined') {
   window.__store__ = store;
   console.log('[Store] Available at window.__store__ (dev mode)');
 }
