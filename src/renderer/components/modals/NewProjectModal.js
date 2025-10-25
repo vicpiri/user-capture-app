@@ -54,7 +54,19 @@ class NewProjectModal extends BaseModal {
   }
 
   /**
-   * Open modal and reset form
+   * Show modal and return promise that resolves with project creation result
+   * @returns {Promise<object|null>} Promise that resolves with result or null if cancelled
+   */
+  show() {
+    return new Promise((resolve) => {
+      this.resolvePromise = resolve;
+      this.resetForm();
+      super.open();
+    });
+  }
+
+  /**
+   * Open modal and reset form (deprecated - use show() instead)
    */
   open() {
     this.resetForm();
@@ -149,7 +161,15 @@ class NewProjectModal extends BaseModal {
           }
         });
 
-        this.close();
+        // Resolve promise with result
+        if (this.resolvePromise) {
+          const resolve = this.resolvePromise;
+          this.resolvePromise = null;
+          this.close();
+          resolve(result);
+        } else {
+          this.close();
+        }
       } else {
         this._showError(result.error || 'Error al crear proyecto');
       }
@@ -167,7 +187,29 @@ class NewProjectModal extends BaseModal {
    */
   handleCancel() {
     this._log('Create project cancelled');
-    this.close();
+
+    // Resolve promise with null (cancelled)
+    if (this.resolvePromise) {
+      const resolve = this.resolvePromise;
+      this.resolvePromise = null;
+      this.close();
+      resolve(null);
+    } else {
+      this.close();
+    }
+  }
+
+  /**
+   * Override close to handle promise resolution
+   */
+  close() {
+    super.close();
+
+    // If closed without creating, resolve as null (cancelled)
+    if (this.resolvePromise) {
+      this.resolvePromise(null);
+      this.resolvePromise = null;
+    }
   }
 
   /**
