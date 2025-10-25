@@ -1,3 +1,7 @@
+// Import new architecture modules
+const { store } = require('./core');
+const { NewProjectModal, ConfirmModal, InfoModal } = require('./components/modals');
+
 // State management
 let currentUsers = [];
 let allUsers = []; // All users from database for duplicate checking
@@ -44,14 +48,19 @@ const nextImageBtn = document.getElementById('next-image');
 const loadingSpinner = document.getElementById('loading-spinner');
 const noProjectPlaceholder = document.getElementById('no-project-placeholder');
 
-// Modals
-const newProjectModal = document.getElementById('new-project-modal');
-const confirmModal = document.getElementById('confirm-modal');
+// Modal DOM elements (legacy - will be replaced by modal instances)
 const progressModal = document.getElementById('progress-modal');
-const infoModal = document.getElementById('info-modal');
+
+// Modal instances (new architecture)
+let newProjectModalInstance = null;
+let confirmModalInstance = null;
+let infoModalInstance = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize modal instances
+  initializeModals();
+
   initializeEventListeners();
   setupProgressListener();
   setupMenuListeners();
@@ -60,6 +69,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Show no project placeholder initially
   updateNoProjectPlaceholder();
 });
+
+// Initialize modal instances
+function initializeModals() {
+  newProjectModalInstance = new NewProjectModal();
+  newProjectModalInstance.init();
+
+  confirmModalInstance = new ConfirmModal();
+  confirmModalInstance.init();
+
+  infoModalInstance = new InfoModal();
+  infoModalInstance.init();
+
+  console.log('[Renderer] Modal instances initialized');
+}
 
 // Event Listeners
 function initializeEventListeners() {
@@ -92,14 +115,7 @@ function initializeEventListeners() {
   prevImageBtn.addEventListener('click', () => navigateImages(-1));
   nextImageBtn.addEventListener('click', () => navigateImages(1));
 
-  // Modal buttons
-  document.getElementById('select-folder-btn').addEventListener('click', selectProjectFolder);
-  document.getElementById('select-xml-btn').addEventListener('click', selectXMLFile);
-  document.getElementById('create-project-btn').addEventListener('click', createProject);
-  document.getElementById('cancel-new-project-btn').addEventListener('click', closeNewProjectModal);
-
-  // Confirmation modal
-  document.getElementById('confirm-no-btn').addEventListener('click', closeConfirmModal);
+  // Note: Modal buttons (new project, confirm, info) are handled by modal classes
 
   // Variable to track blinking interval
   let blinkInterval = null;
@@ -181,58 +197,14 @@ function initializeEventListeners() {
 }
 
 // Project management
-function openNewProjectModal() {
-  newProjectModal.classList.add('show');
-}
+async function openNewProjectModal() {
+  // NewProjectModal class handles the entire flow
+  const result = await newProjectModalInstance.show();
 
-function closeNewProjectModal() {
-  newProjectModal.classList.remove('show');
-  document.getElementById('project-folder').value = '';
-  document.getElementById('xml-file').value = '';
-}
-
-async function selectProjectFolder() {
-  const result = await window.electronAPI.showOpenDialog({
-    properties: ['openDirectory']
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    document.getElementById('project-folder').value = result.filePaths[0];
-  }
-}
-
-async function selectXMLFile() {
-  const result = await window.electronAPI.showOpenDialog({
-    properties: ['openFile'],
-    filters: [{ name: 'XML Files', extensions: ['xml'] }]
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    document.getElementById('xml-file').value = result.filePaths[0];
-  }
-}
-
-async function createProject() {
-  const folderPath = document.getElementById('project-folder').value;
-  const xmlPath = document.getElementById('xml-file').value;
-
-  if (!folderPath || !xmlPath) {
-    showInfoModal('Error', 'Por favor, selecciona la carpeta del proyecto y el archivo XML');
-    return;
-  }
-
-  closeNewProjectModal();
-  showProgressModal('Creando Proyecto', 'Inicializando...');
-
-  const result = await window.electronAPI.createProject({ folderPath, xmlPath });
-
-  closeProgressModal();
-
-  if (result.success) {
+  if (result) {
+    // Project created successfully - modal already updated store
     projectOpen = true;
     await loadProjectData();
-  } else {
-    showInfoModal('Error', 'Error al crear el proyecto: ' + result.error);
   }
 }
 
@@ -846,7 +818,8 @@ async function handleLinkImage() {
     const userList = result.assignedUsers.map(u => `${u.name} (${u.nia || 'Sin NIA'})`).join(', ');
     const message = `Esta imagen ya está asignada a: ${userList}. ¿Deseas continuar y asignarla también a ${selectedUser.first_name} ${selectedUser.last_name1}?`;
 
-    showConfirmationModal(message, async () => {
+    const confirmed = await showConfirmationModal(message);
+    if (confirmed) {
       const confirmResult = await window.electronAPI.confirmLinkImage({
         userId: selectedUser.id,
         imagePath
@@ -857,23 +830,24 @@ async function handleLinkImage() {
       } else {
         showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
       }
-    });
+    }
   } else if (result.needsConfirmation) {
-    showConfirmationModal(
-      'El usuario ya tiene una imagen asignada. ¿Deseas reemplazarla?',
-      async () => {
-        const confirmResult = await window.electronAPI.confirmLinkImage({
-          userId: selectedUser.id,
-          imagePath
-        });
-
-        if (confirmResult.success) {
-          await loadUsers(getCurrentFilters());
-        } else {
-          showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
-        }
-      }
+    const confirmed = await showConfirmationModal(
+      'El usuario ya tiene una imagen asignada. ¿Deseas reemplazarla?'
     );
+
+    if (confirmed) {
+      const confirmResult = await window.electronAPI.confirmLinkImage({
+        userId: selectedUser.id,
+        imagePath
+      });
+
+      if (confirmResult.success) {
+        await loadUsers(getCurrentFilters());
+      } else {
+        showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
+      }
+    }
   } else {
     showInfoModal('Error', 'Error al enlazar la imagen: ' + result.error);
   }
@@ -900,62 +874,35 @@ async function handleDeletePhoto() {
 
   const userName = `${selectedUser.first_name} ${selectedUser.last_name1} ${selectedUser.last_name2 || ''}`.trim();
 
-  showConfirmationModal(
-    `¿Estás seguro de que deseas eliminar la fotografía vinculada a ${userName}?`,
-    async () => {
-      const result = await window.electronAPI.unlinkImageFromUser(selectedUser.id);
-
-      if (result.success) {
-        await loadUsers(getCurrentFilters());
-        // Update selected user reference
-        const updatedUser = currentUsers.find(u => u.id === selectedUser.id);
-        if (updatedUser) {
-          selectedUser = updatedUser;
-        }
-      } else {
-        showInfoModal('Error', 'Error al eliminar la fotografía: ' + result.error);
-      }
-    }
+  const confirmed = await showConfirmationModal(
+    `¿Estás seguro de que deseas eliminar la fotografía vinculada a ${userName}?`
   );
+
+  if (confirmed) {
+    const result = await window.electronAPI.unlinkImageFromUser(selectedUser.id);
+
+    if (result.success) {
+      await loadUsers(getCurrentFilters());
+      // Update selected user reference
+      const updatedUser = currentUsers.find(u => u.id === selectedUser.id);
+      if (updatedUser) {
+        selectedUser = updatedUser;
+      }
+    } else {
+      showInfoModal('Error', 'Error al eliminar la fotografía: ' + result.error);
+    }
+  }
 }
 
-// Confirmation modal
-function showConfirmationModal(message, onConfirm) {
-  document.getElementById('confirm-message').textContent = message;
-  confirmModal.classList.add('show');
-
-  const confirmYesBtn = document.getElementById('confirm-yes-btn');
-  const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
-  confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
-
-  newConfirmYesBtn.addEventListener('click', () => {
-    closeConfirmModal();
-    onConfirm();
-  });
+// Confirmation modal - using promise-based ConfirmModal class
+async function showConfirmationModal(message) {
+  const confirmed = await confirmModalInstance.show(message);
+  return confirmed;
 }
 
-function closeConfirmModal() {
-  confirmModal.classList.remove('show');
-}
-
-// Info/Alert modal
-function showInfoModal(title, message, onClose) {
-  document.getElementById('info-modal-title').textContent = title;
-  document.getElementById('info-modal-message').textContent = message;
-  infoModal.classList.add('show');
-
-  const okBtn = document.getElementById('info-modal-ok-btn');
-  const newOkBtn = okBtn.cloneNode(true);
-  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
-
-  newOkBtn.addEventListener('click', () => {
-    closeInfoModal();
-    if (onClose) onClose();
-  });
-}
-
-function closeInfoModal() {
-  infoModal.classList.remove('show');
+// Info/Alert modal - using promise-based InfoModal class
+async function showInfoModal(title, message) {
+  await infoModalInstance.show(title, message);
   // Restore focus to search input after closing
   searchInput.focus();
 }
@@ -1662,7 +1609,9 @@ async function handleUpdateXML() {
 
   message += '\n¿Deseas continuar con la actualización?';
 
-  showConfirmationModal(message, async () => {
+  const confirmed = await showConfirmationModal(message);
+
+  if (confirmed) {
     // Show progress modal
     showProgressModal('Actualizando XML', 'Aplicando cambios...');
 
@@ -1692,7 +1641,7 @@ async function handleUpdateXML() {
     } else {
       showInfoModal('Error', 'Error al actualizar el XML: ' + confirmResult.error);
     }
-  });
+  }
 }
 
 // Add image tag
