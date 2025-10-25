@@ -210,13 +210,22 @@ function createWindow() {
   const isDev = process.argv.includes('--dev');
   const mainWindow = mainWindowManager.create({ isDev });
 
-  // Send initial display preferences to renderer
-  mainWindowManager.sendInitialPreferences({
-    showDuplicatesOnly,
-    showCapturedPhotos,
-    showRepositoryPhotos,
-    showRepositoryIndicators,
-    showAdditionalActions
+  // Wait for renderer to be ready before sending events
+  mainWindow.webContents.on('did-finish-load', () => {
+    // Send initial display preferences to renderer
+    mainWindowManager.sendInitialPreferences({
+      showDuplicatesOnly,
+      showCapturedPhotos,
+      showRepositoryPhotos,
+      showRepositoryIndicators,
+      showAdditionalActions
+    });
+
+    // If repository options are enabled in saved preferences, start repository mirror
+    if (showRepositoryPhotos || showRepositoryIndicators) {
+      logger.info('[STARTUP] Repository options enabled in preferences, starting repository mirror');
+      ensureRepositoryMirrorStarted();
+    }
   });
 
   mainWindow.on('closed', () => {

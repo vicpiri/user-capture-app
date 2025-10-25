@@ -1061,6 +1061,16 @@ function setupMenuListeners() {
     showRepositoryPhotos = prefs.showRepositoryPhotos;
     showRepositoryIndicators = prefs.showRepositoryIndicators;
 
+    // Mark as loading if repository options are enabled in saved preferences
+    if (prefs.showRepositoryPhotos) {
+      isLoadingRepositoryPhotos = true;
+      repositorySyncCompleted = false;
+    }
+    if (prefs.showRepositoryIndicators) {
+      isLoadingRepositoryIndicators = true;
+      repositorySyncCompleted = false;
+    }
+
     // Set initial visibility of Additional Actions section
     const additionalActionsSection = document.querySelector('.additional-actions');
     if (additionalActionsSection) {
