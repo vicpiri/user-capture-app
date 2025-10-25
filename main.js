@@ -57,10 +57,11 @@ let logger = getLogger();
 let cameraEnabled = false;
 let cameraAutoStart = false;
 let recentProjects = [];
+// Display preferences - will be loaded from config on startup
 let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
-let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
-let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
+let showRepositoryPhotos = false;
+let showRepositoryIndicators = false;
 let showAdditionalActions = true;
 let availableCameras = [];
 let selectedCameraId = null;
@@ -532,9 +533,8 @@ app.whenReady().then(() => {
   const config = loadGlobalConfig();
   showDuplicatesOnly = config.showDuplicatesOnly ?? false;
   showCapturedPhotos = config.showCapturedPhotos ?? true;
-  // Force repository options to false on startup to avoid blocking on Google Drive
-  showRepositoryPhotos = false;
-  showRepositoryIndicators = false;
+  showRepositoryPhotos = config.showRepositoryPhotos ?? false;
+  showRepositoryIndicators = config.showRepositoryIndicators ?? false;
   showAdditionalActions = config.showAdditionalActions ?? true;
 
   loadRecentProjects();
