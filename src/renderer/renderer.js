@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager
 
 // Component instances
 let userRowRenderer = null;
@@ -12,6 +12,7 @@ let progressManager = null;
 let lazyImageManager = null;
 let keyboardNavigationManager = null;
 let menuEventManager = null;
+let userDataManager = null;
 
 // State management
 let currentUsers = [];
@@ -101,6 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize menu event manager
   initializeMenuEventManager();
+
+  // Initialize user data manager
+  initializeUserDataManager();
 
   initializeEventListeners();
   // Defer camera detection to not block UI
@@ -363,6 +367,41 @@ function initializeMenuEventManager() {
   console.log('[Renderer] Menu event manager initialized');
 }
 
+// Initialize user data manager
+function initializeUserDataManager() {
+  userDataManager = new UserDataManager({
+    // State setters
+    setCurrentUsers: (users) => { currentUsers = users; },
+    setAllUsers: (users) => { allUsers = users; },
+    setCurrentGroups: (groups) => { currentGroups = groups; },
+    setIsLoadingRepositoryPhotos: (value) => { isLoadingRepositoryPhotos = value; },
+    setIsLoadingRepositoryIndicators: (value) => { isLoadingRepositoryIndicators = value; },
+    setRepositorySyncCompleted: (value) => { repositorySyncCompleted = value; },
+
+    // State getters
+    getCurrentUsers: () => currentUsers,
+    getAllUsers: () => allUsers,
+    getCurrentGroups: () => currentGroups,
+    getShowCapturedPhotos: () => showCapturedPhotos,
+    getShowRepositoryPhotos: () => showRepositoryPhotos,
+    getShowRepositoryIndicators: () => showRepositoryIndicators,
+
+    // Callbacks
+    onDisplayUsers: displayUsers,
+    onUpdateUserCount: updateUserCount,
+
+    // DOM elements
+    groupFilter: groupFilter,
+    loadingSpinner: loadingSpinner,
+    userTableBody: userTableBody,
+
+    // IPC API
+    electronAPI: window.electronAPI
+  });
+
+  console.log('[Renderer] User data manager initialized');
+}
+
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
@@ -517,125 +556,27 @@ function updateNoProjectPlaceholder() {
 }
 
 async function loadGroups() {
-  const result = await window.electronAPI.getGroups();
-
-  if (result.success) {
-    currentGroups = result.groups;
-    populateGroupFilter();
+  if (userDataManager) {
+    await userDataManager.loadGroups();
   }
-}
-
-function populateGroupFilter() {
-  groupFilter.innerHTML = '<option value="">Todos los grupos</option>';
-  currentGroups.forEach(group => {
-    const option = document.createElement('option');
-    option.value = group.code;
-    option.textContent = `${group.code} - ${group.name}`;
-    groupFilter.appendChild(option);
-  });
 }
 
 async function loadUsers(filters = {}) {
-  // Show loading spinner
-  loadingSpinner.style.display = 'flex';
-
-  // Clear rows but preserve spacers
-  const existingRows = Array.from(userTableBody.querySelectorAll('tr:not(#top-spacer):not(#bottom-spacer)'));
-  existingRows.forEach(row => row.remove());
-
-  try {
-    // Load users WITHOUT repository images for fast initial display
-    const loadOptions = {
-      loadCapturedImages: showCapturedPhotos,
-      loadRepositoryImages: false // Always false for initial load
-    };
-
-    const result = await window.electronAPI.getUsers(filters, loadOptions);
-
-    if (result.success) {
-      currentUsers = result.users;
-
-      // Always reload all users for accurate duplicate checking
-      // Only load image_path for duplicate checking, no need for repository images
-      const allLoadOptions = {
-        loadCapturedImages: true,
-        loadRepositoryImages: false
-      };
-      const allResult = await window.electronAPI.getUsers({}, allLoadOptions);
-      if (allResult.success) {
-        allUsers = allResult.users;
-      }
-
-      displayUsers(currentUsers, allUsers);
-      updateUserCount();
-
-      // Load repository data in background if needed
-      if (showRepositoryPhotos || showRepositoryIndicators) {
-        // Check if repository data is actually loaded
-        const hasRepositoryData = currentUsers.some(u => u.repository_image_path);
-        if (!hasRepositoryData) {
-          loadRepositoryDataInBackground(currentUsers);
-        } else {
-          // Data already loaded, stop loading state
-          isLoadingRepositoryPhotos = false;
-          isLoadingRepositoryIndicators = false;
-          repositorySyncCompleted = true;
-        }
-      }
-    }
-  } finally {
-    // Hide loading spinner
-    loadingSpinner.style.display = 'none';
+  if (userDataManager) {
+    await userDataManager.loadUsers(filters);
   }
 }
 
-// Load repository data in background (non-blocking)
 async function loadRepositoryDataInBackground(users) {
-  const startTime = Date.now();
-  const minDisplayTime = 300; // Minimum time to show spinners (ms)
-
-  try {
-    const result = await window.electronAPI.loadRepositoryImages(users);
-
-    if (result.success) {
-      // Merge repository data into currentUsers
-      currentUsers.forEach(user => {
-        const repoData = result.repositoryData[user.id];
-        if (repoData) {
-          user.has_repository_image = repoData.has_repository_image;
-          user.repository_image_path = repoData.repository_image_path;
-        }
-      });
-
-      // Ensure spinners are visible for at least minDisplayTime
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
-
-      setTimeout(() => {
-        // Update the display with repository data
-        updateRepositoryDataInDisplay();
-      }, remainingTime);
-    } else {
-      console.error('Error loading repository data:', result.error);
-      // Stop loading states even on error
-      updateRepositoryDataInDisplay();
-    }
-  } catch (error) {
-    console.error('Error loading repository data in background:', error);
-    // Stop loading states even on error
-    updateRepositoryDataInDisplay();
+  if (userDataManager) {
+    await userDataManager.loadRepositoryDataInBackground(users);
   }
 }
 
-// Update repository data in the displayed rows
 function updateRepositoryDataInDisplay() {
-  // Stop loading states first
-  isLoadingRepositoryPhotos = false;
-  isLoadingRepositoryIndicators = false;
-  repositorySyncCompleted = true;
-
-  // Re-render users to update spinners and show actual data
-  displayUsers(currentUsers, allUsers);
+  if (userDataManager) {
+    userDataManager.updateRepositoryDataInDisplay();
+  }
 }
 
 async function displayUsers(users, allUsers = null) {
