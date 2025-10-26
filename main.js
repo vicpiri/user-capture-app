@@ -392,8 +392,22 @@ async function ensureRepositoryMirrorStarted() {
         // File synced - could update UI here if needed
       });
 
+      // Listen for repository changes detected by watcher
+      repositoryMirror.on('repository-changed', (data) => {
+        logger.info(`Repository change detected: ${data.type} - ${data.filename}`);
+        // The watcher will automatically trigger a debounced sync
+      });
+
       // Start initial sync
       repositoryMirror.startSync();
+
+      // Start watching for repository changes
+      const watchStarted = await repositoryMirror.startWatch();
+      if (watchStarted) {
+        logger.success('Repository folder watching enabled - automatic sync on changes');
+      } else {
+        logger.warning('Failed to start repository folder watch');
+      }
     } else {
       logger.error('Failed to initialize repository mirror');
     }
@@ -571,6 +585,11 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  // Cleanup repository mirror watcher
+  if (repositoryMirror) {
+    repositoryMirror.stopWatch();
+  }
+
   if (process.platform !== 'darwin') {
     app.quit();
   }
