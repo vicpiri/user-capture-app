@@ -226,6 +226,35 @@ function registerMiscHandlers(context) {
       return { success: false, error: error.message };
     }
   });
+
+  // ============================================================================
+  // Repository Mirror Handlers
+  // ============================================================================
+
+  // Get repository sync status
+  ipcMain.handle('get-sync-status', async () => {
+    try {
+      const { repositoryMirror } = context;
+      const mirror = repositoryMirror();
+
+      if (!mirror) {
+        return { success: true, isSyncing: false, hasCompleted: false };
+      }
+
+      const stats = mirror.getStats();
+
+      return {
+        success: true,
+        isSyncing: stats.isSyncing,
+        hasCompleted: stats.lastSyncTime !== null,
+        totalFiles: stats.totalFiles,
+        lastSyncTime: stats.lastSyncTime
+      };
+    } catch (error) {
+      console.error('Error getting sync status:', error);
+      return { success: false, error: error.message, isSyncing: false };
+    }
+  });
 }
 
 module.exports = { registerMiscHandlers };
