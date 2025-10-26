@@ -157,6 +157,8 @@
         // Perform export
         const exportResult = await this.electronAPI.exportImages(folderPath, usersToExport, apiOptions);
 
+        // Wait a moment to show 100% progress
+        await new Promise(resolve => setTimeout(resolve, 500));
         this.closeProgressModal();
 
         // Only show error if export failed
@@ -201,6 +203,8 @@
         // Perform export
         const exportResult = await this.electronAPI.exportImagesName(folderPath, usersToExport, apiOptions);
 
+        // Wait a moment to show 100% progress
+        await new Promise(resolve => setTimeout(resolve, 500));
         this.closeProgressModal();
 
         // Only show error if export failed
@@ -236,6 +240,8 @@
       // Perform export
       const exportResult = await this.electronAPI.exportToRepository(usersToExport, apiOptions);
 
+      // Wait a moment to show 100% progress
+      await new Promise(resolve => setTimeout(resolve, 500));
       this.closeProgressModal();
 
       if (exportResult.success) {
