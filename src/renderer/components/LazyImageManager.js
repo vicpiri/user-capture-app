@@ -1,0 +1,169 @@
+/**
+ * LazyImageManager - Manages lazy loading of images using IntersectionObserver
+ *
+ * Handles efficient image loading for better performance:
+ * - Uses IntersectionObserver API to load images only when visible
+ * - Configurable root margin and threshold
+ * - Automatic cleanup and re-initialization
+ * - Observes all images with 'lazy-image' class
+ *
+ * Features:
+ * - Lazy load images as they enter viewport
+ * - Reduce initial page load time
+ * - Improve performance for pages with many images
+ * - Clean up observers properly
+ */
+
+(function(global) {
+  'use strict';
+
+  class LazyImageManager {
+    constructor(config = {}) {
+      // Configuration
+      this.rootMargin = config.rootMargin || '50px'; // Start loading 50px before entering viewport
+      this.threshold = config.threshold || 0.01; // Trigger when 1% of image is visible
+      this.imageSelector = config.imageSelector || '.lazy-image';
+
+      // State
+      this.observer = null;
+    }
+
+    /**
+     * Initialize the IntersectionObserver
+     */
+    init() {
+      // Disconnect previous observer if exists
+      if (this.observer) {
+        this.disconnect();
+      }
+
+      // Create intersection observer for lazy loading
+      const options = {
+        root: null, // Use viewport as root
+        rootMargin: this.rootMargin,
+        threshold: this.threshold
+      };
+
+      this.observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            this.loadImage(entry.target, observer);
+          }
+        });
+      }, options);
+
+      console.log('[LazyImageManager] Initialized');
+    }
+
+    /**
+     * Load an image
+     * @param {HTMLImageElement} img - Image element to load
+     * @param {IntersectionObserver} observer - Observer instance
+     */
+    loadImage(img, observer) {
+      // Load the image
+      if (img.dataset.src) {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+        img.classList.remove('lazy-image');
+        img.classList.add('lazy-loaded');
+
+        // Stop observing this image
+        observer.unobserve(img);
+
+        console.log(`[LazyImageManager] Loaded image: ${img.src.substring(0, 50)}...`);
+      }
+    }
+
+    /**
+     * Observe all lazy images in the document
+     */
+    observeAll() {
+      if (!this.observer) {
+        this.init();
+      }
+
+      const lazyImages = document.querySelectorAll(this.imageSelector);
+      lazyImages.forEach(img => {
+        this.observer.observe(img);
+      });
+
+      console.log(`[LazyImageManager] Observing ${lazyImages.length} images`);
+    }
+
+    /**
+     * Observe a specific image
+     * @param {HTMLImageElement} img - Image element to observe
+     */
+    observe(img) {
+      if (!this.observer) {
+        this.init();
+      }
+
+      if (img && img.classList.contains('lazy-image')) {
+        this.observer.observe(img);
+      }
+    }
+
+    /**
+     * Unobserve a specific image
+     * @param {HTMLImageElement} img - Image element to unobserve
+     */
+    unobserve(img) {
+      if (this.observer && img) {
+        this.observer.unobserve(img);
+      }
+    }
+
+    /**
+     * Disconnect the observer
+     */
+    disconnect() {
+      if (this.observer) {
+        this.observer.disconnect();
+        console.log('[LazyImageManager] Disconnected');
+      }
+    }
+
+    /**
+     * Check if observer is active
+     * @returns {boolean} True if observer exists
+     */
+    isActive() {
+      return this.observer !== null;
+    }
+
+    /**
+     * Force load all lazy images immediately (without observing)
+     */
+    loadAllImmediate() {
+      const lazyImages = document.querySelectorAll(this.imageSelector);
+
+      lazyImages.forEach(img => {
+        if (img.dataset.src) {
+          img.src = img.dataset.src;
+          img.removeAttribute('data-src');
+          img.classList.remove('lazy-image');
+          img.classList.add('lazy-loaded');
+        }
+      });
+
+      console.log(`[LazyImageManager] Loaded ${lazyImages.length} images immediately`);
+    }
+
+    /**
+     * Reset - disconnect and clear observer
+     */
+    reset() {
+      this.disconnect();
+      this.observer = null;
+    }
+  }
+
+  // Export (for tests and browser)
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { LazyImageManager };
+  } else if (typeof window !== 'undefined') {
+    global.LazyImageManager = LazyImageManager;
+  }
+})(typeof window !== 'undefined' ? window : global);

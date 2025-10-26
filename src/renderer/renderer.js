@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager
 
 // Component instances
 let userRowRenderer = null;
@@ -9,6 +9,7 @@ let imageTagsManager = null;
 let selectionModeManager = null;
 let dragDropManager = null;
 let progressManager = null;
+let lazyImageManager = null;
 
 // State management
 let currentUsers = [];
@@ -23,7 +24,6 @@ let showRepositoryIndicators = false;  // Default to false to avoid blocking on 
 let isLoadingRepositoryPhotos = false;  // Track if repository photos are being loaded
 let isLoadingRepositoryIndicators = false;  // Track if repository indicators are being loaded
 let repositorySyncCompleted = false;  // Track if initial repository sync has completed
-let imageObserver = null;
 
 // Selection mode state (deprecated - now managed by SelectionModeManager)
 // Kept for backward compatibility during transition
@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize progress manager
   initializeProgressManager();
+
+  // Initialize lazy image manager
+  initializeLazyImageManager();
 
   initializeEventListeners();
   setupMenuListeners();
@@ -260,6 +263,13 @@ function initializeProgressManager() {
 
   progressManager.setupListener();
   console.log('[Renderer] Progress manager initialized');
+}
+
+// Initialize lazy image manager
+function initializeLazyImageManager() {
+  lazyImageManager = new LazyImageManager();
+  lazyImageManager.init();
+  console.log('[Renderer] Lazy image manager initialized');
 }
 
 // Event Listeners
@@ -1341,50 +1351,18 @@ function showUserImageModal(user, imageType = 'captured') {
   });
 }
 
-// Initialize lazy loading with IntersectionObserver
+// Initialize lazy loading with IntersectionObserver (delegated to LazyImageManager)
 function initLazyLoading() {
-  // Disconnect previous observer if exists
-  if (imageObserver) {
-    imageObserver.disconnect();
+  if (lazyImageManager) {
+    lazyImageManager.init();
   }
-
-  // Create intersection observer for lazy loading
-  const options = {
-    root: null, // Use viewport as root
-    rootMargin: '50px', // Start loading 50px before entering viewport
-    threshold: 0.01 // Trigger when 1% of image is visible
-  };
-
-  imageObserver = new IntersectionObserver((entries, observer) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const img = entry.target;
-
-        // Load the image
-        if (img.dataset.src) {
-          img.src = img.dataset.src;
-          img.removeAttribute('data-src');
-          img.classList.remove('lazy-image');
-          img.classList.add('lazy-loaded');
-
-          // Stop observing this image
-          observer.unobserve(img);
-        }
-      }
-    });
-  }, options);
 }
 
-// Observe all images with lazy-image class
+// Observe all images with lazy-image class (delegated to LazyImageManager)
 function observeLazyImages() {
-  if (!imageObserver) {
-    initLazyLoading();
+  if (lazyImageManager) {
+    lazyImageManager.observeAll();
   }
-
-  const lazyImages = document.querySelectorAll('.lazy-image');
-  lazyImages.forEach(img => {
-    imageObserver.observe(img);
-  });
 }
 
 // Selection mode handlers (delegated to SelectionModeManager)
