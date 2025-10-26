@@ -7,15 +7,18 @@
  * @extends BaseModal
  */
 
-// Dependencies: BaseModal (loaded from core in browser, or via require in Node.js)
-let BaseModal;
-if (typeof window !== 'undefined' && window.BaseModal) {
-  BaseModal = window.BaseModal;
-} else if (typeof require !== 'undefined') {
-  ({ BaseModal } = require('../../core/BaseModal'));
-}
+(function(global) {
+  'use strict';
 
-class ConfirmModal extends BaseModal {
+  // Dependencies: BaseModal (loaded from core in browser, or via require in Node.js)
+  let BaseModal;
+  if (typeof window !== 'undefined' && window.BaseModal) {
+    BaseModal = window.BaseModal;
+  } else if (typeof require !== 'undefined') {
+    ({ BaseModal } = require('../../core/BaseModal'));
+  }
+
+  class ConfirmModal extends BaseModal {
   constructor() {
     super('confirm-modal');
 
@@ -131,9 +134,10 @@ class ConfirmModal extends BaseModal {
   }
 }
 
-// Export (for tests and browser)
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ConfirmModal };
-} else if (typeof window !== 'undefined') {
-  window.ConfirmModal = ConfirmModal;
-}
+  // Export (for tests and browser)
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { ConfirmModal };
+  } else if (typeof window !== 'undefined') {
+    global.ConfirmModal = ConfirmModal;
+  }
+})(typeof window !== 'undefined' ? window : global);
