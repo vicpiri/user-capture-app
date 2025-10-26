@@ -273,8 +273,9 @@ function createGridItem(user) {
     // User has an image in repository - use lazy loading
     const img = document.createElement('img');
     img.className = 'grid-item-image lazy-image';
-    // Store the actual path in data attribute
-    img.dataset.src = `file://${user.repository_image_path}`;
+    // Store the actual path in data attribute with cache buster
+    const cacheBuster = `?t=${Date.now()}`;
+    img.dataset.src = `file://${user.repository_image_path}${cacheBuster}`;
     img.alt = `${user.first_name} ${user.last_name1}`;
 
     // Show placeholder initially

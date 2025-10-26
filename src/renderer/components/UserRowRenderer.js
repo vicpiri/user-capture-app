@@ -88,7 +88,9 @@ class UserRowRenderer {
     }
 
     if (user.image_path) {
-      return `<img data-src="file://${user.image_path}" class="photo-indicator lazy-image ${duplicateClass}" alt="Foto" style="background-color: #f0f0f0">`;
+      // Add timestamp to prevent browser caching
+      const cacheBuster = `?t=${Date.now()}`;
+      return `<img data-src="file://${user.image_path}${cacheBuster}" class="photo-indicator lazy-image ${duplicateClass}" alt="Foto" style="background-color: #f0f0f0">`;
     }
 
     return `<div class="photo-placeholder">
@@ -109,7 +111,9 @@ class UserRowRenderer {
     }
 
     if (user.repository_image_path) {
-      return `<img data-src="file://${user.repository_image_path}" class="repository-indicator lazy-image" alt="Foto Depósito" style="background-color: #f0f0f0">`;
+      // Add timestamp to prevent browser caching
+      const cacheBuster = `?t=${Date.now()}`;
+      return `<img data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="Foto Depósito" style="background-color: #f0f0f0">`;
     }
 
     if (this.config.isLoadingRepositoryPhotos) {

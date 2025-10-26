@@ -518,11 +518,13 @@ function initializeEventListeners() {
 
   // Listen for repository changes
   window.electronAPI.onRepositoryChanged(async () => {
+    console.log('[Repository] Repository changed, reloading users...');
     // Mark repository sync as completed
     repositorySyncCompleted = true;
     // Reload users to update repository indicators
     const filters = getCurrentFilters();
     await loadUsers(filters);
+    console.log('[Repository] Users reloaded after repository change');
   });
 
   // Keyboard navigation is now handled by KeyboardNavigationManager
