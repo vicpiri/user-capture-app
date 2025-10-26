@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager
 
 // Component instances
 let userRowRenderer = null;
@@ -8,6 +8,7 @@ let exportManager = null;
 let imageTagsManager = null;
 let selectionModeManager = null;
 let dragDropManager = null;
+let progressManager = null;
 
 // State management
 let currentUsers = [];
@@ -86,8 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize drag and drop manager
   initializeDragDropManager();
 
+  // Initialize progress manager
+  initializeProgressManager();
+
   initializeEventListeners();
-  setupProgressListener();
   setupMenuListeners();
   // Defer camera detection to not block UI
   setTimeout(() => detectAvailableCameras(), 100);
@@ -246,6 +249,17 @@ function initializeDragDropManager() {
 
   dragDropManager.enable();
   console.log('[Renderer] Drag drop manager initialized');
+}
+
+// Initialize progress manager
+function initializeProgressManager() {
+  progressManager = new ProgressManager({
+    modal: progressModal,
+    electronAPI: window.electronAPI
+  });
+
+  progressManager.setupListener();
+  console.log('[Renderer] Progress manager initialized');
 }
 
 // Event Listeners
@@ -887,42 +901,23 @@ async function showInfoModal(title, message) {
   searchInput.focus();
 }
 
-// Progress modal functions
-function setupProgressListener() {
-  window.electronAPI.onProgress((data) => {
-    updateProgress(data.percentage, data.message, data.details);
-  });
-}
-
+// Progress modal functions (delegated to ProgressManager)
 function showProgressModal(title = 'Procesando...', message = 'Por favor, espera...') {
-  document.getElementById('progress-title').textContent = title;
-  document.getElementById('progress-message').textContent = message;
-  document.getElementById('progress-bar').style.width = '0%';
-  document.getElementById('progress-percentage').textContent = '0%';
-  document.getElementById('progress-details').textContent = '';
-  progressModal.classList.add('show');
+  if (progressManager) {
+    progressManager.show(title, message);
+  }
 }
 
 function updateProgress(percentage, message = '', details = '') {
-  const progressBar = document.getElementById('progress-bar');
-  const progressPercentage = document.getElementById('progress-percentage');
-  const progressMessage = document.getElementById('progress-message');
-  const progressDetails = document.getElementById('progress-details');
-
-  progressBar.style.width = percentage + '%';
-  progressPercentage.textContent = Math.round(percentage) + '%';
-
-  if (message) {
-    progressMessage.textContent = message;
-  }
-
-  if (details) {
-    progressDetails.textContent = details;
+  if (progressManager) {
+    progressManager.update(percentage, message, details);
   }
 }
 
 function closeProgressModal() {
-  progressModal.classList.remove('show');
+  if (progressManager) {
+    progressManager.close();
+  }
 }
 
 // Menu listeners
