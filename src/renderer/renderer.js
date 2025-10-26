@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager
 
 // Component instances
 let userRowRenderer = null;
@@ -7,6 +7,7 @@ let imageGridManager = null;
 let exportManager = null;
 let imageTagsManager = null;
 let selectionModeManager = null;
+let dragDropManager = null;
 
 // State management
 let currentUsers = [];
@@ -81,6 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize selection mode manager
   initializeSelectionModeManager();
+
+  // Initialize drag and drop manager
+  initializeDragDropManager();
 
   initializeEventListeners();
   setupProgressListener();
@@ -232,6 +236,18 @@ function initializeSelectionModeManager() {
   console.log('[Renderer] Selection mode manager initialized');
 }
 
+// Initialize drag and drop manager
+function initializeDragDropManager() {
+  dragDropManager = new DragDropManager({
+    dropZone: document.querySelector('.image-container'),
+    showInfoModal: showInfoModal,
+    moveImageToIngest: (path) => window.electronAPI.moveImageToIngest(path)
+  });
+
+  dragDropManager.enable();
+  console.log('[Renderer] Drag drop manager initialized');
+}
+
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
@@ -317,9 +333,6 @@ function initializeEventListeners() {
     const filters = getCurrentFilters();
     await loadUsers(filters);
   });
-
-  // Drag and drop for image preview
-  setupDragAndDrop();
 
   // Keyboard navigation for images and users
   document.addEventListener('keydown', (event) => {
@@ -1198,64 +1211,6 @@ async function detectAvailableCameras() {
       console.error('Error al detectar cámaras:', err);
     }
   }
-}
-
-// Setup drag and drop for image preview
-function setupDragAndDrop() {
-  const imageContainer = document.querySelector('.image-container');
-
-  // Prevent default behavior for drag events
-  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    imageContainer.addEventListener(eventName, preventDefaults, false);
-  });
-
-  function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  // Highlight drop area when dragging over
-  ['dragenter', 'dragover'].forEach(eventName => {
-    imageContainer.addEventListener(eventName, () => {
-      imageContainer.classList.add('drag-over');
-    }, false);
-  });
-
-  ['dragleave', 'drop'].forEach(eventName => {
-    imageContainer.addEventListener(eventName, () => {
-      imageContainer.classList.remove('drag-over');
-    }, false);
-  });
-
-  // Handle drop
-  imageContainer.addEventListener('drop', async (e) => {
-    const files = Array.from(e.dataTransfer.files);
-
-    // Filter only image files (jpg, jpeg)
-    const imageFiles = files.filter(file => {
-      const ext = file.name.toLowerCase();
-      return ext.endsWith('.jpg') || ext.endsWith('.jpeg');
-    });
-
-    if (imageFiles.length === 0) {
-      showInfoModal('Aviso', 'Por favor, arrastra solo archivos de imagen JPG/JPEG');
-      return;
-    }
-
-    // Process each image file
-    for (const file of imageFiles) {
-      const result = await window.electronAPI.moveImageToIngest(file.path);
-      if (!result.success) {
-        showInfoModal('Error', `Error al mover ${file.name}: ${result.error}`);
-      }
-    }
-
-    // Show success message
-    if (imageFiles.length > 0) {
-      // Images will be detected automatically by the folder watcher
-      console.log(`${imageFiles.length} imagen(es) movida(s) a la carpeta ingest`);
-    }
-  }, false);
 }
 
 // Update XML file
