@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager
 
 // Component instances
 let userRowRenderer = null;
@@ -60,6 +60,7 @@ let confirmModalInstance = null;
 let infoModalInstance = null;
 let exportOptionsModalInstance = null;
 let addTagModalInstance = null;
+let userImageModalInstance = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -117,6 +118,9 @@ function initializeModals() {
 
   addTagModalInstance = new AddTagModal();
   addTagModalInstance.init();
+
+  userImageModalInstance = new UserImageModal();
+  // UserImageModal initializes itself in constructor
 
   console.log('[Renderer] Modal instances initialized');
 }
@@ -1323,32 +1327,11 @@ async function handleShowTaggedImages() {
   }
 }
 
-// Show user image modal
+// Show user image modal (delegated to UserImageModal)
 function showUserImageModal(user, imageType = 'captured') {
-  const userImageModal = document.getElementById('user-image-modal');
-  const userImageModalTitle = document.getElementById('user-image-modal-title');
-  const userImagePreview = document.getElementById('user-image-preview');
-  const userImageCloseBtn = document.getElementById('user-image-close-btn');
-
-  // Set title with user's name and image type
-  const fullName = `${user.first_name} ${user.last_name1} ${user.last_name2 || ''}`.trim();
-  const imageLabel = imageType === 'repository' ? ' - Depósito' : '';
-  userImageModalTitle.textContent = fullName + imageLabel;
-
-  // Set image based on type
-  const imagePath = imageType === 'repository' ? user.repository_image_path : user.image_path;
-  userImagePreview.src = `file://${imagePath}`;
-
-  // Show modal
-  userImageModal.classList.add('show');
-
-  // Setup close button
-  const newCloseBtn = userImageCloseBtn.cloneNode(true);
-  userImageCloseBtn.parentNode.replaceChild(newCloseBtn, userImageCloseBtn);
-
-  newCloseBtn.addEventListener('click', () => {
-    userImageModal.classList.remove('show');
-  });
+  if (userImageModalInstance) {
+    userImageModalInstance.show(user, imageType);
+  }
 }
 
 // Initialize lazy loading with IntersectionObserver (delegated to LazyImageManager)
