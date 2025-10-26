@@ -8,9 +8,18 @@
  * @extends BaseModal
  */
 
-const { BaseModal } = require('../../core/BaseModal');
+(function(global) {
+  'use strict';
 
-class ExportOptionsModal extends BaseModal {
+  // Dependencies: BaseModal (loaded from core in browser, or via require in Node.js)
+  let BaseModal;
+  if (typeof window !== 'undefined' && window.BaseModal) {
+    BaseModal = window.BaseModal;
+  } else if (typeof require !== 'undefined') {
+    ({ BaseModal } = require('../../core/BaseModal'));
+  }
+
+  class ExportOptionsModal extends BaseModal {
   constructor() {
     super('export-options-modal');
 
@@ -194,7 +203,10 @@ class ExportOptionsModal extends BaseModal {
   }
 }
 
-// Export
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ExportOptionsModal };
-}
+  // Export (for tests and browser)
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { ExportOptionsModal };
+  } else if (typeof window !== 'undefined') {
+    global.ExportOptionsModal = ExportOptionsModal;
+  }
+})(typeof window !== 'undefined' ? window : global);
