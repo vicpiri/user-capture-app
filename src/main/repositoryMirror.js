@@ -1,12 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
+const chokidar = require('chokidar');
 
 /**
  * Repository Mirror Manager
  *
  * Creates a local mirror of the repository folder to avoid blocking on network drives.
  * Synchronizes files in small batches to keep the UI responsive.
+ * Watches for changes in the repository and automatically syncs them.
  */
 class RepositoryMirror extends EventEmitter {
   constructor(repositoryPath, mirrorPath, logger) {
@@ -22,6 +24,12 @@ class RepositoryMirror extends EventEmitter {
     this.isSyncing = false;
     this.syncAborted = false;
     this.lastSyncTime = null;
+
+    // Watch state
+    this.watcher = null;
+    this.watchEnabled = false;
+    this.syncDebounceTimer = null;
+    this.SYNC_DEBOUNCE_DELAY = 2000; // Wait 2 seconds after last change before syncing
 
     // Batch configuration
     this.BATCH_SIZE = 50;  // Process 50 files at a time
@@ -375,8 +383,141 @@ class RepositoryMirror extends EventEmitter {
     return {
       totalFiles: this.mirrorIndex.size,
       isSyncing: this.isSyncing,
-      lastSyncTime: this.lastSyncTime
+      lastSyncTime: this.lastSyncTime,
+      isWatching: this.watchEnabled
     };
+  }
+
+  /**
+   * Start watching the repository folder for changes
+   */
+  async startWatch() {
+    if (this.watchEnabled) {
+      this.logger.warning('Repository watch already enabled');
+      return true;
+    }
+
+    try {
+      // Check if repository path exists
+      const exists = await fs.promises.access(this.repositoryPath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (!exists) {
+        this.logger.warning('Repository path does not exist, cannot start watch');
+        return false;
+      }
+
+      this.logger.info('Starting repository folder watch...');
+
+      // Create chokidar watcher
+      this.watcher = chokidar.watch(this.repositoryPath, {
+        persistent: true,
+        ignoreInitial: true, // Don't trigger events for existing files
+        awaitWriteFinish: {
+          stabilityThreshold: 500, // Wait 500ms for file to finish writing
+          pollInterval: 100
+        },
+        // Only watch jpg/jpeg files
+        ignored: (filePath) => {
+          const ext = path.extname(filePath).toLowerCase();
+          return ext !== '.jpg' && ext !== '.jpeg';
+        }
+      });
+
+      // File added
+      this.watcher.on('add', (filePath) => {
+        const filename = path.basename(filePath);
+        this.logger.info(`Repository file added: ${filename}`);
+        this.emit('repository-changed', { type: 'add', filename });
+        this.scheduleDebouncedSync();
+      });
+
+      // File changed
+      this.watcher.on('change', (filePath) => {
+        const filename = path.basename(filePath);
+        this.logger.info(`Repository file changed: ${filename}`);
+        this.emit('repository-changed', { type: 'change', filename });
+        this.scheduleDebouncedSync();
+      });
+
+      // File removed
+      this.watcher.on('unlink', (filePath) => {
+        const filename = path.basename(filePath);
+        this.logger.info(`Repository file removed: ${filename}`);
+        this.emit('repository-changed', { type: 'unlink', filename });
+        this.scheduleDebouncedSync();
+      });
+
+      // Error handling
+      this.watcher.on('error', (error) => {
+        this.logger.error('Repository watcher error:', error);
+      });
+
+      // Wait for watcher to be ready
+      await new Promise((resolve) => {
+        this.watcher.on('ready', () => {
+          this.watchEnabled = true;
+          this.logger.success('Repository folder watch started');
+          resolve();
+        });
+      });
+
+      return true;
+    } catch (error) {
+      this.logger.error('Error starting repository watch:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Schedule a debounced sync after file changes
+   */
+  scheduleDebouncedSync() {
+    // Clear existing timer
+    if (this.syncDebounceTimer) {
+      clearTimeout(this.syncDebounceTimer);
+    }
+
+    // Schedule new sync after debounce delay
+    this.syncDebounceTimer = setTimeout(() => {
+      this.syncDebounceTimer = null;
+
+      // Only sync if not already syncing
+      if (!this.isSyncing) {
+        this.logger.info('Auto-syncing repository after detected changes...');
+        this.startSync();
+      } else {
+        this.logger.info('Sync already in progress, skipping auto-sync');
+      }
+    }, this.SYNC_DEBOUNCE_DELAY);
+  }
+
+  /**
+   * Stop watching the repository folder
+   */
+  stopWatch() {
+    if (this.watcher) {
+      this.logger.info('Stopping repository folder watch...');
+      this.watcher.close();
+      this.watcher = null;
+      this.watchEnabled = false;
+
+      // Clear any pending debounced sync
+      if (this.syncDebounceTimer) {
+        clearTimeout(this.syncDebounceTimer);
+        this.syncDebounceTimer = null;
+      }
+
+      this.logger.success('Repository folder watch stopped');
+    }
+  }
+
+  /**
+   * Check if watching is enabled
+   */
+  isWatching() {
+    return this.watchEnabled;
   }
 }
 
