@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getUsers: (filters, options) => ipcRenderer.invoke('get-users', filters, options),
   getGroups: () => ipcRenderer.invoke('get-groups'),
   loadRepositoryImages: (users) => ipcRenderer.invoke('load-repository-images', users),
+  getSyncStatus: () => ipcRenderer.invoke('get-sync-status'),
 
   // Image management
   getImages: () => ipcRenderer.invoke('get-images'),

@@ -35,20 +35,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
   console.log(`[SYNC] loadUsers() took ${(performance.now() - usersStart).toFixed(2)}ms`);
 
-  // Mark as syncing to show spinners while mirror initializes
-  isSyncing = true;
-  updateSyncStatus('Cargando imágenes del depósito...');
+  // Check current sync status
+  console.log('[SYNC] Checking initial sync status...');
+  const syncStatusStart = performance.now();
+  const syncStatus = await window.electronAPI.getSyncStatus();
+  console.log(`[SYNC] getSyncStatus() took ${(performance.now() - syncStatusStart).toFixed(2)}ms`, syncStatus);
 
-  initLazyLoading();
-  displayGrid();
-  console.log(`[SYNC] Total init time: ${(performance.now() - startTime).toFixed(2)}ms`);
-
-  console.log('[SYNC] Waiting for initial mirror sync to complete...');
-
-  // Give browser a chance to paint the grid with spinners before loading repository data
-  if (isSyncing) {
-    console.log('[SYNC] Waiting for browser to paint before loading data...');
+  if (syncStatus.success) {
+    // If sync has already completed, load repository data immediately
+    if (syncStatus.hasCompleted && !syncStatus.isSyncing) {
+      console.log('[SYNC] Sync already completed, loading repository data immediately...');
+      initialSyncCompleted = true;
+      isSyncing = true; // Set to true temporarily while loading
+      updateSyncStatus('Cargando imágenes del depósito...');
+      initLazyLoading();
+      displayGrid();
+      await loadRepositoryDataInBackground(allUsers);
+    } else {
+      // Sync is still in progress, show spinners
+      console.log('[SYNC] Sync still in progress, showing spinners...');
+      isSyncing = true;
+      updateSyncStatus('Cargando imágenes del depósito...');
+      initLazyLoading();
+      displayGrid();
+    }
+  } else {
+    // Couldn't get sync status, assume syncing
+    console.log('[SYNC] Could not get sync status, assuming syncing...');
+    isSyncing = true;
+    updateSyncStatus('Cargando imágenes del depósito...');
+    initLazyLoading();
+    displayGrid();
   }
+
+  console.log(`[SYNC] Total init time: ${(performance.now() - startTime).toFixed(2)}ms`);
 
   // Add event listener for group filter
   groupFilter.addEventListener('change', async () => {
