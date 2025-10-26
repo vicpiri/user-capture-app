@@ -1,11 +1,12 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager
 
 // Component instances
 let userRowRenderer = null;
 let imageGridManager = null;
 let exportManager = null;
 let imageTagsManager = null;
+let selectionModeManager = null;
 
 // State management
 let currentUsers = [];
@@ -22,7 +23,8 @@ let isLoadingRepositoryIndicators = false;  // Track if repository indicators ar
 let repositorySyncCompleted = false;  // Track if initial repository sync has completed
 let imageObserver = null;
 
-// Selection mode state
+// Selection mode state (deprecated - now managed by SelectionModeManager)
+// Kept for backward compatibility during transition
 let selectionMode = false;
 let selectedUsers = new Set(); // Store selected user IDs
 
@@ -76,6 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize image tags manager
   initializeImageTagsManager();
+
+  // Initialize selection mode manager
+  initializeSelectionModeManager();
 
   initializeEventListeners();
   setupProgressListener();
@@ -202,6 +207,29 @@ function initializeImageTagsManager() {
   });
 
   console.log('[Renderer] Image tags manager initialized');
+}
+
+// Initialize selection mode manager
+function initializeSelectionModeManager() {
+  selectionModeManager = new SelectionModeManager({
+    onSelectionChange: (isActive, selected) => {
+      // Sync with global state for backward compatibility
+      selectionMode = isActive;
+      selectedUsers = selected;
+
+      // Update user row renderer state
+      if (userRowRenderer) {
+        userRowRenderer.selectionMode = isActive;
+        userRowRenderer.selectedUsers = selected;
+      }
+    },
+    getDisplayedUsers: () => displayedUsers,
+    reRenderUsers: () => displayUsers(currentUsers, allUsers),
+    selectedUserInfo: selectedUserInfo,
+    tableHeader: document.querySelector('.user-table thead tr')
+  });
+
+  console.log('[Renderer] Selection mode manager initialized');
 }
 
 // Event Listeners
@@ -601,9 +629,14 @@ function selectUserRow(row, user) {
   row.classList.add('selected');
   selectedUser = user;
 
-  // Update selected user info
-  const fullName = `${user.first_name} ${user.last_name1} ${user.last_name2 || ''}`;
-  selectedUserInfo.textContent = fullName;
+  // Update selected user info in selection mode manager
+  if (selectionModeManager) {
+    selectionModeManager.setCurrentSelectedUser(user);
+  } else {
+    // Fallback
+    const fullName = `${user.first_name} ${user.last_name1} ${user.last_name2 || ''}`;
+    selectedUserInfo.textContent = fullName;
+  }
 
   // Enable link button if image is selected
   updateLinkButtonState();
@@ -1404,146 +1437,39 @@ function observeLazyImages() {
   });
 }
 
-// Context menu functionality
+// Selection mode handlers (delegated to SelectionModeManager)
 function showContextMenu(event, user, row) {
-  // Remove any existing context menu
-  const existingMenu = document.querySelector('.context-menu');
-  if (existingMenu) {
-    existingMenu.remove();
+  if (selectionModeManager) {
+    selectionModeManager.showContextMenu(event, user);
   }
-
-  // Create context menu
-  const menu = document.createElement('div');
-  menu.className = 'context-menu';
-  menu.style.position = 'fixed';
-  menu.style.left = `${event.clientX}px`;
-  menu.style.top = `${event.clientY}px`;
-
-  // If not in selection mode, show "Seleccionar" option
-  if (!selectionMode) {
-    const selectOption = document.createElement('div');
-    selectOption.className = 'context-menu-item';
-    selectOption.textContent = 'Seleccionar';
-    selectOption.addEventListener('click', () => {
-      enableSelectionMode(user.id);
-      menu.remove();
-    });
-    menu.appendChild(selectOption);
-  } else {
-    // If in selection mode, show "Deseleccionar todo" option
-    const deselectAllOption = document.createElement('div');
-    deselectAllOption.className = 'context-menu-item';
-    deselectAllOption.textContent = 'Deseleccionar todo';
-    deselectAllOption.addEventListener('click', () => {
-      disableSelectionMode();
-      menu.remove();
-    });
-    menu.appendChild(deselectAllOption);
-  }
-
-  document.body.appendChild(menu);
-
-  // Close menu when clicking outside
-  const closeMenu = (e) => {
-    if (!menu.contains(e.target)) {
-      menu.remove();
-      document.removeEventListener('click', closeMenu);
-    }
-  };
-
-  // Use setTimeout to avoid immediate removal
-  setTimeout(() => {
-    document.addEventListener('click', closeMenu);
-  }, 0);
 }
 
-// Enable selection mode
 function enableSelectionMode(initialUserId) {
-  selectionMode = true;
-  selectedUsers.clear();
-
-  // Add the initial user to selection
-  if (initialUserId) {
-    selectedUsers.add(initialUserId);
+  if (selectionModeManager) {
+    selectionModeManager.enable(initialUserId);
   }
-
-  // Update table header to include checkbox column
-  updateTableHeader();
-
-  // Re-render users to show checkboxes
-  displayUsers(currentUsers, allUsers);
 }
 
-// Disable selection mode
 function disableSelectionMode() {
-  selectionMode = false;
-  selectedUsers.clear();
-
-  // Update table header to remove checkbox column
-  updateTableHeader();
-
-  // Re-render users to hide checkboxes
-  displayUsers(currentUsers, allUsers);
+  if (selectionModeManager) {
+    selectionModeManager.disable();
+  }
 }
 
-// Toggle user selection
 function toggleUserSelection(userId, isChecked) {
-  if (isChecked) {
-    selectedUsers.add(userId);
-  } else {
-    selectedUsers.delete(userId);
-  }
-
-  // Update selection info
-  updateSelectionInfo();
-
-  // Exit selection mode if no users are selected
-  if (selectedUsers.size === 0) {
-    disableSelectionMode();
+  if (selectionModeManager) {
+    selectionModeManager.toggleSelection(userId, isChecked);
   }
 }
 
-// Update selection info display
 function updateSelectionInfo() {
-  if (selectionMode && selectedUsers.size > 0) {
-    selectedUserInfo.textContent = `${selectedUsers.size} usuario(s) seleccionado(s)`;
-  } else if (selectedUser) {
-    const fullName = `${selectedUser.first_name} ${selectedUser.last_name1} ${selectedUser.last_name2 || ''}`;
-    selectedUserInfo.textContent = fullName;
-  } else {
-    selectedUserInfo.textContent = '-';
+  if (selectionModeManager) {
+    selectionModeManager.updateSelectionInfo();
   }
 }
 
-// Update table header based on selection mode
 function updateTableHeader() {
-  const thead = document.querySelector('.user-table thead tr');
-  const existingCheckboxTh = thead.querySelector('.checkbox-header');
-
-  if (selectionMode && !existingCheckboxTh) {
-    // Add checkbox column header
-    const checkboxTh = document.createElement('th');
-    checkboxTh.className = 'checkbox-header';
-    checkboxTh.innerHTML = `<input type="checkbox" id="select-all-checkbox">`;
-    thead.insertBefore(checkboxTh, thead.firstChild);
-
-    // Handle select all checkbox
-    const selectAllCheckbox = document.getElementById('select-all-checkbox');
-    selectAllCheckbox.addEventListener('change', (e) => {
-      const isChecked = e.target.checked;
-      if (isChecked) {
-        // Select all displayed users
-        displayedUsers.forEach(user => selectedUsers.add(user.id));
-      } else {
-        // Deselect all
-        selectedUsers.clear();
-      }
-      // Re-render to update checkboxes
-      displayUsers(currentUsers, allUsers);
-      updateSelectionInfo();
-    });
-  } else if (!selectionMode && existingCheckboxTh) {
-    // Remove checkbox column header
-    existingCheckboxTh.remove();
+  if (selectionModeManager) {
+    selectionModeManager.updateTableHeader();
   }
 }
