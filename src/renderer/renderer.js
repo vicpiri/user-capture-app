@@ -1,9 +1,10 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal
 
 // Component instances
 let userRowRenderer = null;
 let imageGridManager = null;
+let exportManager = null;
 
 // State management
 let currentUsers = [];
@@ -52,6 +53,7 @@ const progressModal = document.getElementById('progress-modal');
 let newProjectModalInstance = null;
 let confirmModalInstance = null;
 let infoModalInstance = null;
+let exportOptionsModalInstance = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,6 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize image grid manager
   initializeImageGridManager();
+
+  // Initialize export manager
+  initializeExportManager();
 
   initializeEventListeners();
   setupProgressListener();
@@ -86,6 +91,9 @@ function initializeModals() {
 
   infoModalInstance = new InfoModal();
   infoModalInstance.init();
+
+  exportOptionsModalInstance = new ExportOptionsModal();
+  exportOptionsModalInstance.init();
 
   console.log('[Renderer] Modal instances initialized');
 }
@@ -143,6 +151,31 @@ function initializeImageGridManager() {
   });
 
   console.log('[Renderer] Image grid manager initialized');
+}
+
+// Initialize export manager
+function initializeExportManager() {
+  exportManager = new ExportManager({
+    exportOptionsModal: exportOptionsModalInstance,
+    showProgressModal: showProgressModal,
+    closeProgressModal: closeProgressModal,
+    showInfoModal: showInfoModal,
+    showOpenDialog: (options) => window.electronAPI.showOpenDialog(options),
+    getProjectOpen: () => projectOpen,
+    getSelectionMode: () => selectionMode,
+    getSelectedUsers: () => selectedUsers,
+    getDisplayedUsers: () => displayedUsers,
+    getCurrentUsers: () => currentUsers,
+    getShowDuplicatesOnly: () => showDuplicatesOnly,
+    getAllUsers: () => allUsers,
+    onExportComplete: async () => {
+      // Reload users to refresh the repository check indicators
+      await loadUsers(getCurrentFilters());
+    },
+    electronAPI: window.electronAPI
+  });
+
+  console.log('[Renderer] Export manager initialized');
 }
 
 // Event Listeners
@@ -1045,297 +1078,29 @@ async function handleImportImagesId() {
 }
 
 // Helper function to get users to export based on selection or current view
-function getUsersToExport() {
-  // If in selection mode and there are selected users, export only those
-  if (selectionMode && selectedUsers.size > 0) {
-    return displayedUsers.filter(user => selectedUsers.has(user.id));
-  }
-
-  // Otherwise, use current view
-  let usersToExport = currentUsers;
-
-  // If showing duplicates only, get all duplicates from database
-  if (showDuplicatesOnly && allUsers) {
-    const imageCount = {};
-    allUsers.forEach(user => {
-      if (user.image_path) {
-        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
-      }
-    });
-    usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
-  }
-
-  return usersToExport;
-}
-
-// Export CSV
+// Export handlers (delegated to ExportManager)
 async function handleExportCSV() {
-  if (!projectOpen) {
-    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
-    return;
-  }
-
-  // Get users to export based on selection or current view
-  const usersToExport = getUsersToExport();
-
-  const result = await window.electronAPI.showOpenDialog({
-    properties: ['openDirectory'],
-    title: 'Seleccionar carpeta para guardar el CSV'
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    const folderPath = result.filePaths[0];
-    const exportResult = await window.electronAPI.exportCSV(folderPath, usersToExport);
-
-    if (exportResult.success) {
-      let message = `CSV exportado correctamente: ${exportResult.filename}\n\n`;
-      message += `${exportResult.exported} usuarios exportados`;
-
-      if (exportResult.ignored > 0) {
-        message += `\n${exportResult.ignored} usuarios ignorados (sin imagen en el depósito)`;
-      }
-
-      showInfoModal('Exportación exitosa', message);
-    } else {
-      showInfoModal('Error', 'Error al exportar el CSV: ' + exportResult.error);
-    }
+  if (exportManager) {
+    await exportManager.exportCSV();
   }
 }
 
-// Export images
 async function handleExportImages() {
-  if (!projectOpen) {
-    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
-    return;
-  }
-
-  // Get users to export based on selection or current view
-  const usersToExport = getUsersToExport();
-
-  const result = await window.electronAPI.showOpenDialog({
-    properties: ['openDirectory'],
-    title: 'Seleccionar carpeta para exportar las imágenes'
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    const folderPath = result.filePaths[0];
-
-    // Show export options modal
-    showExportOptionsModal(folderPath, usersToExport);
+  if (exportManager) {
+    await exportManager.exportImagesByID();
   }
 }
 
-// Export images by name
 async function handleExportImagesName() {
-  if (!projectOpen) {
-    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
-    return;
-  }
-
-  // Get users to export based on selection or current view
-  const usersToExport = getUsersToExport();
-
-  const result = await window.electronAPI.showOpenDialog({
-    properties: ['openDirectory'],
-    title: 'Seleccionar carpeta para exportar las imágenes'
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    const folderPath = result.filePaths[0];
-
-    // Show export options modal
-    showExportOptionsModalName(folderPath, usersToExport);
+  if (exportManager) {
+    await exportManager.exportImagesByName();
   }
 }
 
-// Show export options modal
-function showExportOptionsModal(folderPath, usersToExport) {
-  const exportOptionsModal = document.getElementById('export-options-modal');
-  const exportConfirmBtn = document.getElementById('export-confirm-btn');
-  const exportCancelBtn = document.getElementById('export-cancel-btn');
-
-  // Setup event listeners (remove old ones first)
-  const newExportConfirmBtn = exportConfirmBtn.cloneNode(true);
-  exportConfirmBtn.parentNode.replaceChild(newExportConfirmBtn, exportConfirmBtn);
-
-  const newExportCancelBtn = exportCancelBtn.cloneNode(true);
-  exportCancelBtn.parentNode.replaceChild(newExportCancelBtn, exportCancelBtn);
-
-  // Confirm button handler
-  newExportConfirmBtn.addEventListener('click', async () => {
-    // Collect export options
-    const options = {
-      copyOriginal: document.getElementById('export-copy-original').checked,
-      resizeEnabled: document.getElementById('export-resize-enabled').checked,
-      boxSize: parseInt(document.getElementById('export-box-size').value),
-      maxSizeKB: parseInt(document.getElementById('export-max-size').value)
-    };
-
-    // Close modal
-    exportOptionsModal.classList.remove('show');
-
-    // Show progress modal
-    showProgressModal('Exportando Imágenes', 'Procesando archivos...');
-
-    // Perform export
-    const exportResult = await window.electronAPI.exportImages(folderPath, usersToExport, options);
-
-    closeProgressModal();
-
-    // Only show error if export failed
-    if (!exportResult.success) {
-      showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
-    }
-  });
-
-  // Cancel button handler
-  newExportCancelBtn.addEventListener('click', () => {
-    exportOptionsModal.classList.remove('show');
-  });
-
-  // Reset to default state (copy original selected)
-  document.getElementById('export-copy-original').checked = true;
-  document.getElementById('export-resize-enabled').checked = false;
-
-  // Show modal
-  exportOptionsModal.classList.add('show');
-}
-
-// Export to repository
 async function handleExportToRepository() {
-  if (!projectOpen) {
-    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
-    return;
+  if (exportManager) {
+    await exportManager.exportToRepository();
   }
-
-  // Get users to export based on selection or current view
-  const usersToExport = getUsersToExport();
-
-  // Show export options modal
-  showExportToRepositoryModal(usersToExport);
-}
-
-// Show export to repository options modal
-function showExportToRepositoryModal(usersToExport) {
-  const exportOptionsModal = document.getElementById('export-options-modal');
-  const exportConfirmBtn = document.getElementById('export-confirm-btn');
-  const exportCancelBtn = document.getElementById('export-cancel-btn');
-
-  // Setup event listeners (remove old ones first)
-  const newExportConfirmBtn = exportConfirmBtn.cloneNode(true);
-  exportConfirmBtn.parentNode.replaceChild(newExportConfirmBtn, exportConfirmBtn);
-
-  const newExportCancelBtn = exportCancelBtn.cloneNode(true);
-  exportCancelBtn.parentNode.replaceChild(newExportCancelBtn, exportCancelBtn);
-
-  // Confirm button handler
-  newExportConfirmBtn.addEventListener('click', async () => {
-    // Collect export options
-    const options = {
-      copyOriginal: document.getElementById('export-copy-original').checked,
-      resizeEnabled: document.getElementById('export-resize-enabled').checked,
-      boxSize: parseInt(document.getElementById('export-box-size').value),
-      maxSizeKB: parseInt(document.getElementById('export-max-size').value)
-    };
-
-    // Close modal
-    exportOptionsModal.classList.remove('show');
-
-    // Show progress modal
-    showProgressModal('Exportando al Depósito', 'Procesando archivos...');
-
-    // Perform export
-    const exportResult = await window.electronAPI.exportToRepository(usersToExport, options);
-
-    closeProgressModal();
-
-    if (exportResult.success) {
-      const results = exportResult.results;
-      let message = `Exportación completada:\n\n`;
-      message += `Total de usuarios con imágenes: ${results.total}\n`;
-      message += `Imágenes exportadas correctamente: ${results.exported}\n`;
-
-      if (results.errors.length > 0) {
-        message += `\nErrores (${results.errors.length}):\n`;
-        message += results.errors.slice(0, 5).map(e => `${e.user}: ${e.error}`).join('\n');
-        if (results.errors.length > 5) {
-          message += `\n... y ${results.errors.length - 5} más`;
-        }
-      }
-
-      showInfoModal('Exportación completada', message, async () => {
-        // Reload users to refresh the repository check indicators
-        await loadUsers(getCurrentFilters());
-      });
-    } else {
-      showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
-    }
-  });
-
-  // Cancel button handler
-  newExportCancelBtn.addEventListener('click', () => {
-    exportOptionsModal.classList.remove('show');
-  });
-
-  // Reset to default state (copy original selected)
-  document.getElementById('export-copy-original').checked = true;
-  document.getElementById('export-resize-enabled').checked = false;
-
-  // Show modal
-  exportOptionsModal.classList.add('show');
-}
-
-// Show export options modal for name-based export
-function showExportOptionsModalName(folderPath, usersToExport) {
-  const exportOptionsModal = document.getElementById('export-options-modal');
-  const exportConfirmBtn = document.getElementById('export-confirm-btn');
-  const exportCancelBtn = document.getElementById('export-cancel-btn');
-
-  // Setup event listeners (remove old ones first)
-  const newExportConfirmBtn = exportConfirmBtn.cloneNode(true);
-  exportConfirmBtn.parentNode.replaceChild(newExportConfirmBtn, exportConfirmBtn);
-
-  const newExportCancelBtn = exportCancelBtn.cloneNode(true);
-  exportCancelBtn.parentNode.replaceChild(newExportCancelBtn, exportCancelBtn);
-
-  // Confirm button handler
-  newExportConfirmBtn.addEventListener('click', async () => {
-    // Collect export options
-    const options = {
-      copyOriginal: document.getElementById('export-copy-original').checked,
-      resizeEnabled: document.getElementById('export-resize-enabled').checked,
-      boxSize: parseInt(document.getElementById('export-box-size').value),
-      maxSizeKB: parseInt(document.getElementById('export-max-size').value)
-    };
-
-    // Close modal
-    exportOptionsModal.classList.remove('show');
-
-    // Show progress modal
-    showProgressModal('Exportando Imágenes', 'Procesando archivos...');
-
-    // Perform export
-    const exportResult = await window.electronAPI.exportImagesName(folderPath, usersToExport, options);
-
-    closeProgressModal();
-
-    // Only show error if export failed
-    if (!exportResult.success) {
-      showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
-    }
-  });
-
-  // Cancel button handler
-  newExportCancelBtn.addEventListener('click', () => {
-    exportOptionsModal.classList.remove('show');
-  });
-
-  // Reset to default state (copy original selected)
-  document.getElementById('export-copy-original').checked = true;
-  document.getElementById('export-resize-enabled').checked = false;
-
-  // Show modal
-  exportOptionsModal.classList.add('show');
 }
 
 // Detect available cameras
