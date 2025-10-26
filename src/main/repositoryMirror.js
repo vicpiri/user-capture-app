@@ -30,6 +30,9 @@ class RepositoryMirror extends EventEmitter {
     this.watchEnabled = false;
     this.syncDebounceTimer = null;
     this.SYNC_DEBOUNCE_DELAY = 2000; // Wait 2 seconds after last change before syncing
+    this.forceResyncFiles = new Set(); // Files that must be re-synced regardless of metadata
+    this.pollingTimer = null; // Periodic polling timer
+    this.POLLING_INTERVAL = 5000; // Check for changes every 5 seconds
 
     // Batch configuration
     this.BATCH_SIZE = 50;  // Process 50 files at a time
@@ -118,6 +121,7 @@ class RepositoryMirror extends EventEmitter {
       }
 
       this.logger.info('Starting repository sync...');
+      this.logger.info(`Force-resync files: ${this.forceResyncFiles.size > 0 ? Array.from(this.forceResyncFiles).join(', ') : 'none'}`);
 
       // Phase 1: Discover files in repository (non-blocking)
       const repositoryFiles = await this.discoverRepositoryFiles();
@@ -225,6 +229,13 @@ class RepositoryMirror extends EventEmitter {
         const filenameLower = file.toLowerCase();
         const mirrorEntry = this.mirrorIndex.get(filenameLower);
 
+        // Check if this file is marked for force re-sync (detected by watcher)
+        if (this.forceResyncFiles.has(filenameLower)) {
+          this.logger.info(`Force re-syncing file detected by watcher: ${file}`);
+          filesToSync.push(file);
+          continue;
+        }
+
         if (!mirrorEntry || !mirrorEntry.synced) {
           // File not in mirror or not synced
           filesToSync.push(file);
@@ -267,6 +278,7 @@ class RepositoryMirror extends EventEmitter {
       if (this.syncAborted) break;
 
       const file = filesToSync[i];
+      const filenameLower = file.toLowerCase();
       const sourcePath = path.join(this.repositoryPath, file);
       const destPath = path.join(this.mirrorPath, file);
 
@@ -276,11 +288,14 @@ class RepositoryMirror extends EventEmitter {
 
         // Update index
         const stats = await fs.promises.stat(destPath);
-        this.mirrorIndex.set(file.toLowerCase(), {
+        this.mirrorIndex.set(filenameLower, {
           size: stats.size,
           mtime: stats.mtimeMs,
           synced: true
         });
+
+        // Remove from force-resync set if present
+        this.forceResyncFiles.delete(filenameLower);
 
         synced++;
 
@@ -414,6 +429,8 @@ class RepositoryMirror extends EventEmitter {
       this.watcher = chokidar.watch(this.repositoryPath, {
         persistent: true,
         ignoreInitial: true, // Don't trigger events for existing files
+        usePolling: true, // Use polling for better compatibility with network drives and certain file systems
+        interval: 1000, // Poll every second
         awaitWriteFinish: {
           stabilityThreshold: 500, // Wait 500ms for file to finish writing
           pollInterval: 100
@@ -429,6 +446,7 @@ class RepositoryMirror extends EventEmitter {
       this.watcher.on('add', (filePath) => {
         const filename = path.basename(filePath);
         this.logger.info(`Repository file added: ${filename}`);
+        this.forceResyncFiles.add(filename.toLowerCase());
         this.emit('repository-changed', { type: 'add', filename });
         this.scheduleDebouncedSync();
       });
@@ -437,6 +455,7 @@ class RepositoryMirror extends EventEmitter {
       this.watcher.on('change', (filePath) => {
         const filename = path.basename(filePath);
         this.logger.info(`Repository file changed: ${filename}`);
+        this.forceResyncFiles.add(filename.toLowerCase());
         this.emit('repository-changed', { type: 'change', filename });
         this.scheduleDebouncedSync();
       });
@@ -445,6 +464,7 @@ class RepositoryMirror extends EventEmitter {
       this.watcher.on('unlink', (filePath) => {
         const filename = path.basename(filePath);
         this.logger.info(`Repository file removed: ${filename}`);
+        this.forceResyncFiles.add(filename.toLowerCase());
         this.emit('repository-changed', { type: 'unlink', filename });
         this.scheduleDebouncedSync();
       });
@@ -462,6 +482,9 @@ class RepositoryMirror extends EventEmitter {
           resolve();
         });
       });
+
+      // Also start periodic polling as a fallback for detecting changes
+      this.startPeriodicPolling();
 
       return true;
     } catch (error) {
@@ -494,6 +517,91 @@ class RepositoryMirror extends EventEmitter {
   }
 
   /**
+   * Start periodic polling to check for file changes
+   */
+  startPeriodicPolling() {
+    if (this.pollingTimer) {
+      return; // Already polling
+    }
+
+    this.logger.info(`Starting periodic polling (every ${this.POLLING_INTERVAL / 1000} seconds)`);
+
+    this.pollingTimer = setInterval(async () => {
+      if (this.isSyncing) {
+        // Skip this poll if already syncing
+        return;
+      }
+
+      try {
+        // Check for changes by comparing timestamps
+        const hasChanges = await this.checkForChanges();
+        if (hasChanges) {
+          this.logger.info('Periodic poll detected changes, triggering sync...');
+          this.scheduleDebouncedSync();
+        }
+      } catch (error) {
+        this.logger.error('Error during periodic poll:', error);
+      }
+    }, this.POLLING_INTERVAL);
+  }
+
+  /**
+   * Check if there are changes in the repository
+   */
+  async checkForChanges() {
+    try {
+      const files = await fs.promises.readdir(this.repositoryPath);
+
+      // Check a sample of files for changes (not all 6000+ files every time)
+      const sampleSize = Math.min(50, files.length);
+      const step = Math.floor(files.length / sampleSize);
+
+      for (let i = 0; i < files.length; i += step) {
+        const file = files[i];
+        const ext = path.extname(file).toLowerCase();
+        if (ext !== '.jpg' && ext !== '.jpeg') continue;
+
+        const filenameLower = file.toLowerCase();
+        const mirrorEntry = this.mirrorIndex.get(filenameLower);
+
+        if (!mirrorEntry) {
+          // New file found
+          return true;
+        }
+
+        // Check if file has changed
+        const sourcePath = path.join(this.repositoryPath, file);
+        try {
+          const stats = await fs.promises.stat(sourcePath);
+          if (stats.mtimeMs !== mirrorEntry.mtime || stats.size !== mirrorEntry.size) {
+            this.logger.info(`Change detected in file: ${file} (mtime or size different)`);
+            return true;
+          }
+        } catch (error) {
+          // File might have been deleted
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error('Error checking for changes:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Stop periodic polling
+   */
+  stopPeriodicPolling() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
+      this.logger.info('Periodic polling stopped');
+    }
+  }
+
+  /**
    * Stop watching the repository folder
    */
   stopWatch() {
@@ -511,6 +619,9 @@ class RepositoryMirror extends EventEmitter {
 
       this.logger.success('Repository folder watch stopped');
     }
+
+    // Also stop periodic polling
+    this.stopPeriodicPolling();
   }
 
   /**

@@ -399,6 +399,20 @@ async function ensureRepositoryMirrorStarted() {
       // Listen for repository changes detected by watcher
       repositoryMirror.on('repository-changed', (data) => {
         logger.info(`Repository change detected: ${data.type} - ${data.filename}`);
+
+        // Notify windows immediately about the change (before sync completes)
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          logger.info('Notifying main window about repository change');
+          mainWindow.webContents.send('repository-changed', data);
+        }
+
+        const repositoryGridWindow = repositoryGridWindowManager.getWindow();
+        if (repositoryGridWindow) {
+          logger.info('Notifying repository grid window about repository change');
+          repositoryGridWindow.webContents.send('repository-changed', data);
+        }
+
         // The watcher will automatically trigger a debounced sync
       });
 
