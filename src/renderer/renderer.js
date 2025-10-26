@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager
 
 // Component instances
 let userRowRenderer = null;
@@ -10,6 +10,7 @@ let selectionModeManager = null;
 let dragDropManager = null;
 let progressManager = null;
 let lazyImageManager = null;
+let keyboardNavigationManager = null;
 
 // State management
 let currentUsers = [];
@@ -93,6 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize lazy image manager
   initializeLazyImageManager();
+
+  // Initialize keyboard navigation manager
+  initializeKeyboardNavigationManager();
 
   initializeEventListeners();
   setupMenuListeners();
@@ -276,6 +280,36 @@ function initializeLazyImageManager() {
   console.log('[Renderer] Lazy image manager initialized');
 }
 
+// Initialize keyboard navigation manager
+function initializeKeyboardNavigationManager() {
+  keyboardNavigationManager = new KeyboardNavigationManager({
+    onNavigateUserPrev: () => navigateUsers(-1),
+    onNavigateUserNext: () => navigateUsers(1),
+    onNavigateImagePrev: () => {
+      if (imageGridManager) {
+        imageGridManager.previous();
+      }
+    },
+    onNavigateImageNext: () => {
+      if (imageGridManager) {
+        imageGridManager.next();
+      }
+    },
+    isModalOpen: () => {
+      return (
+        (newProjectModalInstance && newProjectModalInstance.modal && newProjectModalInstance.modal.classList.contains('show')) ||
+        (confirmModalInstance && confirmModalInstance.modal && confirmModalInstance.modal.classList.contains('show')) ||
+        (progressModal && progressModal.classList.contains('show')) ||
+        (infoModalInstance && infoModalInstance.modal && infoModalInstance.modal.classList.contains('show'))
+      );
+    },
+    hasImages: () => imageGridManager && imageGridManager.getImageCount() > 0
+  });
+
+  keyboardNavigationManager.enable();
+  console.log('[Renderer] Keyboard navigation manager initialized');
+}
+
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
@@ -362,43 +396,7 @@ function initializeEventListeners() {
     await loadUsers(filters);
   });
 
-  // Keyboard navigation for images and users
-  document.addEventListener('keydown', (event) => {
-    // Don't handle keyboard events if a modal is open
-    const isModalOpen = (
-      (newProjectModalInstance && newProjectModalInstance.modal && newProjectModalInstance.modal.classList.contains('show')) ||
-      (confirmModalInstance && confirmModalInstance.modal && confirmModalInstance.modal.classList.contains('show')) ||
-      (progressModal && progressModal.classList.contains('show')) ||
-      (infoModalInstance && infoModalInstance.modal && infoModalInstance.modal.classList.contains('show'))
-    );
-    if (isModalOpen) return;
-
-    // Don't prevent default behavior if user is typing in an input field
-    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-      return; // Allow normal typing in inputs
-    }
-
-    // Left arrow key - previous image
-    if (event.key === 'ArrowLeft' && imageGridManager && imageGridManager.getImageCount() > 0) {
-      event.preventDefault();
-      imageGridManager.previous();
-    }
-    // Right arrow key - next image
-    else if (event.key === 'ArrowRight' && imageGridManager && imageGridManager.getImageCount() > 0) {
-      event.preventDefault();
-      imageGridManager.next();
-    }
-    // Up arrow key - previous user
-    else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      navigateUsers(-1);
-    }
-    // Down arrow key - next user
-    else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      navigateUsers(1);
-    }
-  });
+  // Keyboard navigation is now handled by KeyboardNavigationManager
 }
 
 // Project management
