@@ -345,9 +345,13 @@ async function ensureRepositoryMirrorStarted() {
 
   // Initialize in background (non-blocking)
   setImmediate(async () => {
-    const initialized = await repositoryMirror.initialize();
-    if (initialized) {
-      logger.success('Repository mirror initialized');
+    try {
+      logger.info(`Repository path: ${repositoryPath}`);
+      logger.info(`Mirror path: ${mirrorPath}`);
+
+      const initialized = await repositoryMirror.initialize();
+      if (initialized) {
+        logger.success('Repository mirror initialized');
 
       // Listen to sync events
       repositoryMirror.on('sync-started', () => {
@@ -410,6 +414,9 @@ async function ensureRepositoryMirrorStarted() {
       }
     } else {
       logger.error('Failed to initialize repository mirror');
+    }
+    } catch (error) {
+      logger.error('Error in repository mirror initialization:', error);
     }
   });
 }
