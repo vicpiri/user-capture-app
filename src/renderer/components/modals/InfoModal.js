@@ -7,15 +7,18 @@
  * @extends BaseModal
  */
 
-// Dependencies: BaseModal (loaded from core in browser, or via require in Node.js)
-let BaseModal;
-if (typeof window !== 'undefined' && window.BaseModal) {
-  BaseModal = window.BaseModal;
-} else if (typeof require !== 'undefined') {
-  ({ BaseModal } = require('../../core/BaseModal'));
-}
+(function(global) {
+  'use strict';
 
-class InfoModal extends BaseModal {
+  // Dependencies: BaseModal (loaded from core in browser, or via require in Node.js)
+  let BaseModal;
+  if (typeof window !== 'undefined' && window.BaseModal) {
+    BaseModal = window.BaseModal;
+  } else if (typeof require !== 'undefined') {
+    ({ BaseModal } = require('../../core/BaseModal'));
+  }
+
+  class InfoModal extends BaseModal {
   constructor() {
     super('info-modal');
 
@@ -138,9 +141,10 @@ class InfoModal extends BaseModal {
   }
 }
 
-// Export (for tests and browser)
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { InfoModal };
-} else if (typeof window !== 'undefined') {
-  window.InfoModal = InfoModal;
-}
+  // Export (for tests and browser)
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { InfoModal };
+  } else if (typeof window !== 'undefined') {
+    global.InfoModal = InfoModal;
+  }
+})(typeof window !== 'undefined' ? window : global);

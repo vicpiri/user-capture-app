@@ -7,17 +7,20 @@
  * @extends BaseModal
  */
 
-// Dependencies: BaseModal, store (loaded from core in browser, or via require in Node.js)
-let BaseModal, store;
-if (typeof window !== 'undefined' && window.BaseModal) {
-  BaseModal = window.BaseModal;
-  store = window.store;
-} else if (typeof require !== 'undefined') {
-  ({ BaseModal } = require('../../core/BaseModal'));
-  ({ store } = require('../../core/store'));
-}
+(function(global) {
+  'use strict';
 
-class NewProjectModal extends BaseModal {
+  // Dependencies: BaseModal, store (loaded from core in browser, or via require in Node.js)
+  let BaseModal, store;
+  if (typeof window !== 'undefined' && window.BaseModal) {
+    BaseModal = window.BaseModal;
+    store = window.store;
+  } else if (typeof require !== 'undefined') {
+    ({ BaseModal } = require('../../core/BaseModal'));
+    ({ store } = require('../../core/store'));
+  }
+
+  class NewProjectModal extends BaseModal {
   constructor() {
     super('new-project-modal');
 
@@ -258,9 +261,10 @@ class NewProjectModal extends BaseModal {
   }
 }
 
-// Export (for tests and browser)
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { NewProjectModal };
-} else if (typeof window !== 'undefined') {
-  window.NewProjectModal = NewProjectModal;
-}
+  // Export (for tests and browser)
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { NewProjectModal };
+  } else if (typeof window !== 'undefined') {
+    global.NewProjectModal = NewProjectModal;
+  }
+})(typeof window !== 'undefined' ? window : global);
