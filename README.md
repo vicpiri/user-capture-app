@@ -64,6 +64,12 @@ Iniciar en modo desarrollo (con hot reload y DevTools):
 npm run dev
 ```
 
+Ejecutar suite de tests unitarios:
+
+```bash
+npm test
+```
+
 ## Build
 
 ### Reconstruir módulos nativos
@@ -127,8 +133,28 @@ user-capture-app/
 │   │   ├── repositoryMirror.js  # Mirror local del repositorio
 │   │   └── xmlParser.js         # Parser de archivos XML
 │   ├── renderer/          # Interfaz de usuario
+│   │   ├── components/          # Componentes modulares de UI
+│   │   │   ├── modals/          # Componentes de modales
+│   │   │   │   ├── AddTagModal.js
+│   │   │   │   ├── ConfirmModal.js
+│   │   │   │   ├── ExportOptionsModal.js
+│   │   │   │   ├── InfoModal.js
+│   │   │   │   ├── NewProjectModal.js
+│   │   │   │   └── UserImageModal.js
+│   │   │   ├── DragDropManager.js       # Gestión de drag & drop
+│   │   │   ├── ExportManager.js         # Coordinador de exportaciones
+│   │   │   ├── ImageGridManager.js      # Gestión de grid de imágenes
+│   │   │   ├── ImageTagsManager.js      # Gestión de etiquetas
+│   │   │   ├── LazyImageManager.js      # Lazy loading de imágenes
+│   │   │   ├── ProgressManager.js       # Gestión de modal de progreso
+│   │   │   ├── SelectionModeManager.js  # Modo multi-selección
+│   │   │   ├── UserRowRenderer.js       # Renderizado de filas
+│   │   │   └── VirtualScrollManager.js  # Virtual scroll
+│   │   ├── core/                # Módulos core del renderer
+│   │   │   ├── BaseModal.js             # Clase base para modales
+│   │   │   └── store.js                 # Estado global
 │   │   ├── index.html     # Ventana principal
-│   │   ├── renderer.js    # Lógica de UI principal
+│   │   ├── renderer.js    # Lógica de UI principal (coordinador)
 │   │   ├── styles.css     # Estilos globales
 │   │   ├── camera.html    # Ventana de cámara
 │   │   ├── camera.js      # Lógica de captura
@@ -138,6 +164,12 @@ user-capture-app/
 │   │   └── repository-grid.js # Lógica del grid repositorio
 │   └── preload/           # Scripts preload (puente seguro)
 │       └── preload.js     # API expuesta al renderer
+├── tests/                 # Tests unitarios (Jest)
+│   └── unit/
+│       ├── components/          # Tests de componentes del renderer
+│       │   ├── modals/          # Tests de modales
+│       │   └── ...              # Tests de managers
+│       └── ...
 ├── scripts/
 │   └── rebuild-native.mjs # Script de rebuild multiplataforma
 ├── assets/
@@ -224,6 +256,58 @@ El proceso principal ha sido refactorizado en módulos especializados:
 - **Sincronización automática**: Mirror local del repositorio Google Drive con detección de cambios
 - **Arquitectura modular**: Código organizado por responsabilidad y funcionalidad
 - **Seguridad**: Implementa `contextIsolation` y `nodeIntegration: false`
+
+### Arquitectura del Renderer (Interfaz de Usuario)
+
+El proceso de renderizado sigue una arquitectura modular basada en componentes:
+
+#### Componentes Principales
+
+**Modales (components/modals/)**
+- Todos extienden `BaseModal` para comportamiento consistente
+- Basados en Promises para flujos async/await limpios
+- 6 modales especializados: NewProject, Confirm, Info, ExportOptions, AddTag, UserImage
+
+**Managers (components/)**
+- **ExportManager**: Coordinador de todas las exportaciones (CSV e imágenes)
+- **ImageTagsManager**: Sistema completo de etiquetado de imágenes
+- **SelectionModeManager**: Modo de selección múltiple de usuarios
+- **DragDropManager**: Drag & drop de archivos de imagen
+- **ProgressManager**: Gestión de modal de progreso con eventos IPC
+- **LazyImageManager**: Lazy loading con IntersectionObserver API
+- **ImageGridManager**: Grid de imágenes del usuario seleccionado
+- **VirtualScrollManager**: Virtual scrolling para listas grandes
+- **UserRowRenderer**: Renderizado optimizado de filas de usuarios
+
+**Core (core/)**
+- **BaseModal**: Clase base para todos los modales
+- **store.js**: Estado global de la aplicación
+
+**Coordinador (renderer.js)**
+- Inicializa componentes con callbacks de comunicación
+- Delega funcionalidad a componentes especializados
+- Mantiene retrocompatibilidad con estado global
+- Gestiona eventos IPC del main process
+
+#### Principios de Diseño
+
+- **Patrón IIFE**: Evita contaminación del scope global
+- **UMD Exports**: Compatible con browser y Node.js (para tests)
+- **Callback-based**: Comunicación entre componentes mediante callbacks
+- **Delegation**: renderer.js delega a componentes especializados
+
+#### Testing
+
+- **488 tests unitarios** con Jest y JSDOM
+- Cobertura completa de todos los componentes (20-37 tests por componente)
+- Mocking de DOM, IPC (electronAPI), y APIs del browser
+- Ejecución: `npm test`
+
+#### Optimizaciones
+
+- **Virtual Scrolling**: Manejo eficiente de miles de usuarios
+- **Lazy Loading**: Carga diferida de imágenes con IntersectionObserver
+- **Code Splitting**: Componentes modulares cargados en orden de dependencias
 
 ## Tecnologías
 
