@@ -19,7 +19,7 @@ const FolderWatcher = require('../folderWatcher');
  * @param {Function} context.updateWindowTitle - Function to update window title
  */
 function registerProjectHandlers(context) {
-  const { mainWindow, logger, state, addRecentProject, updateWindowTitle } = context;
+  const { mainWindow: getMainWindow, logger, state, addRecentProject, updateWindowTitle } = context;
 
   // Create new project
   ipcMain.handle('create-project', async (event, data) => {
@@ -42,7 +42,7 @@ function registerProjectHandlers(context) {
       logger.success('Paths validated successfully');
 
       // Progress: 10%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 10,
         message: 'Creando carpetas del proyecto...',
         details: ''
@@ -67,7 +67,7 @@ function registerProjectHandlers(context) {
       logger.success('Project structure created successfully');
 
       // Progress: 25%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 25,
         message: 'Inicializando base de datos...',
         details: ''
@@ -82,7 +82,7 @@ function registerProjectHandlers(context) {
       logger.success('Database initialized successfully');
 
       // Progress: 40%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 40,
         message: 'Leyendo archivo XML...',
         details: xmlPath
@@ -106,7 +106,7 @@ function registerProjectHandlers(context) {
       });
 
       // Progress: 60%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 60,
         message: 'Importando usuarios...',
         details: `${totalGroups} grupos, ${totalUsers} usuarios encontrados`
@@ -212,7 +212,7 @@ function registerProjectHandlers(context) {
       }
 
       // Progress: 80%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 80,
         message: 'Configurando vigilancia de carpetas...',
         details: ''
@@ -227,19 +227,19 @@ function registerProjectHandlers(context) {
       state.folderWatcher = new FolderWatcher(ingestPath, importsPath);
       state.folderWatcher.on('image-detecting', (filename) => {
         logger.info(`Image being processed: ${filename}`);
-        mainWindow.webContents.send('image-detecting', filename);
+        getMainWindow()?.webContents.send('image-detecting', filename);
       });
       state.folderWatcher.on('image-added', (filename) => {
         logger.info(`New image detected: ${filename}`);
         // Invalidate image cache when new image is added
         state.imageManager.invalidateCache();
-        mainWindow.webContents.send('new-image-detected', filename);
+        getMainWindow()?.webContents.send('new-image-detected', filename);
       });
       state.folderWatcher.start();
       logger.success('Folder watcher started', { watchPath: ingestPath });
 
       // Progress: 100%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 100,
         message: 'Proyecto creado exitosamente',
         details: `${totalUsers} usuarios importados`
@@ -341,13 +341,13 @@ function registerProjectHandlers(context) {
       state.folderWatcher = new FolderWatcher(ingestPath, importsPath);
       state.folderWatcher.on('image-detecting', (filename) => {
         logger.info(`Image being processed: ${filename}`);
-        mainWindow.webContents.send('image-detecting', filename);
+        getMainWindow()?.webContents.send('image-detecting', filename);
       });
       state.folderWatcher.on('image-added', (filename) => {
         logger.info(`New image detected: ${filename}`);
         // Invalidate image cache when new image is added
         state.imageManager.invalidateCache();
-        mainWindow.webContents.send('new-image-detected', filename);
+        getMainWindow()?.webContents.send('new-image-detected', filename);
       });
       state.folderWatcher.start();
       logger.success('Folder watcher started', { watchPath: ingestPath });
@@ -384,7 +384,7 @@ function registerProjectHandlers(context) {
       }
 
       // Progress: 10%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 10,
         message: 'Leyendo archivo XML...',
         details: xmlPath
@@ -404,7 +404,7 @@ function registerProjectHandlers(context) {
       });
 
       // Progress: 30%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 30,
         message: 'Comparando usuarios actuales...',
         details: ''
@@ -501,7 +501,7 @@ function registerProjectHandlers(context) {
       });
 
       // Progress: 50%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 50,
         message: 'Análisis completado',
         details: `${changes.toAdd.length} nuevos, ${changes.toUpdate.length} actualizados, ${changes.toDelete.length} eliminados`
@@ -541,7 +541,7 @@ function registerProjectHandlers(context) {
       logger.section('APPLYING XML UPDATE');
 
       // Progress: 60%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 60,
         message: 'Actualizando grupos...',
         details: ''
@@ -553,7 +553,7 @@ function registerProjectHandlers(context) {
       logger.success(`Groups updated: ${groups.length}`);
 
       // Progress: 70%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 70,
         message: 'Procesando usuarios eliminados...',
         details: ''
@@ -581,7 +581,7 @@ function registerProjectHandlers(context) {
       logger.success(`Processed deleted users: ${movedToDeleted} moved to Eliminados, ${permanentlyDeleted} permanently deleted`);
 
       // Progress: 80%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 80,
         message: 'Actualizando y agregando usuarios...',
         details: ''
@@ -693,7 +693,7 @@ function registerProjectHandlers(context) {
       const totalProcessed = updated + skipped;
 
       // Progress: 100%
-      mainWindow.webContents.send('progress', {
+      getMainWindow()?.webContents.send('progress', {
         percentage: 100,
         message: 'Actualización completada',
         details: `${added} añadidos, ${totalProcessed} actualizados, ${movedToDeleted} movidos a Eliminados, ${permanentlyDeleted} eliminados`

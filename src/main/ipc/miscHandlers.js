@@ -16,7 +16,7 @@ const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, 
  * @param {Function} context.createMenu - Create menu function
  */
 function registerMiscHandlers(context) {
-  const { mainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu } = context;
+  const { mainWindow: getMainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu } = context;
 
   // ============================================================================
   // Dialog Handlers
@@ -24,6 +24,7 @@ function registerMiscHandlers(context) {
 
   // Show open dialog
   ipcMain.handle('show-open-dialog', async (event, options) => {
+    const mainWindow = getMainWindow();
     const result = await dialog.showOpenDialog(mainWindow, options);
     return result;
   });
@@ -34,6 +35,7 @@ function registerMiscHandlers(context) {
 
   // Focus window handler
   ipcMain.handle('focus-window', async () => {
+    const mainWindow = getMainWindow();
     if (mainWindow) {
       mainWindow.focus();
     }
@@ -109,6 +111,7 @@ function registerMiscHandlers(context) {
     try {
       if (setSelectedGroupFilter(groupCode)) {
         // Notify all windows about the filter change
+        const mainWindow = getMainWindow();
         if (mainWindow) {
           mainWindow.webContents.send('group-filter-changed', groupCode);
         }
