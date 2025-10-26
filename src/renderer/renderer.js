@@ -517,8 +517,8 @@ function initializeEventListeners() {
   });
 
   // Listen for repository changes
-  window.electronAPI.onRepositoryChanged(async () => {
-    console.log('[Repository] Repository changed, reloading users...');
+  window.electronAPI.onRepositoryChanged(async (data) => {
+    console.log('[Repository] Repository changed:', data);
     // Mark repository sync as completed
     repositorySyncCompleted = true;
     // Reload users to update repository indicators

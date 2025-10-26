@@ -198,6 +198,26 @@ function createMenu() {
           mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
         }
       },
+      refreshRepositoryImages: async () => {
+        if (repositoryMirror) {
+          logger.info('[Menu] Manual repository refresh requested');
+          const mainWindow = mainWindowManager.getWindow();
+
+          // Force a full resync by marking all files for resync
+          await repositoryMirror.forceFullResync();
+
+          // Broadcast to all windows
+          mainWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
+          const imageGridWindow = imageGridWindowManager.getWindow();
+          if (imageGridWindow) {
+            imageGridWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
+          }
+          const repositoryGridWindow = repositoryGridWindowManager.getWindow();
+          if (repositoryGridWindow) {
+            repositoryGridWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
+          }
+        }
+      },
       openImageGridWindow,
       openRepositoryGridWindow,
       openPOC: () => {
@@ -231,6 +251,17 @@ function createWindow() {
     if (showRepositoryPhotos || showRepositoryIndicators) {
       logger.info('[STARTUP] Repository options enabled in preferences, starting repository mirror');
       ensureRepositoryMirrorStarted();
+    }
+
+    // Auto-open most recent project if available
+    if (recentProjects && recentProjects.length > 0) {
+      const mostRecentProjectPath = recentProjects[0];
+      logger.info(`[STARTUP] Auto-opening most recent project: ${mostRecentProjectPath}`);
+
+      // Use setTimeout to avoid blocking the UI during startup
+      setTimeout(() => {
+        openRecentProject(mostRecentProjectPath);
+      }, 500);
     }
   });
 

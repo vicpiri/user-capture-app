@@ -328,6 +328,14 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
+          label: 'Actualizar imágenes del depósito',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            this.callbacks.refreshRepositoryImages();
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Mostrar acciones adicionales',
           type: 'checkbox',
           checked: this.showAdditionalActions,
