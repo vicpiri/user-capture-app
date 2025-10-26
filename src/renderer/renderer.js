@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
 
 // Component instances
 let userRowRenderer = null;
@@ -13,6 +13,7 @@ let lazyImageManager = null;
 let keyboardNavigationManager = null;
 let menuEventManager = null;
 let userDataManager = null;
+let projectManager = null;
 
 // State management
 let currentUsers = [];
@@ -105,6 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize user data manager
   initializeUserDataManager();
+
+  // Initialize project manager
+  initializeProjectManager();
 
   initializeEventListeners();
   // Defer camera detection to not block UI
@@ -402,6 +406,39 @@ function initializeUserDataManager() {
   console.log('[Renderer] User data manager initialized');
 }
 
+function initializeProjectManager() {
+  projectManager = new ProjectManager({
+    // State setters
+    setProjectOpen: (value) => { projectOpen = value; },
+
+    // State getters
+    getProjectOpen: () => projectOpen,
+
+    // Callbacks
+    onLoadGroups: loadGroups,
+    onLoadUsers: loadUsers,
+    onLoadImages: loadImages,
+    onGetCurrentFilters: getCurrentFilters,
+    onShowInfoModal: showInfoModal,
+    onShowConfirmModal: showConfirmationModal,
+    onShowProgressModal: showProgressModal,
+    onCloseProgressModal: closeProgressModal,
+
+    // DOM elements
+    searchInput: searchInput,
+    groupFilter: groupFilter,
+    noProjectPlaceholder: noProjectPlaceholder,
+
+    // Modal instances
+    newProjectModal: newProjectModalInstance,
+
+    // IPC API
+    electronAPI: window.electronAPI
+  });
+
+  console.log('[Renderer] Project manager initialized');
+}
+
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
@@ -491,67 +528,28 @@ function initializeEventListeners() {
   // Keyboard navigation is now handled by KeyboardNavigationManager
 }
 
-// Project management
+// Project management - delegates to ProjectManager
 async function openNewProjectModal() {
-  // NewProjectModal class handles the entire flow
-  const result = await newProjectModalInstance.show();
-
-  if (result) {
-    // Project created successfully - modal already updated store
-    projectOpen = true;
-    await loadProjectData();
+  if (projectManager) {
+    await projectManager.openNewProject();
   }
 }
 
 async function handleOpenProject() {
-  const result = await window.electronAPI.showOpenDialog({
-    properties: ['openDirectory']
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    const openResult = await window.electronAPI.openProject(result.filePaths[0]);
-
-    if (openResult.success) {
-      projectOpen = true;
-      await loadProjectData();
-    } else {
-      showInfoModal('Error', 'Error al abrir el proyecto: ' + openResult.error);
-    }
+  if (projectManager) {
+    await projectManager.openExistingProject();
   }
 }
 
-// Load project data
 async function loadProjectData() {
-  await loadGroups();
-
-  // Load saved group filter
-  const filterResult = await window.electronAPI.getSelectedGroupFilter();
-  if (filterResult.success && filterResult.groupCode) {
-    groupFilter.value = filterResult.groupCode;
+  if (projectManager) {
+    await projectManager.loadProjectData();
   }
-
-  await loadUsers(getCurrentFilters());
-  await loadImages();
-
-  // Re-enable search input after data load
-  searchInput.disabled = false;
-  searchInput.readOnly = false;
-
-  // Update placeholder visibility
-  updateNoProjectPlaceholder();
 }
 
-// Update no project placeholder visibility
 function updateNoProjectPlaceholder() {
-  if (!noProjectPlaceholder) {
-    console.error('No project placeholder element not found');
-    return;
-  }
-
-  if (projectOpen) {
-    noProjectPlaceholder.classList.remove('visible');
-  } else {
-    noProjectPlaceholder.classList.add('visible');
+  if (projectManager) {
+    projectManager.updateNoProjectPlaceholder();
   }
 }
 
@@ -1046,88 +1044,9 @@ async function detectAvailableCameras() {
   }
 }
 
-// Update XML file
 async function handleUpdateXML() {
-  if (!projectOpen) {
-    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
-    return;
-  }
-
-  // Select new XML file
-  const result = await window.electronAPI.showOpenDialog({
-    properties: ['openFile'],
-    filters: [{ name: 'XML Files', extensions: ['xml'] }],
-    title: 'Seleccionar nuevo archivo XML'
-  });
-
-  if (result.canceled || result.filePaths.length === 0) {
-    return;
-  }
-
-  const xmlPath = result.filePaths[0];
-
-  // Show progress modal
-  showProgressModal('Actualizando XML', 'Analizando cambios...');
-
-  // Call update-xml to analyze changes
-  const updateResult = await window.electronAPI.updateXML(xmlPath);
-
-  if (!updateResult.success) {
-    closeProgressModal();
-    showInfoModal('Error', 'Error al analizar el XML: ' + updateResult.error);
-    return;
-  }
-
-  closeProgressModal();
-
-  // Show confirmation dialog with summary
-  const changes = updateResult.changes;
-  let message = 'Se han detectado los siguientes cambios:\n\n';
-  message += `Usuarios nuevos: ${changes.toAdd}\n`;
-  message += `Usuarios actualizados: ${changes.toUpdate}\n`;
-  message += `Usuarios eliminados: ${changes.toDelete}\n\n`;
-
-  if (changes.toDeleteWithImage > 0) {
-    message += `- ${changes.toDeleteWithImage} usuario(s) con imagen serán movidos al grupo "¡Eliminados!"\n`;
-  }
-  if (changes.toDeleteWithoutImage > 0) {
-    message += `- ${changes.toDeleteWithoutImage} usuario(s) sin imagen serán eliminados permanentemente\n`;
-  }
-
-  message += '\n¿Deseas continuar con la actualización?';
-
-  const confirmed = await showConfirmationModal(message);
-
-  if (confirmed) {
-    // Show progress modal
-    showProgressModal('Actualizando XML', 'Aplicando cambios...');
-
-    // Apply the update
-    const confirmResult = await window.electronAPI.confirmUpdateXML({
-      groups: updateResult.groups,
-      newUsersMap: updateResult.newUsersMap,
-      deletedUsers: updateResult.deletedUsers,
-      currentUsers: updateResult.currentUsers
-    });
-
-    closeProgressModal();
-
-    if (confirmResult.success) {
-      const results = confirmResult.results;
-      let successMessage = 'Actualización completada exitosamente:\n\n';
-      successMessage += `Usuarios añadidos: ${results.added}\n`;
-      successMessage += `Usuarios actualizados: ${results.updated}\n`;
-      successMessage += `Usuarios movidos a Eliminados: ${results.movedToDeleted}\n`;
-      successMessage += `Usuarios eliminados permanentemente: ${results.permanentlyDeleted}`;
-
-      // Reload project data first
-      await loadProjectData();
-
-      // Show info modal instead of alert
-      showInfoModal('Actualización completada', successMessage);
-    } else {
-      showInfoModal('Error', 'Error al actualizar el XML: ' + confirmResult.error);
-    }
+  if (projectManager) {
+    await projectManager.handleUpdateXML();
   }
 }
 
