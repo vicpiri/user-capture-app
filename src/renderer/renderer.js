@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager
 
 // Component instances
 let userRowRenderer = null;
@@ -11,6 +11,7 @@ let dragDropManager = null;
 let progressManager = null;
 let lazyImageManager = null;
 let keyboardNavigationManager = null;
+let menuEventManager = null;
 
 // State management
 let currentUsers = [];
@@ -98,8 +99,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize keyboard navigation manager
   initializeKeyboardNavigationManager();
 
+  // Initialize menu event manager
+  initializeMenuEventManager();
+
   initializeEventListeners();
-  setupMenuListeners();
   // Defer camera detection to not block UI
   setTimeout(() => detectAvailableCameras(), 100);
   // Show no project placeholder initially
@@ -308,6 +311,56 @@ function initializeKeyboardNavigationManager() {
 
   keyboardNavigationManager.enable();
   console.log('[Renderer] Keyboard navigation manager initialized');
+}
+
+// Initialize menu event manager
+function initializeMenuEventManager() {
+  menuEventManager = new MenuEventManager({
+    // State setters
+    setShowDuplicatesOnly: (value) => { showDuplicatesOnly = value; },
+    setShowCapturedPhotos: (value) => { showCapturedPhotos = value; },
+    setShowRepositoryPhotos: (value) => { showRepositoryPhotos = value; },
+    setShowRepositoryIndicators: (value) => { showRepositoryIndicators = value; },
+    setIsLoadingRepositoryPhotos: (value) => { isLoadingRepositoryPhotos = value; },
+    setIsLoadingRepositoryIndicators: (value) => { isLoadingRepositoryIndicators = value; },
+    setRepositorySyncCompleted: (value) => { repositorySyncCompleted = value; },
+    setProjectOpen: (value) => { projectOpen = value; },
+
+    // State getters
+    getCurrentUsers: () => currentUsers,
+    getAllUsers: () => allUsers,
+    getCurrentFilters: getCurrentFilters,
+
+    // Action callbacks
+    onNewProject: openNewProjectModal,
+    onOpenProject: handleOpenProject,
+    onProjectLoaded: loadProjectData,
+    onLinkImage: handleLinkImage,
+    onDeletePhoto: handleDeletePhoto,
+    onImportImagesId: handleImportImagesId,
+    onExportCSV: handleExportCSV,
+    onExportImages: handleExportImages,
+    onExportImagesName: handleExportImagesName,
+    onExportToRepository: handleExportToRepository,
+    onUpdateXML: handleUpdateXML,
+    onAddImageTag: handleAddImageTag,
+    onShowTaggedImages: handleShowTaggedImages,
+
+    // Display callbacks
+    onDisplayUsers: displayUsers,
+    onLoadUsers: loadUsers,
+    onLoadRepositoryData: loadRepositoryDataInBackground,
+
+    // DOM elements
+    duplicatesFilter: duplicatesFilter,
+    additionalActionsSection: document.querySelector('.additional-actions'),
+
+    // IPC API
+    electronAPI: window.electronAPI
+  });
+
+  menuEventManager.init();
+  console.log('[Renderer] Menu event manager initialized');
 }
 
 // Event Listeners
@@ -932,175 +985,7 @@ function closeProgressModal() {
   }
 }
 
-// Menu listeners
-function setupMenuListeners() {
-  // Load initial display preferences from main process
-  window.electronAPI.onInitialDisplayPreferences((prefs) => {
-    showDuplicatesOnly = prefs.showDuplicatesOnly;
-    showCapturedPhotos = prefs.showCapturedPhotos;
-    showRepositoryPhotos = prefs.showRepositoryPhotos;
-    showRepositoryIndicators = prefs.showRepositoryIndicators;
-
-    // Mark as loading if repository options are enabled in saved preferences
-    if (prefs.showRepositoryPhotos) {
-      isLoadingRepositoryPhotos = true;
-      repositorySyncCompleted = false;
-    }
-    if (prefs.showRepositoryIndicators) {
-      isLoadingRepositoryIndicators = true;
-      repositorySyncCompleted = false;
-    }
-
-    // Set initial visibility of Additional Actions section
-    const additionalActionsSection = document.querySelector('.additional-actions');
-    if (additionalActionsSection) {
-      additionalActionsSection.style.display = prefs.showAdditionalActions ? 'block' : 'none';
-    }
-  });
-
-  window.electronAPI.onMenuNewProject(() => {
-    openNewProjectModal();
-  });
-
-  window.electronAPI.onMenuOpenProject(() => {
-    handleOpenProject();
-  });
-
-  window.electronAPI.onProjectOpened((data) => {
-    if (data.success) {
-      projectOpen = true;
-      loadProjectData();
-    }
-  });
-
-  window.electronAPI.onMenuLinkImage(() => {
-    handleLinkImage();
-  });
-
-  window.electronAPI.onMenuDeletePhoto(() => {
-    handleDeletePhoto();
-  });
-
-  window.electronAPI.onMenuToggleDuplicates((enabled) => {
-    showDuplicatesOnly = enabled;
-    duplicatesFilter.checked = enabled;
-    displayUsers(currentUsers, allUsers);
-  });
-
-  window.electronAPI.onMenuToggleCapturedPhotos(async (enabled) => {
-    showCapturedPhotos = enabled;
-    // If enabling, check if captured photo data is loaded
-    if (enabled && currentUsers.length > 0) {
-      // Check if captured photo data was previously loaded
-      // When loadCapturedImages is false, image_path is set to null explicitly
-      // So we need to check if ALL users have null image_path (meaning data wasn't loaded)
-      const allImagesAreNull = currentUsers.every(u => u.image_path === null);
-      if (allImagesAreNull) {
-        // Reload users with captured images
-        await loadUsers(getCurrentFilters());
-        return; // loadUsers already calls displayUsers
-      }
-    }
-    displayUsers(currentUsers, allUsers);
-  });
-
-  window.electronAPI.onMenuToggleRepositoryPhotos((enabled) => {
-    showRepositoryPhotos = enabled;
-    if (enabled) {
-      // Mark as loading to show spinners and reset sync completed flag
-      isLoadingRepositoryPhotos = true;
-      repositorySyncCompleted = false;
-      // Display users immediately with loading spinners
-      displayUsers(currentUsers, allUsers);
-    }
-    // Load repository data if enabling and not already loaded
-    if (enabled && currentUsers.length > 0) {
-      // Check if repository data is actually loaded (not just the property exists)
-      const hasRepositoryData = currentUsers.some(u => u.repository_image_path);
-      if (!hasRepositoryData) {
-        loadRepositoryDataInBackground(currentUsers);
-      } else {
-        // Data already loaded, stop loading state and mark sync as completed
-        isLoadingRepositoryPhotos = false;
-        repositorySyncCompleted = true;
-        // Re-display with actual data (no spinners)
-        displayUsers(currentUsers, allUsers);
-      }
-    } else if (!enabled) {
-      // If disabling, stop loading state
-      isLoadingRepositoryPhotos = false;
-      displayUsers(currentUsers, allUsers);
-    }
-  });
-
-  window.electronAPI.onMenuToggleRepositoryIndicators((enabled) => {
-    showRepositoryIndicators = enabled;
-    if (enabled) {
-      // Mark as loading to show spinners and reset sync completed flag
-      isLoadingRepositoryIndicators = true;
-      repositorySyncCompleted = false;
-      // Display users immediately with loading spinners
-      displayUsers(currentUsers, allUsers);
-    }
-    // Load repository data if enabling and not already loaded
-    if (enabled && currentUsers.length > 0) {
-      // Check if repository data is actually loaded (not just the property exists)
-      const hasRepositoryData = currentUsers.some(u => u.repository_image_path);
-      if (!hasRepositoryData) {
-        loadRepositoryDataInBackground(currentUsers);
-      } else {
-        // Data already loaded, stop loading state and mark sync as completed
-        isLoadingRepositoryIndicators = false;
-        repositorySyncCompleted = true;
-        // Re-display with actual data (no spinners)
-        displayUsers(currentUsers, allUsers);
-      }
-    } else if (!enabled) {
-      // If disabling, stop loading state
-      isLoadingRepositoryIndicators = false;
-      displayUsers(currentUsers, allUsers);
-    }
-  });
-
-  window.electronAPI.onMenuImportImagesId(() => {
-    handleImportImagesId();
-  });
-
-  window.electronAPI.onMenuExportCSV(() => {
-    handleExportCSV();
-  });
-
-  window.electronAPI.onMenuExportImages(() => {
-    handleExportImages();
-  });
-
-  window.electronAPI.onMenuExportImagesName(() => {
-    handleExportImagesName();
-  });
-
-  window.electronAPI.onMenuExportToRepository(() => {
-    handleExportToRepository();
-  });
-
-  window.electronAPI.onMenuUpdateXML(() => {
-    handleUpdateXML();
-  });
-
-  window.electronAPI.onMenuAddImageTag(() => {
-    handleAddImageTag();
-  });
-
-  window.electronAPI.onMenuShowTaggedImages(() => {
-    handleShowTaggedImages();
-  });
-
-  window.electronAPI.onMenuToggleAdditionalActions((enabled) => {
-    const additionalActionsSection = document.querySelector('.additional-actions');
-    if (additionalActionsSection) {
-      additionalActionsSection.style.display = enabled ? 'block' : 'none';
-    }
-  });
-}
+// Menu listeners now handled by MenuEventManager
 
 // Import images with ID
 async function handleImportImagesId() {
