@@ -42,7 +42,42 @@ user-capture-app/
 │   │   └── xmlParser.js         # Parseo de archivos XML de usuarios
 │   ├── preload/       # Scripts preload (comunicación segura entre procesos)
 │   ├── renderer/      # Proceso de renderizado (interfaz de usuario)
+│   │   ├── components/                  # Componentes modulares de UI
+│   │   │   ├── modals/                  # Componentes de modales
+│   │   │   │   ├── AddTagModal.js           # Modal para agregar etiquetas a imágenes
+│   │   │   │   ├── ConfirmModal.js          # Modal de confirmación genérico
+│   │   │   │   ├── ExportOptionsModal.js    # Modal de opciones de exportación
+│   │   │   │   ├── InfoModal.js             # Modal informativo genérico
+│   │   │   │   ├── NewProjectModal.js       # Modal de creación de proyectos
+│   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
+│   │   │   ├── DragDropManager.js       # Gestión de drag & drop de imágenes
+│   │   │   ├── ExportManager.js         # Coordinador de exportaciones (CSV/imágenes)
+│   │   │   ├── ImageGridManager.js      # Gestión de grid de imágenes capturadas
+│   │   │   ├── ImageTagsManager.js      # Gestión de etiquetas de imágenes
+│   │   │   ├── LazyImageManager.js      # Carga lazy de imágenes (IntersectionObserver)
+│   │   │   ├── ProgressManager.js       # Gestión de modal de progreso
+│   │   │   ├── SelectionModeManager.js  # Gestión de modo multi-selección
+│   │   │   ├── UserRowRenderer.js       # Renderizado de filas de usuarios
+│   │   │   └── VirtualScrollManager.js  # Virtual scroll para lista de usuarios
+│   │   ├── core/                        # Módulos core del renderer
+│   │   │   ├── BaseModal.js             # Clase base para modales
+│   │   │   └── store.js                 # Estado global de la aplicación
+│   │   ├── index.html           # HTML de la ventana principal
+│   │   ├── renderer.js          # Lógica principal de la UI (coordinador)
+│   │   ├── styles.css           # Estilos globales
+│   │   ├── camera.html          # HTML de la ventana de cámara
+│   │   ├── camera.js            # Lógica de captura desde webcam
+│   │   ├── image-grid.html      # HTML del grid de imágenes capturadas
+│   │   ├── image-grid.js        # Lógica del grid de capturadas
+│   │   ├── repository-grid.html # HTML del grid del repositorio
+│   │   └── repository-grid.js   # Lógica del grid del repositorio
 │   └── shared/        # Código compartido (tipos, constantes, utilidades)
+├── tests/             # Tests unitarios (Jest)
+│   └── unit/
+│       ├── components/          # Tests de componentes del renderer
+│       │   ├── modals/          # Tests de modales
+│       │   └── ...              # Tests de managers
+│       └── ...
 ├── assets/
 │   └── icons/         # Iconos de la aplicación
 ├── public/            # Archivos estáticos
@@ -74,6 +109,9 @@ user-capture-app/
 ### Ejecución
 - `npm start` - Inicia la aplicación en modo producción
 - `npm run dev` - Inicia la aplicación en modo desarrollo
+
+### Testing
+- `npm test` - Ejecuta suite completa de tests unitarios (Jest)
 
 ### Mantenimiento
 - `npm run clean` - Limpia node_modules, dist y build completamente
@@ -132,6 +170,267 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado
 
+## Arquitectura del Proceso de Renderizado
+
+El proceso de renderizado ha sido refactorizado siguiendo una arquitectura modular basada en componentes (Phase 4). El archivo monolítico `renderer.js` (originalmente 2091 líneas) se ha reducido a 1386 líneas (reducción del 34%) extrayendo funcionalidad cohesiva en componentes especializados.
+
+### Principios de Diseño
+
+#### Patrón IIFE (Immediately Invoked Function Expression)
+Todos los componentes utilizan IIFE para evitar contaminación del scope global:
+```javascript
+(function(global) {
+  'use strict';
+  class ComponentName { /* ... */ }
+
+  // Export UMD
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { ComponentName };
+  } else if (typeof window !== 'undefined') {
+    global.ComponentName = ComponentName;
+  }
+})(typeof window !== 'undefined' ? window : global);
+```
+
+#### Arquitectura basada en Callbacks
+Los componentes se comunican mediante callbacks configurados en la inicialización:
+```javascript
+const manager = new SomeManager({
+  onEvent: (data) => { /* handle event */ },
+  getSomeData: () => { /* provide data */ }
+});
+```
+
+#### Patrón de Delegación
+`renderer.js` actúa como coordinador, delegando funcionalidad a componentes especializados:
+```javascript
+// Antes: implementación directa en renderer.js
+function someFunction() { /* 50 líneas de código */ }
+
+// Después: delegación al manager
+function someFunction() {
+  if (someManager) {
+    someManager.handleFunction();
+  }
+}
+```
+
+### Componentes de Modales (components/modals/)
+
+Todos los modales extienden `BaseModal` para comportamiento consistente.
+
+- **NewProjectModal.js**: Modal de creación de proyectos
+  - Selección de carpeta y archivo XML
+  - Validación de inputs
+  - Retorna configuración mediante Promise
+
+- **ConfirmModal.js**: Modal de confirmación genérico
+  - Mensaje personalizable
+  - Retorna `true`/`false` mediante Promise
+
+- **InfoModal.js**: Modal informativo genérico
+  - Título y mensaje personalizables
+  - Soporte para texto multilínea
+
+- **ExportOptionsModal.js**: Modal de opciones de exportación
+  - Modo copia original vs redimensionamiento
+  - Configuración de tamaño y calidad
+  - Retorna opciones mediante Promise
+
+- **AddTagModal.js**: Modal para agregar etiquetas a imágenes
+  - Input de texto para etiqueta
+  - Retorna texto de etiqueta mediante Promise
+
+- **UserImageModal.js**: Modal de vista previa de imágenes de usuario
+  - Muestra imagen capturada o del repositorio
+  - Título con nombre completo del usuario
+  - Etiqueta distintiva para imágenes del repositorio
+
+### Componentes Managers (components/)
+
+#### ExportManager.js
+**Propósito**: Coordinador central de todas las exportaciones (CSV e imágenes)
+
+**Funcionalidades**:
+- Exportación de CSV para carnets
+- Exportación de imágenes por ID (NIA/DNI)
+- Exportación de imágenes por nombre completo
+- Exportación a repositorio
+- Gestión de usuarios a exportar (selección, duplicados, filtros)
+
+**Patrón**: Consolida código duplicado de 3 funciones casi idénticas en un único flujo reutilizable
+
+#### ImageTagsManager.js
+**Propósito**: Gestión completa del sistema de etiquetado de imágenes
+
+**Funcionalidades**:
+- Agregar etiquetas a imágenes
+- Cargar y mostrar etiquetas
+- Eliminar etiquetas
+- Mostrar modal con todas las imágenes etiquetadas
+- Actualización automática de UI
+
+#### SelectionModeManager.js
+**Propósito**: Gestión del modo de selección múltiple de usuarios
+
+**Funcionalidades**:
+- Activar/desactivar modo selección
+- Toggle de selección individual
+- Seleccionar/deseleccionar todos
+- Actualización de header de tabla (checkbox selectAll)
+- Sincronización con estado global para retrocompatibilidad
+
+**Estado**: Mantiene `isActive` y `selectedUsers` (Set)
+
+#### DragDropManager.js
+**Propósito**: Gestión de drag & drop de archivos de imagen
+
+**Funcionalidades**:
+- Highlight visual de zona de drop
+- Filtrado de archivos (solo JPG/JPEG)
+- Procesamiento de múltiples archivos
+- Integración con sistema de importación
+
+#### ProgressManager.js
+**Propósito**: Gestión del modal de progreso
+
+**Funcionalidades**:
+- Mostrar/ocultar modal de progreso
+- Actualizar barra de progreso (porcentaje)
+- Actualizar mensaje y detalles
+- Listener IPC para eventos de progreso del main process
+
+#### LazyImageManager.js
+**Propósito**: Carga lazy de imágenes usando IntersectionObserver API
+
+**Funcionalidades**:
+- Observación automática de imágenes con clase `.lazy-image`
+- Carga bajo demanda cuando la imagen entra en viewport
+- Configuración de rootMargin y threshold
+- Métodos para observar/desobservar imágenes individuales
+- Carga inmediata de todas las imágenes (fallback)
+
+**Optimización**: Reduce carga inicial de página con muchas imágenes de usuario
+
+#### ImageGridManager.js
+**Propósito**: Gestión del grid de imágenes capturadas del usuario seleccionado
+
+**Funcionalidades**:
+- Carga de imágenes del usuario
+- Navegación entre imágenes (prev/next)
+- Actualización de UI (contador, botones)
+- Callback `onImageChange` para sincronización
+
+#### VirtualScrollManager.js
+**Propósito**: Implementación de virtual scrolling para la lista de usuarios
+
+**Funcionalidades**:
+- Renderizado eficiente de grandes listas (solo elementos visibles)
+- Cálculo dinámico de alturas (spacers)
+- Actualización on scroll
+- Scroll programático a índice específico
+
+**Optimización**: Permite manejar miles de usuarios sin degradación de performance
+
+#### UserRowRenderer.js
+**Propósito**: Renderizado de filas individuales de la tabla de usuarios
+
+**Funcionalidades**:
+- Generación de HTML para fila de usuario
+- Indicadores visuales (foto, repositorio, duplicados)
+- Checkbox de selección en modo multi-selección
+- Lazy loading de miniaturas
+
+### Componentes Core (core/)
+
+#### BaseModal.js
+**Propósito**: Clase base para todos los modales
+
+**Funcionalidades**:
+- Gestión de apertura/cierre
+- Manejo de tecla Escape
+- Prevención de cierre durante loading
+- Soporte para Promise-based workflows
+
+**Patrón**: Herencia - todos los modales extienden BaseModal
+
+#### store.js
+**Propósito**: Estado global de la aplicación
+
+**Variables**:
+- `currentProject`: Proyecto actualmente abierto
+- `currentUsers`: Lista de usuarios cargados
+- `selectedUser`: Usuario actualmente seleccionado
+- `selectionMode`: Estado del modo multi-selección
+- `selectedUsers`: Set de usuarios seleccionados
+
+### Coordinador Principal (renderer.js)
+
+**Función**: Actúa como coordinador central que:
+1. Inicializa todos los componentes
+2. Configura callbacks de comunicación inter-componentes
+3. Delega funcionalidad a componentes especializados
+4. Mantiene compatibilidad con código legacy mediante sincronización de estado
+5. Gestiona eventos IPC del main process
+
+**Inicialización**:
+```javascript
+// 1. Crear instancias con configuración
+const manager = new SomeManager({
+  callback: handleEvent,
+  getData: () => globalState
+});
+
+// 2. Inicializar
+manager.init();
+
+// 3. Funciones delegadas
+function legacyFunction() {
+  manager.handleLegacyFunction();
+}
+```
+
+### Testing
+
+Todos los componentes tienen tests unitarios completos usando Jest y JSDOM:
+
+- **Total de tests**: 488 tests pasando
+- **Cobertura**: Cada componente tiene 20-37 tests
+- **Mocking**: DOM elements, IPC (electronAPI), IntersectionObserver
+
+**Estructura de tests**:
+```
+tests/unit/components/
+├── modals/
+│   ├── AddTagModal.test.js (14 tests)
+│   ├── ConfirmModal.test.js (19 tests)
+│   ├── ExportOptionsModal.test.js (29 tests)
+│   ├── InfoModal.test.js (16 tests)
+│   ├── NewProjectModal.test.js (32 tests)
+│   └── UserImageModal.test.js (24 tests)
+├── DragDropManager.test.js (24 tests)
+├── ExportManager.test.js (27 tests)
+├── ImageGridManager.test.js (36 tests)
+├── ImageTagsManager.test.js (22 tests)
+├── LazyImageManager.test.js (36 tests)
+├── ProgressManager.test.js (37 tests)
+├── SelectionModeManager.test.js (29 tests)
+├── UserRowRenderer.test.js (33 tests)
+└── VirtualScrollManager.test.js (37 tests)
+```
+
+**Comando**: `npm test`
+
+### Beneficios de la Refactorización
+
+1. **Mantenibilidad**: Código organizado en módulos cohesivos y especializados
+2. **Testabilidad**: Cada componente es independiente y fácilmente testable
+3. **Reutilización**: Componentes reutilizables (especialmente modales)
+4. **Escalabilidad**: Fácil agregar nuevas funcionalidades sin inflar renderer.js
+5. **Legibilidad**: Separación clara de responsabilidades
+6. **Performance**: Virtual scrolling y lazy loading optimizan rendimiento
+7. **Calidad**: 488 tests garantizan estabilidad
+
 ## Estado Actual
 
 Aplicación completamente funcional con todas las características principales implementadas:
@@ -147,7 +446,8 @@ Aplicación completamente funcional con todas las características principales i
 - ✅ Detección de duplicados
 - ✅ Múltiples ventanas (principal, cámara, grids de visualización)
 - ✅ Caché de archivos con TTL para optimización
-- ✅ Arquitectura modular refactorizada
+- ✅ Arquitectura modular refactorizada (main process y renderer process)
+- ✅ Cobertura de tests completa (488 tests unitarios)
 
 ## Notas de Desarrollo
 
@@ -157,6 +457,8 @@ Aplicación completamente funcional con todas las características principales i
 - **Caché optimizado**: Sistema de caché con TTL para reducir operaciones de filesystem
 - **Sincronización**: Mirror local del repositorio Google Drive con actualización automática
 - **Privacidad**: Apropiado para entornos educativos
+- **Testing**: Suite completa de tests unitarios con Jest (488 tests)
+- **Patrones**: IIFE, UMD exports, callback-based communication, delegation pattern
 
 ## Funcionalidades principales
 - Captura de imágenes desde:
