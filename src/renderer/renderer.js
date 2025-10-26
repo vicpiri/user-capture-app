@@ -1,16 +1,15 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserRowRenderer, VirtualScrollManager, ImageGridManager
 
 // Component instances
 let userRowRenderer = null;
+let imageGridManager = null;
 
 // State management
 let currentUsers = [];
 let allUsers = []; // All users from database for duplicate checking
 let currentGroups = [];
 let selectedUser = null;
-let currentImages = [];
-let currentImageIndex = 0;
 let projectOpen = false;
 let showDuplicatesOnly = false;
 let showCapturedPhotos = true;
@@ -64,6 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize virtual scroll manager
   initializeVirtualScroll();
+
+  // Initialize image grid manager
+  initializeImageGridManager();
 
   initializeEventListeners();
   setupProgressListener();
@@ -126,6 +128,23 @@ function initializeVirtualScroll() {
   console.log('[Renderer] Virtual scroll manager initialized');
 }
 
+// Initialize image grid manager
+function initializeImageGridManager() {
+  imageGridManager = new ImageGridManager({
+    imagePreviewContainer: imagePreviewContainer,
+    currentImage: currentImage,
+    getImages: () => window.electronAPI.getImages(),
+    onImageChange: async (imagePath) => {
+      // Load and display tags for current image
+      await loadImageTags();
+      // Update link button state
+      updateLinkButtonState();
+    }
+  });
+
+  console.log('[Renderer] Image grid manager initialized');
+}
+
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
@@ -154,8 +173,16 @@ function initializeEventListeners() {
   linkBtn.addEventListener('click', handleLinkImage);
 
   // Image navigation
-  prevImageBtn.addEventListener('click', () => navigateImages(-1));
-  nextImageBtn.addEventListener('click', () => navigateImages(1));
+  prevImageBtn.addEventListener('click', () => {
+    if (imageGridManager) {
+      imageGridManager.previous();
+    }
+  });
+  nextImageBtn.addEventListener('click', () => {
+    if (imageGridManager) {
+      imageGridManager.next();
+    }
+  });
 
   // Note: Modal buttons (new project, confirm, info) are handled by modal classes
 
@@ -167,7 +194,14 @@ function initializeEventListeners() {
     // Start blinking the image preview container
     if (!blinkInterval) {
       blinkInterval = setInterval(() => {
-        imagePreviewContainer.classList.toggle('detecting-image');
+        if (imageGridManager) {
+          imageGridManager.setDetecting(true);
+        }
+        setTimeout(() => {
+          if (imageGridManager) {
+            imageGridManager.setDetecting(false);
+          }
+        }, 150);
       }, 300); // Blink every 300ms
     }
   });
@@ -178,12 +212,13 @@ function initializeEventListeners() {
     if (blinkInterval) {
       clearInterval(blinkInterval);
       blinkInterval = null;
-      imagePreviewContainer.classList.remove('detecting-image');
+      if (imageGridManager) {
+        imageGridManager.setDetecting(false);
+      }
     }
 
-    await loadImages();
-    if (currentImages.length > 0) {
-      showImagePreview();
+    if (imageGridManager) {
+      await imageGridManager.loadImages(true);
     }
   });
 
@@ -216,14 +251,14 @@ function initializeEventListeners() {
     }
 
     // Left arrow key - previous image
-    if (event.key === 'ArrowLeft' && currentImages.length > 0) {
+    if (event.key === 'ArrowLeft' && imageGridManager && imageGridManager.getImageCount() > 0) {
       event.preventDefault();
-      navigateImages(-1);
+      imageGridManager.previous();
     }
     // Right arrow key - next image
-    else if (event.key === 'ArrowRight' && currentImages.length > 0) {
+    else if (event.key === 'ArrowRight' && imageGridManager && imageGridManager.getImageCount() > 0) {
       event.preventDefault();
-      navigateImages(1);
+      imageGridManager.next();
     }
     // Up arrow key - previous user
     else if (event.key === 'ArrowUp') {
@@ -559,49 +594,26 @@ async function filterUsers() {
 }
 
 // Image management
+// Load images - delegates to ImageGridManager
 async function loadImages() {
-  const result = await window.electronAPI.getImages();
-
-  if (result.success) {
-    const previousLength = currentImages.length;
-    currentImages = result.images;
-
-    if (currentImages.length > 0) {
-      // If new image was added, show the latest one
-      if (currentImages.length > previousLength) {
-        currentImageIndex = 0; // Newest image is first
-      }
-      showImagePreview();
-    }
+  if (imageGridManager) {
+    return await imageGridManager.loadImages(true);
   }
+  return false;
 }
 
+// Show image preview - delegates to ImageGridManager
 async function showImagePreview() {
-  if (currentImages.length === 0) return;
-
-  imagePreviewContainer.classList.add('active');
-  currentImage.src = `file://${currentImages[currentImageIndex]}`;
-  updateLinkButtonState();
-
-  // Load and display tags for current image
-  await loadImageTags();
+  if (imageGridManager && imageGridManager.getImageCount() > 0) {
+    imageGridManager.showPreview();
+  }
 }
 
+// Navigate images - delegates to ImageGridManager
 async function navigateImages(direction) {
-  if (currentImages.length === 0) return;
-
-  currentImageIndex += direction;
-
-  if (currentImageIndex < 0) {
-    currentImageIndex = currentImages.length - 1;
-  } else if (currentImageIndex >= currentImages.length) {
-    currentImageIndex = 0;
+  if (imageGridManager) {
+    imageGridManager.navigate(direction);
   }
-
-  currentImage.src = `file://${currentImages[currentImageIndex]}`;
-
-  // Load and display tags for current image
-  await loadImageTags();
 }
 
 function navigateUsers(direction) {
@@ -662,12 +674,12 @@ async function handleLinkImage() {
     return;
   }
 
-  if (currentImages.length === 0 || !imagePreviewContainer.classList.contains('active')) {
+  if (!imageGridManager || !imageGridManager.isPreviewActive()) {
     showInfoModal('Aviso', 'Debes seleccionar una imagen');
     return;
   }
 
-  const imagePath = currentImages[currentImageIndex];
+  const imagePath = imageGridManager.getCurrentImagePath();
 
   const result = await window.electronAPI.linkImageToUser({
     userId: selectedUser.id,
@@ -717,7 +729,7 @@ async function handleLinkImage() {
 }
 
 function updateLinkButtonState() {
-  const hasImageSelected = imagePreviewContainer.classList.contains('active') && currentImages.length > 0;
+  const hasImageSelected = imageGridManager && imageGridManager.isPreviewActive();
   const hasUserSelected = selectedUser !== null;
 
   linkBtn.disabled = !(hasImageSelected && hasUserSelected);
@@ -1509,7 +1521,7 @@ async function handleUpdateXML() {
 
 // Add image tag
 async function handleAddImageTag() {
-  if (currentImages.length === 0 || !imagePreviewContainer.classList.contains('active')) {
+  if (!imageGridManager || !imageGridManager.isPreviewActive()) {
     showInfoModal('Aviso', 'Debes seleccionar una imagen primero');
     return;
   }
@@ -1547,7 +1559,12 @@ function showAddTagModal() {
     }
 
     // Get current image path
-    const imagePath = currentImages[currentImageIndex];
+    const imagePath = imageGridManager ? imageGridManager.getCurrentImagePath() : null;
+
+    if (!imagePath) {
+      showInfoModal('Error', 'No se pudo obtener la imagen actual');
+      return;
+    }
 
     // Close modal
     addTagModal.classList.remove('show');
@@ -1579,9 +1596,10 @@ function showAddTagModal() {
 
 // Load and display image tags
 async function loadImageTags() {
-  if (currentImages.length === 0) return;
+  if (!imageGridManager || imageGridManager.getImageCount() === 0) return;
 
-  const imagePath = currentImages[currentImageIndex];
+  const imagePath = imageGridManager.getCurrentImagePath();
+  if (!imagePath) return;
   const result = await window.electronAPI.getImageTags(imagePath);
 
   const tagsContainer = document.getElementById('image-tags-container');
@@ -1713,11 +1731,8 @@ async function handleShowTaggedImages() {
 
       // Add click handler to show full image
       imageItem.addEventListener('click', () => {
-        // Find the image in currentImages
-        const imageIndex = currentImages.indexOf(imageData.path);
-        if (imageIndex !== -1) {
-          currentImageIndex = imageIndex;
-          showImagePreview();
+        // Show image in preview
+        if (imageGridManager && imageGridManager.showImageByPath(imageData.path)) {
           taggedImagesModal.classList.remove('show');
         }
       });
