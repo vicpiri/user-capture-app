@@ -945,6 +945,8 @@ async function handleImportImagesId() {
 
     const importResult = await window.electronAPI.importImagesWithId(folderPath);
 
+    // Wait a moment to show 100% progress
+    await new Promise(resolve => setTimeout(resolve, 500));
     closeProgressModal();
 
     if (importResult.success) {

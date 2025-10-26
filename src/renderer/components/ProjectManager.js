@@ -161,11 +161,15 @@
       const updateResult = await this.electronAPI.updateXML(xmlPath);
 
       if (!updateResult.success) {
+        // Wait a moment to show 100% progress
+        await new Promise(resolve => setTimeout(resolve, 500));
         this.onCloseProgressModal();
         this.onShowInfoModal('Error', 'Error al analizar el XML: ' + updateResult.error);
         return;
       }
 
+      // Wait a moment to show 100% progress
+      await new Promise(resolve => setTimeout(resolve, 500));
       this.onCloseProgressModal();
 
       // Show confirmation dialog with summary
@@ -198,6 +202,8 @@
           currentUsers: updateResult.currentUsers
         });
 
+        // Wait a moment to show 100% progress
+        await new Promise(resolve => setTimeout(resolve, 500));
         this.onCloseProgressModal();
 
         if (confirmResult.success) {

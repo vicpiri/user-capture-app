@@ -69,6 +69,22 @@ function calculateAge(birthDate, logger) {
 }
 
 /**
+ * Helper function to send progress update to main window
+ * @param {Function} getMainWindow - Function to get main window
+ * @param {number} processedCount - Number of items processed
+ * @param {number} total - Total number of items
+ * @param {string} message - Progress message
+ */
+function sendProgressUpdate(getMainWindow, processedCount, total, message) {
+  const percentage = Math.round((processedCount / total) * 100);
+  getMainWindow()?.webContents.send('progress', {
+    percentage,
+    message,
+    details: `${processedCount} de ${total} imágenes procesadas`
+  });
+}
+
+/**
  * Register export-related IPC handlers
  * @param {Object} context - Shared context object
  * @param {BrowserWindow} context.mainWindow - Main window instance
@@ -346,23 +362,17 @@ function registerExportHandlers(context) {
               }
 
               results.exported++;
-              processedCount++;
               logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
-
-              // Send progress update
-              const percentage = Math.round((processedCount / results.total) * 100);
-              getMainWindow()?.webContents.send('progress', {
-                percentage,
-                message: 'Exportando imágenes...',
-                details: `${processedCount} de ${results.total} imágenes procesadas`
-              });
             } catch (error) {
               results.errors.push({
                 user: `${user.first_name} ${user.last_name1}`,
                 error: error.message
               });
-              processedCount++;
               logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
+            } finally {
+              // Always update progress, regardless of success or failure
+              processedCount++;
+              sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
             }
           }
         } catch (error) {
@@ -374,6 +384,7 @@ function registerExportHandlers(context) {
               error: `Error al crear carpeta del grupo: ${error.message}`
             });
             processedCount++;
+            sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
           });
         }
       }
@@ -534,23 +545,17 @@ function registerExportHandlers(context) {
           }
 
           results.exported++;
-          processedCount++;
           logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${destFileName}`);
-
-          // Send progress update
-          const percentage = Math.round((processedCount / results.total) * 100);
-          getMainWindow()?.webContents.send('progress', {
-            percentage,
-            message: 'Exportando imágenes al depósito...',
-            details: `${processedCount} de ${results.total} imágenes procesadas`
-          });
         } catch (error) {
           results.errors.push({
             user: `${user.first_name} ${user.last_name1}`,
             error: error.message
           });
-          processedCount++;
           logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
+        } finally {
+          // Always update progress, regardless of success or failure
+          processedCount++;
+          sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes al depósito...');
         }
       }
 
@@ -740,23 +745,17 @@ function registerExportHandlers(context) {
               }
 
               results.exported++;
-              processedCount++;
               logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
-
-              // Send progress update
-              const percentage = Math.round((processedCount / results.total) * 100);
-              getMainWindow()?.webContents.send('progress', {
-                percentage,
-                message: 'Exportando imágenes...',
-                details: `${processedCount} de ${results.total} imágenes procesadas`
-              });
             } catch (error) {
               results.errors.push({
                 user: `${user.first_name} ${user.last_name1}`,
                 error: error.message
               });
-              processedCount++;
               logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
+            } finally {
+              // Always update progress, regardless of success or failure
+              processedCount++;
+              sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
             }
           }
         } catch (error) {
@@ -768,6 +767,7 @@ function registerExportHandlers(context) {
               error: `Error al crear carpeta del grupo: ${error.message}`
             });
             processedCount++;
+            sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
           });
         }
       }
