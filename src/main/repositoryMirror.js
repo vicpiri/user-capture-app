@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const chokidar = require('chokidar');
 
@@ -546,43 +547,124 @@ class RepositoryMirror extends EventEmitter {
   }
 
   /**
+   * Calculate MD5 hash of a file (first 64KB only for performance)
+   * @param {string} filePath - Path to file
+   * @returns {Promise<string>} - MD5 hash
+   */
+  async calculateFileHash(filePath) {
+    return new Promise((resolve, reject) => {
+      const hash = crypto.createHash('md5');
+      const stream = fs.createReadStream(filePath, { start: 0, end: 65535 }); // First 64KB
+
+      stream.on('data', chunk => hash.update(chunk));
+      stream.on('end', () => resolve(hash.digest('hex')));
+      stream.on('error', reject);
+    });
+  }
+
+  /**
    * Check if there are changes in the repository
    */
   async checkForChanges() {
     try {
       const files = await fs.promises.readdir(this.repositoryPath);
 
-      // Check a sample of files for changes (not all 6000+ files every time)
-      const sampleSize = Math.min(50, files.length);
-      const step = Math.floor(files.length / sampleSize);
+      // Count only JPG files
+      const jpgFiles = files.filter(f => {
+        const ext = path.extname(f).toLowerCase();
+        return ext === '.jpg' || ext === '.jpeg';
+      });
 
-      for (let i = 0; i < files.length; i += step) {
-        const file = files[i];
-        const ext = path.extname(file).toLowerCase();
-        if (ext !== '.jpg' && ext !== '.jpeg') continue;
+      this.logger.info(`[Polling] Checking repository: ${jpgFiles.length} JPG files, ${this.mirrorIndex.size} in mirror index`);
 
+      // Quick check: if file count changed, trigger sync immediately
+      if (jpgFiles.length !== this.mirrorIndex.size) {
+        this.logger.info(`[Polling] File count mismatch detected (${jpgFiles.length} vs ${this.mirrorIndex.size}) - triggering sync`);
+        return true;
+      }
+
+      // Get file stats for all JPG files to sort by modification time
+      const fileStats = [];
+      for (const file of jpgFiles) {
+        try {
+          const sourcePath = path.join(this.repositoryPath, file);
+          const stats = await fs.promises.stat(sourcePath);
+          fileStats.push({ file, stats, sourcePath });
+        } catch (error) {
+          // File might have been deleted
+          this.logger.info(`[Polling] File inaccessible: ${file}`);
+        }
+      }
+
+      // Sort by modification time (most recent first)
+      fileStats.sort((a, b) => b.stats.mtimeMs - a.stats.mtimeMs);
+
+      // Strategy: Check a random sample of 50 files with hash verification
+      // This catches file replacements regardless of when they were modified
+      const sampleSize = Math.min(50, fileStats.length);
+      const step = Math.floor(fileStats.length / sampleSize);
+
+      this.logger.info(`[Polling] Checking ${sampleSize} random files with hash verification (step: ${step})`);
+
+      for (let i = 0; i < sampleSize; i++) {
+        const index = i * step;
+        const { file, stats, sourcePath } = fileStats[index];
         const filenameLower = file.toLowerCase();
         const mirrorEntry = this.mirrorIndex.get(filenameLower);
 
         if (!mirrorEntry) {
           // New file found
+          this.logger.info(`[Polling] New file detected: ${file}`);
+          // Mark it for force resync
+          this.forceResyncFiles.add(filenameLower);
+          this.emit('repository-changed', { type: 'add', filename: file });
           return true;
         }
 
-        // Check if file has changed
-        const sourcePath = path.join(this.repositoryPath, file);
+        // First quick check: mtime or size changed
+        const mtimeChanged = stats.mtimeMs !== mirrorEntry.mtime;
+        const sizeChanged = stats.size !== mirrorEntry.size;
+
+        if (mtimeChanged || sizeChanged) {
+          this.logger.info(`[Polling] Change detected in file: ${file} (mtime: ${mirrorEntry.mtime} -> ${stats.mtimeMs}, size: ${mirrorEntry.size} -> ${stats.size})`);
+          // Mark it for force resync
+          this.forceResyncFiles.add(filenameLower);
+          this.emit('repository-changed', { type: 'change', filename: file });
+          return true;
+        }
+
+        // Always check hash for sampled files to catch Windows copy-over behavior
         try {
-          const stats = await fs.promises.stat(sourcePath);
-          if (stats.mtimeMs !== mirrorEntry.mtime || stats.size !== mirrorEntry.size) {
-            this.logger.info(`Change detected in file: ${file} (mtime or size different)`);
+          const sourceHash = await this.calculateFileHash(sourcePath);
+          const mirrorPath = path.join(this.mirrorPath, file);
+
+          if (fs.existsSync(mirrorPath)) {
+            const mirrorHash = await this.calculateFileHash(mirrorPath);
+
+            // Log first 3 files for debugging
+            if (i < 3) {
+              this.logger.info(`[Polling] Hash check: ${file} - source: ${sourceHash.substring(0, 8)}, mirror: ${mirrorHash.substring(0, 8)}, match: ${sourceHash === mirrorHash}`);
+            }
+
+            if (sourceHash !== mirrorHash) {
+              this.logger.info(`[Polling] Content change detected in file (hash mismatch): ${file}`);
+              this.forceResyncFiles.add(filenameLower);
+              this.emit('repository-changed', { type: 'change', filename: file });
+              return true;
+            }
+          } else {
+            // Mirror file doesn't exist
+            this.logger.info(`[Polling] Mirror file missing: ${file}`);
+            this.forceResyncFiles.add(filenameLower);
+            this.emit('repository-changed', { type: 'change', filename: file });
             return true;
           }
         } catch (error) {
-          // File might have been deleted
-          return true;
+          this.logger.error(`[Polling] Error checking hash for ${file}:`, error.message);
         }
       }
 
+      this.logger.info('[Polling] No changes detected');
       return false;
     } catch (error) {
       this.logger.error('Error checking for changes:', error);
@@ -629,6 +711,23 @@ class RepositoryMirror extends EventEmitter {
    */
   isWatching() {
     return this.watchEnabled;
+  }
+
+  /**
+   * Force a full resync of all repository files
+   * Used for manual refresh from menu
+   */
+  async forceFullResync() {
+    this.logger.info('[Manual Refresh] Forcing full repository resync');
+
+    try {
+      // Start a new sync which will compare all files
+      await this.startSync();
+      this.logger.success('[Manual Refresh] Repository resync completed');
+    } catch (error) {
+      this.logger.error('[Manual Refresh] Error during resync:', error);
+      throw error;
+    }
   }
 }
 

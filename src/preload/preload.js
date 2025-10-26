@@ -33,7 +33,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   onRepositoryChanged: (callback) => {
-    ipcRenderer.on('repository-changed', () => callback());
+    ipcRenderer.on('repository-changed', (event, data) => callback(data));
   },
 
   onSyncProgress: (callback) => {

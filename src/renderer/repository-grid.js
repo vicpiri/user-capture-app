@@ -88,7 +88,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Listen for repository changes
-  window.electronAPI.onRepositoryChanged(async () => {
+  window.electronAPI.onRepositoryChanged(async (data) => {
+    console.log('[Repository Grid] Repository changed:', data);
     await loadUsers();
     displayGrid();
   });
