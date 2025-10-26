@@ -6,10 +6,18 @@
  * @extends BaseModal
  */
 
-const { BaseModal } = require('../../core/BaseModal');
-const { imageService } = require('../../services');
+(function(global) {
+  'use strict';
 
-class AddTagModal extends BaseModal {
+  // Dependencies: BaseModal (loaded from core in browser, or via require in Node.js)
+  let BaseModal;
+  if (typeof window !== 'undefined' && window.BaseModal) {
+    BaseModal = window.BaseModal;
+  } else if (typeof require !== 'undefined') {
+    ({ BaseModal } = require('../../core/BaseModal'));
+  }
+
+  class AddTagModal extends BaseModal {
   constructor() {
     super('add-tag-modal');
 
@@ -19,9 +27,7 @@ class AddTagModal extends BaseModal {
     this.cancelBtn = null;
 
     // State
-    this.currentImageId = null;
     this.resolvePromise = null;
-    this.rejectPromise = null;
   }
 
   /**
@@ -53,14 +59,12 @@ class AddTagModal extends BaseModal {
 
   /**
    * Show add tag dialog
-   * @param {number} imageId - Image ID to tag
-   * @returns {Promise<object|null>} Promise that resolves with tag result or null if cancelled
+   * @returns {Promise<string|null>} Promise that resolves with tag text or null if cancelled
    */
-  show(imageId) {
+  show() {
     return new Promise((resolve, reject) => {
       this.resolvePromise = resolve;
       this.rejectPromise = reject;
-      this.currentImageId = imageId;
 
       // Reset input
       if (this.tagInput) {
@@ -82,51 +86,19 @@ class AddTagModal extends BaseModal {
   /**
    * Handle confirm button
    */
-  async handleConfirm() {
+  handleConfirm() {
     const tagText = this.tagInput ? this.tagInput.value.trim() : '';
 
-    if (!tagText) {
-      this._log('No tag text entered', 'warn');
-      return;
-    }
+    this._log('Confirm clicked, tag:', tagText);
 
-    if (!this.currentImageId) {
-      this._log('No image ID set', 'error');
-      return;
-    }
-
-    // Disable button
-    this.confirmBtn.disabled = true;
-    this.confirmBtn.textContent = 'Agregando...';
-
-    try {
-      this._log(`Adding tag "${tagText}" to image ${this.currentImageId}`);
-
-      const result = await imageService.addImageTag(this.currentImageId, tagText);
-
-      if (result.success) {
-        this._log('Tag added successfully');
-        this.close();
-
-        if (this.resolvePromise) {
-          this.resolvePromise({
-            success: true,
-            imageId: this.currentImageId,
-            tag: tagText
-          });
-          this.resolvePromise = null;
-          this.rejectPromise = null;
-        }
-      } else {
-        this._log('Failed to add tag', 'error');
-        throw new Error(result.error || 'Failed to add tag');
-      }
-    } catch (error) {
-      console.error('[AddTagModal] Error adding tag:', error);
-      alert('Error al agregar etiqueta: ' + error.message);
-    } finally {
-      this.confirmBtn.disabled = false;
-      this.confirmBtn.textContent = 'Agregar';
+    if (this.resolvePromise) {
+      const resolve = this.resolvePromise;
+      this.resolvePromise = null;
+      this.rejectPromise = null;
+      this.close();
+      resolve(tagText || null); // Return null if empty
+    } else {
+      this.close();
     }
   }
 
@@ -154,29 +126,29 @@ class AddTagModal extends BaseModal {
     if (this.resolvePromise) {
       this.resolvePromise(null);
       this.resolvePromise = null;
-      this.rejectPromise = null;
     }
-
-    this.currentImageId = null;
   }
 
   /**
    * Internal logging
    * @private
    */
-  _log(message, level = 'info') {
+  _log(message, data = null, level = 'info') {
     const prefix = '[AddTagModal]';
     if (level === 'error') {
-      console.error(prefix, message);
+      console.error(prefix, message, data || '');
     } else if (level === 'warn') {
-      console.warn(prefix, message);
+      console.warn(prefix, message, data || '');
     } else {
-      console.log(prefix, message);
+      console.log(prefix, message, data || '');
     }
   }
 }
 
-// Export
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { AddTagModal };
-}
+  // Export (for tests and browser)
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { AddTagModal };
+  } else if (typeof window !== 'undefined') {
+    global.AddTagModal = AddTagModal;
+  }
+})(typeof window !== 'undefined' ? window : global);
