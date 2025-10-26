@@ -76,7 +76,7 @@ function calculateAge(birthDate, logger) {
  * @param {Object} context.state - Application state
  */
 function registerExportHandlers(context) {
-  const { mainWindow, logger, state } = context;
+  const { mainWindow: getMainWindow, logger, state } = context;
 
   // Export CSV
   ipcMain.handle('export-csv', async (event, folderPath, users) => {
@@ -351,7 +351,7 @@ function registerExportHandlers(context) {
 
               // Send progress update
               const percentage = Math.round((processedCount / results.total) * 100);
-              mainWindow.webContents.send('progress', {
+              getMainWindow()?.webContents.send('progress', {
                 percentage,
                 message: 'Exportando imágenes...',
                 details: `${processedCount} de ${results.total} imágenes procesadas`
@@ -539,7 +539,7 @@ function registerExportHandlers(context) {
 
           // Send progress update
           const percentage = Math.round((processedCount / results.total) * 100);
-          mainWindow.webContents.send('progress', {
+          getMainWindow()?.webContents.send('progress', {
             percentage,
             message: 'Exportando imágenes al depósito...',
             details: `${processedCount} de ${results.total} imágenes procesadas`
@@ -745,7 +745,7 @@ function registerExportHandlers(context) {
 
               // Send progress update
               const percentage = Math.round((processedCount / results.total) * 100);
-              mainWindow.webContents.send('progress', {
+              getMainWindow()?.webContents.send('progress', {
                 percentage,
                 message: 'Exportando imágenes...',
                 details: `${processedCount} de ${results.total} imágenes procesadas`
