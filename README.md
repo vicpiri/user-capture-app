@@ -44,6 +44,24 @@ User Capture App permite la captura, organización y exportación de fotografía
 - npm 8 o superior
 - Windows, macOS o Linux
 
+### Requisitos adicionales para compilación en Windows
+
+Para compilar la aplicación en Windows, se requiere configuración adicional:
+
+1. **Python con setuptools**:
+   - Instalar Python 3.11 o anterior (Python 3.12+ requiere configuración adicional)
+   - Si usas Python 3.12+, instalar setuptools: `pip install setuptools`
+
+2. **Modo Desarrollador de Windows** (recomendado):
+   - Abre Configuración de Windows → Privacidad y seguridad → Para desarrolladores
+   - Activa "Modo de desarrollador"
+   - Esto permite crear enlaces simbólicos sin privilegios de administrador
+   - Reinicia el equipo si es necesario
+
+3. **Alternativa sin Modo Desarrollador**:
+   - Ejecutar PowerShell o terminal como Administrador para compilar
+   - Esto es necesario para que electron-builder pueda crear enlaces simbólicos
+
 ## Instalación
 
 ```bash
