@@ -145,6 +145,7 @@ class MenuBuilder {
               label: 'Depósito imágenes de usuario',
               click: async () => {
                 const currentPath = this.callbacks.getImageRepositoryPath();
+
                 const result = await dialog.showOpenDialog(this.mainWindow, {
                   title: 'Seleccionar carpeta del depósito de imágenes',
                   defaultPath: currentPath || undefined,
@@ -153,7 +154,13 @@ class MenuBuilder {
 
                 if (!result.canceled && result.filePaths.length > 0) {
                   const selectedPath = result.filePaths[0];
+
                   if (this.callbacks.setImageRepositoryPath(selectedPath)) {
+                    // Reinitialize repository mirror with new path
+                    if (this.callbacks.reinitializeRepositoryMirror) {
+                      await this.callbacks.reinitializeRepositoryMirror();
+                    }
+
                     dialog.showMessageBox(this.mainWindow, {
                       type: 'info',
                       title: 'Configuración guardada',
@@ -161,12 +168,6 @@ class MenuBuilder {
                       detail: `Ruta: ${selectedPath}`,
                       buttons: ['Aceptar']
                     });
-                    this.logger.info(`Image repository path set to: ${selectedPath}`);
-
-                    // Notify renderer to reload users with new repository path
-                    if (this.mainWindow) {
-                      this.mainWindow.webContents.send('repository-changed');
-                    }
                   } else {
                     dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
                   }

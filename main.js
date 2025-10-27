@@ -96,6 +96,7 @@ function createMenu() {
       openRecentProject,
       getImageRepositoryPath,
       setImageRepositoryPath,
+      reinitializeRepositoryMirror,
       toggleCamera: () => {
         cameraEnabled = !cameraEnabled;
         if (cameraEnabled) {
@@ -355,6 +356,34 @@ async function ensureDeletedGroup() {
 }
 
 // Repository mirror management
+async function reinitializeRepositoryMirror() {
+  // Stop existing mirror if running
+  if (repositoryMirror) {
+    await repositoryMirror.stopWatch();
+    repositoryMirror = null;
+  }
+
+  // Clear repository cache
+  repositoryCacheManager.invalidateCache();
+
+  // Start new mirror with new path
+  await ensureRepositoryMirrorStarted();
+
+  // Wait a bit for the sync to start
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // Notify all windows to reload repository data
+  const mainWindow = mainWindowManager.getWindow();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('repository-changed');
+  }
+
+  const repositoryGridWindow = repositoryGridWindowManager.getWindow();
+  if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
+    repositoryGridWindow.webContents.send('repository-changed');
+  }
+}
+
 async function ensureRepositoryMirrorStarted() {
   // Only start if not already running and repository path is set
   if (repositoryMirror) {
@@ -599,7 +628,8 @@ function registerIPCHandlers() {
     addRecentProject,
     updateWindowTitle,
     ensureDeletedGroup,
-    ensureRepositoryMirrorStarted
+    ensureRepositoryMirrorStarted,
+    reinitializeRepositoryMirror
   };
 
   // Register all handler modules

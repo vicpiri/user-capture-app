@@ -16,7 +16,7 @@ const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, 
  * @param {Function} context.createMenu - Create menu function
  */
 function registerMiscHandlers(context) {
-  const { mainWindow: getMainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu } = context;
+  const { mainWindow: getMainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu, reinitializeRepositoryMirror } = context;
 
   // ============================================================================
   // Dialog Handlers
@@ -81,6 +81,10 @@ function registerMiscHandlers(context) {
   ipcMain.handle('set-image-repository-path', async (event, repositoryPath) => {
     try {
       if (setImageRepositoryPath(repositoryPath)) {
+        // Reinitialize repository mirror with new path
+        logger.info(`Repository path changed to: ${repositoryPath}`);
+        await reinitializeRepositoryMirror();
+        logger.success('Repository mirror reinitialized with new path');
         return { success: true };
       } else {
         return { success: false, error: 'No se pudo guardar la configuración' };
