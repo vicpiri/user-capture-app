@@ -120,6 +120,42 @@ npm run dist:linux
 
 Los instaladores se generarán en la carpeta `dist/`.
 
+### Firma de código (Code Signing)
+
+**Problema**: Windows Defender y SmartScreen pueden marcar la aplicación como software malicioso si no está firmada digitalmente.
+
+**Soluciones**:
+
+1. **Para distribución pública** (recomendado):
+   - Obtener un certificado de firma de código (Code Signing Certificate)
+   - Certificado EV: ~$300-400/año (reconocimiento inmediato)
+   - Certificado OV: ~$100-200/año (requiere construcción de reputación)
+   - Proveedores: DigiCert, Sectigo, SSL.com
+
+2. **Para desarrollo/uso interno**:
+   - Agregar excepción en Windows Defender en el equipo de destino
+   - Distribuir por carpeta compartida en red (sin instalador NSIS)
+   - Usar formato portable (sin instalador)
+   - Documentar el proceso de instalación manual
+
+**Configuración de firma** (una vez obtenido el certificado):
+
+```json
+"build": {
+  "win": {
+    "certificateFile": "path/to/certificate.pfx",
+    "certificatePassword": "your-password",
+    "signingHashAlgorithms": ["sha256"],
+    "rfc3161TimeStampServer": "http://timestamp.digicert.com"
+  }
+}
+```
+
+**Instrucciones para usuarios** (aplicación sin firmar):
+1. Al descargar, Windows SmartScreen puede mostrar advertencia
+2. Click en "Más información" → "Ejecutar de todas formas"
+3. Agregar excepción en Windows Defender si es necesario
+
 ## Estructura del Proyecto
 
 ```
