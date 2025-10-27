@@ -247,6 +247,68 @@
       if (callbacks.onDisplayUsers) this.onDisplayUsers = callbacks.onDisplayUsers;
       if (callbacks.onUpdateUserCount) this.onUpdateUserCount = callbacks.onUpdateUserCount;
     }
+
+    /**
+     * Refresh only repository indicators without reloading the entire user list
+     * This preserves scroll position and DOM state
+     * @param {Function} userRowRendererUpdateCallback - Callback to update row renderer
+     * @returns {Promise<void>}
+     */
+    async refreshRepositoryIndicators(userRowRendererUpdateCallback) {
+      console.log('[UserDataManager] Refreshing repository indicators without full reload');
+
+      try {
+        // Get current users to refresh their repository data
+        const currentUsers = this.getCurrentUsers();
+        if (!currentUsers || currentUsers.length === 0) {
+          console.log('[UserDataManager] No users loaded, skipping refresh');
+          return;
+        }
+
+        // Set loading state
+        this.setIsLoadingRepositoryPhotos(true);
+        this.setIsLoadingRepositoryIndicators(true);
+
+        // Load repository data for current users
+        const result = await this.electronAPI.loadRepositoryImages(currentUsers);
+
+        if (result.success) {
+          // Update repository data in the existing user objects
+          currentUsers.forEach(user => {
+            const repoData = result.repositoryData[user.id];
+            if (repoData) {
+              user.has_repository_image = repoData.has_repository_image;
+              user.repository_image_path = repoData.repository_image_path;
+            }
+          });
+
+          // Update the current users state
+          this.setCurrentUsers(currentUsers);
+
+          // Stop loading states
+          this.setIsLoadingRepositoryPhotos(false);
+          this.setIsLoadingRepositoryIndicators(false);
+          this.setRepositorySyncCompleted(true);
+
+          // Call the callback to update the UI (without full re-render)
+          if (userRowRendererUpdateCallback) {
+            userRowRendererUpdateCallback(currentUsers);
+          }
+
+          console.log('[UserDataManager] Repository indicators refreshed successfully');
+        } else {
+          console.error('[UserDataManager] Error refreshing repository data:', result.error);
+          // Stop loading states even on error
+          this.setIsLoadingRepositoryPhotos(false);
+          this.setIsLoadingRepositoryIndicators(false);
+        }
+      } catch (error) {
+        console.error('[UserDataManager] Error refreshing repository indicators:', error);
+        // Stop loading states even on error
+        this.setIsLoadingRepositoryPhotos(false);
+        this.setIsLoadingRepositoryIndicators(false);
+      }
+    }
   }
 
   // Export (for tests and browser)

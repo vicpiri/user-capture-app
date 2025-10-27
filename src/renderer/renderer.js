@@ -528,10 +528,24 @@ function initializeEventListeners() {
     console.log('[Repository] Repository changed:', data);
     // Mark repository sync as completed
     repositorySyncCompleted = true;
-    // Reload users to update repository indicators
-    const filters = getCurrentFilters();
-    await loadUsers(filters);
-    console.log('[Repository] Users reloaded after repository change');
+
+    // Refresh only repository indicators to preserve scroll position
+    if (userDataManager && userRowRenderer) {
+      await userDataManager.refreshRepositoryIndicators((updatedUsers) => {
+        // Update repository indicators in existing rows
+        userRowRenderer.updateRepositoryIndicators(userTableBody, updatedUsers);
+        // Trigger lazy image observation for new repository images
+        if (lazyImageManager) {
+          lazyImageManager.observeAll();
+        }
+      });
+      console.log('[Repository] Repository indicators refreshed (scroll preserved)');
+    } else {
+      // Fallback to full reload if managers not initialized
+      const filters = getCurrentFilters();
+      await loadUsers(filters);
+      console.log('[Repository] Users reloaded after repository change');
+    }
   });
 
   // Keyboard navigation is now handled by KeyboardNavigationManager
