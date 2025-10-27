@@ -21,7 +21,9 @@
 
   class ExportOptionsModal extends BaseModal {
   constructor() {
-    super('export-options-modal');
+    super('export-options-modal', {
+      defaultButtonSelector: '#export-confirm-btn'
+    });
 
     // Form elements
     this.copyOriginalRadio = null;

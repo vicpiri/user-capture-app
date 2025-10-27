@@ -20,7 +20,9 @@
 
   class ConfirmModal extends BaseModal {
   constructor() {
-    super('confirm-modal');
+    super('confirm-modal', {
+      defaultButtonSelector: '#confirm-yes-btn'
+    });
 
     // Elements
     this.messageEl = null;

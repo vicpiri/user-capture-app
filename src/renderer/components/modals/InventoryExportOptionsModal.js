@@ -13,7 +13,9 @@
 
   class InventoryExportOptionsModal extends BaseModal {
     constructor() {
-      super('inventory-export-options-modal');
+      super('inventory-export-options-modal', {
+        defaultButtonSelector: '#inventory-export-confirm'
+      });
 
       // Get DOM elements - User scope
       this.allUsersRadio = document.getElementById('inventory-export-all-users');

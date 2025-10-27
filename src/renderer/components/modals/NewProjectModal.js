@@ -22,7 +22,9 @@
 
   class NewProjectModal extends BaseModal {
   constructor() {
-    super('new-project-modal');
+    super('new-project-modal', {
+      defaultButtonSelector: '#create-project-btn'
+    });
 
     // Form elements
     this.projectFolderInput = null;

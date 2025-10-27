@@ -24,7 +24,9 @@
 
   class UserImageModal extends BaseModal {
     constructor(modalId = 'user-image-modal') {
-      super(modalId);
+      super(modalId, {
+        defaultButtonSelector: '#user-image-close-btn'
+      });
 
       // Get DOM elements
       this.titleElement = document.getElementById('user-image-modal-title');

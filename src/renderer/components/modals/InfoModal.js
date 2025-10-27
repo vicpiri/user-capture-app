@@ -20,7 +20,9 @@
 
   class InfoModal extends BaseModal {
   constructor() {
-    super('info-modal');
+    super('info-modal', {
+      defaultButtonSelector: '#info-modal-ok-btn'
+    });
 
     // Elements
     this.titleEl = null;
