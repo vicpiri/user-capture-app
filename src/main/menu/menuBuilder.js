@@ -111,6 +111,12 @@ class MenuBuilder {
               }
             },
             {
+              label: 'CSV de inventario por grupos',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-inventory-csv');
+              }
+            },
+            {
               label: 'Imágenes como ID',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-images');

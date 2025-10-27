@@ -21,6 +21,7 @@
     constructor(config = {}) {
       // Required dependencies
       this.exportOptionsModal = config.exportOptionsModal; // ExportOptionsModal instance
+      this.inventoryExportOptionsModal = config.inventoryExportOptionsModal; // InventoryExportOptionsModal instance
       this.showProgressModal = config.showProgressModal; // Function to show progress
       this.closeProgressModal = config.closeProgressModal; // Function to close progress
       this.showInfoModal = config.showInfoModal; // Function to show info/error
@@ -34,6 +35,7 @@
       this.getCurrentUsers = config.getCurrentUsers; // Function returning current users array
       this.getShowDuplicatesOnly = config.getShowDuplicatesOnly; // Function returning showDuplicatesOnly boolean
       this.getAllUsers = config.getAllUsers; // Function returning all users array
+      this.getCurrentFilters = config.getCurrentFilters; // Function returning current filters object
 
       // Required callbacks
       this.onExportComplete = config.onExportComplete || (() => {}); // Called after successful export
@@ -118,6 +120,141 @@
           this.showInfoModal('Exportación exitosa', message);
         } else {
           this.showInfoModal('Error', 'Error al exportar el CSV: ' + exportResult.error);
+        }
+      }
+    }
+
+    /**
+     * Export inventory CSV files (3 files: Alumnado, Personal, Grupos)
+     */
+    async exportInventoryCSV() {
+      if (!this.checkProjectOpen()) return;
+
+      // Get current group information
+      const filters = this.getCurrentFilters();
+      const selectedGroupCode = filters.group || null;
+
+      // Get group name if a group is selected
+      let selectedGroupName = null;
+      if (selectedGroupCode) {
+        try {
+          const groupsResult = await this.electronAPI.getGroups();
+          if (groupsResult.success) {
+            const group = groupsResult.groups.find(g => g.code === selectedGroupCode);
+            if (group) {
+              selectedGroupName = group.name;
+            }
+          }
+        } catch (error) {
+          console.error('Error getting group info:', error);
+        }
+      }
+
+      // Show inventory export options modal
+      const options = await this.inventoryExportOptionsModal.show({
+        selectedGroupCode,
+        selectedGroupName
+      });
+
+      // User cancelled
+      if (!options) return;
+
+      // Determine which users to export
+      let usersToExport;
+      if (options.scope === 'all') {
+        // Export all users - no filters
+        const result = await this.electronAPI.getUsers({}, {});
+        if (result.success) {
+          usersToExport = result.users;
+        } else {
+          this.showInfoModal('Error', 'Error al cargar los usuarios');
+          return;
+        }
+      } else {
+        // Export selected group only
+        const result = await this.electronAPI.getUsers({ group: selectedGroupCode }, {});
+        if (result.success) {
+          usersToExport = result.users;
+        } else {
+          this.showInfoModal('Error', 'Error al cargar los usuarios del grupo');
+          return;
+        }
+      }
+
+      // Show folder picker
+      const dialogResult = await this.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Seleccionar carpeta para guardar los CSV de inventario'
+      });
+
+      if (!dialogResult.canceled && dialogResult.filePaths.length > 0) {
+        const folderPath = dialogResult.filePaths[0];
+
+        // Export CSV files
+        const exportResult = await this.electronAPI.exportInventoryCSV(folderPath, usersToExport);
+
+        if (exportResult.success) {
+          const results = exportResult.results;
+          let message = `CSV de inventario exportados correctamente\n\n`;
+          message += `${results.filesCreated} archivos creados\n\n`;
+
+          if (results.files.length > 0) {
+            message += 'Archivos generados:\n';
+            results.files.forEach(file => {
+              message += `  • ${file.filename} (${file.userCount} registros)\n`;
+            });
+          }
+
+          // Export images if enabled
+          if (options.exportImages) {
+            message += '\n';
+
+            // Convert modal format to API format
+            const imageOptions = {
+              copyOriginal: options.imageOptions.copyOriginal,
+              resizeEnabled: options.imageOptions.resizeEnabled,
+              boxSize: options.imageOptions.boxSize,
+              maxSizeKB: options.imageOptions.maxSizeKB,
+              zipEnabled: options.zipEnabled || false,
+              zipMaxSizeMB: options.zipMaxSizeMB || 25
+            };
+
+            // Show progress
+            this.showProgressModal('Exportando Imágenes', 'Procesando archivos...');
+
+            // Perform image export
+            const imageExportResult = await this.electronAPI.exportInventoryImages(folderPath, usersToExport, imageOptions);
+
+            // Wait a moment to show 100% progress
+            await new Promise(resolve => setTimeout(resolve, 500));
+            this.closeProgressModal();
+
+            if (imageExportResult.success) {
+              const imageResults = imageExportResult.results;
+              message += `\nImágenes exportadas:\n`;
+              message += `  • Total procesadas: ${imageResults.total}\n`;
+              message += `  • Exportadas correctamente: ${imageResults.exported}\n`;
+              message += `  • Sin imagen en depósito: ${imageResults.skipped}\n`;
+
+              if (imageResults.errors > 0) {
+                message += `  • Errores: ${imageResults.errors}\n`;
+              }
+
+              // Add ZIP file information if applicable
+              if (imageOptions.zipEnabled && imageResults.zipFiles && imageResults.zipFiles.length > 0) {
+                message += `\nArchivos ZIP creados:\n`;
+                imageResults.zipFiles.forEach(zipFile => {
+                  message += `  • ${zipFile.name} (${zipFile.count} imágenes)\n`;
+                });
+              }
+            } else {
+              message += `\nError al exportar imágenes: ${imageExportResult.error}`;
+            }
+          }
+
+          this.showInfoModal('Exportación exitosa', message);
+        } else {
+          this.showInfoModal('Error', 'Error al exportar los CSV de inventario: ' + exportResult.error);
         }
       }
     }

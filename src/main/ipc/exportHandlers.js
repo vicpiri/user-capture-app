@@ -5,6 +5,7 @@ const { ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
+const archiver = require('archiver');
 const { getImageRepositoryPath } = require('../utils/config');
 const { capitalizeWords } = require('../utils/formatting');
 
@@ -574,6 +575,443 @@ function registerExportHandlers(context) {
       return { success: true, results };
     } catch (error) {
       logger.error('Error exporting images to repository', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  /**
+   * Helper function to create a ZIP archive from images
+   * @param {string} zipPath - Full path to the ZIP file to create
+   * @param {Array} images - Array of image objects with {path, name} properties
+   * @returns {Promise<void>}
+   */
+  async function createZipArchive(zipPath, images) {
+    return new Promise((resolve, reject) => {
+      const output = fs.createWriteStream(zipPath);
+      const archive = archiver('zip', {
+        zlib: { level: 9 } // Maximum compression
+      });
+
+      output.on('close', () => {
+        resolve();
+      });
+
+      archive.on('error', (err) => {
+        reject(err);
+      });
+
+      archive.pipe(output);
+
+      // Add each image to the archive
+      for (const image of images) {
+        archive.file(image.path, { name: image.name });
+      }
+
+      archive.finalize();
+    });
+  }
+
+  // Export inventory images from repository
+  ipcMain.handle('export-inventory-images', async (event, folderPath, users, options) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      // Get repository path
+      const repositoryPath = getImageRepositoryPath();
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado el depósito de imágenes' };
+      }
+
+      // Default options
+      const exportOptions = {
+        copyOriginal: options?.copyOriginal ?? true,
+        resizeEnabled: options?.resizeEnabled ?? false,
+        boxSize: options?.boxSize ?? 800,
+        maxSizeKB: options?.maxSizeKB ?? 500,
+        zipEnabled: options?.zipEnabled ?? false,
+        zipMaxSizeMB: options?.zipMaxSizeMB ?? 25
+      };
+
+      logger.section('EXPORTING INVENTORY IMAGES');
+      logger.info(`Export folder: ${folderPath}`);
+      logger.info(`Export options:`, exportOptions);
+      logger.info(`Users to check: ${users.length}`);
+
+      const results = {
+        total: users.length,
+        exported: 0,
+        skipped: 0,
+        errors: []
+      };
+
+      // If ZIP is enabled, use temp folder, otherwise use target folder
+      const tempFolder = exportOptions.zipEnabled ? path.join(folderPath, '.temp-images') : null;
+      const exportFolder = exportOptions.zipEnabled ? tempFolder : folderPath;
+
+      // Create temp folder if needed
+      if (tempFolder && !fs.existsSync(tempFolder)) {
+        fs.mkdirSync(tempFolder, { recursive: true });
+      }
+
+      // Track progress
+      let processedCount = 0;
+
+      // Array to store processed image paths for ZIP
+      const processedImages = [];
+
+      // Export images for each user
+      for (const user of users) {
+        try {
+          // Determine the ID to use for filename: NIA for students, document for others
+          const isStudent = user.type === 'student';
+          const userId = isStudent ? user.nia : user.document;
+
+          if (!userId) {
+            results.skipped++;
+            processedCount++;
+            continue;
+          }
+
+          // Check if image exists in repository
+          const sourceImagePath = path.join(repositoryPath, `${userId}.jpg`);
+          const sourceImagePathJpeg = path.join(repositoryPath, `${userId}.jpeg`);
+
+          let actualSourcePath = null;
+          if (fs.existsSync(sourceImagePath)) {
+            actualSourcePath = sourceImagePath;
+          } else if (fs.existsSync(sourceImagePathJpeg)) {
+            actualSourcePath = sourceImagePathJpeg;
+          }
+
+          if (!actualSourcePath) {
+            results.skipped++;
+            processedCount++;
+            continue;
+          }
+
+          // Create destination filename
+          const destFileName = `${userId}.jpg`;
+          const destPath = path.join(exportFolder, destFileName);
+
+          // Process image based on options
+          if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
+            // Copy original but correct orientation using sharp
+            await sharp(actualSourcePath)
+              .rotate() // Auto-rotate based on EXIF orientation
+              .toFile(destPath);
+          } else if (exportOptions.resizeEnabled) {
+            // Use sharp to process the image
+            let sharpInstance = sharp(actualSourcePath)
+              .rotate(); // Auto-rotate based on EXIF orientation
+
+            // Get image metadata (after rotation)
+            const metadata = await sharpInstance.metadata();
+
+            // Resize if image is larger than boxSize
+            if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
+              sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+                fit: 'inside',
+                withoutEnlargement: true
+              });
+            }
+
+            // Convert to JPEG and apply quality compression
+            // Start with quality 90 and reduce if needed
+            let quality = 90;
+            let outputBuffer;
+            const maxSizeBytes = exportOptions.maxSizeKB * 1024;
+
+            // Try to compress to target size
+            do {
+              outputBuffer = await sharpInstance
+                .jpeg({ quality })
+                .toBuffer();
+
+              if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
+                break;
+              }
+
+              // Reduce quality and retry
+              quality -= 10;
+              sharpInstance = sharp(actualSourcePath)
+                .rotate(); // Auto-rotate based on EXIF orientation
+              if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
+                sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+                  fit: 'inside',
+                  withoutEnlargement: true
+                });
+              }
+            } while (quality > 0);
+
+            // Write the processed image
+            fs.writeFileSync(destPath, outputBuffer);
+
+            logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length/1024)}KB`);
+          }
+
+          // Store path for ZIP if enabled
+          if (exportOptions.zipEnabled) {
+            processedImages.push({
+              path: destPath,
+              name: destFileName,
+              size: fs.statSync(destPath).size
+            });
+          }
+
+          results.exported++;
+          logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${destFileName}`);
+        } catch (error) {
+          results.errors.push({
+            user: `${user.first_name} ${user.last_name1}`,
+            error: error.message
+          });
+          logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
+        } finally {
+          // Always update progress
+          processedCount++;
+          sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes del inventario...');
+        }
+      }
+
+      // Create ZIP files if enabled
+      if (exportOptions.zipEnabled && processedImages.length > 0) {
+        logger.info('Creating ZIP archives...');
+        const maxSizeBytes = exportOptions.zipMaxSizeMB * 1024 * 1024;
+        let currentZipSize = 0;
+        let zipIndex = 1;
+        let currentZipImages = [];
+        const zipFiles = [];
+
+        for (let i = 0; i < processedImages.length; i++) {
+          const image = processedImages[i];
+
+          // If adding this image would exceed the max size, create a ZIP and start a new one
+          if (currentZipSize + image.size > maxSizeBytes && currentZipImages.length > 0) {
+            const zipFileName = processedImages.length <= 1 || (currentZipSize + image.size <= maxSizeBytes && i === processedImages.length - 1)
+              ? 'imagenes.zip'
+              : `imagenes_${zipIndex}.zip`;
+            const zipPath = path.join(folderPath, zipFileName);
+
+            await createZipArchive(zipPath, currentZipImages);
+            zipFiles.push({ name: zipFileName, count: currentZipImages.length });
+
+            logger.info(`Created ZIP: ${zipFileName} (${currentZipImages.length} images, ${Math.round(currentZipSize/1024/1024)}MB)`);
+
+            currentZipImages = [];
+            currentZipSize = 0;
+            zipIndex++;
+          }
+
+          currentZipImages.push(image);
+          currentZipSize += image.size;
+        }
+
+        // Create final ZIP with remaining images
+        if (currentZipImages.length > 0) {
+          const zipFileName = zipFiles.length === 0 ? 'imagenes.zip' : `imagenes_${zipIndex}.zip`;
+          const zipPath = path.join(folderPath, zipFileName);
+
+          await createZipArchive(zipPath, currentZipImages);
+          zipFiles.push({ name: zipFileName, count: currentZipImages.length });
+
+          logger.info(`Created ZIP: ${zipFileName} (${currentZipImages.length} images, ${Math.round(currentZipSize/1024/1024)}MB)`);
+        }
+
+        // Clean up temp folder
+        if (tempFolder && fs.existsSync(tempFolder)) {
+          fs.rmSync(tempFolder, { recursive: true, force: true });
+        }
+
+        results.zipFiles = zipFiles;
+      }
+
+      logger.section('INVENTORY IMAGES EXPORT COMPLETED');
+      logger.success(`Exported: ${results.exported}/${results.total} images`);
+      logger.info(`Skipped: ${results.skipped} (no image in repository)`);
+      if (exportOptions.zipEnabled && results.zipFiles) {
+        logger.info(`ZIP files created: ${results.zipFiles.length}`);
+      }
+      if (results.errors.length > 0) {
+        logger.error(`Errors: ${results.errors.length} images`);
+      }
+
+      return { success: true, results };
+    } catch (error) {
+      logger.error('Error exporting inventory images', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Export inventory CSVs (3 files: Alumnado, Personal, Grupos)
+  ipcMain.handle('export-inventory-csv', async (event, folderPath, users) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      // Use provided users or get all users if not provided
+      if (!users || users.length === 0) {
+        users = await state.dbManager.getUsers({});
+      }
+
+      logger.section('INVENTORY EXPORT');
+      logger.info(`Exporting inventory CSVs for ${users.length} users`);
+
+      const results = {
+        totalUsers: users.length,
+        filesCreated: 0,
+        files: []
+      };
+
+      // Separate users by type
+      const students = users.filter(u => u.type === 'student');
+      const staff = users.filter(u => u.type === 'teacher' || u.type === 'non_teaching_staff');
+
+      logger.info(`Students: ${students.length}, Staff: ${staff.length}`);
+
+      // 1. Generate Alumnado.csv (Students)
+      try {
+        // CSV header (comma-delimited)
+        const csvHeader = 'Codigo,Nombre,Apellido1,Apellido2,Fecha Nacimiento,Grupo\n';
+
+        // Generate CSV rows
+        const csvRows = students.map(user => {
+          const codigo = user.nia || '';
+          const nombre = user.first_name || '';
+          const apellido1 = user.last_name1 || '';
+          const apellido2 = user.last_name2 || '';
+          const fechaNacimiento = user.birth_date || '';
+          const grupo = user.group_code || '';
+
+          // Escape fields that might contain commas
+          const escapeCSV = (field) => {
+            if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+              return `"${field.replace(/"/g, '""')}"`;
+            }
+            return field;
+          };
+
+          return `${escapeCSV(codigo)},${escapeCSV(nombre)},${escapeCSV(apellido1)},${escapeCSV(apellido2)},${escapeCSV(fechaNacimiento)},${escapeCSV(grupo)}`;
+        }).join('\n');
+
+        const csvContent = csvHeader + csvRows;
+        const filename = 'Alumnado.csv';
+        const filePath = path.join(folderPath, filename);
+
+        fs.writeFileSync(filePath, csvContent, 'utf8');
+
+        results.filesCreated++;
+        results.files.push({
+          filename,
+          userCount: students.length,
+          type: 'Alumnado'
+        });
+
+        logger.success(`Created ${filename} (${students.length} students)`);
+      } catch (error) {
+        logger.error('Error creating Alumnado.csv:', error);
+      }
+
+      // 2. Generate Personal.csv (Staff)
+      try {
+        // CSV header (comma-delimited)
+        const csvHeader = 'Función,Documento,Nombre,Apellido1,Apellido2,Fecha Nacimiento,Teléfono 1,Teléfono 2,Email\n';
+
+        // Generate CSV rows
+        const csvRows = staff.map(user => {
+          // Función: "Docente" for teachers, "No Docente" for non-teaching staff
+          const funcion = user.type === 'teacher' ? 'Docente' : 'No Docente';
+          const documento = user.document || '';
+          const nombre = user.first_name || '';
+          const apellido1 = user.last_name1 || '';
+          const apellido2 = user.last_name2 || '';
+          const fechaNacimiento = user.birth_date || '';
+          const telefono1 = '';
+          const telefono2 = '';
+          const email = '';
+
+          // Escape fields that might contain commas
+          const escapeCSV = (field) => {
+            if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+              return `"${field.replace(/"/g, '""')}"`;
+            }
+            return field;
+          };
+
+          return `${escapeCSV(funcion)},${escapeCSV(documento)},${escapeCSV(nombre)},${escapeCSV(apellido1)},${escapeCSV(apellido2)},${escapeCSV(fechaNacimiento)},${escapeCSV(telefono1)},${escapeCSV(telefono2)},${escapeCSV(email)}`;
+        }).join('\n');
+
+        const csvContent = csvHeader + csvRows;
+        const filename = 'Personal.csv';
+        const filePath = path.join(folderPath, filename);
+
+        fs.writeFileSync(filePath, csvContent, 'utf8');
+
+        results.filesCreated++;
+        results.files.push({
+          filename,
+          userCount: staff.length,
+          type: 'Personal'
+        });
+
+        logger.success(`Created ${filename} (${staff.length} staff)`);
+      } catch (error) {
+        logger.error('Error creating Personal.csv:', error);
+      }
+
+      // 3. Generate Grupos.csv (Groups)
+      try {
+        // Get all groups from database
+        const groups = await state.dbManager.getGroups();
+
+        // CSV header (comma-delimited)
+        const csvHeader = 'CódigoGrupo,Nombre\n';
+
+        // Generate CSV rows
+        const csvRows = groups.map(group => {
+          const codigoGrupo = group.code || '';
+          const nombre = group.name || '';
+
+          // Escape fields that might contain commas
+          const escapeCSV = (field) => {
+            if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+              return `"${field.replace(/"/g, '""')}"`;
+            }
+            return field;
+          };
+
+          return `${escapeCSV(codigoGrupo)},${escapeCSV(nombre)}`;
+        }).join('\n');
+
+        const csvContent = csvHeader + csvRows;
+        const filename = 'Grupos.csv';
+        const filePath = path.join(folderPath, filename);
+
+        fs.writeFileSync(filePath, csvContent, 'utf8');
+
+        results.filesCreated++;
+        results.files.push({
+          filename,
+          userCount: groups.length,
+          type: 'Grupos'
+        });
+
+        logger.success(`Created ${filename} (${groups.length} groups)`);
+      } catch (error) {
+        logger.error('Error creating Grupos.csv:', error);
+      }
+
+      logger.section('INVENTORY EXPORT COMPLETED');
+      logger.success(`Created ${results.filesCreated} CSV files`);
+
+      return {
+        success: true,
+        results
+      };
+    } catch (error) {
+      console.error('Error exporting inventory CSV:', error);
       return { success: false, error: error.message };
     }
   });
