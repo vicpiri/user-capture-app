@@ -40,6 +40,7 @@
       this.onDeletePhoto = config.onDeletePhoto || (() => {});
       this.onImportImagesId = config.onImportImagesId || (() => {});
       this.onExportCSV = config.onExportCSV || (() => {});
+      this.onExportInventoryCSV = config.onExportInventoryCSV || (() => {});
       this.onExportImages = config.onExportImages || (() => {});
       this.onExportImagesName = config.onExportImagesName || (() => {});
       this.onExportToRepository = config.onExportToRepository || (() => {});
@@ -256,6 +257,10 @@
 
       this.electronAPI.onMenuExportCSV(() => {
         this.onExportCSV();
+      });
+
+      this.electronAPI.onMenuExportInventoryCSV(() => {
+        this.onExportInventoryCSV();
       });
 
       this.electronAPI.onMenuExportImages(() => {

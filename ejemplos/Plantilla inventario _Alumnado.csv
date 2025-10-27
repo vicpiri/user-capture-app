@@ -1,0 +1,3 @@
+Codigo,Nombre,Apellido1,Apellido2,Fecha Nacimiento,Grupo
+(Numero de identificación del alumno),(Nombre del alumno),(Apellido del alumno),(Apellido del alumno),(Fecha de nacimiento del alumno con el formato DD/MM/AAAA),(Código del grupo del alumno)
+RECUERDE ELIMINAR TODO EL CONTENIDO DE LAS FILAS 2 Y 3 DE ESTA PLANTILLA ANTES DE REALIZAR LA IMPORTACIÓN.,,,,,

@@ -104,6 +104,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-export-csv', callback);
   },
 
+  onMenuExportInventoryCSV: (callback) => {
+    ipcRenderer.on('menu-export-inventory-csv', callback);
+  },
+
   onMenuExportImages: (callback) => {
     ipcRenderer.on('menu-export-images', callback);
   },
@@ -118,6 +122,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   importImagesWithId: (folderPath) => ipcRenderer.invoke('import-images-with-id', folderPath),
   exportCSV: (folderPath, users) => ipcRenderer.invoke('export-csv', folderPath, users),
+  exportInventoryCSV: (folderPath, users) => ipcRenderer.invoke('export-inventory-csv', folderPath, users),
+  exportInventoryImages: (folderPath, users, options) => ipcRenderer.invoke('export-inventory-images', folderPath, users, options),
   exportImages: (folderPath, users, options) => ipcRenderer.invoke('export-images', folderPath, users, options),
   exportImagesName: (folderPath, users, options) => ipcRenderer.invoke('export-images-name', folderPath, users, options),
   exportToRepository: (users, options) => ipcRenderer.invoke('export-to-repository', users, options),

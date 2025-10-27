@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
 
 // Component instances
 let userRowRenderer = null;
@@ -63,6 +63,7 @@ let newProjectModalInstance = null;
 let confirmModalInstance = null;
 let infoModalInstance = null;
 let exportOptionsModalInstance = null;
+let inventoryExportOptionsModalInstance = null;
 let addTagModalInstance = null;
 let userImageModalInstance = null;
 
@@ -130,6 +131,9 @@ function initializeModals() {
 
   exportOptionsModalInstance = new ExportOptionsModal();
   exportOptionsModalInstance.init();
+
+  inventoryExportOptionsModalInstance = new InventoryExportOptionsModal();
+  inventoryExportOptionsModalInstance.init();
 
   addTagModalInstance = new AddTagModal();
   addTagModalInstance.init();
@@ -199,6 +203,7 @@ function initializeImageGridManager() {
 function initializeExportManager() {
   exportManager = new ExportManager({
     exportOptionsModal: exportOptionsModalInstance,
+    inventoryExportOptionsModal: inventoryExportOptionsModalInstance,
     showProgressModal: showProgressModal,
     closeProgressModal: closeProgressModal,
     showInfoModal: showInfoModal,
@@ -210,6 +215,7 @@ function initializeExportManager() {
     getCurrentUsers: () => currentUsers,
     getShowDuplicatesOnly: () => showDuplicatesOnly,
     getAllUsers: () => allUsers,
+    getCurrentFilters: getCurrentFilters,
     onExportComplete: async () => {
       // Reload users to refresh the repository check indicators
       await loadUsers(getCurrentFilters());
@@ -347,6 +353,7 @@ function initializeMenuEventManager() {
     onDeletePhoto: handleDeletePhoto,
     onImportImagesId: handleImportImagesId,
     onExportCSV: handleExportCSV,
+    onExportInventoryCSV: handleExportInventoryCSV,
     onExportImages: handleExportImages,
     onExportImagesName: handleExportImagesName,
     onExportToRepository: handleExportToRepository,
@@ -989,6 +996,12 @@ async function handleImportImagesId() {
 async function handleExportCSV() {
   if (exportManager) {
     await exportManager.exportCSV();
+  }
+}
+
+async function handleExportInventoryCSV() {
+  if (exportManager) {
+    await exportManager.exportInventoryCSV();
   }
 }
 

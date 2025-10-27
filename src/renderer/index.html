@@ -258,6 +258,86 @@
     </div>
   </div>
 
+  <!-- Inventory Export Options Modal -->
+  <div id="inventory-export-options-modal" class="modal">
+    <div class="modal-content">
+      <h2>Opciones de Exportación de Inventario</h2>
+
+      <h3>Usuarios a exportar</h3>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="radio" name="inventory-export-scope" id="inventory-export-all-users" value="all" checked>
+          <span>Todos los usuarios</span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="radio" name="inventory-export-scope" id="inventory-export-selected-group" value="group">
+          <span>Grupo seleccionado: <strong id="inventory-selected-group-label">Ningún grupo seleccionado</strong></span>
+        </label>
+      </div>
+
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+
+      <h3>Exportar imágenes del depósito</h3>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="inventory-export-images-enabled">
+          <span>Exportar imágenes del depósito</span>
+        </label>
+      </div>
+
+      <div id="inventory-image-options" style="margin-left: 28px; opacity: 0.5;">
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="radio" name="inventory-image-mode" id="inventory-image-copy-original" value="copy" checked>
+            <span>Copiar imagen original</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="radio" name="inventory-image-mode" id="inventory-image-resize" value="resize">
+            <span>Redimensionar imágenes</span>
+          </label>
+        </div>
+
+        <div id="inventory-resize-options" style="margin-left: 28px; margin-top: 12px;">
+          <div class="form-group">
+            <label>Tamaño del cuadro (píxeles):</label>
+            <input type="number" id="inventory-box-size" value="800" min="100" max="4000" step="50">
+          </div>
+          <div class="form-group">
+            <label>Tamaño máximo de archivo (KB):</label>
+            <input type="number" id="inventory-max-size" value="500" min="50" max="5000" step="50">
+          </div>
+        </div>
+
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="inventory-zip-enabled">
+            <span>Comprimir imágenes en archivos ZIP</span>
+          </label>
+        </div>
+
+        <div id="inventory-zip-options" style="margin-left: 28px; opacity: 0.5;">
+          <div class="form-group">
+            <label>Tamaño máximo por archivo ZIP (MB):</label>
+            <input type="number" id="inventory-zip-max-size" value="25" min="1" max="100" step="1">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="inventory-export-confirm" class="btn btn-primary">Exportar</button>
+        <button id="inventory-export-cancel" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Image Tag Modal -->
   <div id="add-tag-modal" class="modal">
     <div class="modal-content">
@@ -306,6 +386,7 @@
   <script src="components/modals/ConfirmModal.js"></script>
   <script src="components/modals/InfoModal.js"></script>
   <script src="components/modals/ExportOptionsModal.js"></script>
+  <script src="components/modals/InventoryExportOptionsModal.js"></script>
   <script src="components/modals/AddTagModal.js"></script>
   <script src="components/modals/UserImageModal.js"></script>
   <script src="components/UserRowRenderer.js"></script>
