@@ -229,6 +229,66 @@ class UserRowRenderer {
   createRows(users, imageCount = {}) {
     return users.map(user => this.createRow(user, imageCount));
   }
+
+  /**
+   * Update repository indicators for existing rows without recreating them
+   * Preserves scroll position and DOM state
+   * @param {HTMLElement} tableBody - The table body containing user rows
+   * @param {Array} users - Updated user data with repository information
+   * @param {object} imageCount - Optional image duplication count map
+   */
+  updateRepositoryIndicators(tableBody, users, imageCount = {}) {
+    if (!tableBody) return;
+
+    // Create a map for quick user lookup
+    const userMap = new Map(users.map(user => [user.id, user]));
+
+    // Find all user rows (exclude spacers)
+    const rows = tableBody.querySelectorAll('tr[data-user-id]');
+
+    rows.forEach(row => {
+      const userId = parseInt(row.dataset.userId, 10);
+      const user = userMap.get(userId);
+
+      if (!user) return;
+
+      // Find the last cell (contains indicators)
+      const lastCell = row.querySelector('td:last-child');
+      if (!lastCell) return;
+
+      // Check for duplicate images
+      const hasDuplicateImage = user.image_path && imageCount[user.image_path] > 1;
+      const duplicateClass = hasDuplicateImage ? 'duplicate-image' : '';
+
+      // Rebuild indicators HTML
+      const photoIndicator = this._buildPhotoIndicator(user, duplicateClass);
+      const repositoryIndicator = this._buildRepositoryIndicator(user);
+      const repositoryCheckIndicator = this._buildRepositoryCheckIndicator(user);
+
+      lastCell.innerHTML = `${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}`;
+
+      // Reattach event listeners for double-click on images
+      if (user.image_path) {
+        const photoIndicatorEl = lastCell.querySelector('.photo-indicator');
+        if (photoIndicatorEl) {
+          photoIndicatorEl.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            this.onImagePreview(user, 'captured');
+          });
+        }
+      }
+
+      if (user.repository_image_path) {
+        const repositoryIndicatorEl = lastCell.querySelector('.repository-indicator');
+        if (repositoryIndicatorEl) {
+          repositoryIndicatorEl.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            this.onImagePreview(user, 'repository');
+          });
+        }
+      }
+    });
+  }
 }
 
 // Export for both browser and Node.js (tests)
