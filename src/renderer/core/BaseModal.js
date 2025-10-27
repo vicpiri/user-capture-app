@@ -10,8 +10,10 @@
 class BaseModal {
   /**
    * @param {string} modalId - DOM id of the modal element
+   * @param {object} options - Configuration options
+   * @param {string} options.defaultButtonSelector - CSS selector for default button (activated on Enter)
    */
-  constructor(modalId) {
+  constructor(modalId, options = {}) {
     this.modalId = modalId;
     this.modal = document.getElementById(modalId);
 
@@ -29,7 +31,28 @@ class BaseModal {
     this.isInitialized = false;
     this.isOpen = false;
 
+    // Default button configuration (can be overridden by subclasses)
+    this.defaultButtonSelector = options.defaultButtonSelector || null;
+
+    // Bind Enter key handler
+    this.handleEnterKey = this.handleEnterKey.bind(this);
+
     this._log('Modal constructed');
+  }
+
+  /**
+   * Handle Enter key press
+   * @private
+   */
+  handleEnterKey(event) {
+    // Only handle Enter key if this modal is open
+    if (event.key === 'Enter' && this.isOpen && this.defaultButtonSelector) {
+      const button = this.modal.querySelector(this.defaultButtonSelector);
+      if (button && !button.disabled) {
+        event.preventDefault();
+        button.click();
+      }
+    }
   }
 
   /**
@@ -69,6 +92,11 @@ class BaseModal {
     this.modal.classList.add('show');
     this.isOpen = true;
     this._log('Opened');
+
+    // Add Enter key listener to document if default button configured
+    if (this.defaultButtonSelector) {
+      this.addEventListener(document, 'keydown', this.handleEnterKey);
+    }
 
     // Trigger onOpen hook if exists
     if (typeof this.onOpen === 'function') {

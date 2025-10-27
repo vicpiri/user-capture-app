@@ -19,7 +19,9 @@
 
   class AddTagModal extends BaseModal {
   constructor() {
-    super('add-tag-modal');
+    super('add-tag-modal', {
+      defaultButtonSelector: '#add-tag-confirm-btn'
+    });
 
     // Form elements
     this.tagInput = null;
