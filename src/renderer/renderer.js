@@ -461,16 +461,31 @@ function initializeEventListeners() {
     filterUsers();
   });
   clearSearchBtn.addEventListener('click', clearSearch);
+  let lastFilterValue = groupFilter.value; // Track last value to detect actual changes
+
   groupFilter.addEventListener('change', async () => {
+    const newValue = groupFilter.value;
+
+    // Only process if value actually changed
+    if (newValue === lastFilterValue) {
+      return;
+    }
+
+    lastFilterValue = newValue;
+
     // Save filter selection and broadcast to other windows
-    await window.electronAPI.setSelectedGroupFilter(groupFilter.value);
+    await window.electronAPI.setSelectedGroupFilter(newValue);
     await filterUsers();
   });
 
   // Listen for group filter changes from other windows
   window.electronAPI.onGroupFilterChanged(async (groupCode) => {
-    groupFilter.value = groupCode;
-    await filterUsers();
+    // Only update if the value is actually different to avoid unnecessary reloads
+    if (groupFilter.value !== groupCode) {
+      lastFilterValue = groupCode;
+      groupFilter.value = groupCode;
+      await filterUsers();
+    }
   });
   duplicatesFilter.addEventListener('change', () => {
     showDuplicatesOnly = duplicatesFilter.checked;

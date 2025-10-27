@@ -100,8 +100,8 @@ class VirtualScrollManager {
       }
     }
 
-    // Render items
-    this.render();
+    // Always force render when items change to ensure display is updated
+    this.render(true);
   }
 
   /**
