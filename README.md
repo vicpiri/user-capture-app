@@ -100,10 +100,17 @@ npm run rebuild:native
 
 ### Generar ejecutable
 
-Para Windows (NSIS installer):
+Para Windows:
 
 ```bash
+# Instalador NSIS
 npm run dist:win
+
+# Versión portable (ejecutable único)
+npm run dist:win:portable
+
+# Versión ZIP (carpeta comprimida)
+npm run dist:win:zip
 ```
 
 Para macOS (DMG):
@@ -118,7 +125,12 @@ Para Linux (AppImage):
 npm run dist:linux
 ```
 
-Los instaladores se generarán en la carpeta `dist/`.
+Los archivos generados se guardarán en la carpeta `dist/`.
+
+**Nota sobre versiones portables**:
+- `portable`: Genera un único archivo `.exe` que se auto-extrae (ideal para distribuir por USB)
+- `zip`: Genera un archivo `.zip` con la aplicación desempaquetada (ideal para copiar en red)
+- Ambas opciones **no requieren instalación** y evitan advertencias de SmartScreen más fácilmente
 
 ### Firma de código (Code Signing)
 
@@ -380,9 +392,11 @@ El proceso de renderizado sigue una arquitectura modular basada en componentes:
 - `npm run dev` - Inicia la aplicación en modo desarrollo (con hot reload y DevTools)
 
 ### Distribución
-- `npm run dist:win` - Crear distribución completa para Windows (NSIS x64)
-- `npm run dist:mac` - Crear distribución completa para macOS (DMG x64)
-- `npm run dist:linux` - Crear distribución completa para Linux (AppImage x64)
+- `npm run dist:win` - Crear instalador NSIS para Windows (x64)
+- `npm run dist:win:portable` - Crear ejecutable portable auto-extraíble para Windows (x64)
+- `npm run dist:win:zip` - Crear archivo ZIP con aplicación desempaquetada para Windows (x64)
+- `npm run dist:mac` - Crear distribución DMG para macOS (x64)
+- `npm run dist:linux` - Crear AppImage para Linux (x64)
 
 ### Módulos nativos
 - `npm run rebuild:native` - Reconstruir módulos nativos (SQLite3 y Sharp) para Electron
