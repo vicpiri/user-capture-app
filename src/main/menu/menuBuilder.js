@@ -335,7 +335,7 @@ class MenuBuilder {
         { type: 'separator' },
         {
           label: 'Actualizar imágenes del depósito',
-          accelerator: 'CmdOrCtrl+R',
+          accelerator: 'CmdOrCtrl+Shift+D',
           click: () => {
             this.callbacks.refreshRepositoryImages();
           }
