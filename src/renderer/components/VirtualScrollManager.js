@@ -106,13 +106,22 @@ class VirtualScrollManager {
 
   /**
    * Render items (virtual or normal depending on count)
+   * @param {boolean} force - Force re-render even if range hasn't changed
    */
-  render() {
+  render(force = false) {
     if (this.isActive) {
-      this.renderVirtualized();
+      this.renderVirtualized(force);
     } else {
       this.renderNormal();
     }
+  }
+
+  /**
+   * Force a complete re-render of all visible items
+   * Use this when the rendering config changes (e.g., selection mode toggle)
+   */
+  forceRerender() {
+    this.render(true);
   }
 
   /**
@@ -147,8 +156,9 @@ class VirtualScrollManager {
 
   /**
    * Render only visible items (for large lists)
+   * @param {boolean} force - Force re-render even if range hasn't changed
    */
-  renderVirtualized() {
+  renderVirtualized(force = false) {
     const containerHeight = this.container.clientHeight;
     const scrollTop = this.container.scrollTop;
 
@@ -160,8 +170,8 @@ class VirtualScrollManager {
       startIndex + visibleCount + (this.bufferSize * 2)
     );
 
-    // Only re-render if range changed significantly
-    if (startIndex === this.visibleStartIndex && endIndex === this.visibleEndIndex) {
+    // Only re-render if range changed significantly (unless forced)
+    if (!force && startIndex === this.visibleStartIndex && endIndex === this.visibleEndIndex) {
       return;
     }
 

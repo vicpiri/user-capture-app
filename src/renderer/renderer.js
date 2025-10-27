@@ -259,7 +259,14 @@ function initializeSelectionModeManager() {
       }
     },
     getDisplayedUsers: () => displayedUsers,
-    reRenderUsers: () => displayUsers(currentUsers, allUsers),
+    reRenderUsers: () => {
+      // Force re-render to update checkboxes when selection mode changes
+      if (virtualScrollManager) {
+        virtualScrollManager.forceRerender();
+      } else {
+        displayUsers(currentUsers, allUsers);
+      }
+    },
     selectedUserInfo: selectedUserInfo,
     tableHeader: document.querySelector('.user-table thead tr')
   });

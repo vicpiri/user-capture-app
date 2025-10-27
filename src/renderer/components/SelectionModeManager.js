@@ -122,6 +122,11 @@
         this.selectedUsers.add(initialUserId);
       }
 
+      // Notify change BEFORE re-rendering to update global state
+      // This ensures that when createUserRow() is called during re-render,
+      // the selectionMode flag is already set to true
+      this.onSelectionChange(this.isActive, this.selectedUsers);
+
       // Update table header to include checkbox column
       this.updateTableHeader();
 
@@ -130,9 +135,6 @@
 
       // Update selection info
       this.updateSelectionInfo();
-
-      // Notify change
-      this.onSelectionChange(this.isActive, this.selectedUsers);
     }
 
     /**
@@ -142,6 +144,11 @@
       this.isActive = false;
       this.selectedUsers.clear();
 
+      // Notify change BEFORE re-rendering to update global state
+      // This ensures that when createUserRow() is called during re-render,
+      // the selectionMode flag is already set to false
+      this.onSelectionChange(this.isActive, this.selectedUsers);
+
       // Update table header to remove checkbox column
       this.updateTableHeader();
 
@@ -150,9 +157,6 @@
 
       // Update selection info
       this.updateSelectionInfo();
-
-      // Notify change
-      this.onSelectionChange(this.isActive, this.selectedUsers);
     }
 
     /**
