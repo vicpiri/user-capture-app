@@ -145,45 +145,6 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'Configuración',
-          submenu: [
-            {
-              label: 'Depósito imágenes de usuario',
-              click: async () => {
-                const currentPath = this.callbacks.getImageRepositoryPath();
-
-                const result = await dialog.showOpenDialog(this.mainWindow, {
-                  title: 'Seleccionar carpeta del depósito de imágenes',
-                  defaultPath: currentPath || undefined,
-                  properties: ['openDirectory', 'createDirectory']
-                });
-
-                if (!result.canceled && result.filePaths.length > 0) {
-                  const selectedPath = result.filePaths[0];
-
-                  if (this.callbacks.setImageRepositoryPath(selectedPath)) {
-                    // Reinitialize repository mirror with new path
-                    if (this.callbacks.reinitializeRepositoryMirror) {
-                      await this.callbacks.reinitializeRepositoryMirror();
-                    }
-
-                    dialog.showMessageBox(this.mainWindow, {
-                      type: 'info',
-                      title: 'Configuración guardada',
-                      message: 'Depósito de imágenes configurado',
-                      detail: `Ruta: ${selectedPath}`,
-                      buttons: ['Aceptar']
-                    });
-                  } else {
-                    dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
-                  }
-                }
-              }
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
           label: 'Salir',
           accelerator: 'CmdOrCtrl+Q',
           role: 'quit'
@@ -236,6 +197,40 @@ class MenuBuilder {
           label: 'Actualizar archivo XML',
           click: () => {
             this.mainWindow.webContents.send('menu-update-xml');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Configurar depósito de imágenes',
+          click: async () => {
+            const currentPath = await this.callbacks.getImageRepositoryPath();
+
+            const result = await dialog.showOpenDialog(this.mainWindow, {
+              title: 'Seleccionar carpeta del depósito de imágenes',
+              defaultPath: currentPath || undefined,
+              properties: ['openDirectory', 'createDirectory']
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+              const selectedPath = result.filePaths[0];
+
+              if (await this.callbacks.setImageRepositoryPath(selectedPath)) {
+                // Reinitialize repository mirror with new path
+                if (this.callbacks.reinitializeRepositoryMirror) {
+                  await this.callbacks.reinitializeRepositoryMirror();
+                }
+
+                dialog.showMessageBox(this.mainWindow, {
+                  type: 'info',
+                  title: 'Configuración guardada',
+                  message: 'Depósito de imágenes configurado',
+                  detail: `Ruta: ${selectedPath}`,
+                  buttons: ['Aceptar']
+                });
+              } else {
+                dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
+              }
+            }
           }
         }
       ]

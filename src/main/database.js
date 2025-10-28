@@ -66,6 +66,15 @@ class DatabaseManager {
           )
         `);
 
+        // Project settings table
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS project_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
         // Create indexes for performance optimization
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_group ON users(group_code)');
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_type ON users(type)');
@@ -480,6 +489,41 @@ class DatabaseManager {
       `, [], (err, rows) => {
         if (err) reject(err);
         else resolve(rows || []);
+      });
+    });
+  }
+
+  // Project settings methods
+  async getProjectSetting(key) {
+    return new Promise((resolve, reject) => {
+      this.db.get(`
+        SELECT value FROM project_settings WHERE key = ?
+      `, [key], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.value : null);
+      });
+    });
+  }
+
+  async setProjectSetting(key, value) {
+    return new Promise((resolve, reject) => {
+      this.db.run(`
+        INSERT OR REPLACE INTO project_settings (key, value, updated_at)
+        VALUES (?, ?, datetime('now'))
+      `, [key, value], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async deleteProjectSetting(key) {
+    return new Promise((resolve, reject) => {
+      this.db.run(`
+        DELETE FROM project_settings WHERE key = ?
+      `, [key], (err) => {
+        if (err) reject(err);
+        else resolve();
       });
     });
   }

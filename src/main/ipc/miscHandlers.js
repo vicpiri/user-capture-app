@@ -69,7 +69,10 @@ function registerMiscHandlers(context) {
   // Get image repository path
   ipcMain.handle('get-image-repository-path', async () => {
     try {
-      const repositoryPath = getImageRepositoryPath();
+      if (!state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
       return { success: true, path: repositoryPath };
     } catch (error) {
       console.error('Error getting image repository path:', error);
@@ -80,7 +83,10 @@ function registerMiscHandlers(context) {
   // Set image repository path
   ipcMain.handle('set-image-repository-path', async (event, repositoryPath) => {
     try {
-      if (setImageRepositoryPath(repositoryPath)) {
+      if (!state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+      if (await setImageRepositoryPath(state.dbManager, repositoryPath)) {
         // Reinitialize repository mirror with new path
         logger.info(`Repository path changed to: ${repositoryPath}`);
         await reinitializeRepositoryMirror();

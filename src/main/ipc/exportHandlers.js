@@ -108,7 +108,7 @@ function registerExportHandlers(context) {
       }
 
       // Get repository path
-      const repositoryPath = getImageRepositoryPath();
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
 
       // Filter users to only include those with images in the repository
       const usersWithRepositoryImages = users.filter(user => {
@@ -411,9 +411,9 @@ function registerExportHandlers(context) {
       }
 
       // Get repository path
-      const repositoryPath = getImageRepositoryPath();
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
       if (!repositoryPath) {
-        return { success: false, error: 'No se ha configurado el depósito de imágenes. Por favor, configúralo en Configuración > Depósito imágenes de usuario' };
+        return { success: false, error: 'No se ha configurado el depósito de imágenes. Por favor, configúralo en Proyecto > Configurar depósito de imágenes' };
       }
 
       // Check if repository path exists
@@ -619,9 +619,9 @@ function registerExportHandlers(context) {
       }
 
       // Get repository path
-      const repositoryPath = getImageRepositoryPath();
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
       if (!repositoryPath) {
-        return { success: false, error: 'No se ha configurado el depósito de imágenes' };
+        return { success: false, error: 'No se ha configurado el depósito de imágenes. Por favor, configúralo en Proyecto > Configurar depósito de imágenes' };
       }
 
       // Default options
@@ -1328,7 +1328,7 @@ function registerExportHandlers(context) {
 
           // If using repository photos and path is not set, try to construct it
           if (photoSource === 'repository' && !imagePath) {
-            const repositoryPath = getImageRepositoryPath();
+            const repositoryPath = await getImageRepositoryPath(state.dbManager);
             if (repositoryPath) {
               const isStudent = user.type === 'student';
               const userId = isStudent ? user.nia : user.document;

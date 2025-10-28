@@ -67,7 +67,7 @@ function registerUserGroupImageHandlers(context) {
 
       // Only check repository images if needed (for photos or indicators)
       if (loadOptions.loadRepositoryImages) {
-        const repositoryPath = getImageRepositoryPath();
+        const repositoryPath = await getImageRepositoryPath(state.dbManager);
 
         if (repositoryPath) {
           // Load repository file list ONCE asynchronously
@@ -137,7 +137,7 @@ function registerUserGroupImageHandlers(context) {
         throw new Error('No hay ningún proyecto abierto');
       }
 
-      const repositoryPath = getImageRepositoryPath();
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
       const repositoryData = {};
 
       if (!repositoryPath) {

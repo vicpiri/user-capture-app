@@ -47,23 +47,39 @@ function saveGlobalConfig(config) {
 }
 
 /**
- * Get image repository path from config
- * @returns {string|null} Repository path or null
+ * Get image repository path from project database
+ * @param {Object} dbManager - Database manager instance
+ * @returns {Promise<string|null>} Repository path or null
  */
-function getImageRepositoryPath() {
-  const config = loadGlobalConfig();
-  return config.imageRepositoryPath || null;
+async function getImageRepositoryPath(dbManager) {
+  if (!dbManager) {
+    return null;
+  }
+  try {
+    return await dbManager.getProjectSetting('imageRepositoryPath');
+  } catch (error) {
+    console.error('Error getting repository path:', error);
+    return null;
+  }
 }
 
 /**
- * Set image repository path in config
+ * Set image repository path in project database
+ * @param {Object} dbManager - Database manager instance
  * @param {string} repositoryPath - Path to repository
- * @returns {boolean} Success status
+ * @returns {Promise<boolean>} Success status
  */
-function setImageRepositoryPath(repositoryPath) {
-  const config = loadGlobalConfig();
-  config.imageRepositoryPath = repositoryPath;
-  return saveGlobalConfig(config);
+async function setImageRepositoryPath(dbManager, repositoryPath) {
+  if (!dbManager) {
+    return false;
+  }
+  try {
+    await dbManager.setProjectSetting('imageRepositoryPath', repositoryPath);
+    return true;
+  } catch (error) {
+    console.error('Error setting repository path:', error);
+    return false;
+  }
 }
 
 /**

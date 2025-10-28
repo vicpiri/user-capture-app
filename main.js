@@ -94,8 +94,12 @@ function createMenu() {
     // Callbacks
     callbacks: {
       openRecentProject,
-      getImageRepositoryPath,
-      setImageRepositoryPath,
+      getImageRepositoryPath: async () => {
+        return await getImageRepositoryPath(dbManager);
+      },
+      setImageRepositoryPath: async (path) => {
+        return await setImageRepositoryPath(dbManager, path);
+      },
       reinitializeRepositoryMirror,
       toggleCamera: () => {
         cameraEnabled = !cameraEnabled;
@@ -150,7 +154,7 @@ function createMenu() {
           mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
         }
       },
-      toggleRepositoryPhotos: (checked) => {
+      toggleRepositoryPhotos: async (checked) => {
         showRepositoryPhotos = checked;
         saveDisplayPreferences({
           showDuplicatesOnly,
@@ -161,14 +165,14 @@ function createMenu() {
         });
         if (showRepositoryPhotos) {
           logger.info('[MENU] Mostrar imágenes del depósito activated');
-          ensureRepositoryMirrorStarted();
+          await ensureRepositoryMirrorStarted();
         }
         const mainWindow = mainWindowManager.getWindow();
         if (mainWindow) {
           mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
         }
       },
-      toggleRepositoryIndicators: (checked) => {
+      toggleRepositoryIndicators: async (checked) => {
         showRepositoryIndicators = checked;
         saveDisplayPreferences({
           showDuplicatesOnly,
@@ -178,7 +182,7 @@ function createMenu() {
           showAdditionalActions
         });
         if (showRepositoryIndicators) {
-          ensureRepositoryMirrorStarted();
+          await ensureRepositoryMirrorStarted();
         }
         const mainWindow = mainWindowManager.getWindow();
         if (mainWindow) {
@@ -296,7 +300,7 @@ function openImageGridWindow() {
   imageGridWindowManager.open({ isDev });
 }
 
-function openRepositoryGridWindow() {
+async function openRepositoryGridWindow() {
   const mainWindow = mainWindowManager.getWindow();
 
   if (!dbManager) {
@@ -310,7 +314,7 @@ function openRepositoryGridWindow() {
   }
 
   // Check if repository path is configured
-  const repositoryPath = getImageRepositoryPath();
+  const repositoryPath = await getImageRepositoryPath(dbManager);
   if (!repositoryPath) {
     dialog.showMessageBox(mainWindow, {
       type: 'warning',
@@ -322,7 +326,7 @@ function openRepositoryGridWindow() {
   }
 
   // Start mirror lazily when opening repository grid
-  ensureRepositoryMirrorStarted();
+  await ensureRepositoryMirrorStarted();
 
   const isDev = process.argv.includes('--dev');
   repositoryGridWindowManager.open({ isDev });
@@ -390,7 +394,12 @@ async function ensureRepositoryMirrorStarted() {
     return; // Already running
   }
 
-  const repositoryPath = getImageRepositoryPath();
+  // Check if there's a project open
+  if (!dbManager) {
+    return; // No project open yet
+  }
+
+  const repositoryPath = await getImageRepositoryPath(dbManager);
   if (!repositoryPath) {
     return;
   }
