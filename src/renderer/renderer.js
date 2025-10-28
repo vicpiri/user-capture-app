@@ -140,8 +140,6 @@ function initializeModals() {
 
   userImageModalInstance = new UserImageModal();
   // UserImageModal initializes itself in constructor
-
-  console.log('[Renderer] Modal instances initialized');
 }
 
 // Initialize user row renderer
@@ -159,8 +157,6 @@ function initializeUserRowRenderer() {
     onImagePreview: (user, type) => showUserImageModal(user, type),
     onCheckboxToggle: (userId, checked) => toggleUserSelection(userId, checked)
   });
-
-  console.log('[Renderer] User row renderer initialized');
 }
 
 // Initialize virtual scroll manager
@@ -179,7 +175,6 @@ function initializeVirtualScroll() {
   });
 
   virtualScrollManager.init();
-  console.log('[Renderer] Virtual scroll manager initialized');
 }
 
 // Initialize image grid manager
@@ -196,7 +191,6 @@ function initializeImageGridManager() {
     }
   });
 
-  console.log('[Renderer] Image grid manager initialized');
 }
 
 // Initialize export manager
@@ -223,7 +217,6 @@ function initializeExportManager() {
     electronAPI: window.electronAPI
   });
 
-  console.log('[Renderer] Export manager initialized');
 }
 
 // Initialize image tags manager
@@ -241,7 +234,6 @@ function initializeImageTagsManager() {
     taggedImagesCloseBtn: document.getElementById('tagged-images-close-btn')
   });
 
-  console.log('[Renderer] Image tags manager initialized');
 }
 
 // Initialize selection mode manager
@@ -271,7 +263,6 @@ function initializeSelectionModeManager() {
     tableHeader: document.querySelector('.user-table thead tr')
   });
 
-  console.log('[Renderer] Selection mode manager initialized');
 }
 
 // Initialize drag and drop manager
@@ -283,7 +274,6 @@ function initializeDragDropManager() {
   });
 
   dragDropManager.enable();
-  console.log('[Renderer] Drag drop manager initialized');
 }
 
 // Initialize progress manager
@@ -294,14 +284,12 @@ function initializeProgressManager() {
   });
 
   progressManager.setupListener();
-  console.log('[Renderer] Progress manager initialized');
 }
 
 // Initialize lazy image manager
 function initializeLazyImageManager() {
   lazyImageManager = new LazyImageManager();
   lazyImageManager.init();
-  console.log('[Renderer] Lazy image manager initialized');
 }
 
 // Initialize keyboard navigation manager
@@ -331,7 +319,6 @@ function initializeKeyboardNavigationManager() {
   });
 
   keyboardNavigationManager.enable();
-  console.log('[Renderer] Keyboard navigation manager initialized');
 }
 
 // Initialize menu event manager
@@ -382,7 +369,6 @@ function initializeMenuEventManager() {
   });
 
   menuEventManager.init();
-  console.log('[Renderer] Menu event manager initialized');
 }
 
 // Initialize user data manager
@@ -417,7 +403,6 @@ function initializeUserDataManager() {
     electronAPI: window.electronAPI
   });
 
-  console.log('[Renderer] User data manager initialized');
 }
 
 function initializeProjectManager() {
@@ -450,7 +435,6 @@ function initializeProjectManager() {
     electronAPI: window.electronAPI
   });
 
-  console.log('[Renderer] Project manager initialized');
 }
 
 // Event Listeners
@@ -547,7 +531,6 @@ function initializeEventListeners() {
 
   // Listen for repository changes
   window.electronAPI.onRepositoryChanged(async (data) => {
-    console.log('[Repository] Repository changed:', data);
     // Mark repository sync as completed
     repositorySyncCompleted = true;
 
@@ -561,12 +544,10 @@ function initializeEventListeners() {
           lazyImageManager.observeAll();
         }
       });
-      console.log('[Repository] Repository indicators refreshed (scroll preserved)');
     } else {
       // Fallback to full reload if managers not initialized
       const filters = getCurrentFilters();
       await loadUsers(filters);
-      console.log('[Repository] Users reloaded after repository change');
     }
   });
 

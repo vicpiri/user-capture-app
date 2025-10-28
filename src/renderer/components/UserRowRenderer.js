@@ -94,9 +94,7 @@ class UserRowRenderer {
       const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
       // Wrap img in div to support ::after spinner (img elements don't support pseudo-elements)
       // Add 'loading' class to wrapper for CSS spinner
-      const html = `<div class="photo-indicator-wrapper loading ${duplicateClass}"><img src="${transparentPixel}" data-src="file://${user.image_path}${cacheBuster}" class="photo-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
-      console.log(`[UserRowRenderer] Built photo indicator for user ${user.id}:`, html.substring(0, 150));
-      return html;
+      return `<div class="photo-indicator-wrapper loading ${duplicateClass}"><img src="${transparentPixel}" data-src="file://${user.image_path}${cacheBuster}" class="photo-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
     }
 
     return `<div class="photo-placeholder">
@@ -123,9 +121,7 @@ class UserRowRenderer {
       const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
       // Wrap img in div to support ::after spinner (img elements don't support pseudo-elements)
       // Add 'loading' class to wrapper for CSS spinner
-      const html = `<div class="repository-indicator-wrapper loading"><img src="${transparentPixel}" data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
-      console.log(`[UserRowRenderer] Built repository indicator for user ${user.id}:`, html.substring(0, 150));
-      return html;
+      return `<div class="repository-indicator-wrapper loading"><img src="${transparentPixel}" data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
     }
 
     if (this.config.isLoadingRepositoryPhotos) {

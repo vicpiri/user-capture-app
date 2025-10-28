@@ -66,15 +66,9 @@
         const imageSrc = img.dataset.src;
         const loadStartTime = Date.now();
 
-        console.log(`[LazyImageManager] Starting to load image: ${imageSrc.substring(0, 50)}...`);
-        console.log(`[LazyImageManager] Image classes before load:`, img.classList.toString());
-        console.log(`[LazyImageManager] Image has parent wrapper:`, img.parentElement?.className);
-
         // Set up onload handler to remove spinner when image actually loads
         img.onload = () => {
           const loadDuration = Date.now() - loadStartTime;
-          console.log(`[LazyImageManager] ✓ Image LOADED (onload fired in ${loadDuration}ms): ${imageSrc.substring(0, 50)}...`);
-          console.log(`[LazyImageManager] Image classes before removing lazy-image:`, img.classList.toString());
 
           // Ensure spinner is visible for at least 200ms so user can see it
           const minSpinnerDuration = 200;
@@ -87,16 +81,12 @@
             // Also remove 'loading' class from parent wrapper if it exists
             if (img.parentElement && img.parentElement.classList.contains('loading')) {
               img.parentElement.classList.remove('loading');
-              console.log(`[LazyImageManager] Removed 'loading' class from wrapper`);
             }
-
-            console.log(`[LazyImageManager] Image classes after removing lazy-image:`, img.classList.toString());
           }, remainingTime);
         };
 
         // Set up onerror handler
         img.onerror = () => {
-          console.log(`[LazyImageManager] ✗ Image ERROR: ${imageSrc.substring(0, 50)}...`);
           img.classList.remove('lazy-image');
           img.classList.add('lazy-error');
         };
@@ -104,7 +94,6 @@
         // Start loading the image (spinner will stay visible until onload fires)
         img.src = imageSrc;
         img.removeAttribute('data-src');
-        console.log(`[LazyImageManager] Set img.src, spinner should be visible now`);
 
         // Stop observing this image
         observer.unobserve(img);
@@ -119,22 +108,15 @@
         this.init();
       }
 
-      console.log(`[LazyImageManager] === observeAll() called ===`);
       const lazyImages = document.querySelectorAll(this.imageSelector);
-      console.log(`[LazyImageManager] Found ${lazyImages.length} images with selector '${this.imageSelector}'`);
-
       let loadedImmediately = 0;
       let observedForLater = 0;
-      let alreadyLoaded = 0;
 
-      lazyImages.forEach((img, index) => {
+      lazyImages.forEach(img => {
         // Skip images that are already loaded
         if (!img.dataset.src) {
-          alreadyLoaded++;
           return;
         }
-
-        console.log(`[LazyImageManager] Image ${index + 1}: classes=${img.classList.toString()}, parent=${img.parentElement?.className}`);
 
         // Check if image is already in viewport
         const rect = img.getBoundingClientRect();
@@ -147,18 +129,16 @@
 
         if (isInViewport) {
           // Image is already visible, load it immediately
-          console.log(`[LazyImageManager] Image ${index + 1} is IN viewport, loading immediately`);
           this.loadImage(img, this.observer);
           loadedImmediately++;
         } else {
           // Image is not visible yet, observe it
-          console.log(`[LazyImageManager] Image ${index + 1} is OUT of viewport, will observe`);
           this.observer.observe(img);
           observedForLater++;
         }
       });
 
-      console.log(`[LazyImageManager] === Summary: ${alreadyLoaded} already loaded, ${loadedImmediately} loaded immediately, ${observedForLater} observing for later ===`);
+      console.log(`[LazyImageManager] Loaded ${loadedImmediately} visible images, observing ${observedForLater} images`);
     }
 
     /**
