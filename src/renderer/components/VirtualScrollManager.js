@@ -182,21 +182,89 @@ class VirtualScrollManager {
     this.topSpacer.style.height = `${startIndex * this.itemHeight}px`;
     this.bottomSpacer.style.height = `${(this.items.length - endIndex) * this.itemHeight}px`;
 
-    // Clear existing rows (except spacers)
+    // If forced (like when changing groups), clear all rows and re-render
+    if (force) {
+      const existingRows = Array.from(
+        this.tbody.querySelectorAll('tr:not(#top-spacer):not(#bottom-spacer)')
+      );
+      existingRows.forEach(row => row.remove());
+
+      // Render visible rows
+      const visibleItems = this.items.slice(startIndex, endIndex);
+      visibleItems.forEach(item => {
+        const row = this.createRowCallback(item);
+        this.bottomSpacer.parentNode.insertBefore(row, this.bottomSpacer);
+      });
+
+      // Observe lazy images
+      if (this.observeImagesCallback) {
+        this.observeImagesCallback();
+      }
+      return;
+    }
+
+    // Get existing rows (except spacers)
     const existingRows = Array.from(
       this.tbody.querySelectorAll('tr:not(#top-spacer):not(#bottom-spacer)')
     );
-    existingRows.forEach(row => row.remove());
 
-    // Render visible rows
-    const visibleItems = this.items.slice(startIndex, endIndex);
-
-    visibleItems.forEach(item => {
-      const row = this.createRowCallback(item);
-      this.bottomSpacer.parentNode.insertBefore(row, this.bottomSpacer);
+    // Build a map of existing rows by user ID for reuse
+    const existingRowsMap = new Map();
+    existingRows.forEach(row => {
+      const userId = row.dataset.userId;
+      if (userId) {
+        existingRowsMap.set(userId, row);
+      }
     });
 
-    // Observe lazy images
+    // Get visible items
+    const visibleItems = this.items.slice(startIndex, endIndex);
+    const visibleUserIds = new Set(visibleItems.map(item => String(item.id)));
+
+    // Remove rows that are no longer visible
+    existingRows.forEach(row => {
+      const userId = row.dataset.userId;
+      if (!visibleUserIds.has(userId)) {
+        row.remove();
+        existingRowsMap.delete(userId);
+      }
+    });
+
+    // Add or reuse rows for visible items
+    visibleItems.forEach((item, index) => {
+      const userId = String(item.id);
+      const existingRow = existingRowsMap.get(userId);
+
+      if (existingRow) {
+        // Row already exists - reuse it (move if necessary)
+        // Check if row is in correct position
+        const currentIndex = Array.from(this.tbody.children).indexOf(existingRow);
+        const targetIndex = index + 1; // +1 for top spacer
+
+        if (currentIndex !== targetIndex) {
+          // Move row to correct position
+          const referenceNode = this.tbody.children[targetIndex];
+          if (referenceNode && referenceNode !== existingRow) {
+            this.tbody.insertBefore(existingRow, referenceNode);
+          }
+        }
+      } else {
+        // Row doesn't exist - create new one
+        const row = this.createRowCallback(item);
+
+        // Insert at correct position
+        const targetIndex = index + 1; // +1 for top spacer
+        const referenceNode = this.tbody.children[targetIndex];
+
+        if (referenceNode && referenceNode.id !== 'bottom-spacer') {
+          this.tbody.insertBefore(row, referenceNode);
+        } else {
+          this.bottomSpacer.parentNode.insertBefore(row, this.bottomSpacer);
+        }
+      }
+    });
+
+    // Observe only NEW lazy images (ones without src attribute set)
     if (this.observeImagesCallback) {
       this.observeImagesCallback();
     }

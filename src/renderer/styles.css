@@ -243,6 +243,31 @@ body {
   display: block;
 }
 
+/* Loading spinner for lazy images before they load */
+.user-table td .photo-indicator.lazy-image {
+  background-color: #f5f5f5;
+  position: relative;
+}
+
+.user-table td .photo-indicator.lazy-image::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #4a7cc7;
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes spinner-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .user-table td .photo-indicator.duplicate-image {
   border: 2px solid #ef4444;
   box-sizing: border-box;
@@ -289,6 +314,26 @@ body {
   transition: transform 0.2s, box-shadow 0.2s;
   border: 2px solid #10b981;
   box-sizing: border-box;
+}
+
+/* Loading spinner for repository lazy images before they load */
+.user-table td .repository-indicator.lazy-image {
+  background-color: #ecfdf5;
+  position: relative;
+}
+
+.user-table td .repository-indicator.lazy-image::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid #d1fae5;
+  border-top-color: #10b981;
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
 }
 
 .user-table td .repository-indicator:hover {

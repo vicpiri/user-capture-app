@@ -84,11 +84,36 @@
       }
 
       const lazyImages = document.querySelectorAll(this.imageSelector);
+      let loadedImmediately = 0;
+      let observedForLater = 0;
+
       lazyImages.forEach(img => {
-        this.observer.observe(img);
+        // Skip images that are already loaded
+        if (!img.dataset.src) {
+          return;
+        }
+
+        // Check if image is already in viewport
+        const rect = img.getBoundingClientRect();
+        const isInViewport = (
+          rect.top >= -100 && // Give some margin
+          rect.left >= -100 &&
+          rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) + 100 &&
+          rect.right <= (window.innerWidth || document.documentElement.clientWidth) + 100
+        );
+
+        if (isInViewport) {
+          // Image is already visible, load it immediately
+          this.loadImage(img, this.observer);
+          loadedImmediately++;
+        } else {
+          // Image is not visible yet, observe it
+          this.observer.observe(img);
+          observedForLater++;
+        }
       });
 
-      console.log(`[LazyImageManager] Observing ${lazyImages.length} images`);
+      console.log(`[LazyImageManager] Loaded ${loadedImmediately} visible images, observing ${observedForLater} images`);
     }
 
     /**

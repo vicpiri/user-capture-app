@@ -90,7 +90,9 @@ class UserRowRenderer {
     if (user.image_path) {
       // Add timestamp to prevent browser caching
       const cacheBuster = `?t=${Date.now()}`;
-      return `<img data-src="file://${user.image_path}${cacheBuster}" class="photo-indicator lazy-image ${duplicateClass}" alt="Foto" style="background-color: #f0f0f0">`;
+      // Use transparent 1x1 pixel as placeholder to avoid broken image icon
+      const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      return `<img src="${transparentPixel}" data-src="file://${user.image_path}${cacheBuster}" class="photo-indicator lazy-image ${duplicateClass}" alt="" onerror="this.style.display='none'">`;
     }
 
     return `<div class="photo-placeholder">
@@ -113,7 +115,9 @@ class UserRowRenderer {
     if (user.repository_image_path) {
       // Add timestamp to prevent browser caching
       const cacheBuster = `?t=${Date.now()}`;
-      return `<img data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="Foto Depósito" style="background-color: #f0f0f0">`;
+      // Use transparent 1x1 pixel as placeholder to avoid broken image icon
+      const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      return `<img src="${transparentPixel}" data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'">`;
     }
 
     if (this.config.isLoadingRepositoryPhotos) {
