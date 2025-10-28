@@ -93,7 +93,7 @@ function sendProgressUpdate(getMainWindow, processedCount, total, message) {
  * @param {Object} context.state - Application state
  */
 function registerExportHandlers(context) {
-  const { mainWindow: getMainWindow, logger, state } = context;
+  const { mainWindow: getMainWindow, logger, state, repositoryMirror } = context;
 
   // Export CSV
   ipcMain.handle('export-csv', async (event, folderPath, users) => {
@@ -1219,6 +1219,222 @@ function registerExportHandlers(context) {
       return { success: true, results };
     } catch (error) {
       logger.error('Error exporting images by name', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Export Orla PDF
+  ipcMain.handle('export-orla-pdf', async (event, { exportPath, photoSource, imageQuality, usersByGroup }) => {
+    const PDFDocument = require('pdfkit');
+
+    try {
+      logger.section('ORLA PDF EXPORT');
+      logger.info(`Export path: ${exportPath}`);
+      logger.info(`Photo source: ${photoSource}`);
+      logger.info(`Image quality: ${imageQuality}`);
+      logger.info(`Groups with users: ${Object.keys(usersByGroup).length}`);
+
+      const generatedFiles = [];
+      const totalGroups = Object.keys(usersByGroup).length;
+      let processedGroups = 0;
+
+      // Generate one PDF per group
+      for (const [groupCode, users] of Object.entries(usersByGroup)) {
+        logger.info(`Generating PDF for group: ${groupCode} (${users.length} users)`);
+
+        // Send progress update
+        sendProgressUpdate(getMainWindow, processedGroups, totalGroups, `Generando PDF para grupo ${groupCode}...`);
+
+        // Create PDF document
+        const doc = new PDFDocument({
+          size: 'A4',
+          layout: 'portrait',
+          margins: { top: 50, bottom: 50, left: 50, right: 50 }
+        });
+
+        // Create output file path
+        const fileName = `Orla_${groupCode}.pdf`;
+        const filePath = path.join(exportPath, fileName);
+
+        // Pipe PDF to file
+        const writeStream = fs.createWriteStream(filePath);
+        doc.pipe(writeStream);
+
+        // Add title
+        doc.fontSize(20)
+           .font('Helvetica-Bold')
+           .text(`Orla - ${groupCode}`, { align: 'center' });
+
+        doc.moveDown(2);
+
+        // Calculate grid layout
+        const imagesPerRow = 4;
+        // Aspect ratio 3:4 (width:height) for vertical portrait photos
+        const imageWidth = 105;
+        const imageHeight = 140; // 105 * 4/3 = 140
+        const imageSpacing = 15;
+        const nameHeight = 30;
+        const cellHeight = imageHeight + nameHeight + imageSpacing;
+
+        // Page dimensions
+        const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+        const pageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
+
+        // Calculate starting X position to center the grid
+        const totalGridWidth = (imageWidth + imageSpacing) * imagesPerRow - imageSpacing;
+        const startX = doc.page.margins.left + (pageWidth - totalGridWidth) / 2;
+
+        let currentX = startX;
+        let currentY = doc.y;
+        let count = 0;
+
+        // Sort users alphabetically by last_name1, then last_name2, then first_name
+        users.sort((a, b) => {
+          const lastName1A = (a.last_name1 || '').toLowerCase();
+          const lastName1B = (b.last_name1 || '').toLowerCase();
+          const lastName2A = (a.last_name2 || '').toLowerCase();
+          const lastName2B = (b.last_name2 || '').toLowerCase();
+          const firstNameA = (a.first_name || '').toLowerCase();
+          const firstNameB = (b.first_name || '').toLowerCase();
+
+          // Compare by last_name1 first
+          if (lastName1A !== lastName1B) {
+            return lastName1A.localeCompare(lastName1B);
+          }
+
+          // If last_name1 is the same, compare by last_name2
+          if (lastName2A !== lastName2B) {
+            return lastName2A.localeCompare(lastName2B);
+          }
+
+          // If both last names are the same, compare by first_name
+          return firstNameA.localeCompare(firstNameB);
+        });
+
+        // Process each user
+        for (const user of users) {
+          // Check if we need a new page
+          if (currentY + cellHeight > pageHeight + doc.page.margins.top) {
+            doc.addPage();
+            currentY = doc.page.margins.top;
+            currentX = startX;
+            count = 0;
+          }
+
+          // Get image path
+          let imagePath = photoSource === 'captured'
+            ? user.image_path
+            : user.repository_image_path;
+
+          // If using repository photos and path is not set, try to construct it
+          if (photoSource === 'repository' && !imagePath) {
+            const repositoryPath = getImageRepositoryPath();
+            if (repositoryPath) {
+              const isStudent = user.type === 'student';
+              const userId = isStudent ? user.nia : user.document;
+              if (userId) {
+                const filename = `${userId}.jpg`;
+                const mirror = repositoryMirror();
+                const mirrorPath = mirror ? mirror.getMirrorPath(filename) : null;
+                imagePath = mirrorPath || path.join(repositoryPath, filename);
+              }
+            }
+          }
+
+          // Draw image or placeholder
+          if (imagePath && fs.existsSync(imagePath)) {
+            try {
+              // Load and resize image to fit in 3:4 vertical portrait
+              // rotate() without parameters auto-rotates based on EXIF orientation
+              // Process at higher resolution (3x display size) for better quality in PDF
+              const processingWidth = imageWidth * 3; // 315px for 105pt display
+              const processingHeight = imageHeight * 3; // 420px for 140pt display
+              const imageBuffer = await sharp(imagePath)
+                .rotate()
+                .resize(processingWidth, processingHeight, { fit: 'cover' })
+                .jpeg({ quality: imageQuality })
+                .toBuffer();
+
+              doc.image(imageBuffer, currentX, currentY, {
+                width: imageWidth,
+                height: imageHeight
+              });
+            } catch (error) {
+              logger.error(`Error loading image for user ${user.first_name} ${user.last_name1}:`, error);
+              // Draw placeholder on error
+              doc.rect(currentX, currentY, imageWidth, imageHeight)
+                 .stroke('#cccccc');
+            }
+          } else {
+            // Draw placeholder rectangle with light gray background
+            doc.rect(currentX, currentY, imageWidth, imageHeight)
+               .fillAndStroke('#f5f5f5', '#cccccc');
+
+            // Draw simple user icon using SVG-like shapes
+            const centerX = currentX + imageWidth / 2;
+            const centerY = currentY + imageHeight / 2;
+
+            // Draw head circle
+            doc.circle(centerX, centerY - 20, 15)
+               .fillAndStroke('#cccccc', '#aaaaaa');
+
+            // Draw body (simplified trapezoid using lines)
+            doc.moveTo(centerX - 20, centerY + 35)
+               .lineTo(centerX - 12, centerY + 15)
+               .lineTo(centerX + 12, centerY + 15)
+               .lineTo(centerX + 20, centerY + 35)
+               .fillAndStroke('#cccccc', '#aaaaaa');
+          }
+
+          // Draw user name below image (always in black)
+          // Format: Apellido1 Apellido2, Nombre
+          const lastName2 = user.last_name2 ? ` ${user.last_name2}` : '';
+          const fullName = `${user.last_name1}${lastName2}, ${user.first_name}`;
+          doc.fillColor('#000000')
+             .fontSize(8)
+             .font('Helvetica')
+             .text(fullName, currentX, currentY + imageHeight + 5, {
+               width: imageWidth,
+               align: 'center',
+               lineBreak: false,
+               ellipsis: true
+             });
+
+          // Move to next position
+          count++;
+          if (count % imagesPerRow === 0) {
+            // Move to next row
+            currentX = startX;
+            currentY += cellHeight;
+          } else {
+            // Move to next column
+            currentX += imageWidth + imageSpacing;
+          }
+        }
+
+        // Finalize PDF
+        doc.end();
+
+        // Wait for write stream to finish
+        await new Promise((resolve, reject) => {
+          writeStream.on('finish', resolve);
+          writeStream.on('error', reject);
+        });
+
+        logger.success(`Generated PDF: ${fileName}`);
+        generatedFiles.push(fileName);
+
+        // Update progress
+        processedGroups++;
+        sendProgressUpdate(getMainWindow, processedGroups, totalGroups, `PDF generado: ${fileName}`);
+      }
+
+      logger.section('ORLA PDF EXPORT COMPLETED');
+      logger.success(`Generated ${generatedFiles.length} PDF file(s)`);
+
+      return { success: true, generatedFiles };
+    } catch (error) {
+      logger.error('Error exporting orla PDF', error);
       return { success: false, error: error.message };
     }
   });

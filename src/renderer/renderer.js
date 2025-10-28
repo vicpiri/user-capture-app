@@ -1,10 +1,11 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, OrlaExportManager, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
 
 // Component instances
 let userRowRenderer = null;
 let imageGridManager = null;
 let exportManager = null;
+let orlaExportManager = null;
 let imageTagsManager = null;
 let selectionModeManager = null;
 let dragDropManager = null;
@@ -66,6 +67,7 @@ let exportOptionsModalInstance = null;
 let inventoryExportOptionsModalInstance = null;
 let addTagModalInstance = null;
 let userImageModalInstance = null;
+let orlaExportModalInstance = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -83,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize export manager
   initializeExportManager();
+
+  // Initialize orla export manager
+  initializeOrlaExportManager();
 
   // Initialize image tags manager
   initializeImageTagsManager();
@@ -140,6 +145,9 @@ function initializeModals() {
 
   userImageModalInstance = new UserImageModal();
   // UserImageModal initializes itself in constructor
+
+  orlaExportModalInstance = new OrlaExportModal();
+  orlaExportModalInstance.init();
 }
 
 // Initialize user row renderer
@@ -213,6 +221,25 @@ function initializeExportManager() {
     onExportComplete: async () => {
       // Reload users to refresh the repository check indicators
       await loadUsers(getCurrentFilters());
+    },
+    electronAPI: window.electronAPI
+  });
+
+}
+
+// Initialize orla export manager
+function initializeOrlaExportManager() {
+  orlaExportManager = new OrlaExportManager({
+    orlaExportModal: orlaExportModalInstance,
+    showProgressModal: showProgressModal,
+    closeProgressModal: closeProgressModal,
+    showInfoModal: showInfoModal,
+    showOpenDialog: (options) => window.electronAPI.showOpenDialog(options),
+    getProjectOpen: () => projectOpen,
+    getAllUsers: () => allUsers,
+    getAllGroups: () => currentGroups,
+    onExportComplete: () => {
+      // Orla export doesn't need to reload users
     },
     electronAPI: window.electronAPI
   });
@@ -351,6 +378,7 @@ function initializeMenuEventManager() {
     onExportImages: handleExportImages,
     onExportImagesName: handleExportImagesName,
     onExportToRepository: handleExportToRepository,
+    onExportOrlaPDF: handleExportOrlaPDF,
     onUpdateXML: handleUpdateXML,
     onAddImageTag: handleAddImageTag,
     onShowTaggedImages: handleShowTaggedImages,
@@ -1037,6 +1065,13 @@ async function handleExportImagesName() {
 async function handleExportToRepository() {
   if (exportManager) {
     await exportManager.exportToRepository();
+  }
+}
+
+// Export orla PDF
+async function handleExportOrlaPDF() {
+  if (orlaExportManager) {
+    await orlaExportManager.exportOrlaPDF();
   }
 }
 

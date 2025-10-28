@@ -134,6 +134,12 @@ class MenuBuilder {
               click: () => {
                 this.mainWindow.webContents.send('menu-export-to-repository');
               }
+            },
+            {
+              label: 'Exportar orla en PDF',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-orla-pdf');
+              }
             }
           ]
         },

@@ -380,6 +380,44 @@
     </div>
   </div>
 
+  <!-- Orla Export Modal -->
+  <div id="orla-export-modal" class="modal">
+    <div class="modal-content">
+      <h2>Exportar Orla en PDF</h2>
+
+      <h3>Tipo de fotografías a incluir</h3>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="radio" name="orla-photo-source" id="orla-export-captured" value="captured" checked>
+          <span>Fotografías capturadas</span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="radio" name="orla-photo-source" id="orla-export-repository" value="repository">
+          <span>Fotografías del depósito</span>
+        </label>
+      </div>
+
+      <h3>Calidad de imagen</h3>
+      <div class="form-group">
+        <label for="orla-export-quality">Calidad JPEG (0-100):</label>
+        <select id="orla-export-quality" class="form-control">
+          <option value="60">Baja (60) - Archivo más pequeño</option>
+          <option value="80" selected>Alta (80) - Recomendado</option>
+          <option value="90">Muy Alta (90) - Archivo más grande</option>
+          <option value="100">Máxima (100) - Sin compresión</option>
+        </select>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="orla-export-cancel" class="btn btn-secondary">Cancelar</button>
+        <button id="orla-export-confirm" class="btn btn-primary">Exportar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Load modules in dependency order -->
   <script src="core/store.js"></script>
   <script src="core/BaseModal.js"></script>
@@ -390,10 +428,12 @@
   <script src="components/modals/InventoryExportOptionsModal.js"></script>
   <script src="components/modals/AddTagModal.js"></script>
   <script src="components/modals/UserImageModal.js"></script>
+  <script src="components/modals/OrlaExportModal.js"></script>
   <script src="components/UserRowRenderer.js"></script>
   <script src="components/VirtualScrollManager.js"></script>
   <script src="components/ImageGridManager.js"></script>
   <script src="components/ExportManager.js"></script>
+  <script src="components/OrlaExportManager.js"></script>
   <script src="components/ImageTagsManager.js"></script>
   <script src="components/SelectionModeManager.js"></script>
   <script src="components/DragDropManager.js"></script>
