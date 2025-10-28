@@ -702,6 +702,107 @@ function registerProjectHandlers(context) {
       logger.section('XML UPDATE COMPLETED');
       logger.success('XML update completed successfully');
 
+      // Generate updated import report
+      try {
+        const allUsers = await state.dbManager.getUsers({});
+        const reportLogPath = path.join(state.projectPath, 'import-report.log');
+
+        // Analyze current users for report
+        const usersWithoutGroup = allUsers.filter(u =>
+          u.type === 'student' && (!u.group_code || u.group_code === 'SIN_GRUPO')
+        );
+
+        // Find duplicates by checking the newUsersMap
+        const duplicatesInfo = [];
+        const niaMap = new Map();
+        const docMap = new Map();
+
+        // Collect all identifiers from newUsersMap to detect duplicates
+        for (const [key, user] of usersToProcess) {
+          if (user.type === 'student') {
+            if (!niaMap.has(user.nia)) {
+              niaMap.set(user.nia, []);
+            }
+            niaMap.get(user.nia).push(user);
+          } else {
+            if (!docMap.has(user.document)) {
+              docMap.set(user.document, []);
+            }
+            docMap.get(user.document).push(user);
+          }
+        }
+
+        // Build duplicates info from maps
+        for (const [nia, users] of niaMap) {
+          if (users.length > 1) {
+            const dbUser = allUsers.find(u => u.type === 'student' && u.nia == nia);
+            const groups = users.map(u => u.group_code || 'Sin grupo').filter((v, i, a) => a.indexOf(v) === i).join(', ');
+            duplicatesInfo.push({
+              type: 'Estudiante',
+              identifier: `NIA: ${nia}`,
+              allNames: users.map(u => `${u.first_name} ${u.last_name1} ${u.last_name2 || ''}`).join(', '),
+              allGroups: groups,
+              group: dbUser ? dbUser.group_code : users[0].group_code,
+              occurrencesCount: users.length
+            });
+          }
+        }
+
+        let reportContent = '='.repeat(80) + '\n';
+        reportContent += 'INFORME DE IMPORTACIÓN DE USUARIOS\n';
+        reportContent += '='.repeat(80) + '\n\n';
+        reportContent += `Fecha: ${new Date().toLocaleString('es-ES')}\n`;
+        reportContent += `Total de usuarios importados: ${allUsers.length}\n\n`;
+
+        // Users without group
+        if (usersWithoutGroup.length > 0) {
+          reportContent += '-'.repeat(80) + '\n';
+          reportContent += `USUARIOS SIN GRUPO (${usersWithoutGroup.length})\n`;
+          reportContent += '-'.repeat(80) + '\n';
+          reportContent += 'Estos usuarios se han importado pero no tienen grupo asignado.\n\n';
+
+          usersWithoutGroup.forEach((user, index) => {
+            reportContent += `${index + 1}. ${user.first_name} ${user.last_name1} ${user.last_name2 || ''}\n`;
+            reportContent += `   Tipo: Estudiante\n`;
+            reportContent += `   Identificador: NIA: ${user.nia}\n`;
+            reportContent += `   Documento: ${user.document || 'Sin documento'}\n`;
+            reportContent += `   Nota: No existen grupos asignados\n\n`;
+          });
+        }
+
+        // Duplicates
+        if (duplicatesInfo.length > 0) {
+          reportContent += '-'.repeat(80) + '\n';
+          reportContent += `USUARIOS DUPLICADOS (${duplicatesInfo.length})\n`;
+          reportContent += '-'.repeat(80) + '\n';
+          reportContent += 'Estos usuarios tienen el mismo identificador (NIA o documento).\n';
+          reportContent += 'Se prioriza la importación del usuario que tiene grupo asignado.\n\n';
+
+          duplicatesInfo.forEach((dup, index) => {
+            reportContent += `${index + 1}. ${dup.identifier}\n`;
+            reportContent += `   Tipo: ${dup.type}\n`;
+            reportContent += `   Nombres encontrados: ${dup.allNames}\n`;
+            reportContent += `   Ocurrencias: ${dup.occurrencesCount}\n`;
+            reportContent += `   Grupos encontrados: ${dup.allGroups}\n`;
+            reportContent += `   Grupo importado: ${dup.group}\n`;
+            const noteText = dup.occurrencesCount > 1 && dup.allGroups.split(', ').length > 1
+              ? `Usuario asignado a más de un grupo. Importado en el grupo ${dup.group}`
+              : `Importado en el grupo ${dup.group}`;
+            reportContent += `   Nota: ${noteText}\n\n`;
+          });
+        }
+
+        reportContent += '='.repeat(80) + '\n';
+        reportContent += 'FIN DEL INFORME\n';
+        reportContent += '='.repeat(80) + '\n';
+
+        fs.writeFileSync(reportLogPath, reportContent, 'utf8');
+        logger.success(`Import report updated: ${reportLogPath}`);
+      } catch (reportError) {
+        logger.error('Error generating import report', reportError);
+        // Don't fail the whole operation if report generation fails
+      }
+
       return {
         success: true,
         results: {
