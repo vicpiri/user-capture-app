@@ -92,7 +92,11 @@ class UserRowRenderer {
       const cacheBuster = `?t=${Date.now()}`;
       // Use transparent 1x1 pixel as placeholder to avoid broken image icon
       const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-      return `<img src="${transparentPixel}" data-src="file://${user.image_path}${cacheBuster}" class="photo-indicator lazy-image ${duplicateClass}" alt="" onerror="this.style.display='none'">`;
+      // Wrap img in div to support ::after spinner (img elements don't support pseudo-elements)
+      // Add 'loading' class to wrapper for CSS spinner
+      const html = `<div class="photo-indicator-wrapper loading ${duplicateClass}"><img src="${transparentPixel}" data-src="file://${user.image_path}${cacheBuster}" class="photo-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
+      console.log(`[UserRowRenderer] Built photo indicator for user ${user.id}:`, html.substring(0, 150));
+      return html;
     }
 
     return `<div class="photo-placeholder">
@@ -117,7 +121,11 @@ class UserRowRenderer {
       const cacheBuster = `?t=${Date.now()}`;
       // Use transparent 1x1 pixel as placeholder to avoid broken image icon
       const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-      return `<img src="${transparentPixel}" data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'">`;
+      // Wrap img in div to support ::after spinner (img elements don't support pseudo-elements)
+      // Add 'loading' class to wrapper for CSS spinner
+      const html = `<div class="repository-indicator-wrapper loading"><img src="${transparentPixel}" data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
+      console.log(`[UserRowRenderer] Built repository indicator for user ${user.id}:`, html.substring(0, 150));
+      return html;
     }
 
     if (this.config.isLoadingRepositoryPhotos) {
@@ -201,22 +209,22 @@ class UserRowRenderer {
       this.onUserContextMenu(e, user, row);
     });
 
-    // Double-click on captured photo
+    // Double-click on captured photo (use wrapper to capture clicks on both image and spinner)
     if (user.image_path) {
-      const photoIndicator = row.querySelector('.photo-indicator');
-      if (photoIndicator) {
-        photoIndicator.addEventListener('dblclick', (e) => {
+      const photoWrapper = row.querySelector('.photo-indicator-wrapper');
+      if (photoWrapper) {
+        photoWrapper.addEventListener('dblclick', (e) => {
           e.stopPropagation();
           this.onImagePreview(user, 'captured');
         });
       }
     }
 
-    // Double-click on repository photo
+    // Double-click on repository photo (use wrapper to capture clicks on both image and spinner)
     if (user.repository_image_path) {
-      const repositoryIndicator = row.querySelector('.repository-indicator');
-      if (repositoryIndicator) {
-        repositoryIndicator.addEventListener('dblclick', (e) => {
+      const repositoryWrapper = row.querySelector('.repository-indicator-wrapper');
+      if (repositoryWrapper) {
+        repositoryWrapper.addEventListener('dblclick', (e) => {
           e.stopPropagation();
           this.onImagePreview(user, 'repository');
         });
@@ -271,11 +279,11 @@ class UserRowRenderer {
 
       lastCell.innerHTML = `${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}`;
 
-      // Reattach event listeners for double-click on images
+      // Reattach event listeners for double-click on images (use wrappers)
       if (user.image_path) {
-        const photoIndicatorEl = lastCell.querySelector('.photo-indicator');
-        if (photoIndicatorEl) {
-          photoIndicatorEl.addEventListener('dblclick', (e) => {
+        const photoWrapper = lastCell.querySelector('.photo-indicator-wrapper');
+        if (photoWrapper) {
+          photoWrapper.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             this.onImagePreview(user, 'captured');
           });
@@ -283,9 +291,9 @@ class UserRowRenderer {
       }
 
       if (user.repository_image_path) {
-        const repositoryIndicatorEl = lastCell.querySelector('.repository-indicator');
-        if (repositoryIndicatorEl) {
-          repositoryIndicatorEl.addEventListener('dblclick', (e) => {
+        const repositoryWrapper = lastCell.querySelector('.repository-indicator-wrapper');
+        if (repositoryWrapper) {
+          repositoryWrapper.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             this.onImagePreview(user, 'repository');
           });
