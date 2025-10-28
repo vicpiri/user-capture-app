@@ -735,7 +735,16 @@ function selectUserRow(row, user) {
 }
 
 function updateUserCount() {
-  userCount.textContent = `Listo. ${currentUsers.length} usuarios cargados.`;
+  // Update old status bar (if exists)
+  if (userCount) {
+    userCount.textContent = `Listo. ${currentUsers.length} usuarios cargados.`;
+  }
+
+  // Update new status bar
+  const statusUsers = document.getElementById('status-users');
+  if (statusUsers) {
+    statusUsers.textContent = `${currentUsers.length} usuarios cargados`;
+  }
 }
 
 // Search functions
