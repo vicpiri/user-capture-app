@@ -1012,3 +1012,35 @@ body {
   cursor: pointer;
   accent-color: #4a7cc7;
 }
+
+/* Status Bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background-color: #1e2330;
+  border-top: 1px solid #2a2f3e;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 20px;
+  font-size: 12px;
+  z-index: 100;
+}
+
+.status-bar-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-bar .status-label {
+  color: #6c7a9b;
+  font-weight: 500;
+}
+
+.status-bar .status-value {
+  color: #b0b0b0;
+}

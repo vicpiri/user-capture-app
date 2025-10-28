@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getGroups: () => ipcRenderer.invoke('get-groups'),
   loadRepositoryImages: (users) => ipcRenderer.invoke('load-repository-images', users),
   getSyncStatus: () => ipcRenderer.invoke('get-sync-status'),
+  getProjectInfo: () => ipcRenderer.invoke('get-project-info'),
 
   // Image management
   getImages: () => ipcRenderer.invoke('get-images'),
@@ -174,5 +175,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   onMenuToggleAdditionalActions: (callback) => {
     ipcRenderer.on('menu-toggle-additional-actions', (event, enabled) => callback(enabled));
+  },
+
+  onRepositoryPathChanged: (callback) => {
+    ipcRenderer.on('repository-path-changed', callback);
   }
 });

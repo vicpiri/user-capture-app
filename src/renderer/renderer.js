@@ -445,6 +445,7 @@ function initializeProjectManager() {
     onLoadGroups: loadGroups,
     onLoadUsers: loadUsers,
     onLoadImages: loadImages,
+    onUpdateStatusBar: updateStatusBar,
     onGetCurrentFilters: getCurrentFilters,
     onShowInfoModal: showInfoModal,
     onShowConfirmModal: showConfirmationModal,
@@ -577,6 +578,12 @@ function initializeEventListeners() {
       const filters = getCurrentFilters();
       await loadUsers(filters);
     }
+  });
+
+  // Listen for repository path changes
+  window.electronAPI.onRepositoryPathChanged(async () => {
+    // Update status bar to reflect the new repository path
+    await updateStatusBar();
   });
 
   // Keyboard navigation is now handled by KeyboardNavigationManager
@@ -777,6 +784,41 @@ async function loadImages() {
     return await imageGridManager.loadImages(true);
   }
   return false;
+}
+
+// Status Bar
+async function updateStatusBar() {
+  try {
+    const result = await window.electronAPI.getProjectInfo();
+
+    const statusBar = document.getElementById('status-bar');
+    const statusProject = document.getElementById('status-project');
+    const statusRepository = document.getElementById('status-repository');
+
+    if (result.success && statusBar && statusProject && statusRepository) {
+      // Show the status bar
+      statusBar.style.display = 'flex';
+
+      // Update project name (show only folder name)
+      const projectName = result.projectPath.split('\\').pop() || result.projectPath.split('/').pop();
+      statusProject.textContent = projectName;
+      statusProject.title = result.projectPath; // Full path in tooltip
+
+      // Update repository path (show full path)
+      if (result.repositoryPath) {
+        statusRepository.textContent = result.repositoryPath;
+        statusRepository.title = result.repositoryPath; // Full path in tooltip
+      } else {
+        statusRepository.textContent = 'No configurado';
+        statusRepository.title = '';
+      }
+    } else if (statusBar) {
+      // Hide if no project is open
+      statusBar.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Error updating status bar:', error);
+  }
 }
 
 // Show image preview - delegates to ImageGridManager

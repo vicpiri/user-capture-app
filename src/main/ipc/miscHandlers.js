@@ -268,6 +268,30 @@ function registerMiscHandlers(context) {
       return { success: false, error: error.message, isSyncing: false };
     }
   });
+
+  // ============================================================================
+  // Project Info Handlers
+  // ============================================================================
+
+  // Get project information (path and repository path)
+  ipcMain.handle('get-project-info', async () => {
+    try {
+      if (!state.projectPath) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+
+      return {
+        success: true,
+        projectPath: state.projectPath,
+        repositoryPath: repositoryPath || null
+      };
+    } catch (error) {
+      console.error('Error getting project info:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerMiscHandlers };

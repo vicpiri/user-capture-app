@@ -220,6 +220,9 @@ class MenuBuilder {
                   await this.callbacks.reinitializeRepositoryMirror();
                 }
 
+                // Notify renderer to update status bar
+                this.mainWindow.webContents.send('repository-path-changed');
+
                 dialog.showMessageBox(this.mainWindow, {
                   type: 'info',
                   title: 'Configuración guardada',

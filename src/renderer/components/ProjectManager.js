@@ -31,6 +31,7 @@
       this.onLoadGroups = config.onLoadGroups || (async () => {});
       this.onLoadUsers = config.onLoadUsers || (async (filters) => {});
       this.onLoadImages = config.onLoadImages || (async () => {});
+      this.onUpdateStatusBar = config.onUpdateStatusBar || (async () => {});
       this.onGetCurrentFilters = config.onGetCurrentFilters || (() => ({}));
       this.onShowInfoModal = config.onShowInfoModal || ((title, message) => {});
       this.onShowConfirmModal = config.onShowConfirmModal || (async (message) => false);
@@ -95,6 +96,9 @@
      * @returns {Promise<void>}
      */
     async loadProjectData() {
+      // Update status bar first
+      await this.onUpdateStatusBar();
+
       await this.onLoadGroups();
 
       // Load saved group filter
@@ -233,6 +237,7 @@
       if (callbacks.onLoadGroups) this.onLoadGroups = callbacks.onLoadGroups;
       if (callbacks.onLoadUsers) this.onLoadUsers = callbacks.onLoadUsers;
       if (callbacks.onLoadImages) this.onLoadImages = callbacks.onLoadImages;
+      if (callbacks.onUpdateStatusBar) this.onUpdateStatusBar = callbacks.onUpdateStatusBar;
       if (callbacks.onGetCurrentFilters) this.onGetCurrentFilters = callbacks.onGetCurrentFilters;
       if (callbacks.onShowInfoModal) this.onShowInfoModal = callbacks.onShowInfoModal;
       if (callbacks.onShowConfirmModal) this.onShowConfirmModal = callbacks.onShowConfirmModal;
