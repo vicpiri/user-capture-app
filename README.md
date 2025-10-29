@@ -279,6 +279,16 @@ La base de datos se almacena en `[proyecto]/data/users.db`
 - `data/`: Base de datos SQLite
 - `repository-mirror/`: Mirror local del repositorio Google Drive
 
+## Changelog
+
+### 2025-01-29 - Fixes y Optimizaciones
+
+**Corrección de carga de repositorio**: Solucionado problema donde las imágenes del repositorio no se cargaban al inicio (race condition en inicialización del repositoryMirror).
+
+**Limpieza de código**: Eliminado campo `has_external_image` no utilizado de la base de datos y su función asociada `markExternalImage()`.
+
+**Tests corregidos**: Corregidos 3 tests en UserRowRenderer relacionados con CSS class de indicadores de duplicados. Suite completa: 488/488 tests pasando ✅
+
 ## Arquitectura
 
 ### Arquitectura Modular del Proceso Principal

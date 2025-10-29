@@ -613,6 +613,35 @@ tests/unit/components/
   - Imágenes lazy-loaded
 - **Duración mínima**: Configurada para evitar flashes visuales
 
+## Changelog Reciente
+
+### 2025-01-29 - Fixes y limpieza de código
+
+**Corrección de carga de repositorio al inicio**:
+- **Problema**: Las imágenes del repositorio no se cargaban al arrancar con `npm run dev`, pero sí después de hacer Ctrl+R
+- **Causa raíz**: Race condition - `ensureRepositoryMirrorStarted()` se llamaba en `createWindow()` antes de que el proyecto se abriera, por lo que `dbManager` era null y la función retornaba silenciosamente
+- **Solución**: Mover la llamada a `ensureRepositoryMirrorStarted()` al final de `openRecentProject()` (después de que el proyecto se haya abierto exitosamente)
+- **Archivos modificados**: `main.js` (líneas 303-313 eliminadas, líneas 651-655 agregadas)
+
+**Eliminación de código muerto**:
+- **Campo eliminado**: `has_external_image` en tabla `users` de SQLite
+- **Función eliminada**: `markExternalImage(userId, exists)` en `database.js`
+- **Razón**: El campo se definió en el schema pero nunca se utilizó en ninguna parte del código
+- **Archivos modificados**: `src/main/database.js` (líneas 53 y 404-411)
+
+**Corrección de tests**:
+- **Tests corregidos**: 3 tests en `UserRowRenderer.test.js` que verificaban el CSS class `duplicate-image`
+- **Problema**: Los tests verificaban el class en `.photo-indicator` pero en realidad se aplica a `.photo-indicator-wrapper`
+- **Tests afectados**:
+  - "should show duplicate indicator for duplicate images" (líneas 136-142)
+  - "should not show duplicate indicator for unique images" (líneas 144-150)
+  - "should apply imageCount to all rows" (líneas 288-303)
+- **Resultado**: 488/488 tests pasando ✅
+
+**Commits**:
+- `c0bc3a9` - fix: ensure repository mirror starts after project opens
+- `a5b9f6a` - refactor: remove unused has_external_image field and fix UserRowRenderer tests
+
 ## Estado Actual
 
 **Versión**: 1.3.1
