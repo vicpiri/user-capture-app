@@ -26,7 +26,8 @@ class UserRowRenderer {
       isLoadingRepositoryIndicators: config.isLoadingRepositoryIndicators ?? false,
       selectionMode: config.selectionMode ?? false,
       selectedUsers: config.selectedUsers ?? new Set(),
-      cardPrintRequests: config.cardPrintRequests ?? new Set()
+      cardPrintRequests: config.cardPrintRequests ?? new Set(),
+      publicationRequests: config.publicationRequests ?? new Set()
     };
 
     // Callbacks (provided by renderer)
@@ -63,6 +64,7 @@ class UserRowRenderer {
     const repositoryIndicator = this._buildRepositoryIndicator(user);
     const repositoryCheckIndicator = this._buildRepositoryCheckIndicator(user);
     const cardPrintIndicator = this._buildCardPrintIndicator(user);
+    const publicationIndicator = this._buildPublicationIndicator(user);
     const checkboxCell = this._buildCheckboxCell(user);
 
     row.innerHTML = `
@@ -71,7 +73,7 @@ class UserRowRenderer {
       <td>${user.last_name1} ${user.last_name2 || ''}</td>
       <td>${user.nia || '-'}</td>
       <td>${user.group_code}</td>
-      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}</td>
+      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}${publicationIndicator}</td>
     `;
 
     // Attach event listeners
@@ -189,6 +191,30 @@ class UserRowRenderer {
   }
 
   /**
+   * Build publication request indicator HTML
+   * @private
+   */
+  _buildPublicationIndicator(user) {
+    // Determine user ID (NIA for students, document for others)
+    const userId = user.type === 'student' ? user.nia : user.document;
+
+    if (!userId) {
+      return '';
+    }
+
+    // Check if this user has a pending publication request
+    if (this.config.publicationRequests.has(userId)) {
+      return `<svg class="publication-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Publicación solicitada">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>`;
+    }
+
+    return '';
+  }
+
+  /**
    * Build checkbox cell HTML
    * @private
    */
@@ -298,8 +324,9 @@ class UserRowRenderer {
       const repositoryIndicator = this._buildRepositoryIndicator(user);
       const repositoryCheckIndicator = this._buildRepositoryCheckIndicator(user);
       const cardPrintIndicator = this._buildCardPrintIndicator(user);
+      const publicationIndicator = this._buildPublicationIndicator(user);
 
-      lastCell.innerHTML = `${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}`;
+      lastCell.innerHTML = `${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}${publicationIndicator}`;
 
       // Reattach event listeners for double-click on images (use wrappers)
       if (user.image_path) {

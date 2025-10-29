@@ -24,6 +24,7 @@ let selectedUser = null;
 let projectOpen = false;
 let showDuplicatesOnly = false;
 let showCardPrintRequestsOnly = false;
+let showPublicationRequestsOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
 let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
@@ -38,6 +39,7 @@ let selectedUsers = new Set(); // Store selected user IDs
 
 // Card print requests
 let cardPrintRequests = new Set(); // Store user IDs with pending card print requests
+let publicationRequests = new Set(); // Store user IDs with pending publication requests
 
 // Virtual scrolling
 let virtualScrollManager = null;
@@ -165,6 +167,7 @@ function initializeUserRowRenderer() {
     selectionMode: selectionMode,
     selectedUsers: selectedUsers,
     cardPrintRequests: cardPrintRequests,
+    publicationRequests: publicationRequests,
     onUserSelect: (row, user) => selectUserRow(row, user),
     onUserContextMenu: (e, user, row) => showContextMenu(e, user, row),
     onImagePreview: (user, type) => showUserImageModal(user, type),
@@ -292,6 +295,7 @@ function initializeSelectionModeManager() {
       }
     },
     onRequestCardPrint: handleRequestCardPrint,
+    onRequestPublication: handleRequestPublication,
     selectedUserInfo: selectedUserInfo,
     tableHeader: document.querySelector('.user-table thead tr')
   });
@@ -429,6 +433,7 @@ function initializeUserDataManager() {
     onDisplayUsers: displayUsers,
     onUpdateUserCount: updateUserCount,
     onUpdateCardPrintRequests: (requests) => { cardPrintRequests = requests; },
+    onUpdatePublicationRequests: (requests) => { publicationRequests = requests; },
     onUpdateUserRowRenderer: (config) => {
       if (userRowRenderer) {
         userRowRenderer.updateConfig(config);
@@ -528,6 +533,12 @@ function initializeEventListeners() {
   // Listen for card print requests filter toggle from menu
   window.electronAPI.onMenuToggleCardPrintRequests((enabled) => {
     showCardPrintRequestsOnly = enabled;
+    displayUsers(currentUsers, allUsers);
+  });
+
+  // Listen for publication requests filter toggle from menu
+  window.electronAPI.onMenuTogglePublicationRequests((enabled) => {
+    showPublicationRequestsOnly = enabled;
     displayUsers(currentUsers, allUsers);
   });
 
@@ -710,6 +721,12 @@ async function displayUsers(users, allUsers = null) {
     usersToDisplay = users.filter(user => {
       const userId = user.type === 'student' ? user.nia : user.document;
       return userId && cardPrintRequests.has(userId);
+    });
+  } else if (showPublicationRequestsOnly) {
+    // Show only users with pending publication requests
+    usersToDisplay = users.filter(user => {
+      const userId = user.type === 'student' ? user.nia : user.document;
+      return userId && publicationRequests.has(userId);
     });
   }
 
@@ -1295,6 +1312,63 @@ async function handleRequestCardPrint(userIds) {
       progressManager.close();
     }
     showInfoModal('Error', `Error al solicitar impresión: ${error.message}`);
+  }
+}
+
+/**
+ * Handle request for official publication
+ * @param {number[]} userIds - Array of user IDs to request publication for
+ */
+async function handleRequestPublication(userIds) {
+  try {
+    console.log('[Publication] Requesting publication for users:', userIds);
+
+    // Get project info to check if project is open
+    const projectInfo = await window.electronAPI.getProjectInfo();
+    if (!projectInfo.success || !projectInfo.projectPath) {
+      showInfoModal('Aviso', 'Debe abrir un proyecto primero');
+      return;
+    }
+
+    if (userIds.length === 0) {
+      showInfoModal('Aviso', 'No hay usuarios seleccionados');
+      return;
+    }
+
+    // Show progress modal
+    if (progressManager) {
+      progressManager.show('Solicitando Petición Oficial', 'Copiando imágenes...');
+    }
+
+    // Request publication via IPC
+    const result = await window.electronAPI.requestPublication(userIds);
+
+    // Close progress modal
+    if (progressManager) {
+      progressManager.close();
+    }
+
+    if (result.success) {
+      // Reload publication requests to update indicators
+      if (userDataManager) {
+        await userDataManager.loadPublicationRequests();
+      }
+
+      let message = `Se han copiado ${result.count} imagen(es) en la carpeta 'To-Publish'`;
+      if (result.skipped > 0) {
+        message += `\n\n${result.skipped} usuario(s) omitido(s) por no tener imagen en el depósito`;
+      }
+
+      showInfoModal('Solicitud completada', message);
+    } else {
+      showInfoModal('Error', `Error al solicitar publicación: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('[Publication] Error requesting publication:', error);
+    if (progressManager) {
+      progressManager.close();
+    }
+    showInfoModal('Error', `Error al solicitar publicación: ${error.message}`);
   }
 }
 

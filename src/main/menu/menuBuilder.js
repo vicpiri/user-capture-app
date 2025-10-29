@@ -17,6 +17,7 @@ class MenuBuilder {
     this.availableCameras = context.availableCameras;
     this.showDuplicatesOnly = context.showDuplicatesOnly;
     this.showCardPrintRequestsOnly = context.showCardPrintRequestsOnly;
+    this.showPublicationRequestsOnly = context.showPublicationRequestsOnly;
     this.showCapturedPhotos = context.showCapturedPhotos;
     this.showRepositoryPhotos = context.showRepositoryPhotos;
     this.showRepositoryIndicators = context.showRepositoryIndicators;
@@ -326,6 +327,14 @@ class MenuBuilder {
           checked: this.showCardPrintRequestsOnly,
           click: (menuItem) => {
             this.callbacks.toggleCardPrintRequests(menuItem.checked);
+          }
+        },
+        {
+          label: 'Publicaciones solicitadas',
+          type: 'checkbox',
+          checked: this.showPublicationRequestsOnly,
+          click: (menuItem) => {
+            this.callbacks.togglePublicationRequests(menuItem.checked);
           }
         },
         { type: 'separator' },

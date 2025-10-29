@@ -323,6 +323,16 @@ body {
   cursor: help;
 }
 
+/* Publication request indicator */
+.user-table td .publication-indicator {
+  width: 18px;
+  height: 18px;
+  color: #8b5cf6;
+  margin-left: 4px;
+  flex-shrink: 0;
+  cursor: help;
+}
+
 .user-table td .repository-indicator-wrapper {
   width: 32px;
   height: 32px;

@@ -38,6 +38,7 @@
       this.onDisplayUsers = config.onDisplayUsers || (() => {});
       this.onUpdateUserCount = config.onUpdateUserCount || (() => {});
       this.onUpdateCardPrintRequests = config.onUpdateCardPrintRequests || (() => {});
+      this.onUpdatePublicationRequests = config.onUpdatePublicationRequests || (() => {});
       this.onUpdateUserRowRenderer = config.onUpdateUserRowRenderer || (() => {});
 
       // DOM elements
@@ -133,6 +134,9 @@
           // Load card print requests (async, non-blocking)
           this.loadCardPrintRequests();
 
+          // Load publication requests (async, non-blocking)
+          this.loadPublicationRequests();
+
           // Load repository data in background if needed
           if (this.getShowRepositoryPhotos() || this.getShowRepositoryIndicators()) {
             // Check if repository data is actually loaded
@@ -218,6 +222,30 @@
         }
       } catch (error) {
         console.error('Error loading card print requests:', error);
+      }
+    }
+
+    /**
+     * Load publication requests from 'To-Publish' folder
+     */
+    async loadPublicationRequests() {
+      try {
+        const result = await this.electronAPI.getPublicationRequests();
+
+        if (result.success) {
+          // Update global publicationRequests set
+          this.onUpdatePublicationRequests(new Set(result.userIds));
+
+          // Update UserRowRenderer config
+          this.onUpdateUserRowRenderer({ publicationRequests: new Set(result.userIds) });
+
+          // Refresh display to show indicators
+          this.updateRepositoryDataInDisplay();
+        } else {
+          console.error('Error loading publication requests:', result.error);
+        }
+      } catch (error) {
+        console.error('Error loading publication requests:', error);
       }
     }
 

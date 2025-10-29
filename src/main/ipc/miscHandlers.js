@@ -454,6 +454,156 @@ function registerMiscHandlers(context) {
       return { success: false, error: error.message };
     }
   });
+
+  // ============================================================================
+  // Publication Request Handlers
+  // ============================================================================
+
+  // Publication requests cache
+  let publicationRequestsCache = null;
+  let publicationRequestsCacheTime = null;
+  const PUBLICATION_CACHE_TTL = 30000; // 30 seconds
+
+  // Get pending publication requests
+  ipcMain.handle('get-publication-requests', async () => {
+    try {
+      const { projectPath, dbManager } = state;
+
+      if (!projectPath || !dbManager) {
+        return { success: false, error: 'No hay proyecto abierto' };
+      }
+
+      // Check cache validity
+      const now = Date.now();
+      if (publicationRequestsCache && publicationRequestsCacheTime && (now - publicationRequestsCacheTime < PUBLICATION_CACHE_TTL)) {
+        logger.info('[Publication] Using cached publication requests');
+        return { success: true, userIds: publicationRequestsCache };
+      }
+
+      const fs = require('fs').promises;
+      const repositoryPath = await getImageRepositoryPath(dbManager);
+      if (!repositoryPath) {
+        publicationRequestsCache = [];
+        publicationRequestsCacheTime = now;
+        return { success: true, userIds: [] };
+      }
+
+      // Check if 'To-Publish' folder exists
+      const toPublishFolder = path.join(repositoryPath, 'To-Publish');
+      try {
+        await fs.access(toPublishFolder);
+      } catch {
+        // Folder doesn't exist, cache empty result
+        publicationRequestsCache = [];
+        publicationRequestsCacheTime = now;
+        return { success: true, userIds: [] };
+      }
+
+      // Read all files in the folder
+      const files = await fs.readdir(toPublishFolder);
+
+      // Filter out directories, only keep files (which are user IDs)
+      const userIds = [];
+      for (const file of files) {
+        const filePath = path.join(toPublishFolder, file);
+        const stats = await fs.stat(filePath);
+        if (stats.isFile()) {
+          // Remove .jpg extension if present
+          const userId = file.replace(/\.jpg$/i, '');
+          userIds.push(userId);
+        }
+      }
+
+      // Update cache
+      publicationRequestsCache = userIds;
+      publicationRequestsCacheTime = now;
+
+      logger.info(`[Publication] Scanned ${userIds.length} publication requests (cached for ${PUBLICATION_CACHE_TTL}ms)`);
+      return { success: true, userIds };
+    } catch (error) {
+      logger.error('Error getting publication requests:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Request publication for selected users
+  ipcMain.handle('request-publication', async (event, userIds) => {
+    try {
+      const fs = require('fs').promises;
+      const { projectPath, dbManager } = state;
+
+      if (!projectPath || !dbManager) {
+        return { success: false, error: 'No hay proyecto abierto' };
+      }
+
+      if (!userIds || userIds.length === 0) {
+        return { success: false, error: 'No hay usuarios seleccionados' };
+      }
+
+      // Get image repository path
+      const repositoryPath = await getImageRepositoryPath(dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado la ruta del depósito de imágenes' };
+      }
+
+      // Create 'To-Publish' folder if it doesn't exist
+      const toPublishFolder = path.join(repositoryPath, 'To-Publish');
+      try {
+        await fs.access(toPublishFolder);
+      } catch {
+        await fs.mkdir(toPublishFolder, { recursive: true });
+        logger.info(`Created To-Publish folder: ${toPublishFolder}`);
+      }
+
+      // Get user data for selected users
+      const users = await dbManager.getUsersByIds(userIds);
+
+      if (!users || users.length === 0) {
+        return { success: false, error: 'No se encontraron usuarios' };
+      }
+
+      // Copy repository images for each user
+      let count = 0;
+      let skipped = 0;
+      for (const user of users) {
+        // Determine user ID (NIA for students, document for others)
+        const userId = user.type === 'student' ? user.nia : user.document;
+
+        if (!userId) {
+          logger.warning(`User ${user.id} (${user.first_name} ${user.last_name1}) has no ID, skipping`);
+          skipped++;
+          continue;
+        }
+
+        // Check if user has repository image by verifying file existence
+        const repositoryImagePath = path.join(repositoryPath, `${userId}.jpg`);
+        try {
+          await fs.access(repositoryImagePath);
+        } catch {
+          // File doesn't exist
+          logger.warning(`User ${user.id} (${user.first_name} ${user.last_name1}) has no repository image (${userId}.jpg), skipping`);
+          skipped++;
+          continue;
+        }
+
+        // Copy image to To-Publish folder with user ID as filename
+        const destPath = path.join(toPublishFolder, `${userId}.jpg`);
+        await fs.copyFile(repositoryImagePath, destPath);
+        count++;
+        logger.info(`Created publication request for user ${user.id}: ${destPath}`);
+      }
+
+      // Invalidate cache after creating new requests
+      publicationRequestsCache = null;
+      publicationRequestsCacheTime = null;
+      logger.info('[Publication] Cache invalidated after creating requests');
+
+      return { success: true, count, skipped };
+    } catch (error) {
+      logger.error('Error requesting publication:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerMiscHandlers };

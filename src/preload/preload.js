@@ -90,6 +90,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-toggle-card-print-requests', (event, enabled) => callback(enabled));
   },
 
+  onMenuTogglePublicationRequests: (callback) => {
+    ipcRenderer.on('menu-toggle-publication-requests', (event, enabled) => callback(enabled));
+  },
+
   onMenuToggleCapturedPhotos: (callback) => {
     ipcRenderer.on('menu-toggle-captured-photos', (event, enabled) => callback(enabled));
   },
@@ -193,5 +197,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Card print requests
   requestCardPrint: (userIds) => ipcRenderer.invoke('request-card-print', userIds),
-  getCardPrintRequests: () => ipcRenderer.invoke('get-card-print-requests')
+  getCardPrintRequests: () => ipcRenderer.invoke('get-card-print-requests'),
+
+  // Publication requests
+  requestPublication: (userIds) => ipcRenderer.invoke('request-publication', userIds),
+  getPublicationRequests: () => ipcRenderer.invoke('get-publication-requests')
 });

@@ -26,6 +26,7 @@
       this.getDisplayedUsers = config.getDisplayedUsers || (() => []); // Get currently displayed users
       this.reRenderUsers = config.reRenderUsers || (() => {}); // Re-render user list
       this.onRequestCardPrint = config.onRequestCardPrint || (() => {}); // Called when requesting card print
+      this.onRequestPublication = config.onRequestPublication || (() => {}); // Called when requesting publication
 
       // DOM elements
       this.selectedUserInfo = config.selectedUserInfo; // Element to display selection info
@@ -94,6 +95,16 @@
           menu.remove();
         });
         menu.appendChild(requestCardPrintOption);
+
+        // Option: Solicitar Petición Oficial
+        const requestPublicationOption = document.createElement('div');
+        requestPublicationOption.className = 'context-menu-item';
+        requestPublicationOption.textContent = 'Solicitar Petición Oficial';
+        requestPublicationOption.addEventListener('click', () => {
+          this.onRequestPublication(Array.from(this.selectedUsers));
+          menu.remove();
+        });
+        menu.appendChild(requestPublicationOption);
 
         // Separator
         const separator = document.createElement('div');
