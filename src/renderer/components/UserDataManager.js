@@ -37,6 +37,8 @@
       // Callbacks
       this.onDisplayUsers = config.onDisplayUsers || (() => {});
       this.onUpdateUserCount = config.onUpdateUserCount || (() => {});
+      this.onUpdateCardPrintRequests = config.onUpdateCardPrintRequests || (() => {});
+      this.onUpdateUserRowRenderer = config.onUpdateUserRowRenderer || (() => {});
 
       // DOM elements
       this.groupFilter = config.groupFilter;
@@ -128,6 +130,9 @@
           this.onDisplayUsers(this.getCurrentUsers(), this.getAllUsers());
           this.onUpdateUserCount();
 
+          // Load card print requests (async, non-blocking)
+          this.loadCardPrintRequests();
+
           // Load repository data in background if needed
           if (this.getShowRepositoryPhotos() || this.getShowRepositoryIndicators()) {
             // Check if repository data is actually loaded
@@ -189,6 +194,30 @@
         console.error('Error loading repository data in background:', error);
         // Stop loading states even on error
         this.updateRepositoryDataInDisplay();
+      }
+    }
+
+    /**
+     * Load card print requests (async, non-blocking)
+     */
+    async loadCardPrintRequests() {
+      try {
+        const result = await this.electronAPI.getCardPrintRequests();
+
+        if (result.success) {
+          // Update global cardPrintRequests set
+          this.onUpdateCardPrintRequests(new Set(result.userIds));
+
+          // Update UserRowRenderer config
+          this.onUpdateUserRowRenderer({ cardPrintRequests: new Set(result.userIds) });
+
+          // Refresh display to show indicators
+          this.updateRepositoryDataInDisplay();
+        } else {
+          console.error('Error loading card print requests:', result.error);
+        }
+      } catch (error) {
+        console.error('Error loading card print requests:', error);
       }
     }
 

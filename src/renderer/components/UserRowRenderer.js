@@ -25,7 +25,8 @@ class UserRowRenderer {
       isLoadingRepositoryPhotos: config.isLoadingRepositoryPhotos ?? false,
       isLoadingRepositoryIndicators: config.isLoadingRepositoryIndicators ?? false,
       selectionMode: config.selectionMode ?? false,
-      selectedUsers: config.selectedUsers ?? new Set()
+      selectedUsers: config.selectedUsers ?? new Set(),
+      cardPrintRequests: config.cardPrintRequests ?? new Set()
     };
 
     // Callbacks (provided by renderer)
@@ -61,6 +62,7 @@ class UserRowRenderer {
     const photoIndicator = this._buildPhotoIndicator(user, duplicateClass);
     const repositoryIndicator = this._buildRepositoryIndicator(user);
     const repositoryCheckIndicator = this._buildRepositoryCheckIndicator(user);
+    const cardPrintIndicator = this._buildCardPrintIndicator(user);
     const checkboxCell = this._buildCheckboxCell(user);
 
     row.innerHTML = `
@@ -69,7 +71,7 @@ class UserRowRenderer {
       <td>${user.last_name1} ${user.last_name2 || ''}</td>
       <td>${user.nia || '-'}</td>
       <td>${user.group_code}</td>
-      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}</td>
+      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}</td>
     `;
 
     // Attach event listeners
@@ -161,6 +163,29 @@ class UserRowRenderer {
     }
 
     return `<div class="repository-check-placeholder"></div>`;
+  }
+
+  /**
+   * Build card print request indicator HTML
+   * @private
+   */
+  _buildCardPrintIndicator(user) {
+    // Determine user ID (NIA for students, document for others)
+    const userId = user.type === 'student' ? user.nia : user.document;
+
+    if (!userId) {
+      return '';
+    }
+
+    // Check if this user has a pending card print request
+    if (this.config.cardPrintRequests.has(userId)) {
+      return `<svg class="card-print-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Carnet solicitado">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+        <line x1="1" y1="10" x2="23" y2="10"></line>
+      </svg>`;
+    }
+
+    return '';
   }
 
   /**
@@ -272,8 +297,9 @@ class UserRowRenderer {
       const photoIndicator = this._buildPhotoIndicator(user, duplicateClass);
       const repositoryIndicator = this._buildRepositoryIndicator(user);
       const repositoryCheckIndicator = this._buildRepositoryCheckIndicator(user);
+      const cardPrintIndicator = this._buildCardPrintIndicator(user);
 
-      lastCell.innerHTML = `${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}`;
+      lastCell.innerHTML = `${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}`;
 
       // Reattach event listeners for double-click on images (use wrappers)
       if (user.image_path) {

@@ -25,6 +25,7 @@
       this.onSelectionChange = config.onSelectionChange || (() => {}); // Called when selection state changes
       this.getDisplayedUsers = config.getDisplayedUsers || (() => []); // Get currently displayed users
       this.reRenderUsers = config.reRenderUsers || (() => {}); // Re-render user list
+      this.onRequestCardPrint = config.onRequestCardPrint || (() => {}); // Called when requesting card print
 
       // DOM elements
       this.selectedUserInfo = config.selectedUserInfo; // Element to display selection info
@@ -82,7 +83,24 @@
         });
         menu.appendChild(selectOption);
       } else {
-        // If in selection mode, show "Deseleccionar todo" option
+        // If in selection mode, show selection options
+
+        // Option: Solicitar impresión de carnet
+        const requestCardPrintOption = document.createElement('div');
+        requestCardPrintOption.className = 'context-menu-item';
+        requestCardPrintOption.textContent = 'Solicitar impresión de carnet';
+        requestCardPrintOption.addEventListener('click', () => {
+          this.onRequestCardPrint(Array.from(this.selectedUsers));
+          menu.remove();
+        });
+        menu.appendChild(requestCardPrintOption);
+
+        // Separator
+        const separator = document.createElement('div');
+        separator.className = 'context-menu-separator';
+        menu.appendChild(separator);
+
+        // Option: Deseleccionar todo
         const deselectAllOption = document.createElement('div');
         deselectAllOption.className = 'context-menu-item';
         deselectAllOption.textContent = 'Deseleccionar todo';

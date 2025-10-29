@@ -313,6 +313,16 @@ body {
   flex-shrink: 0;
 }
 
+/* Card print request indicator */
+.user-table td .card-print-indicator {
+  width: 18px;
+  height: 18px;
+  color: #f59e0b;
+  margin-left: 4px;
+  flex-shrink: 0;
+  cursor: help;
+}
+
 .user-table td .repository-indicator-wrapper {
   width: 32px;
   height: 32px;
@@ -990,6 +1000,12 @@ body {
 .context-menu-item:hover {
   background-color: #3a3f4e;
   color: #6ba4ff;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background-color: #3a3f4e;
+  margin: 4px 0;
 }
 
 /* Checkbox Column */

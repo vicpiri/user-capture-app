@@ -306,6 +306,128 @@ function registerMiscHandlers(context) {
       return { success: false, error: error.message };
     }
   });
+
+  // ============================================================================
+  // Card Print Request Handlers
+  // ============================================================================
+
+  // Get pending card print requests
+  ipcMain.handle('get-card-print-requests', async () => {
+    try {
+      const fs = require('fs').promises;
+      const { projectPath, dbManager } = state;
+
+      if (!projectPath || !dbManager) {
+        return { success: false, error: 'No hay proyecto abierto' };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(dbManager);
+      if (!repositoryPath) {
+        return { success: true, userIds: [] };
+      }
+
+      // Check if 'To-Print-ID' folder exists
+      const toPrintIdFolder = path.join(repositoryPath, 'To-Print-ID');
+      try {
+        await fs.access(toPrintIdFolder);
+      } catch {
+        // Folder doesn't exist, return empty array
+        return { success: true, userIds: [] };
+      }
+
+      // Read all files in the folder
+      const files = await fs.readdir(toPrintIdFolder);
+
+      // Filter out directories, only keep files (which are user IDs)
+      const userIds = [];
+      for (const file of files) {
+        const filePath = path.join(toPrintIdFolder, file);
+        const stats = await fs.stat(filePath);
+        if (stats.isFile()) {
+          userIds.push(file);
+        }
+      }
+
+      return { success: true, userIds };
+    } catch (error) {
+      logger.error('Error getting card print requests:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Request card print for selected users
+  ipcMain.handle('request-card-print', async (event, userIds) => {
+    try {
+      const fs = require('fs').promises;
+      const { projectPath, dbManager } = state;
+
+      if (!projectPath || !dbManager) {
+        return { success: false, error: 'No hay proyecto abierto' };
+      }
+
+      if (!userIds || userIds.length === 0) {
+        return { success: false, error: 'No hay usuarios seleccionados' };
+      }
+
+      // Get image repository path
+      const repositoryPath = await getImageRepositoryPath(dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado la ruta del depósito de imágenes' };
+      }
+
+      // Create 'To-Print-ID' folder if it doesn't exist
+      const toPrintIdFolder = path.join(repositoryPath, 'To-Print-ID');
+      try {
+        await fs.access(toPrintIdFolder);
+      } catch {
+        await fs.mkdir(toPrintIdFolder, { recursive: true });
+        logger.info(`Created To-Print-ID folder: ${toPrintIdFolder}`);
+      }
+
+      // Get user data for selected users
+      const users = await dbManager.getUsersByIds(userIds);
+
+      if (!users || users.length === 0) {
+        return { success: false, error: 'No se encontraron usuarios' };
+      }
+
+      // Generate ID files for each user
+      let count = 0;
+      let skipped = 0;
+      for (const user of users) {
+        // Determine user ID (NIA for students, document for others)
+        const userId = user.type === 'student' ? user.nia : user.document;
+
+        if (!userId) {
+          logger.warning(`User ${user.id} (${user.first_name} ${user.last_name1}) has no ID, skipping`);
+          skipped++;
+          continue;
+        }
+
+        // Check if user has repository image by verifying file existence
+        const repositoryImagePath = path.join(repositoryPath, `${userId}.jpg`);
+        try {
+          await fs.access(repositoryImagePath);
+        } catch {
+          // File doesn't exist
+          logger.warning(`User ${user.id} (${user.first_name} ${user.last_name1}) has no repository image (${userId}.jpg), skipping`);
+          skipped++;
+          continue;
+        }
+
+        // Create empty file with user ID as filename
+        const filePath = path.join(toPrintIdFolder, userId);
+        await fs.writeFile(filePath, '', 'utf8');
+        count++;
+        logger.info(`Created card print request for user ${user.id}: ${filePath}`);
+      }
+
+      return { success: true, count, skipped };
+    } catch (error) {
+      logger.error('Error requesting card print:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerMiscHandlers };

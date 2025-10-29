@@ -185,5 +185,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   onRepositoryPathChanged: (callback) => {
     ipcRenderer.on('repository-path-changed', callback);
-  }
+  },
+
+  // Card print requests
+  requestCardPrint: (userIds) => ipcRenderer.invoke('request-card-print', userIds),
+  getCardPrintRequests: () => ipcRenderer.invoke('get-card-print-requests')
 });

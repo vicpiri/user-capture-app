@@ -35,6 +35,9 @@ let repositorySyncCompleted = false;  // Track if initial repository sync has co
 let selectionMode = false;
 let selectedUsers = new Set(); // Store selected user IDs
 
+// Card print requests
+let cardPrintRequests = new Set(); // Store user IDs with pending card print requests
+
 // Virtual scrolling
 let virtualScrollManager = null;
 let displayedUsers = []; // Currently displayed users (filtered/duplicates)
@@ -160,6 +163,7 @@ function initializeUserRowRenderer() {
     isLoadingRepositoryIndicators: isLoadingRepositoryIndicators,
     selectionMode: selectionMode,
     selectedUsers: selectedUsers,
+    cardPrintRequests: cardPrintRequests,
     onUserSelect: (row, user) => selectUserRow(row, user),
     onUserContextMenu: (e, user, row) => showContextMenu(e, user, row),
     onImagePreview: (user, type) => showUserImageModal(user, type),
@@ -286,6 +290,7 @@ function initializeSelectionModeManager() {
         displayUsers(currentUsers, allUsers);
       }
     },
+    onRequestCardPrint: handleRequestCardPrint,
     selectedUserInfo: selectedUserInfo,
     tableHeader: document.querySelector('.user-table thead tr')
   });
@@ -422,6 +427,12 @@ function initializeUserDataManager() {
     // Callbacks
     onDisplayUsers: displayUsers,
     onUpdateUserCount: updateUserCount,
+    onUpdateCardPrintRequests: (requests) => { cardPrintRequests = requests; },
+    onUpdateUserRowRenderer: (config) => {
+      if (userRowRenderer) {
+        userRowRenderer.updateConfig(config);
+      }
+    },
 
     // DOM elements
     groupFilter: groupFilter,
@@ -1217,6 +1228,60 @@ async function loadImageTags() {
 async function handleShowTaggedImages() {
   if (imageTagsManager) {
     await imageTagsManager.showTaggedImages();
+  }
+}
+
+// Handle card print request for selected users
+async function handleRequestCardPrint(userIds) {
+  try {
+    console.log('[CardPrint] Requesting card print for users:', userIds);
+
+    // Get project info to check if project is open
+    const projectInfo = await window.electronAPI.getProjectInfo();
+    if (!projectInfo.success || !projectInfo.projectPath) {
+      showInfoModal('Aviso', 'Debe abrir un proyecto primero');
+      return;
+    }
+
+    if (userIds.length === 0) {
+      showInfoModal('Aviso', 'No hay usuarios seleccionados');
+      return;
+    }
+
+    // Show progress modal
+    if (progressManager) {
+      progressManager.show('Solicitando impresión de carnets', 'Generando archivos...');
+    }
+
+    // Request card print via IPC
+    const result = await window.electronAPI.requestCardPrint(userIds);
+
+    // Close progress modal
+    if (progressManager) {
+      progressManager.close();
+    }
+
+    if (result.success) {
+      // Reload card print requests to update indicators
+      if (userDataManager) {
+        await userDataManager.loadCardPrintRequests();
+      }
+
+      let message = `Se han generado ${result.count} archivo(s) en la carpeta 'To-Print-ID'`;
+      if (result.skipped > 0) {
+        message += `\n\n${result.skipped} usuario(s) omitido(s) por no tener imagen en el depósito`;
+      }
+
+      showInfoModal('Solicitud completada', message);
+    } else {
+      showInfoModal('Error', `Error al solicitar impresión: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('[CardPrint] Error requesting card print:', error);
+    if (progressManager) {
+      progressManager.close();
+    }
+    showInfoModal('Error', `Error al solicitar impresión: ${error.message}`);
   }
 }
 

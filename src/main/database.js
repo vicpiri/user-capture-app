@@ -349,6 +349,23 @@ class DatabaseManager {
     });
   }
 
+  async getUsersByIds(userIds) {
+    return new Promise((resolve, reject) => {
+      if (!userIds || userIds.length === 0) {
+        resolve([]);
+        return;
+      }
+
+      const placeholders = userIds.map(() => '?').join(',');
+      const query = `SELECT * FROM users WHERE id IN (${placeholders})`;
+
+      this.db.all(query, userIds, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
   async getGroups() {
     return new Promise((resolve, reject) => {
       this.db.all('SELECT * FROM groups ORDER BY code', [], (err, rows) => {
