@@ -88,7 +88,6 @@ class BaseModal {
       return;
     }
 
-    this.modal.style.display = 'block';
     this.modal.classList.add('show');
     this.isOpen = true;
     this._log('Opened');
