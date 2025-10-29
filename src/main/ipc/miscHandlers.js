@@ -5,6 +5,11 @@ const { ipcMain, dialog } = require('electron');
 const path = require('path');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter } = require('../utils/config');
 
+// Card print requests cache
+let cardPrintRequestsCache = null;
+let cardPrintRequestsCacheTime = null;
+const CARD_PRINT_CACHE_TTL = 30000; // 30 seconds
+
 /**
  * Register miscellaneous IPC handlers
  * @param {Object} context - Shared context object
@@ -314,15 +319,24 @@ function registerMiscHandlers(context) {
   // Get pending card print requests
   ipcMain.handle('get-card-print-requests', async () => {
     try {
-      const fs = require('fs').promises;
       const { projectPath, dbManager } = state;
 
       if (!projectPath || !dbManager) {
         return { success: false, error: 'No hay proyecto abierto' };
       }
 
+      // Check cache validity
+      const now = Date.now();
+      if (cardPrintRequestsCache && cardPrintRequestsCacheTime && (now - cardPrintRequestsCacheTime < CARD_PRINT_CACHE_TTL)) {
+        logger.info('[CardPrint] Using cached card print requests');
+        return { success: true, userIds: cardPrintRequestsCache };
+      }
+
+      const fs = require('fs').promises;
       const repositoryPath = await getImageRepositoryPath(dbManager);
       if (!repositoryPath) {
+        cardPrintRequestsCache = [];
+        cardPrintRequestsCacheTime = now;
         return { success: true, userIds: [] };
       }
 
@@ -331,7 +345,9 @@ function registerMiscHandlers(context) {
       try {
         await fs.access(toPrintIdFolder);
       } catch {
-        // Folder doesn't exist, return empty array
+        // Folder doesn't exist, cache empty result
+        cardPrintRequestsCache = [];
+        cardPrintRequestsCacheTime = now;
         return { success: true, userIds: [] };
       }
 
@@ -348,6 +364,11 @@ function registerMiscHandlers(context) {
         }
       }
 
+      // Update cache
+      cardPrintRequestsCache = userIds;
+      cardPrintRequestsCacheTime = now;
+
+      logger.info(`[CardPrint] Scanned ${userIds.length} card print requests (cached for ${CARD_PRINT_CACHE_TTL}ms)`);
       return { success: true, userIds };
     } catch (error) {
       logger.error('Error getting card print requests:', error);
@@ -421,6 +442,11 @@ function registerMiscHandlers(context) {
         count++;
         logger.info(`Created card print request for user ${user.id}: ${filePath}`);
       }
+
+      // Invalidate cache after creating new requests
+      cardPrintRequestsCache = null;
+      cardPrintRequestsCacheTime = null;
+      logger.info('[CardPrint] Cache invalidated after creating requests');
 
       return { success: true, count, skipped };
     } catch (error) {
