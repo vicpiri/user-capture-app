@@ -16,6 +16,7 @@ class MenuBuilder {
     this.selectedCameraId = context.selectedCameraId;
     this.availableCameras = context.availableCameras;
     this.showDuplicatesOnly = context.showDuplicatesOnly;
+    this.showCardPrintRequestsOnly = context.showCardPrintRequestsOnly;
     this.showCapturedPhotos = context.showCapturedPhotos;
     this.showRepositoryPhotos = context.showRepositoryPhotos;
     this.showRepositoryIndicators = context.showRepositoryIndicators;
@@ -317,6 +318,14 @@ class MenuBuilder {
           checked: this.showDuplicatesOnly,
           click: (menuItem) => {
             this.callbacks.toggleDuplicates(menuItem.checked);
+          }
+        },
+        {
+          label: 'Carnets solicitados',
+          type: 'checkbox',
+          checked: this.showCardPrintRequestsOnly,
+          click: (menuItem) => {
+            this.callbacks.toggleCardPrintRequests(menuItem.checked);
           }
         },
         { type: 'separator' },

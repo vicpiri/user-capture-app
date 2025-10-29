@@ -23,6 +23,7 @@ let currentGroups = [];
 let selectedUser = null;
 let projectOpen = false;
 let showDuplicatesOnly = false;
+let showCardPrintRequestsOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
 let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
@@ -524,6 +525,12 @@ function initializeEventListeners() {
     displayUsers(currentUsers, allUsers);
   });
 
+  // Listen for card print requests filter toggle from menu
+  window.electronAPI.onMenuToggleCardPrintRequests((enabled) => {
+    showCardPrintRequestsOnly = enabled;
+    displayUsers(currentUsers, allUsers);
+  });
+
   // Action buttons
   linkBtn.addEventListener('click', handleLinkImage);
 
@@ -690,7 +697,7 @@ async function displayUsers(users, allUsers = null) {
     }
   }
 
-  // If showing duplicates only, show all duplicates from entire database
+  // Apply filters
   let usersToDisplay = users;
   if (showDuplicatesOnly && allUsers) {
     // Show all users with duplicates from the entire database
@@ -698,6 +705,12 @@ async function displayUsers(users, allUsers = null) {
   } else if (showDuplicatesOnly) {
     // Fallback if allUsers not available
     usersToDisplay = users.filter(user => user.image_path && imageCount[user.image_path] > 1);
+  } else if (showCardPrintRequestsOnly) {
+    // Show only users with pending card print requests
+    usersToDisplay = users.filter(user => {
+      const userId = user.type === 'student' ? user.nia : user.document;
+      return userId && cardPrintRequests.has(userId);
+    });
   }
 
   // Store displayed users and image count for virtual scrolling

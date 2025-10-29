@@ -59,6 +59,7 @@ let cameraAutoStart = false;
 let recentProjects = [];
 // Display preferences - will be loaded from config on startup
 let showDuplicatesOnly = false;
+let showCardPrintRequestsOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = false;
 let showRepositoryIndicators = false;
@@ -82,6 +83,7 @@ function createMenu() {
     selectedCameraId,
     availableCameras,
     showDuplicatesOnly,
+    showCardPrintRequestsOnly,
     showCapturedPhotos,
     showRepositoryPhotos,
     showRepositoryIndicators,
@@ -130,6 +132,7 @@ function createMenu() {
         showDuplicatesOnly = checked;
         saveDisplayPreferences({
           showDuplicatesOnly,
+          showCardPrintRequestsOnly,
           showCapturedPhotos,
           showRepositoryPhotos,
           showRepositoryIndicators,
@@ -140,10 +143,26 @@ function createMenu() {
           mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
         }
       },
+      toggleCardPrintRequests: (checked) => {
+        showCardPrintRequestsOnly = checked;
+        saveDisplayPreferences({
+          showDuplicatesOnly,
+          showCardPrintRequestsOnly,
+          showCapturedPhotos,
+          showRepositoryPhotos,
+          showRepositoryIndicators,
+          showAdditionalActions
+        });
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('menu-toggle-card-print-requests', showCardPrintRequestsOnly);
+        }
+      },
       toggleCapturedPhotos: (checked) => {
         showCapturedPhotos = checked;
         saveDisplayPreferences({
           showDuplicatesOnly,
+          showCardPrintRequestsOnly,
           showCapturedPhotos,
           showRepositoryPhotos,
           showRepositoryIndicators,
@@ -158,6 +177,7 @@ function createMenu() {
         showRepositoryPhotos = checked;
         saveDisplayPreferences({
           showDuplicatesOnly,
+          showCardPrintRequestsOnly,
           showCapturedPhotos,
           showRepositoryPhotos,
           showRepositoryIndicators,
@@ -176,6 +196,7 @@ function createMenu() {
         showRepositoryIndicators = checked;
         saveDisplayPreferences({
           showDuplicatesOnly,
+          showCardPrintRequestsOnly,
           showCapturedPhotos,
           showRepositoryPhotos,
           showRepositoryIndicators,
@@ -193,6 +214,7 @@ function createMenu() {
         showAdditionalActions = checked;
         saveDisplayPreferences({
           showDuplicatesOnly,
+          showCardPrintRequestsOnly,
           showCapturedPhotos,
           showRepositoryPhotos,
           showRepositoryIndicators,
@@ -246,6 +268,7 @@ function createWindow() {
     // Send initial display preferences to renderer
     mainWindowManager.sendInitialPreferences({
       showDuplicatesOnly,
+      showCardPrintRequestsOnly,
       showCapturedPhotos,
       showRepositoryPhotos,
       showRepositoryIndicators,
@@ -652,6 +675,7 @@ app.whenReady().then(() => {
   // Load display preferences from config
   const config = loadGlobalConfig();
   showDuplicatesOnly = config.showDuplicatesOnly ?? false;
+  showCardPrintRequestsOnly = config.showCardPrintRequestsOnly ?? false;
   showCapturedPhotos = config.showCapturedPhotos ?? true;
   showRepositoryPhotos = config.showRepositoryPhotos ?? false;
   showRepositoryIndicators = config.showRepositoryIndicators ?? false;

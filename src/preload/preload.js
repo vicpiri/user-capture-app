@@ -86,6 +86,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-toggle-duplicates', (event, enabled) => callback(enabled));
   },
 
+  onMenuToggleCardPrintRequests: (callback) => {
+    ipcRenderer.on('menu-toggle-card-print-requests', (event, enabled) => callback(enabled));
+  },
+
   onMenuToggleCapturedPhotos: (callback) => {
     ipcRenderer.on('menu-toggle-captured-photos', (event, enabled) => callback(enabled));
   },
