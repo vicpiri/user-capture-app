@@ -300,13 +300,8 @@ function createWindow() {
       showAdditionalActions
     });
 
-    // If repository options are enabled in saved preferences, start repository mirror
-    if (showRepositoryPhotos || showRepositoryIndicators) {
-      logger.info('[STARTUP] Repository options enabled in preferences, starting repository mirror');
-      ensureRepositoryMirrorStarted();
-    }
-
     // Auto-open most recent project if available
+    // Repository mirror will be started after project opens (if preferences enabled)
     if (recentProjects && recentProjects.length > 0) {
       const mostRecentProjectPath = recentProjects[0];
       logger.info(`[STARTUP] Auto-opening most recent project: ${mostRecentProjectPath}`);
@@ -493,6 +488,7 @@ async function ensureRepositoryMirrorStarted() {
           const mainWindow = mainWindowManager.getWindow();
           if (mainWindow) {
             mainWindow.webContents.send('repository-changed');
+            mainWindow.webContents.send('sync-completed', result);
           }
           // Send completion event to repository grid window
           const repositoryGridWindow = repositoryGridWindowManager.getWindow();
@@ -501,6 +497,11 @@ async function ensureRepositoryMirrorStarted() {
           }
         } else {
           logger.error(`Sync failed: ${result.error}`);
+          // Send sync-completed event with error to main window
+          const mainWindow = mainWindowManager.getWindow();
+          if (mainWindow) {
+            mainWindow.webContents.send('sync-completed', result);
+          }
           // Send error to repository grid window
           const repositoryGridWindow = repositoryGridWindowManager.getWindow();
           if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
@@ -640,6 +641,12 @@ async function openRecentProject(folderPath) {
     const mainWindow = mainWindowManager.getWindow();
     if (mainWindow) {
       mainWindow.webContents.send('project-opened', { success: true });
+    }
+
+    // Start repository mirror if repository options are enabled
+    if (showRepositoryPhotos || showRepositoryIndicators) {
+      logger.info('[PROJECT-OPEN] Repository options enabled, starting repository mirror');
+      await ensureRepositoryMirrorStarted();
     }
   } catch (error) {
     logger.error('Error opening recent project', error);
