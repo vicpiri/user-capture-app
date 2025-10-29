@@ -17,9 +17,9 @@ user-capture-app/
 ├── src/
 │   ├── main/                    # Proceso principal de Electron (Node.js)
 │   │   ├── ipc/                 # Manejadores IPC organizados por funcionalidad
-│   │   │   ├── exportHandlers.js       # Exportación de CSV e imágenes
+│   │   │   ├── exportHandlers.js       # Exportación de CSV e imágenes (7 endpoints)
 │   │   │   ├── miscHandlers.js         # Manejadores misceláneos (tags, diálogos, etc.)
-│   │   │   ├── projectHandlers.js      # Gestión de proyectos y XML
+│   │   │   ├── projectHandlers.js      # Gestión de proyectos, XML y cierre
 │   │   │   └── userGroupImageHandlers.js # Usuarios, grupos e imágenes
 │   │   ├── menu/                # Sistema de menús
 │   │   │   └── menuBuilder.js          # Constructor de menús de la aplicación
@@ -27,7 +27,8 @@ user-capture-app/
 │   │   │   ├── config.js               # Configuración y preferencias
 │   │   │   ├── formatting.js           # Formateo de fechas y nombres
 │   │   │   ├── recentProjects.js       # Gestión de proyectos recientes
-│   │   │   └── repositoryCache.js      # Caché de existencia de archivos
+│   │   │   ├── repositoryCache.js      # Caché de existencia de archivos
+│   │   │   └── version.js              # Gestión de versión y modo DEV
 │   │   ├── window/              # Gestión de ventanas
 │   │   │   ├── cameraWindow.js         # Ventana de captura de cámara
 │   │   │   ├── imageGridWindow.js      # Grid de imágenes capturadas
@@ -49,19 +50,30 @@ user-capture-app/
 │   │   │   │   ├── ExportOptionsModal.js    # Modal de opciones de exportación
 │   │   │   │   ├── InfoModal.js             # Modal informativo genérico
 │   │   │   │   ├── NewProjectModal.js       # Modal de creación de proyectos
+│   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
 │   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
 │   │   │   ├── DragDropManager.js       # Gestión de drag & drop de imágenes
 │   │   │   ├── ExportManager.js         # Coordinador de exportaciones (CSV/imágenes)
 │   │   │   ├── ImageGridManager.js      # Gestión de grid de imágenes capturadas
 │   │   │   ├── ImageTagsManager.js      # Gestión de etiquetas de imágenes
+│   │   │   ├── KeyboardNavigationManager.js # Navegación por teclado en tabla de usuarios
 │   │   │   ├── LazyImageManager.js      # Carga lazy de imágenes (IntersectionObserver)
+│   │   │   ├── MenuEventManager.js      # Coordinador de eventos de menú
+│   │   │   ├── OrlaExportManager.js     # Gestión de exportación de orlas PDF
 │   │   │   ├── ProgressManager.js       # Gestión de modal de progreso
+│   │   │   ├── ProjectManager.js        # Gestión de ciclo de vida de proyectos
 │   │   │   ├── SelectionModeManager.js  # Gestión de modo multi-selección
+│   │   │   ├── UserDataManager.js       # Gestión de carga de datos de usuarios/grupos
 │   │   │   ├── UserRowRenderer.js       # Renderizado de filas de usuarios
 │   │   │   └── VirtualScrollManager.js  # Virtual scroll para lista de usuarios
 │   │   ├── core/                        # Módulos core del renderer
 │   │   │   ├── BaseModal.js             # Clase base para modales
 │   │   │   └── store.js                 # Estado global de la aplicación
+│   │   ├── services/                    # Servicios de acceso a datos
+│   │   │   ├── groupService.js          # Servicio de grupos
+│   │   │   ├── imageService.js          # Servicio de imágenes
+│   │   │   ├── projectService.js        # Servicio de proyectos
+│   │   │   └── userService.js           # Servicio de usuarios
 │   │   ├── index.html           # HTML de la ventana principal
 │   │   ├── renderer.js          # Lógica principal de la UI (coordinador)
 │   │   ├── styles.css           # Estilos globales
@@ -141,9 +153,20 @@ Cada comando de release ejecuta automáticamente:
 El proceso principal ha sido refactorizado en módulos organizados por responsabilidad:
 
 ### Manejadores IPC (ipc/)
-- **exportHandlers.js**: Gestiona exportación de CSV e imágenes con opciones de redimensionamiento
+- **exportHandlers.js**: Gestiona 7 tipos de exportación
+  - `export-csv`: CSV para carnets (ID, foto, nombre completo, etc.)
+  - `export-inventory-csv`: 3 CSVs separados (Alumnado.csv, Personal.csv, Grupos.csv)
+  - `export-images`: Imágenes con nombre por ID (NIA/DNI)
+  - `export-images-name`: Imágenes con formato "Apellido1 Apellido2, Nombre"
+  - `export-inventory-images`: Exporta imágenes del repositorio con soporte ZIP
+  - `export-to-repository`: Exporta imágenes capturadas al repositorio Google Drive
+  - `export-orla-pdf`: Genera PDF de orlas con grid 4x columnas por grupo
 - **miscHandlers.js**: Diálogos del sistema, etiquetas de imágenes, y utilidades generales
-- **projectHandlers.js**: Creación, apertura y actualización de proyectos y XML
+  - Incluye `update-window-title` para actualizar título de ventana
+- **projectHandlers.js**: Gestión completa de ciclo de vida de proyectos
+  - Creación, apertura, cierre de proyectos
+  - Actualización de XML con análisis de cambios
+  - Gestión de usuarios eliminados (movidos a grupo "Eliminados")
 - **userGroupImageHandlers.js**: CRUD de usuarios, grupos, imágenes y relaciones
 
 ### Gestión de Ventanas (window/)
@@ -157,6 +180,7 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
 - **formatting.js**: Formateo de fechas (ISO a español) y nombres de archivo
 - **recentProjects.js**: Gestión de lista de proyectos recientes
 - **repositoryCache.js**: Caché con TTL para verificación de existencia de archivos
+- **version.js**: Gestión de versión de la aplicación con detección de modo DEV
 
 ### Menú (menu/)
 - **menuBuilder.js**: Constructor centralizado del menú con gestión de estado y callbacks
@@ -245,6 +269,11 @@ Todos los modales extienden `BaseModal` para comportamiento consistente.
   - Muestra imagen capturada o del repositorio
   - Título con nombre completo del usuario
   - Etiqueta distintiva para imágenes del repositorio
+
+- **OrlaExportModal.js**: Modal de configuración de exportación de orlas PDF
+  - Selección de fuente de fotos (capturadas vs repositorio)
+  - Configuración de calidad de imagen (0-100)
+  - Retorna opciones mediante Promise
 
 ### Componentes Managers (components/)
 
@@ -341,6 +370,66 @@ Todos los modales extienden `BaseModal` para comportamiento consistente.
 - Checkbox de selección en modo multi-selección
 - Lazy loading de miniaturas
 
+#### ProjectManager.js
+**Propósito**: Gestión centralizada del ciclo de vida de proyectos
+
+**Funcionalidades**:
+- Crear nuevo proyecto (delega a NewProjectModal)
+- Abrir proyecto existente
+- Cerrar proyecto (limpia estado main y renderer)
+- Cargar datos del proyecto (grupos, usuarios, imágenes)
+- Actualizar XML con análisis de cambios
+- Gestionar placeholder de "sin proyecto"
+
+**Patrón**: Centraliza toda la lógica de proyectos extraída de renderer.js
+
+#### UserDataManager.js
+**Propósito**: Gestión centralizada de carga de datos de usuarios y grupos
+
+**Funcionalidades**:
+- Cargar grupos y poblar filtro de grupos
+- Cargar usuarios con filtros (búsqueda, grupo, duplicados)
+- Iniciar sincronización de repositorio en background
+- Actualizar contadores y estado de UI
+- Manejo de estado de carga (spinners)
+
+**Patrón**: Separa lógica de carga de datos del coordinador principal
+
+#### MenuEventManager.js
+**Propósito**: Coordinador centralizado de eventos de menú
+
+**Funcionalidades**:
+- Registrar listeners para todos los eventos IPC de menú
+- Gestionar preferencias de visualización (thumbnails, repository, indicators)
+- Coordinar acciones de menú con callbacks configurables
+- Toggle de modo selección múltiple
+- Manejo de shortcuts de teclado
+
+**Patrón**: Desacopla renderer.js de la gestión de eventos de menú
+
+#### OrlaExportManager.js
+**Propósito**: Gestión de exportación de orlas (class photos) en PDF
+
+**Funcionalidades**:
+- Mostrar modal de configuración de exportación
+- Seleccionar fuente de fotos (capturadas vs repositorio)
+- Generar PDFs por grupo con grid 4 columnas
+- Configuración de calidad de imagen
+- Manejo de progreso de exportación
+
+**Patrón**: Encapsula lógica específica de exportación de orlas
+
+#### KeyboardNavigationManager.js
+**Propósito**: Gestión de navegación por teclado en tabla de usuarios
+
+**Funcionalidades**:
+- Navegación con flechas arriba/abajo
+- Selección con Enter
+- Scroll automático para mantener elemento visible
+- Integración con virtual scroll
+
+**Patrón**: Mejora accesibilidad y usabilidad de la aplicación
+
 ### Componentes Core (core/)
 
 #### BaseModal.js
@@ -363,6 +452,28 @@ Todos los modales extienden `BaseModal` para comportamiento consistente.
 - `selectedUser`: Usuario actualmente seleccionado
 - `selectionMode`: Estado del modo multi-selección
 - `selectedUsers`: Set de usuarios seleccionados
+
+### Servicios (services/)
+
+Capa de servicios para acceso a datos mediante IPC:
+
+- **projectService.js**: Servicios relacionados con proyectos
+  - Obtener información del proyecto
+  - Gestión de estado del proyecto
+
+- **userService.js**: Servicios de usuarios
+  - Obtener usuarios con filtros
+  - Gestión de relaciones usuario-imagen
+
+- **groupService.js**: Servicios de grupos
+  - Obtener listado de grupos
+  - Filtrado por grupo
+
+- **imageService.js**: Servicios de imágenes
+  - Cargar imágenes del repositorio
+  - Gestión de estado de sincronización
+
+**Patrón**: Abstrae llamadas IPC en funciones reutilizables
 
 ### Coordinador Principal (renderer.js)
 
@@ -431,23 +542,110 @@ tests/unit/components/
 6. **Performance**: Virtual scrolling y lazy loading optimizan rendimiento
 7. **Calidad**: 488 tests garantizan estabilidad
 
+## Novedades de la Versión 1.3.x
+
+### Nuevas Funcionalidades Implementadas
+
+#### Cerrar Proyecto (v1.3.1)
+- **Funcionalidad**: Permite cerrar el proyecto actual sin salir de la aplicación
+- **Shortcut**: Ctrl+W
+- **Comportamiento**:
+  - Cierra la base de datos SQLite de forma limpia
+  - Detiene el vigilante de carpetas (folderWatcher)
+  - Limpia el estado del main process (projectPath)
+  - Limpia el estado del renderer (usuarios, grupos, imágenes)
+  - Actualiza el título de ventana a "User Capture v{version}"
+  - Oculta la barra de estado
+  - Muestra placeholder de "sin proyecto"
+
+#### Exportación de Orlas PDF (v1.3.0)
+- **Funcionalidad**: Genera PDFs con fotos en formato orla (class photos)
+- **Características**:
+  - Un PDF por grupo
+  - Layout en grid de 4 columnas
+  - Formato A4 portrait
+  - Nombre completo debajo de cada foto
+  - Selección de fuente: fotos capturadas o del repositorio
+  - Calidad de imagen configurable (0-100)
+  - Placeholder para usuarios sin foto
+
+#### Exportación de CSV Inventario (v1.3.0)
+- **Funcionalidad**: Exporta 3 archivos CSV separados por tipo de usuario
+- **Archivos**:
+  - **Alumnado.csv**: NIA, Nombre, Apellido1, Apellido2, FechaNacimiento, Grupo
+  - **Personal.csv**: Documento, Nombre, Apellido1, Apellido2, FechaNacimiento
+  - **Grupos.csv**: Código, Nombre
+- **Uso**: Ideal para inventarios y reportes administrativos
+
+#### Exportación de Imágenes por Nombre Completo (v1.3.0)
+- **Funcionalidad**: Exporta imágenes con formato "Apellido1 Apellido2, Nombre.jpg"
+- **Organización**: Carpetas por grupo
+- **Opciones**: Copia original o redimensionamiento
+
+#### Exportación de Inventario de Imágenes del Repositorio (v1.3.0)
+- **Funcionalidad**: Exporta imágenes del repositorio (no capturadas)
+- **Características**:
+  - Soporte para ZIP con límite de tamaño configurable
+  - División automática en múltiples ZIPs si excede el límite
+  - Solo exporta usuarios que tienen imagen en el repositorio
+  - Organización por grupos
+
+#### Barra de Estado (v1.3.0)
+- **Funcionalidad**: Muestra información del proyecto en tiempo real
+- **Información mostrada**:
+  - Nombre del proyecto
+  - Ruta del repositorio Google Drive
+  - Contador de usuarios totales
+- **Visibilidad**: Se oculta automáticamente cuando no hay proyecto abierto
+
+#### Placeholder "Sin Proyecto" (v1.3.0)
+- **Funcionalidad**: Muestra mensaje cuando no hay proyecto abierto
+- **Acciones disponibles**:
+  - Crear nuevo proyecto
+  - Abrir proyecto existente
+- **Comportamiento**: Se oculta automáticamente al abrir/crear proyecto
+
+#### Spinners de Carga (v1.3.0)
+- **Funcionalidad**: Indicadores visuales de carga para operaciones largas
+- **Ubicaciones**:
+  - Lista de usuarios (carga inicial)
+  - Indicadores de repositorio (durante sincronización)
+  - Imágenes lazy-loaded
+- **Duración mínima**: Configurada para evitar flashes visuales
+
 ## Estado Actual
+
+**Versión**: 1.3.1
 
 Aplicación completamente funcional con todas las características principales implementadas:
 
-- ✅ Gestión de proyectos (crear, abrir, actualizar XML)
-- ✅ Captura de imágenes desde webcam
-- ✅ Importación automática desde carpeta ingest
-- ✅ Asociación de imágenes a usuarios
-- ✅ Integración con Google Drive para repositorio de imágenes
-- ✅ Mirror local del repositorio con sincronización automática
-- ✅ Exportación de CSV e imágenes (con redimensionamiento)
-- ✅ Sistema de etiquetado de imágenes
-- ✅ Detección de duplicados
-- ✅ Múltiples ventanas (principal, cámara, grids de visualización)
-- ✅ Caché de archivos con TTL para optimización
-- ✅ Arquitectura modular refactorizada (main process y renderer process)
-- ✅ Cobertura de tests completa (488 tests unitarios)
+- ✅ **Gestión de proyectos**: crear, abrir, cerrar, actualizar XML
+- ✅ **Captura de imágenes**: desde webcam con previsualización
+- ✅ **Importación automática**: desde carpeta ingest con vigilancia en tiempo real
+- ✅ **Asociación de imágenes**: vincular imágenes a usuarios con confirmación
+- ✅ **Integración Google Drive**: repositorio de imágenes con API v3
+- ✅ **Mirror local**: sincronización automática del repositorio en background
+- ✅ **Exportaciones múltiples**:
+  - CSV para carnets (formato completo)
+  - CSV inventario por grupos (3 archivos separados)
+  - Imágenes por ID (NIA/DNI)
+  - Imágenes por nombre completo
+  - Imágenes del repositorio en ZIP
+  - Orlas PDF con grid personalizable
+  - Exportación a repositorio Google Drive
+- ✅ **Sistema de etiquetado**: tags personalizados para imágenes
+- ✅ **Detección de duplicados**: identificación automática
+- ✅ **Múltiples ventanas**: principal, cámara, grids (capturadas y repositorio)
+- ✅ **Optimizaciones**:
+  - Caché de archivos con TTL
+  - Virtual scrolling para listas grandes
+  - Lazy loading de imágenes
+  - Sincronización en background
+- ✅ **Arquitectura modular**: main process y renderer process completamente refactorizados
+- ✅ **Testing**: 488 tests unitarios con Jest
+- ✅ **Navegación por teclado**: accesibilidad mejorada
+- ✅ **Gestión de estado**: store centralizado con sincronización
+- ✅ **Menú completo**: shortcuts y organización por categorías
 
 ## Notas de Desarrollo
 
@@ -514,26 +712,66 @@ Aplicación completamente funcional con todas las características principales i
 - Formatos de imagen aceptados desde carpeta externa: JPG
 
 ## Exportación de datos
-- Exportar lista en CSV para carnets:
-    - Nombre del archivo: carnets.csv
-    - Campos:
-        - id: NIA para alumnos, DNI para docentes y no docentes
-        - password: NIA para alumnos, DNI para docentes y no docentes
-        - userlevel: Alumno para alumnos Profesor para el resto
-        - nombre
-        - apellido1
-        - apellido2
-        - apellidos: suma de apellido1 y apellido2
-        - centro: no rellenar
-        - foto: para alumnos NIA.jpg. Para el resto DNI.jpg (sustituir NIA Y DNI por el valor correspondiente)
-        - grupo: no rellenar
-        - direccion: no rellenar
-        - telefono: no rellenar
-        - departamento: no rellenar
-        - DNI
-        - edad: para alumnos mayor.jpg si es mayor de edad (18 años), si no menor.jpg. Para el resto profesor.jpg
-        - fechaNacimiento
-        - nombreApellidos: nombre + apellido1 + apellido2
+
+### 1. CSV para carnets
+- **Comando de menú**: Archivo > Exportar > Lista en CSV para carnets
+- **Shortcut**: Ctrl+E
+- **Nombre del archivo**: carnets.csv
+- **Campos**:
+  - id: NIA para alumnos, DNI para docentes y no docentes
+  - password: NIA para alumnos, DNI para docentes y no docentes
+  - userlevel: Alumno para alumnos Profesor para el resto
+  - nombre
+  - apellido1
+  - apellido2
+  - apellidos: suma de apellido1 y apellido2
+  - centro: no rellenar
+  - foto: para alumnos NIA.jpg. Para el resto DNI.jpg
+  - grupo: no rellenar
+  - direccion: no rellenar
+  - telefono: no rellenar
+  - departamento: no rellenar
+  - DNI
+  - edad: para alumnos mayor.jpg si es mayor de edad (18 años), si no menor.jpg. Para el resto profesor.jpg
+  - fechaNacimiento
+  - nombreApellidos: nombre + apellido1 + apellido2
+
+### 2. CSV Inventario por grupos
+- **Comando de menú**: Archivo > Exportar > CSV Inventario por grupos
+- **Archivos generados**:
+  - **Alumnado.csv**: NIA, Nombre, Apellido1, Apellido2, FechaNacimiento, Grupo
+  - **Personal.csv**: Documento, Nombre, Apellido1, Apellido2, FechaNacimiento
+  - **Grupos.csv**: Código, Nombre
+
+### 3. Imágenes como ID
+- **Comando de menú**: Archivo > Exportar > Imágenes como ID
+- **Formato**: `{NIA}.jpg` para alumnos, `{DNI}.jpg` para personal
+- **Opciones**: Copia original o redimensionamiento
+
+### 4. Imágenes como nombre y apellidos
+- **Comando de menú**: Archivo > Exportar > Imágenes como nombre y apellidos
+- **Formato**: `Apellido1 Apellido2, Nombre.jpg`
+- **Organización**: Carpetas por grupo
+- **Opciones**: Copia original o redimensionamiento
+
+### 5. Imágenes a repositorio
+- **Comando de menú**: Archivo > Exportar > Imágenes a repositorio
+- **Destino**: Google Drive configurado
+- **Formato**: Según configuración del repositorio
+
+### 6. Orla PDF
+- **Comando de menú**: Archivo > Exportar > Orla PDF
+- **Formato**: Un PDF por grupo
+- **Layout**: Grid de 4 columnas
+- **Contenido**: Foto + nombre completo debajo
+- **Fuente de fotos**: Seleccionable (capturadas o repositorio)
+- **Calidad**: Configurable (0-100)
+
+### 7. Inventario de imágenes del repositorio
+- **Ubicación**: Parte del proceso de inventario
+- **Formato**: ZIP con límite de tamaño
+- **Contenido**: Imágenes del repositorio organizadas por grupo
+- **Opciones**: Compresión configurable
 ## Política de control de versiones
 - Cada vez que una funcionalidad se de por comprobada y finalizada, se hará un commit en git con la descripción de la funcionalidad en inglés.
 - Los commits NO deben incluir referencias a Claude, herramientas de IA, o co-autoría con Claude.
