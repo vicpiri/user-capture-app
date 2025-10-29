@@ -312,7 +312,7 @@ class MenuBuilder {
       label: 'Ver',
       submenu: [
         {
-          label: 'Mostrar asignaciones duplicadas',
+          label: 'Asignaciones duplicadas',
           type: 'checkbox',
           checked: this.showDuplicatesOnly,
           click: (menuItem) => {
@@ -321,7 +321,7 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'Mostrar fotografías capturadas',
+          label: 'Fotografías capturadas',
           type: 'checkbox',
           checked: this.showCapturedPhotos,
           click: (menuItem) => {
@@ -329,7 +329,7 @@ class MenuBuilder {
           }
         },
         {
-          label: 'Mostrar fotografías del depósito',
+          label: 'Fotografías del depósito',
           type: 'checkbox',
           checked: this.showRepositoryPhotos,
           click: (menuItem) => {
@@ -354,7 +354,7 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'Mostrar acciones adicionales',
+          label: 'Acciones adicionales',
           type: 'checkbox',
           checked: this.showAdditionalActions,
           click: (menuItem) => {
