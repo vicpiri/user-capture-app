@@ -817,6 +817,38 @@ function registerProjectHandlers(context) {
       return { success: false, error: error.message };
     }
   });
+
+  // Close project
+  ipcMain.handle('close-project', async () => {
+    try {
+      logger.info('Closing project');
+
+      // Close database
+      if (state.dbManager) {
+        state.dbManager.close();
+        state.dbManager = null;
+      }
+
+      // Stop folder watcher
+      if (state.folderWatcher) {
+        state.folderWatcher.stop();
+        state.folderWatcher = null;
+      }
+
+      // Clear project path
+      state.projectPath = null;
+
+      // Update window title to default (without project name)
+      updateWindowTitle();
+
+      logger.info('Project closed successfully');
+
+      return { success: true };
+    } catch (error) {
+      logger.error('Error closing project', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerProjectHandlers };

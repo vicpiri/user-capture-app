@@ -83,6 +83,13 @@ class MenuBuilder {
             this.mainWindow.webContents.send('menu-open-project');
           }
         },
+        {
+          label: 'Cerrar Proyecto',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            this.mainWindow.webContents.send('menu-close-project');
+          }
+        },
         { type: 'separator' },
         {
           label: 'Proyectos Recientes',

@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Project management
   createProject: (data) => ipcRenderer.invoke('create-project', data),
   openProject: (folderPath) => ipcRenderer.invoke('open-project', folderPath),
+  closeProject: () => ipcRenderer.invoke('close-project'),
 
   // User management
   getUsers: (filters, options) => ipcRenderer.invoke('get-users', filters, options),
@@ -55,6 +56,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   onMenuOpenProject: (callback) => {
     ipcRenderer.on('menu-open-project', callback);
+  },
+
+  onMenuCloseProject: (callback) => {
+    ipcRenderer.on('menu-close-project', callback);
   },
 
   onMenuToggleCamera: (callback) => {
@@ -155,6 +160,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Global configuration
   getImageRepositoryPath: () => ipcRenderer.invoke('get-image-repository-path'),
   setImageRepositoryPath: (repositoryPath) => ipcRenderer.invoke('set-image-repository-path', repositoryPath),
+  updateWindowTitle: () => ipcRenderer.invoke('update-window-title'),
   getSelectedGroupFilter: () => ipcRenderer.invoke('get-selected-group-filter'),
   setSelectedGroupFilter: (groupCode) => ipcRenderer.invoke('set-selected-group-filter', groupCode),
   onGroupFilterChanged: (callback) => {

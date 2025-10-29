@@ -35,6 +35,7 @@
       // Action callbacks
       this.onNewProject = config.onNewProject || (() => {});
       this.onOpenProject = config.onOpenProject || (() => {});
+      this.onCloseProject = config.onCloseProject || (() => {});
       this.onProjectLoaded = config.onProjectLoaded || (() => {});
       this.onLinkImage = config.onLinkImage || (() => {});
       this.onDeletePhoto = config.onDeletePhoto || (() => {});
@@ -123,6 +124,10 @@
 
       this.electronAPI.onMenuOpenProject(() => {
         this.onOpenProject();
+      });
+
+      this.electronAPI.onMenuCloseProject(() => {
+        this.onCloseProject();
       });
 
       this.electronAPI.onProjectOpened((data) => {

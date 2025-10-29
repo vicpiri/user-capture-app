@@ -292,6 +292,20 @@ function registerMiscHandlers(context) {
       return { success: false, error: error.message };
     }
   });
+
+  // Update window title
+  ipcMain.handle('update-window-title', async () => {
+    try {
+      const { updateWindowTitle } = context;
+      if (updateWindowTitle) {
+        updateWindowTitle();
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating window title:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerMiscHandlers };

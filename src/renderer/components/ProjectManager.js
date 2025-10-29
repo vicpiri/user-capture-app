@@ -23,6 +23,10 @@
     constructor(config = {}) {
       // State setters
       this.setProjectOpen = config.setProjectOpen || ((value) => {});
+      this.setCurrentUsers = config.setCurrentUsers || ((users) => {});
+      this.setAllUsers = config.setAllUsers || ((users) => {});
+      this.setCurrentGroups = config.setCurrentGroups || ((groups) => {});
+      this.setSelectedUser = config.setSelectedUser || ((user) => {});
 
       // State getters
       this.getProjectOpen = config.getProjectOpen || (() => false);
@@ -32,11 +36,13 @@
       this.onLoadUsers = config.onLoadUsers || (async (filters) => {});
       this.onLoadImages = config.onLoadImages || (async () => {});
       this.onUpdateStatusBar = config.onUpdateStatusBar || (async () => {});
+      this.onUpdateWindowTitle = config.onUpdateWindowTitle || (() => {});
       this.onGetCurrentFilters = config.onGetCurrentFilters || (() => ({}));
       this.onShowInfoModal = config.onShowInfoModal || ((title, message) => {});
       this.onShowConfirmModal = config.onShowConfirmModal || (async (message) => false);
       this.onShowProgressModal = config.onShowProgressModal || ((title, message) => {});
       this.onCloseProgressModal = config.onCloseProgressModal || (() => {});
+      this.onClearImages = config.onClearImages || (() => {});
 
       // DOM elements
       this.searchInput = config.searchInput;
@@ -89,6 +95,52 @@
           this.onShowInfoModal('Error', 'Error al abrir el proyecto: ' + openResult.error);
         }
       }
+    }
+
+    /**
+     * Close the current project
+     * Clears all project data and resets UI state
+     */
+    async closeProject() {
+      // Call main process to close project (database, folder watcher, etc.)
+      const result = await this.electronAPI.closeProject();
+
+      if (!result.success) {
+        console.error('[ProjectManager] Error closing project:', result.error);
+        return;
+      }
+
+      // Clear all project data
+      this.setCurrentUsers([]);
+      this.setAllUsers([]);
+      this.setCurrentGroups([]);
+      this.setSelectedUser(null);
+
+      // Clear images
+      this.onClearImages();
+
+      // Reset filters
+      if (this.searchInput) {
+        this.searchInput.value = '';
+        this.searchInput.disabled = true;
+        this.searchInput.readOnly = true;
+      }
+
+      if (this.groupFilter) {
+        this.groupFilter.innerHTML = '<option value="">Todos los grupos</option>';
+        this.groupFilter.value = '';
+      }
+
+      // Set project as closed
+      this.setProjectOpen(false);
+
+      // Update status bar (window title is already updated in main process)
+      this.onUpdateStatusBar();
+
+      // Show no project placeholder
+      this.updateNoProjectPlaceholder();
+
+      console.log('[ProjectManager] Project closed');
     }
 
     /**
@@ -238,11 +290,13 @@
       if (callbacks.onLoadUsers) this.onLoadUsers = callbacks.onLoadUsers;
       if (callbacks.onLoadImages) this.onLoadImages = callbacks.onLoadImages;
       if (callbacks.onUpdateStatusBar) this.onUpdateStatusBar = callbacks.onUpdateStatusBar;
+      if (callbacks.onUpdateWindowTitle) this.onUpdateWindowTitle = callbacks.onUpdateWindowTitle;
       if (callbacks.onGetCurrentFilters) this.onGetCurrentFilters = callbacks.onGetCurrentFilters;
       if (callbacks.onShowInfoModal) this.onShowInfoModal = callbacks.onShowInfoModal;
       if (callbacks.onShowConfirmModal) this.onShowConfirmModal = callbacks.onShowConfirmModal;
       if (callbacks.onShowProgressModal) this.onShowProgressModal = callbacks.onShowProgressModal;
       if (callbacks.onCloseProgressModal) this.onCloseProgressModal = callbacks.onCloseProgressModal;
+      if (callbacks.onClearImages) this.onClearImages = callbacks.onClearImages;
     }
   }
 

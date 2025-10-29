@@ -369,6 +369,7 @@ function initializeMenuEventManager() {
     // Action callbacks
     onNewProject: openNewProjectModal,
     onOpenProject: handleOpenProject,
+    onCloseProject: handleCloseProject,
     onProjectLoaded: loadProjectData,
     onLinkImage: handleLinkImage,
     onDeletePhoto: handleDeletePhoto,
@@ -438,6 +439,10 @@ function initializeProjectManager() {
   projectManager = new ProjectManager({
     // State setters
     setProjectOpen: (value) => { projectOpen = value; },
+    setCurrentUsers: (users) => { currentUsers = users; },
+    setAllUsers: (users) => { allUsers = users; },
+    setCurrentGroups: (groups) => { currentGroups = groups; },
+    setSelectedUser: (user) => { selectedUser = user; },
 
     // State getters
     getProjectOpen: () => projectOpen,
@@ -446,7 +451,9 @@ function initializeProjectManager() {
     onLoadGroups: loadGroups,
     onLoadUsers: loadUsers,
     onLoadImages: loadImages,
+    onClearImages: clearImages,
     onUpdateStatusBar: updateStatusBar,
+    onUpdateWindowTitle: updateWindowTitle,
     onGetCurrentFilters: getCurrentFilters,
     onShowInfoModal: showInfoModal,
     onShowConfirmModal: showConfirmationModal,
@@ -600,6 +607,12 @@ async function openNewProjectModal() {
 async function handleOpenProject() {
   if (projectManager) {
     await projectManager.openExistingProject();
+  }
+}
+
+async function handleCloseProject() {
+  if (projectManager) {
+    await projectManager.closeProject();
   }
 }
 
@@ -796,6 +809,13 @@ async function loadImages() {
   return false;
 }
 
+// Clear images - delegates to ImageGridManager
+function clearImages() {
+  if (imageGridManager) {
+    imageGridManager.clear();
+  }
+}
+
 // Status Bar
 async function updateStatusBar() {
   try {
@@ -828,6 +848,15 @@ async function updateStatusBar() {
     }
   } catch (error) {
     console.error('Error updating status bar:', error);
+  }
+}
+
+// Update window title
+async function updateWindowTitle() {
+  try {
+    await window.electronAPI.updateWindowTitle();
+  } catch (error) {
+    console.error('Error updating window title:', error);
   }
 }
 
