@@ -111,6 +111,26 @@
         if (this.additionalActionsSection) {
           this.additionalActionsSection.style.display = prefs.showAdditionalActions ? 'block' : 'none';
         }
+
+        // If repository preferences are enabled and users are already loaded,
+        // trigger repository data loading (this handles the race condition on startup)
+        if ((prefs.showRepositoryPhotos || prefs.showRepositoryIndicators) &&
+            this.getCurrentUsers().length > 0) {
+          console.log('[MenuEventManager] Repository preferences enabled with users loaded, triggering repository data load');
+
+          // Check if repository data is actually loaded
+          const hasRepositoryData = this.getCurrentUsers().some(u => u.repository_image_path);
+          if (!hasRepositoryData) {
+            this.onLoadRepositoryData(this.getCurrentUsers());
+          } else {
+            // Data already loaded, stop loading state and mark sync as completed
+            this.setIsLoadingRepositoryPhotos(false);
+            this.setIsLoadingRepositoryIndicators(false);
+            this.setRepositorySyncCompleted(true);
+            // Re-display with actual data (no spinners)
+            this.onDisplayUsers(this.getCurrentUsers(), this.getAllUsers());
+          }
+        }
       });
     }
 

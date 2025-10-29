@@ -181,6 +181,58 @@ describe('MenuEventManager', () => {
       handler({ showAdditionalActions: false });
       expect(mockConfig.additionalActionsSection.style.display).toBe('none');
     });
+
+    test('should trigger repository data loading if preferences enabled and users loaded', () => {
+      // Setup: users already loaded
+      const mockUsers = [
+        { id: 1, name: 'User 1' },
+        { id: 2, name: 'User 2' }
+      ];
+      mockConfig.getCurrentUsers.mockReturnValue(mockUsers);
+
+      manager.init();
+
+      const handler = mockElectronAPI.onInitialDisplayPreferences.mock.calls[0][0];
+      handler({ showRepositoryPhotos: true, showRepositoryIndicators: true });
+
+      // Should call onLoadRepositoryData since repository data not loaded
+      expect(mockConfig.onLoadRepositoryData).toHaveBeenCalledWith(mockUsers);
+    });
+
+    test('should not trigger repository data loading if data already loaded', () => {
+      // Setup: users with repository data already loaded
+      const mockUsers = [
+        { id: 1, name: 'User 1', repository_image_path: '/path/to/image1.jpg' },
+        { id: 2, name: 'User 2', repository_image_path: '/path/to/image2.jpg' }
+      ];
+      mockConfig.getCurrentUsers.mockReturnValue(mockUsers);
+
+      manager.init();
+
+      const handler = mockElectronAPI.onInitialDisplayPreferences.mock.calls[0][0];
+      handler({ showRepositoryPhotos: true });
+
+      // Should NOT call onLoadRepositoryData since data already loaded
+      expect(mockConfig.onLoadRepositoryData).not.toHaveBeenCalled();
+      // Should stop loading state
+      expect(mockConfig.setIsLoadingRepositoryPhotos).toHaveBeenCalledWith(false);
+      expect(mockConfig.setIsLoadingRepositoryIndicators).toHaveBeenCalledWith(false);
+      expect(mockConfig.setRepositorySyncCompleted).toHaveBeenCalledWith(true);
+      expect(mockConfig.onDisplayUsers).toHaveBeenCalled();
+    });
+
+    test('should not trigger repository data loading if no users loaded', () => {
+      // Setup: no users loaded yet
+      mockConfig.getCurrentUsers.mockReturnValue([]);
+
+      manager.init();
+
+      const handler = mockElectronAPI.onInitialDisplayPreferences.mock.calls[0][0];
+      handler({ showRepositoryPhotos: true });
+
+      // Should NOT call onLoadRepositoryData since no users loaded
+      expect(mockConfig.onLoadRepositoryData).not.toHaveBeenCalled();
+    });
   });
 
   describe('Project Listeners', () => {
