@@ -156,6 +156,20 @@
           this.onProjectLoaded();
         }
       });
+
+      // Listen for sync completion from repository mirror
+      this.electronAPI.onSyncCompleted(async (result) => {
+        console.log('[MenuEventManager] Repository mirror sync completed:', result);
+
+        if (result.success) {
+          // Load repository data if users are already loaded
+          // Check against the actual state getters, not local variables
+          if (this.getCurrentUsers().length > 0) {
+            console.log('[MenuEventManager] Users loaded, triggering repository data load after sync');
+            this.onLoadRepositoryData(this.getCurrentUsers());
+          }
+        }
+      });
     }
 
     /**

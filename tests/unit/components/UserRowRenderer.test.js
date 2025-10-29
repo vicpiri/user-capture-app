@@ -137,16 +137,16 @@ describe('UserRowRenderer', () => {
       const imageCount = { '/path/to/image.jpg': 2 };
       const row = renderer.createRow(mockUser, imageCount);
 
-      const photoIndicator = row.querySelector('.photo-indicator');
-      expect(photoIndicator.classList.contains('duplicate-image')).toBe(true);
+      const photoWrapper = row.querySelector('.photo-indicator-wrapper');
+      expect(photoWrapper.classList.contains('duplicate-image')).toBe(true);
     });
 
     test('should not show duplicate indicator for unique images', () => {
       const imageCount = { '/path/to/image.jpg': 1 };
       const row = renderer.createRow(mockUser, imageCount);
 
-      const photoIndicator = row.querySelector('.photo-indicator');
-      expect(photoIndicator.classList.contains('duplicate-image')).toBe(false);
+      const photoWrapper = row.querySelector('.photo-indicator-wrapper');
+      expect(photoWrapper.classList.contains('duplicate-image')).toBe(false);
     });
 
     test('should show checkbox in selection mode', () => {
@@ -295,9 +295,9 @@ describe('UserRowRenderer', () => {
       const rows = renderer.createRows(users, imageCount);
 
       rows.forEach(row => {
-        const photoIndicator = row.querySelector('.photo-indicator');
-        if (photoIndicator) {
-          expect(photoIndicator.classList.contains('duplicate-image')).toBe(true);
+        const photoWrapper = row.querySelector('.photo-indicator-wrapper');
+        if (photoWrapper) {
+          expect(photoWrapper.classList.contains('duplicate-image')).toBe(true);
         }
       });
     });
