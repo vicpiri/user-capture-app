@@ -41,6 +41,7 @@
       // DOM elements
       this.groupFilter = config.groupFilter;
       this.loadingSpinner = config.loadingSpinner;
+      this.noProjectPlaceholder = config.noProjectPlaceholder;
       this.userTableBody = config.userTableBody;
 
       // IPC API
@@ -85,7 +86,10 @@
      * @returns {Promise<void>}
      */
     async loadUsers(filters = {}) {
-      // Show loading spinner
+      // Hide no-project placeholder and show loading spinner
+      if (this.noProjectPlaceholder) {
+        this.noProjectPlaceholder.classList.remove('visible');
+      }
       if (this.loadingSpinner) {
         this.loadingSpinner.style.display = 'flex';
       }

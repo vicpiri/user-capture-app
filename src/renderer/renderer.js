@@ -425,6 +425,7 @@ function initializeUserDataManager() {
     // DOM elements
     groupFilter: groupFilter,
     loadingSpinner: loadingSpinner,
+    noProjectPlaceholder: noProjectPlaceholder,
     userTableBody: userTableBody,
 
     // IPC API
