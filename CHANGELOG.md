@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/vicpiri/user-capture-app/compare/v1.3.1...v1.4.0) (2025-10-29)
+
+
+### Features
+
+* add View menu filter for pending card print requests ([866945e](https://github.com/vicpiri/user-capture-app/commit/866945ecaf358d93f09302101fdc6442c5b91878))
+* implement card print request system with repository validation ([5a73ddc](https://github.com/vicpiri/user-capture-app/commit/5a73ddcebc158a9cf8490d74b292065101f5a559))
+* implement official publication request system ([ee47e1f](https://github.com/vicpiri/user-capture-app/commit/ee47e1f7225abcfc6745abe50fd9a0cccb67d7c1)), closes [#8b5cf6](https://github.com/vicpiri/user-capture-app/issues/8b5cf6)
+
+
+### Bug Fixes
+
+* ensure repository mirror starts after project opens ([c0bc3a9](https://github.com/vicpiri/user-capture-app/commit/c0bc3a9c6ec27c05bc4c42b311f89e964d42305a))
+* resolve race condition in repository images loading on app startup ([98d65fc](https://github.com/vicpiri/user-capture-app/commit/98d65fc25845b84b98afdaacbd21474b16455b59))
+
 ### [1.3.1](https://github.com/vicpiri/user-capture-app/compare/v1.3.0...v1.3.1) (2025-10-29)
 
 ## [1.3.0](https://github.com/vicpiri/user-capture-app/compare/v1.2.1...v1.3.0) (2025-10-29)
