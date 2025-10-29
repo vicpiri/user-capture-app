@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/vicpiri/user-capture-app/compare/v1.2.1...v1.3.0) (2025-10-29)
+
+
+### Features
+
+* add close project functionality ([c1e88b9](https://github.com/vicpiri/user-capture-app/commit/c1e88b9407290fd7aac95be9616a54bac1b4c581))
+* add loading spinners to lazy-loaded images with minimum visibility duration ([3119552](https://github.com/vicpiri/user-capture-app/commit/3119552661d55d493012732669f6bd95d0ece222)), closes [#4a7cc7](https://github.com/vicpiri/user-capture-app/issues/4a7cc7) [#10b981](https://github.com/vicpiri/user-capture-app/issues/10b981)
+* add orla PDF export with configurable image quality ([633d424](https://github.com/vicpiri/user-capture-app/commit/633d424eac7b6fc82e4fa05d3b79373631c22995))
+* add status bar with project and repository information ([b2ecb11](https://github.com/vicpiri/user-capture-app/commit/b2ecb116db93fd75da60d31faa1d2762a6ce963b))
+* add user count to status bar ([2bf0ce7](https://github.com/vicpiri/user-capture-app/commit/2bf0ce7c0decd1be95b8bcd99709563af1811c72))
+* improve lazy image loading with row recycling and loading spinners ([256fa33](https://github.com/vicpiri/user-capture-app/commit/256fa334a04963bd18a85263cb1e095a85c741b0))
+
+
+### Bug Fixes
+
+* center modals on screen by using CSS flex layout ([a3d2e80](https://github.com/vicpiri/user-capture-app/commit/a3d2e8003339df2674fbd9d5622f25d6b31532bd))
+* enable checkboxes in selection mode for virtualized lists ([de6d977](https://github.com/vicpiri/user-capture-app/commit/de6d97790a6e3c4118ca7ec4c2fa1325715b4bab))
+* hide no-project placeholder when loading users ([f374ead](https://github.com/vicpiri/user-capture-app/commit/f374ead904336d99492215e708522d2c8dfd398f))
+* regenerate import report after XML update ([1f4f553](https://github.com/vicpiri/user-capture-app/commit/1f4f55375180e3c4d7de8744a4ffbd30e183e41a))
+* reinitialize repository mirror when changing repository path ([f3aa405](https://github.com/vicpiri/user-capture-app/commit/f3aa405d52849756190e30d27657d60562494c9d))
+* resolve empty list when returning to all groups filter ([49e7ef3](https://github.com/vicpiri/user-capture-app/commit/49e7ef392e1ef458d2edee7c563c06cf561e9d15))
+
 ### [1.2.1](https://github.com/vicpiri/user-capture-app/compare/v1.2.0...v1.2.1) (2025-10-27)
 
 ## [1.2.0](https://github.com/vicpiri/user-capture-app/compare/v1.1.4...v1.2.0) (2025-10-27)
