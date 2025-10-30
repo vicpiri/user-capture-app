@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.5.0](https://github.com/vicpiri/user-capture-app/compare/v1.4.0...v1.5.0) (2025-10-30)
+
+
+### Features
+
+* add automatic printed card marking on CSV export ([9aefe86](https://github.com/vicpiri/user-capture-app/commit/9aefe860a4120f54c41445b0c218f63b7661dad8))
+* add context menu options to remove orla paid and receipt printed states ([0cc02a9](https://github.com/vicpiri/user-capture-app/commit/0cc02a926c16e56cc7485cfb7d9ff71753c813c3))
+* add orla payment and receipt printing tracking ([9ba9f9c](https://github.com/vicpiri/user-capture-app/commit/9ba9f9cc3dc13e711eb02e4cfa5a815fee1bfb84))
+* add paid students list PDF and CSV exports ([365e856](https://github.com/vicpiri/user-capture-app/commit/365e85602c17086d9306a396e4cb82accacf4aa8))
+* add paid students list PDF export ([a0e5f19](https://github.com/vicpiri/user-capture-app/commit/a0e5f1962f922f6946880df7d098af0addd89d49))
+* add printed cards history window with clear functionality ([155ab99](https://github.com/vicpiri/user-capture-app/commit/155ab99e1340dea721d0c4a60e898d477f7fb0d0))
+* add visual alert badges for pending card prints and publications ([7f0f25f](https://github.com/vicpiri/user-capture-app/commit/7f0f25f08f6a5ac1c02049863b79496202afaf03))
+* convert duplicates filter to clickable badge with exclusive behavior ([1842699](https://github.com/vicpiri/user-capture-app/commit/184269980caf73d7798c997ca7abf6dc5903c98e))
+* hide photos column when all display options are disabled ([d8d6ba3](https://github.com/vicpiri/user-capture-app/commit/d8d6ba3e8ff2df3088ee5f337afee3ca6a48597f))
+* implement exclusive filter behavior for view menu options ([39cef81](https://github.com/vicpiri/user-capture-app/commit/39cef818fa65b046ec7809c81b3b56d0f4482cde))
+
 ## [1.4.0](https://github.com/vicpiri/user-capture-app/compare/v1.3.1...v1.4.0) (2025-10-29)
 
 
