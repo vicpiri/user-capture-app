@@ -85,9 +85,29 @@ class DatabaseManager {
         // Index for image path lookups (optimizes linking and unlinking operations)
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_image ON users(image_path)');
 
-        this.db.run('CREATE INDEX IF NOT EXISTS idx_image_tags_path ON image_tags(image_path)', (err) => {
-          if (err) reject(err);
-          else resolve();
+        this.db.run('CREATE INDEX IF NOT EXISTS idx_image_tags_path ON image_tags(image_path)');
+
+        // Add orla_paid column if it doesn't exist (for backward compatibility)
+        this.db.run(`
+          ALTER TABLE users ADD COLUMN orla_paid INTEGER DEFAULT 0
+        `, (err) => {
+          // Ignore error if column already exists
+          if (err && !err.message.includes('duplicate column')) {
+            reject(err);
+            return;
+          }
+
+          // Add receipt_printed column if it doesn't exist (for backward compatibility)
+          this.db.run(`
+            ALTER TABLE users ADD COLUMN receipt_printed INTEGER DEFAULT 0
+          `, (err) => {
+            // Ignore error if column already exists
+            if (err && !err.message.includes('duplicate column')) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
         });
       });
     });
@@ -561,6 +581,44 @@ class DatabaseManager {
       `, [key], (err) => {
         if (err) reject(err);
         else resolve();
+      });
+    });
+  }
+
+  // Orla payment methods
+  async markOrlaPaid(userId, isPaid) {
+    return new Promise((resolve, reject) => {
+      this.db.run('UPDATE users SET orla_paid = ? WHERE id = ?', [isPaid ? 1 : 0, userId], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async getOrlaPaidStatus(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT orla_paid FROM users WHERE id = ?', [userId], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.orla_paid === 1 : false);
+      });
+    });
+  }
+
+  // Receipt printing methods
+  async markReceiptPrinted(userId, isPrinted) {
+    return new Promise((resolve, reject) => {
+      this.db.run('UPDATE users SET receipt_printed = ? WHERE id = ?', [isPrinted ? 1 : 0, userId], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async getReceiptPrintedStatus(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT receipt_printed FROM users WHERE id = ?', [userId], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.receipt_printed === 1 : false);
       });
     });
   }

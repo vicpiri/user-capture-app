@@ -339,6 +339,26 @@ body {
   cursor: help;
 }
 
+/* Orla paid indicator */
+.user-table td .orla-paid-indicator {
+  width: 18px;
+  height: 18px;
+  color: #10b981;
+  margin-left: 4px;
+  flex-shrink: 0;
+  cursor: help;
+}
+
+/* Receipt printed indicator */
+.user-table td .receipt-printed-indicator {
+  width: 18px;
+  height: 18px;
+  color: #3b82f6;
+  margin-left: 4px;
+  flex-shrink: 0;
+  cursor: help;
+}
+
 .user-table td .repository-indicator-wrapper {
   width: 32px;
   height: 32px;

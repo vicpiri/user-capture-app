@@ -65,6 +65,8 @@ class UserRowRenderer {
     const repositoryCheckIndicator = this._buildRepositoryCheckIndicator(user);
     const cardPrintIndicator = this._buildCardPrintIndicator(user);
     const publicationIndicator = this._buildPublicationIndicator(user);
+    const orlaPaidIndicator = this._buildOrlaPaidIndicator(user);
+    const receiptPrintedIndicator = this._buildReceiptPrintedIndicator(user);
     const checkboxCell = this._buildCheckboxCell(user);
 
     row.innerHTML = `
@@ -73,7 +75,7 @@ class UserRowRenderer {
       <td>${user.last_name1} ${user.last_name2 || ''}</td>
       <td>${user.nia || '-'}</td>
       <td>${user.group_code}</td>
-      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}${publicationIndicator}</td>
+      <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}${publicationIndicator}${orlaPaidIndicator}${receiptPrintedIndicator}</td>
     `;
 
     // Attach event listeners
@@ -215,6 +217,39 @@ class UserRowRenderer {
   }
 
   /**
+   * Build orla paid indicator HTML
+   * @private
+   */
+  _buildOrlaPaidIndicator(user) {
+    // Check if orla has been paid
+    if (user.orla_paid === 1) {
+      return `<svg class="orla-paid-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Orla pagada">
+        <line x1="12" y1="2" x2="12" y2="22"></line>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+      </svg>`;
+    }
+
+    return '';
+  }
+
+  /**
+   * Build receipt printed indicator HTML
+   * @private
+   */
+  _buildReceiptPrintedIndicator(user) {
+    // Check if receipt has been printed
+    if (user.receipt_printed === 1) {
+      return `<svg class="receipt-printed-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Recibo impreso">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect x="6" y="14" width="12" height="8"></rect>
+      </svg>`;
+    }
+
+    return '';
+  }
+
+  /**
    * Build checkbox cell HTML
    * @private
    */
@@ -325,8 +360,10 @@ class UserRowRenderer {
       const repositoryCheckIndicator = this._buildRepositoryCheckIndicator(user);
       const cardPrintIndicator = this._buildCardPrintIndicator(user);
       const publicationIndicator = this._buildPublicationIndicator(user);
+      const orlaPaidIndicator = this._buildOrlaPaidIndicator(user);
+      const receiptPrintedIndicator = this._buildReceiptPrintedIndicator(user);
 
-      lastCell.innerHTML = `${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}${publicationIndicator}`;
+      lastCell.innerHTML = `${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}${publicationIndicator}${orlaPaidIndicator}${receiptPrintedIndicator}`;
 
       // Reattach event listeners for double-click on images (use wrappers)
       if (user.image_path) {

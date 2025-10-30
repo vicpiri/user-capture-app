@@ -21,6 +21,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   linkImageToUser: (data) => ipcRenderer.invoke('link-image-user', data),
   confirmLinkImage: (data) => ipcRenderer.invoke('confirm-link-image', data),
 
+  // Orla payment
+  markOrlaPaid: (userId, isPaid) => ipcRenderer.invoke('mark-orla-paid', userId, isPaid),
+  getOrlaPaidStatus: (userId) => ipcRenderer.invoke('get-orla-paid-status', userId),
+
+  // Receipt printing
+  markReceiptPrinted: (userId, isPrinted) => ipcRenderer.invoke('mark-receipt-printed', userId, isPrinted),
+  getReceiptPrintedStatus: (userId) => ipcRenderer.invoke('get-receipt-printed-status', userId),
+
   // Dialog
   showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
   focusWindow: () => ipcRenderer.invoke('focus-window'),

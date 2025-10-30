@@ -54,6 +54,8 @@ const photosColumnHeader = document.getElementById('photos-column-header');
 const selectedUserInfo = document.getElementById('selected-user-info');
 const userCount = document.getElementById('user-count');
 const linkBtn = document.getElementById('link-btn');
+const payOriaBtn = document.getElementById('pay-oria-btn');
+const importReceiptBtn = document.getElementById('import-receipt-btn');
 const duplicatesAlert = document.getElementById('duplicates-alert');
 const duplicatesCount = document.getElementById('duplicates-count');
 const cardPrintAlert = document.getElementById('card-print-alert');
@@ -605,6 +607,14 @@ function initializeEventListeners() {
   // Action buttons
   linkBtn.addEventListener('click', handleLinkImage);
 
+  if (payOriaBtn) {
+    payOriaBtn.addEventListener('click', handlePayOrla);
+  }
+
+  if (importReceiptBtn) {
+    importReceiptBtn.addEventListener('click', handlePrintReceipt);
+  }
+
   // Image navigation
   prevImageBtn.addEventListener('click', () => {
     if (imageGridManager) {
@@ -1142,6 +1152,144 @@ async function handleLinkImage() {
     }
   } else {
     showInfoModal('Error', 'Error al enlazar la imagen: ' + result.error);
+  }
+}
+
+// Handle orla payment
+async function handlePayOrla() {
+  if (!selectedUser) {
+    showInfoModal('Aviso', 'Debes seleccionar un usuario');
+    return;
+  }
+
+  try {
+    // Get current payment status
+    const statusResult = await window.electronAPI.getOrlaPaidStatus(selectedUser.id);
+
+    if (!statusResult.success) {
+      showInfoModal('Error', statusResult.error || 'Error al obtener el estado de pago');
+      return;
+    }
+
+    const currentStatus = statusResult.isPaid;
+    const newStatus = !currentStatus;
+    const action = newStatus ? 'marcar como pagado' : 'desmarcar como pagado';
+
+    // Confirm action
+    const confirmed = await showConfirmationModal(
+      `¿Deseas ${action} la orla de ${selectedUser.first_name} ${selectedUser.last_name1}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Mark as paid/unpaid
+    const result = await window.electronAPI.markOrlaPaid(selectedUser.id, newStatus);
+
+    if (result.success) {
+      // Update the user's paid status in the current data
+      selectedUser.orla_paid = newStatus ? 1 : 0;
+
+      // Update the paid status in currentUsers array
+      const userIndex = currentUsers.findIndex(u => u.id === selectedUser.id);
+      if (userIndex !== -1) {
+        currentUsers[userIndex].orla_paid = newStatus ? 1 : 0;
+      }
+
+      // Update the paid status in allUsers array
+      const allUserIndex = allUsers.findIndex(u => u.id === selectedUser.id);
+      if (allUserIndex !== -1) {
+        allUsers[allUserIndex].orla_paid = newStatus ? 1 : 0;
+      }
+
+      // Re-display the current user list to show the new icon
+      displayUsers(currentUsers, allUsers);
+
+      showInfoModal('Éxito', `Orla ${newStatus ? 'marcada como pagada' : 'desmarcada como pagada'} correctamente`);
+    } else {
+      showInfoModal('Error', result.error || 'Error al actualizar el estado de pago');
+    }
+  } catch (error) {
+    console.error('[handlePayOrla] Error:', error);
+    showInfoModal('Error', error.message || 'Error al procesar el pago de orla');
+  }
+}
+
+// Handle receipt printing
+async function handlePrintReceipt() {
+  if (!selectedUser) {
+    showInfoModal('Aviso', 'Debes seleccionar un usuario');
+    return;
+  }
+
+  try {
+    // Get current printed status
+    const statusResult = await window.electronAPI.getReceiptPrintedStatus(selectedUser.id);
+
+    if (!statusResult.success) {
+      showInfoModal('Error', statusResult.error || 'Error al obtener el estado de impresión');
+      return;
+    }
+
+    const currentStatus = statusResult.isPrinted;
+    const newStatus = !currentStatus;
+
+    // If trying to mark as printed, check if orla is paid first
+    if (newStatus) {
+      const paidStatusResult = await window.electronAPI.getOrlaPaidStatus(selectedUser.id);
+
+      if (!paidStatusResult.success) {
+        showInfoModal('Error', paidStatusResult.error || 'Error al verificar el estado de pago');
+        return;
+      }
+
+      if (!paidStatusResult.isPaid) {
+        showInfoModal('Aviso', 'No se puede marcar el recibo como impreso sin que la orla esté pagada previamente');
+        return;
+      }
+    }
+
+    const action = newStatus ? 'marcar como impreso' : 'desmarcar como impreso';
+
+    // Confirm action
+    const confirmed = await showConfirmationModal(
+      `¿Deseas ${action} el recibo de ${selectedUser.first_name} ${selectedUser.last_name1}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Mark as printed/unprinted
+    const result = await window.electronAPI.markReceiptPrinted(selectedUser.id, newStatus);
+
+    if (result.success) {
+      // Update the user's printed status in the current data
+      selectedUser.receipt_printed = newStatus ? 1 : 0;
+
+      // Update the printed status in currentUsers array
+      const userIndex = currentUsers.findIndex(u => u.id === selectedUser.id);
+      if (userIndex !== -1) {
+        currentUsers[userIndex].receipt_printed = newStatus ? 1 : 0;
+      }
+
+      // Update the printed status in allUsers array
+      const allUserIndex = allUsers.findIndex(u => u.id === selectedUser.id);
+      if (allUserIndex !== -1) {
+        allUsers[allUserIndex].receipt_printed = newStatus ? 1 : 0;
+      }
+
+      // Re-display the current user list to show the new icon
+      displayUsers(currentUsers, allUsers);
+
+      showInfoModal('Éxito', `Recibo ${newStatus ? 'marcado como impreso' : 'desmarcado como impreso'} correctamente`);
+    } else {
+      showInfoModal('Error', result.error || 'Error al actualizar el estado de impresión');
+    }
+  } catch (error) {
+    console.error('[handlePrintReceipt] Error:', error);
+    showInfoModal('Error', error.message || 'Error al procesar la impresión del recibo');
   }
 }
 

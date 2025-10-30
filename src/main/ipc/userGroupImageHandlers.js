@@ -437,6 +437,66 @@ function registerUserGroupImageHandlers(context) {
       return { success: false, error: error.message };
     }
   });
+
+  // Mark orla as paid
+  ipcMain.handle('mark-orla-paid', async (event, userId, isPaid) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      await state.dbManager.markOrlaPaid(userId, isPaid);
+      return { success: true };
+    } catch (error) {
+      console.error('Error marking orla as paid:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Get orla paid status
+  ipcMain.handle('get-orla-paid-status', async (event, userId) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const isPaid = await state.dbManager.getOrlaPaidStatus(userId);
+      return { success: true, isPaid };
+    } catch (error) {
+      console.error('Error getting orla paid status:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Mark receipt as printed
+  ipcMain.handle('mark-receipt-printed', async (event, userId, isPrinted) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      await state.dbManager.markReceiptPrinted(userId, isPrinted);
+      return { success: true };
+    } catch (error) {
+      console.error('Error marking receipt as printed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Get receipt printed status
+  ipcMain.handle('get-receipt-printed-status', async (event, userId) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const isPrinted = await state.dbManager.getReceiptPrintedStatus(userId);
+      return { success: true, isPrinted };
+    } catch (error) {
+      console.error('Error getting receipt printed status:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerUserGroupImageHandlers };
