@@ -492,6 +492,7 @@ function registerExportHandlers(context) {
           }
 
           // Create destination filename with user ID in repository
+          // Always use .jpg extension (rename .jpeg to .jpg if needed)
           const destFileName = `${userId}.jpg`;
           const destPath = path.join(repositoryPath, destFileName);
 
