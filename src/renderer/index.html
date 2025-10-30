@@ -401,6 +401,24 @@
     <div class="modal-content">
       <h2>Exportar Orla en PDF</h2>
 
+      <h3>Grupos a exportar</h3>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="radio" name="orla-group-scope" id="orla-export-all-groups" value="all" checked>
+          <span>Todos los grupos</span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="radio" name="orla-group-scope" id="orla-export-single-group" value="single">
+          <span>Un solo grupo:</span>
+        </label>
+        <select id="orla-export-group-select" class="form-control" style="margin-left: 20px; margin-top: 5px;" disabled>
+          <option value="">Seleccionar grupo...</option>
+        </select>
+      </div>
+
       <h3>Tipo de fotografías a incluir</h3>
       <div class="form-group">
         <label class="checkbox-label">

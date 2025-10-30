@@ -1,0 +1,2 @@
+- Implementar limpieza de capturas después de exportar al depósito. (Con backup)
+- 

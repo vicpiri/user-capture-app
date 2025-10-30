@@ -1249,14 +1249,37 @@ function registerExportHandlers(context) {
       for (const [groupCode, users] of Object.entries(usersByGroup)) {
         logger.info(`Generating PDF for group: ${groupCode} (${users.length} users)`);
 
-        // Send progress update
-        sendProgressUpdate(getMainWindow, processedGroups, totalGroups, `Generando PDF para grupo ${groupCode}...`);
+        // Calculate grid layout - 6 columns x 6 rows per page
+        const imagesPerRow = 6;
+        const rowsPerPage = 6; // All pages: 6x6 = 36 photos
 
-        // Create PDF document
+        // Aspect ratio 3:4 (width:height) for vertical portrait photos
+        const imageWidth = 72;
+        const imageHeight = 96; // 72 * 4/3 = 96
+        const imageSpacing = 7;
+        const nameHeight = 20;
+        const cellHeight = imageHeight + nameHeight + imageSpacing;
+
+        // A4 dimensions in points
+        const pageWidthPt = 595.28; // A4 width
+        const pageHeightPt = 841.89; // A4 height
+
+        // Calculate total grid height for first page (with title)
+        const titleHeight = 40; // Height for title and spacing
+        const gridHeight = cellHeight * rowsPerPage;
+        const totalContentHeightFirstPage = titleHeight + gridHeight;
+
+        // Center vertically on first page (with extra margin)
+        const topMarginFirstPage = Math.floor((pageHeightPt - totalContentHeightFirstPage) / 2) + 20;
+
+        // Center vertically on subsequent pages (without title, with extra margin)
+        const topMarginFullPage = Math.floor((pageHeightPt - gridHeight) / 2) + 20;
+
+        // Create PDF document with calculated margins for first page
         const doc = new PDFDocument({
           size: 'A4',
           layout: 'portrait',
-          margins: { top: 50, bottom: 50, left: 50, right: 50 }
+          margins: { top: topMarginFirstPage, bottom: topMarginFirstPage, left: 20, right: 20 }
         });
 
         // Create output file path
@@ -1272,16 +1295,8 @@ function registerExportHandlers(context) {
            .font('Helvetica-Bold')
            .text(`Orla - ${groupCode}`, { align: 'center' });
 
-        doc.moveDown(2);
-
-        // Calculate grid layout
-        const imagesPerRow = 4;
-        // Aspect ratio 3:4 (width:height) for vertical portrait photos
-        const imageWidth = 105;
-        const imageHeight = 140; // 105 * 4/3 = 140
-        const imageSpacing = 15;
-        const nameHeight = 30;
-        const cellHeight = imageHeight + nameHeight + imageSpacing;
+        doc.moveDown(0.5);
+        const titleY = doc.y; // Save Y position after title
 
         // Page dimensions
         const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
@@ -1292,7 +1307,7 @@ function registerExportHandlers(context) {
         const startX = doc.page.margins.left + (pageWidth - totalGridWidth) / 2;
 
         let currentX = startX;
-        let currentY = doc.y;
+        let currentY = titleY;
         let count = 0;
 
         // Sort users alphabetically by last_name1, then last_name2, then first_name
@@ -1320,12 +1335,23 @@ function registerExportHandlers(context) {
 
         // Process each user
         for (const user of users) {
-          // Check if we need a new page
-          if (currentY + cellHeight > pageHeight + doc.page.margins.top) {
-            doc.addPage();
-            currentY = doc.page.margins.top;
-            currentX = startX;
-            count = 0;
+          // Check if we're at the start of a new row and if this row would fit on current page
+          const isStartOfRow = (count % imagesPerRow === 0);
+
+          if (isStartOfRow && count > 0) {
+            // Check if there's enough space for a complete row (cellHeight includes image + name + spacing)
+            const spaceNeeded = cellHeight;
+            const spaceAvailable = (doc.page.height - doc.page.margins.bottom) - currentY;
+
+            if (spaceAvailable < spaceNeeded) {
+              // Not enough space, create new page
+              doc.addPage({
+                margins: { top: topMarginFullPage, bottom: topMarginFullPage, left: 20, right: 20 }
+              });
+              currentY = doc.page.margins.top;
+              currentX = startX;
+              count = 0;
+            }
           }
 
           // Get image path
@@ -1354,8 +1380,8 @@ function registerExportHandlers(context) {
               // Load and resize image to fit in 3:4 vertical portrait
               // rotate() without parameters auto-rotates based on EXIF orientation
               // Process at higher resolution (3x display size) for better quality in PDF
-              const processingWidth = imageWidth * 3; // 315px for 105pt display
-              const processingHeight = imageHeight * 3; // 420px for 140pt display
+              const processingWidth = imageWidth * 3; // 216px for 72pt display
+              const processingHeight = imageHeight * 3; // 288px for 96pt display
               const imageBuffer = await sharp(imagePath)
                 .rotate()
                 .resize(processingWidth, processingHeight, { fit: 'cover' })
@@ -1398,9 +1424,9 @@ function registerExportHandlers(context) {
           const lastName2 = user.last_name2 ? ` ${user.last_name2}` : '';
           const fullName = `${user.last_name1}${lastName2}, ${user.first_name}`;
           doc.fillColor('#000000')
-             .fontSize(8)
+             .fontSize(7)
              .font('Helvetica')
-             .text(fullName, currentX, currentY + imageHeight + 5, {
+             .text(fullName, currentX, currentY + imageHeight + 3, {
                width: imageWidth,
                align: 'center',
                lineBreak: false,

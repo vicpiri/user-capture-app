@@ -56,15 +56,6 @@
       if (!this.checkProjectOpen()) return;
 
       try {
-        // Show modal to select photo source
-        const options = await this.orlaExportModal.show();
-
-        if (!options) {
-          return; // User cancelled
-        }
-
-        const { photoSource, imageQuality } = options; // 'captured' or 'repository', quality 0-100
-
         // Get all users and groups
         const allUsers = this.getAllUsers();
         const allGroups = this.getAllGroups();
@@ -79,15 +70,36 @@
           return;
         }
 
+        // Show modal to select photo source and group scope
+        const options = await this.orlaExportModal.show(allGroups);
+
+        if (!options) {
+          return; // User cancelled
+        }
+
+        const { groupScope, selectedGroup, photoSource, imageQuality } = options;
+
         // Group ALL users by group_code (including those without photos)
-        const usersByGroup = {};
-        allUsers.forEach(user => {
-          const groupCode = user.group_code;
-          if (!usersByGroup[groupCode]) {
-            usersByGroup[groupCode] = [];
+        let usersByGroup = {};
+
+        if (groupScope === 'single') {
+          // Filter users by selected group
+          const groupUsers = allUsers.filter(user => user.group_code === selectedGroup);
+          if (groupUsers.length === 0) {
+            this.showInfoModal('Aviso', `No hay usuarios en el grupo ${selectedGroup}`);
+            return;
           }
-          usersByGroup[groupCode].push(user);
-        });
+          usersByGroup[selectedGroup] = groupUsers;
+        } else {
+          // All groups
+          allUsers.forEach(user => {
+            const groupCode = user.group_code;
+            if (!usersByGroup[groupCode]) {
+              usersByGroup[groupCode] = [];
+            }
+            usersByGroup[groupCode].push(user);
+          });
+        }
 
         // Check if there are any users at all
         if (Object.keys(usersByGroup).length === 0) {
