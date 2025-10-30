@@ -55,6 +55,10 @@ const userTableBody = document.getElementById('user-table-body');
 const selectedUserInfo = document.getElementById('selected-user-info');
 const userCount = document.getElementById('user-count');
 const linkBtn = document.getElementById('link-btn');
+const cardPrintAlert = document.getElementById('card-print-alert');
+const cardPrintCount = document.getElementById('card-print-count');
+const publicationAlert = document.getElementById('publication-alert');
+const publicationCount = document.getElementById('publication-count');
 const imagePreviewContainer = document.getElementById('image-preview-container');
 const currentImage = document.getElementById('current-image');
 const prevImageBtn = document.getElementById('prev-image');
@@ -433,8 +437,14 @@ function initializeUserDataManager() {
     // Callbacks
     onDisplayUsers: displayUsers,
     onUpdateUserCount: updateUserCount,
-    onUpdateCardPrintRequests: (requests) => { cardPrintRequests = requests; },
-    onUpdatePublicationRequests: (requests) => { publicationRequests = requests; },
+    onUpdateCardPrintRequests: (requests) => {
+      cardPrintRequests = requests;
+      updateAlertBadges();
+    },
+    onUpdatePublicationRequests: (requests) => {
+      publicationRequests = requests;
+      updateAlertBadges();
+    },
     onUpdateUserRowRenderer: (config) => {
       if (userRowRenderer) {
         userRowRenderer.updateConfig(config);
@@ -800,6 +810,31 @@ function updateUserCount() {
   const statusUsers = document.getElementById('status-users');
   if (statusUsers) {
     statusUsers.textContent = `${currentUsers.length} usuarios cargados`;
+  }
+
+  // Update alert badges
+  updateAlertBadges();
+}
+
+/**
+ * Update alert badges for pending requests
+ */
+function updateAlertBadges() {
+  const cardPrintRequestsCount = cardPrintRequests.size;
+  const publicationRequestsCount = publicationRequests.size;
+
+  if (cardPrintCount) {
+    cardPrintCount.textContent = cardPrintRequestsCount;
+  }
+  if (cardPrintAlert) {
+    cardPrintAlert.style.display = cardPrintRequestsCount > 0 ? 'flex' : 'none';
+  }
+
+  if (publicationCount) {
+    publicationCount.textContent = publicationRequestsCount;
+  }
+  if (publicationAlert) {
+    publicationAlert.style.display = publicationRequestsCount > 0 ? 'flex' : 'none';
   }
 }
 

@@ -437,6 +437,69 @@ body {
   color: #8a8f9a;
 }
 
+/* Alerts Container */
+.alerts-container {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Alerts in panel header */
+.panel-header .alerts-container {
+  margin-top: 12px;
+  margin-left: 0;
+  justify-content: flex-start;
+}
+
+/* Alert Badge */
+.alert-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.alert-badge svg {
+  flex-shrink: 0;
+}
+
+.alert-badge span:first-of-type {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.alert-label {
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* Alert variants */
+.alert-warning {
+  background-color: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.alert-info {
+  background-color: rgba(13, 202, 240, 0.15);
+  color: #0dcaf0;
+  border: 1px solid rgba(13, 202, 240, 0.3);
+}
+
+/* Pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 /* Right Panel */
 .right-panel {
   flex: 0 0 40%;
