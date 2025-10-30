@@ -369,6 +369,8 @@ function initializeMenuEventManager() {
   menuEventManager = new MenuEventManager({
     // State setters
     setShowDuplicatesOnly: (value) => { showDuplicatesOnly = value; },
+    setShowCardPrintRequestsOnly: (value) => { showCardPrintRequestsOnly = value; },
+    setShowPublicationRequestsOnly: (value) => { showPublicationRequestsOnly = value; },
     setShowCapturedPhotos: (value) => { showCapturedPhotos = value; },
     setShowRepositoryPhotos: (value) => { showRepositoryPhotos = value; },
     setShowRepositoryIndicators: (value) => { showRepositoryIndicators = value; },
@@ -546,12 +548,22 @@ function initializeEventListeners() {
   // Listen for card print requests filter toggle from menu
   window.electronAPI.onMenuToggleCardPrintRequests((enabled) => {
     showCardPrintRequestsOnly = enabled;
+    // Exclusive filter: disable others when this is enabled
+    if (enabled) {
+      showDuplicatesOnly = false;
+      showPublicationRequestsOnly = false;
+    }
     displayUsers(currentUsers, allUsers);
   });
 
   // Listen for publication requests filter toggle from menu
   window.electronAPI.onMenuTogglePublicationRequests((enabled) => {
     showPublicationRequestsOnly = enabled;
+    // Exclusive filter: disable others when this is enabled
+    if (enabled) {
+      showDuplicatesOnly = false;
+      showCardPrintRequestsOnly = false;
+    }
     displayUsers(currentUsers, allUsers);
   });
 

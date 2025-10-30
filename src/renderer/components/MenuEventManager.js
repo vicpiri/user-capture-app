@@ -20,6 +20,8 @@
     constructor(config = {}) {
       // State setters
       this.setShowDuplicatesOnly = config.setShowDuplicatesOnly || ((value) => {});
+      this.setShowCardPrintRequestsOnly = config.setShowCardPrintRequestsOnly || ((value) => {});
+      this.setShowPublicationRequestsOnly = config.setShowPublicationRequestsOnly || ((value) => {});
       this.setShowCapturedPhotos = config.setShowCapturedPhotos || ((value) => {});
       this.setShowRepositoryPhotos = config.setShowRepositoryPhotos || ((value) => {});
       this.setShowRepositoryIndicators = config.setShowRepositoryIndicators || ((value) => {});
@@ -200,6 +202,11 @@
       // Toggle duplicates filter
       this.electronAPI.onMenuToggleDuplicates((enabled) => {
         this.setShowDuplicatesOnly(enabled);
+        // Exclusive filter: disable others when this is enabled
+        if (enabled) {
+          this.setShowCardPrintRequestsOnly(false);
+          this.setShowPublicationRequestsOnly(false);
+        }
         if (this.duplicatesFilter) {
           this.duplicatesFilter.checked = enabled;
         }

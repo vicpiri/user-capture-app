@@ -134,6 +134,11 @@ function createMenu() {
       },
       toggleDuplicates: (checked) => {
         showDuplicatesOnly = checked;
+        // Exclusive filter: disable others when this is enabled
+        if (checked) {
+          showCardPrintRequestsOnly = false;
+          showPublicationRequestsOnly = false;
+        }
         saveDisplayPreferences({
           showDuplicatesOnly,
           showCardPrintRequestsOnly,
@@ -143,6 +148,11 @@ function createMenu() {
           showRepositoryIndicators,
           showAdditionalActions
         });
+        // Update menuBuilder properties and rebuild menu to update all checkboxes
+        menuBuilder.showDuplicatesOnly = showDuplicatesOnly;
+        menuBuilder.showCardPrintRequestsOnly = showCardPrintRequestsOnly;
+        menuBuilder.showPublicationRequestsOnly = showPublicationRequestsOnly;
+        menuBuilder.build();
         const mainWindow = mainWindowManager.getWindow();
         if (mainWindow) {
           mainWindow.webContents.send('menu-toggle-duplicates', showDuplicatesOnly);
@@ -150,6 +160,11 @@ function createMenu() {
       },
       toggleCardPrintRequests: (checked) => {
         showCardPrintRequestsOnly = checked;
+        // Exclusive filter: disable others when this is enabled
+        if (checked) {
+          showDuplicatesOnly = false;
+          showPublicationRequestsOnly = false;
+        }
         saveDisplayPreferences({
           showDuplicatesOnly,
           showCardPrintRequestsOnly,
@@ -159,6 +174,11 @@ function createMenu() {
           showRepositoryIndicators,
           showAdditionalActions
         });
+        // Update menuBuilder properties and rebuild menu to update all checkboxes
+        menuBuilder.showDuplicatesOnly = showDuplicatesOnly;
+        menuBuilder.showCardPrintRequestsOnly = showCardPrintRequestsOnly;
+        menuBuilder.showPublicationRequestsOnly = showPublicationRequestsOnly;
+        menuBuilder.build();
         const mainWindow = mainWindowManager.getWindow();
         if (mainWindow) {
           mainWindow.webContents.send('menu-toggle-card-print-requests', showCardPrintRequestsOnly);
@@ -166,6 +186,11 @@ function createMenu() {
       },
       togglePublicationRequests: (checked) => {
         showPublicationRequestsOnly = checked;
+        // Exclusive filter: disable others when this is enabled
+        if (checked) {
+          showDuplicatesOnly = false;
+          showCardPrintRequestsOnly = false;
+        }
         saveDisplayPreferences({
           showDuplicatesOnly,
           showCardPrintRequestsOnly,
@@ -175,6 +200,11 @@ function createMenu() {
           showRepositoryIndicators,
           showAdditionalActions
         });
+        // Update menuBuilder properties and rebuild menu to update all checkboxes
+        menuBuilder.showDuplicatesOnly = showDuplicatesOnly;
+        menuBuilder.showCardPrintRequestsOnly = showCardPrintRequestsOnly;
+        menuBuilder.showPublicationRequestsOnly = showPublicationRequestsOnly;
+        menuBuilder.build();
         const mainWindow = mainWindowManager.getWindow();
         if (mainWindow) {
           mainWindow.webContents.send('menu-toggle-publication-requests', showPublicationRequestsOnly);
