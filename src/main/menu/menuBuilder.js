@@ -155,6 +155,12 @@ class MenuBuilder {
               click: () => {
                 this.mainWindow.webContents.send('menu-export-paid-orla-pdf');
               }
+            },
+            {
+              label: 'Listado de alumnos pagados en CSV',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-paid-users-csv');
+              }
             }
           ]
         },

@@ -412,6 +412,7 @@ function initializeMenuEventManager() {
     onExportToRepository: handleExportToRepository,
     onExportOrlaPDF: handleExportOrlaPDF,
     onExportPaidOrlaPDF: handleExportPaidOrlaPDF,
+    onExportPaidUsersCSV: handleExportPaidUsersCSV,
     onUpdateXML: handleUpdateXML,
     onAddImageTag: handleAddImageTag,
     onShowTaggedImages: handleShowTaggedImages,
@@ -1579,6 +1580,62 @@ async function handleExportOrlaPDF() {
 async function handleExportPaidOrlaPDF() {
   if (orlaExportManager) {
     await orlaExportManager.exportPaidOrlaPDF();
+  }
+}
+
+// Handle paid users CSV export
+async function handleExportPaidUsersCSV() {
+  if (!projectOpen) {
+    showInfoModal('Aviso', 'Debes abrir o crear un proyecto primero');
+    return;
+  }
+
+  try {
+    // Filter only paid users (orla_paid === 1)
+    const paidUsers = allUsers.filter(user => user.orla_paid === 1);
+
+    if (paidUsers.length === 0) {
+      showInfoModal('Aviso', 'No hay usuarios con orla pagada en el proyecto');
+      return;
+    }
+
+    // Ask user to select export folder
+    const dialogResult = await window.electronAPI.showOpenDialog({
+      title: 'Seleccionar carpeta de exportación',
+      buttonLabel: 'Exportar',
+      properties: ['openDirectory', 'createDirectory']
+    });
+
+    if (!dialogResult || dialogResult.canceled || !dialogResult.filePaths || dialogResult.filePaths.length === 0) {
+      return; // User cancelled
+    }
+
+    const exportPath = dialogResult.filePaths[0];
+
+    // Show progress modal
+    showProgressModal('Exportando listado CSV...', 'Preparando exportación...');
+
+    // Call IPC handler to generate CSV
+    const result = await window.electronAPI.exportPaidUsersCSV({
+      exportPath,
+      users: paidUsers
+    });
+
+    // Close progress modal
+    closeProgressModal();
+
+    if (result.success) {
+      showInfoModal(
+        'Exportación Completada',
+        `Se ha generado el archivo ${result.fileName} correctamente con ${paidUsers.length} alumno${paidUsers.length !== 1 ? 's' : ''}.`
+      );
+    } else {
+      showInfoModal('Error', result.error || 'Error desconocido al exportar CSV');
+    }
+  } catch (error) {
+    console.error('[handleExportPaidUsersCSV] Error:', error);
+    closeProgressModal();
+    showInfoModal('Error', error.message || 'Error al exportar CSV de alumnos pagados');
   }
 }
 

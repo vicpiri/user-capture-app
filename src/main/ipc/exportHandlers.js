@@ -1445,7 +1445,7 @@ function registerExportHandlers(context) {
     }
   });
 
-  // Export Paid Users List PDF
+  // Export Paid Users List PDF (all groups in one document)
   ipcMain.handle('export-paid-users-list-pdf', async (event, { exportPath, usersByGroup }) => {
     const PDFDocument = require('pdfkit');
 
@@ -1454,13 +1454,31 @@ function registerExportHandlers(context) {
       logger.info(`Export path: ${exportPath}`);
       logger.info(`Groups with users: ${Object.keys(usersByGroup).length}`);
 
-      const generatedFiles = [];
       const groupCodes = Object.keys(usersByGroup).sort();
-      const totalGroups = groupCodes.length;
-      let processedGroups = 0;
 
-      // Generate one PDF per group
-      for (const groupCode of groupCodes) {
+      // Create single PDF for all groups
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: 50, bottom: 50, left: 50, right: 50 }
+      });
+
+      const fileName = 'Alumnos_Pagados.pdf';
+      const filePath = path.join(exportPath, fileName);
+      const stream = fs.createWriteStream(filePath);
+      doc.pipe(stream);
+
+      // Main title
+      doc.fontSize(20)
+         .font('Helvetica-Bold')
+         .text('Alumnos con Orla Pagada', { align: 'center' });
+
+      doc.moveDown(2);
+
+      let totalUsers = 0;
+      let globalIndex = 1;
+
+      // Process each group
+      groupCodes.forEach((groupCode, groupIndex) => {
         const users = usersByGroup[groupCode];
 
         // Sort users alphabetically by last_name1, then last_name2, then first_name
@@ -1477,34 +1495,17 @@ function registerExportHandlers(context) {
           return firstNameA.localeCompare(firstNameB);
         });
 
-        // Create PDF
-        const doc = new PDFDocument({
-          size: 'A4',
-          margins: { top: 50, bottom: 50, left: 50, right: 50 }
-        });
+        totalUsers += users.length;
 
-        const fileName = `Alumnos_Pagados_${groupCode}.pdf`;
-        const filePath = path.join(exportPath, fileName);
-        const stream = fs.createWriteStream(filePath);
-        doc.pipe(stream);
+        // Add some space between groups (except first)
+        if (groupIndex > 0) {
+          doc.moveDown(1.5);
+        }
 
-        // Title
-        doc.fontSize(18)
+        // Group title
+        doc.fontSize(14)
            .font('Helvetica-Bold')
-           .text(`Alumnos con Orla Pagada - Grupo ${groupCode}`, { align: 'center' });
-
-        doc.moveDown(2);
-
-        // Table header
-        doc.fontSize(12)
-           .font('Helvetica-Bold')
-           .text('Apellidos y Nombre', 50, doc.y, { continued: true, width: 450 })
-           .text('Grupo', 500, doc.y, { width: 50 });
-
-        doc.moveDown(0.5);
-        doc.moveTo(50, doc.y)
-           .lineTo(550, doc.y)
-           .stroke();
+           .text(`Grupo ${groupCode}`, { underline: true });
 
         doc.moveDown(0.5);
 
@@ -1512,7 +1513,7 @@ function registerExportHandlers(context) {
         doc.fontSize(11)
            .font('Helvetica');
 
-        users.forEach((user, index) => {
+        users.forEach((user) => {
           const lastName2 = user.last_name2 ? ` ${user.last_name2}` : '';
           const fullName = `${user.last_name1}${lastName2}, ${user.first_name}`;
 
@@ -1522,35 +1523,112 @@ function registerExportHandlers(context) {
             doc.fontSize(11).font('Helvetica');
           }
 
-          doc.text(`${index + 1}. ${fullName}`, 50, doc.y, { continued: true, width: 440 })
+          doc.text(`${globalIndex}. ${fullName}`, 50, doc.y, { continued: true, width: 440 })
              .text(user.group_code, 500, doc.y, { width: 50 });
 
           doc.moveDown(0.3);
+          globalIndex++;
         });
 
-        // Footer
+        // Group subtotal
         doc.fontSize(10)
-           .font('Helvetica')
-           .text(`Total: ${users.length} alumno${users.length !== 1 ? 's' : ''}`, 50, doc.page.height - 70);
+           .font('Helvetica-Bold')
+           .text(`Subtotal grupo ${groupCode}: ${users.length} alumno${users.length !== 1 ? 's' : ''}`, 50, doc.y);
 
-        doc.end();
+        doc.moveDown(0.5);
+      });
 
-        await new Promise((resolve) => stream.on('finish', resolve));
+      // Add final page with total
+      doc.addPage();
+      doc.fontSize(16)
+         .font('Helvetica-Bold')
+         .text('Resumen', { align: 'center' });
 
-        logger.success(`Generated PDF: ${fileName}`);
-        generatedFiles.push(fileName);
+      doc.moveDown(1);
 
-        // Update progress
-        processedGroups++;
-        sendProgressUpdate(getMainWindow, processedGroups, totalGroups, `PDF generado: ${fileName}`);
-      }
+      doc.fontSize(12)
+         .font('Helvetica')
+         .text(`Total de grupos: ${groupCodes.length}`, 50);
+
+      doc.text(`Total de alumnos: ${totalUsers}`, 50);
+
+      doc.end();
+
+      await new Promise((resolve) => stream.on('finish', resolve));
 
       logger.section('PAID USERS LIST PDF EXPORT COMPLETED');
-      logger.success(`Generated ${generatedFiles.length} PDF file(s)`);
+      logger.success(`Generated PDF: ${fileName}`);
 
-      return { success: true, generatedFiles };
+      return { success: true, fileName };
     } catch (error) {
       logger.error('Error exporting paid users list PDF', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Export Paid Users List CSV
+  ipcMain.handle('export-paid-users-csv', async (event, { exportPath, users }) => {
+    try {
+      logger.section('PAID USERS CSV EXPORT');
+      logger.info(`Export path: ${exportPath}`);
+      logger.info(`Total users: ${users.length}`);
+
+      // Sort users by group, then alphabetically by last name
+      users.sort((a, b) => {
+        const groupA = (a.group_code || '').toLowerCase();
+        const groupB = (b.group_code || '').toLowerCase();
+
+        if (groupA !== groupB) return groupA.localeCompare(groupB);
+
+        const lastNameA1 = (a.last_name1 || '').toLowerCase();
+        const lastNameB1 = (b.last_name1 || '').toLowerCase();
+        const lastNameA2 = (a.last_name2 || '').toLowerCase();
+        const lastNameB2 = (b.last_name2 || '').toLowerCase();
+        const firstNameA = (a.first_name || '').toLowerCase();
+        const firstNameB = (b.first_name || '').toLowerCase();
+
+        if (lastNameA1 !== lastNameB1) return lastNameA1.localeCompare(lastNameB1);
+        if (lastNameA2 !== lastNameB2) return lastNameA2.localeCompare(lastNameB2);
+        return firstNameA.localeCompare(firstNameB);
+      });
+
+      // Build CSV content
+      const csvRows = [];
+
+      // Header
+      csvRows.push('Grupo,Apellido1,Apellido2,Nombre');
+
+      // Data rows
+      users.forEach(user => {
+        const group = user.group_code || '';
+        const lastName1 = user.last_name1 || '';
+        const lastName2 = user.last_name2 || '';
+        const firstName = user.first_name || '';
+
+        // Escape fields that contain commas or quotes
+        const escapeField = (field) => {
+          if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+            return `"${field.replace(/"/g, '""')}"`;
+          }
+          return field;
+        };
+
+        csvRows.push(`${escapeField(group)},${escapeField(lastName1)},${escapeField(lastName2)},${escapeField(firstName)}`);
+      });
+
+      const csvContent = csvRows.join('\n');
+      const fileName = 'Alumnos_Pagados.csv';
+      const filePath = path.join(exportPath, fileName);
+
+      // Write CSV file
+      fs.writeFileSync(filePath, csvContent, 'utf8');
+
+      logger.section('PAID USERS CSV EXPORT COMPLETED');
+      logger.success(`Generated CSV: ${fileName}`);
+
+      return { success: true, fileName };
+    } catch (error) {
+      logger.error('Error exporting paid users CSV', error);
       return { success: false, error: error.message };
     }
   });

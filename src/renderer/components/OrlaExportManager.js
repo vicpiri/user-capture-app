@@ -210,10 +210,9 @@
         this.closeProgressModal();
 
         if (result.success) {
-          const fileCount = result.generatedFiles?.length || 0;
           this.showInfoModal(
             'Exportación Completada',
-            `Se ${fileCount === 1 ? 'ha generado' : 'han generado'} ${fileCount} archivo${fileCount !== 1 ? 's' : ''} PDF correctamente con el listado de alumnos de orla pagada.`
+            `Se ha generado el archivo ${result.fileName} correctamente con el listado de alumnos de orla pagada.`
           );
           this.onExportComplete();
         } else {
