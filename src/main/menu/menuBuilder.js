@@ -149,6 +149,12 @@ class MenuBuilder {
               click: () => {
                 this.mainWindow.webContents.send('menu-export-orla-pdf');
               }
+            },
+            {
+              label: 'Listado de alumnos pagados en PDF',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-paid-orla-pdf');
+              }
             }
           ]
         },

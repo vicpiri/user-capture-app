@@ -48,6 +48,7 @@
       this.onExportImagesName = config.onExportImagesName || (() => {});
       this.onExportToRepository = config.onExportToRepository || (() => {});
       this.onExportOrlaPDF = config.onExportOrlaPDF || (() => {});
+      this.onExportPaidOrlaPDF = config.onExportPaidOrlaPDF || (() => {});
       this.onUpdateXML = config.onUpdateXML || (() => {});
       this.onAddImageTag = config.onAddImageTag || (() => {});
       this.onShowTaggedImages = config.onShowTaggedImages || (() => {});
@@ -331,6 +332,10 @@
 
       this.electronAPI.onMenuExportOrlaPDF(() => {
         this.onExportOrlaPDF();
+      });
+
+      this.electronAPI.onMenuExportPaidOrlaPDF(() => {
+        this.onExportPaidOrlaPDF();
       });
     }
 

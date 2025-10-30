@@ -138,6 +138,93 @@
         this.showInfoModal('Error', error.message || 'Error al exportar orla PDF');
       }
     }
+
+    /**
+     * Export PDF list for paid users only
+     */
+    async exportPaidOrlaPDF() {
+      if (!this.checkProjectOpen()) return;
+
+      try {
+        // Get all users and groups
+        const allUsers = this.getAllUsers();
+        const allGroups = this.getAllGroups();
+
+        if (!allUsers || allUsers.length === 0) {
+          this.showInfoModal('Aviso', 'No hay usuarios en el proyecto');
+          return;
+        }
+
+        if (!allGroups || allGroups.length === 0) {
+          this.showInfoModal('Aviso', 'No hay grupos en el proyecto');
+          return;
+        }
+
+        // Filter only paid users (orla_paid === 1)
+        const paidUsers = allUsers.filter(user => user.orla_paid === 1);
+
+        if (paidUsers.length === 0) {
+          this.showInfoModal('Aviso', 'No hay usuarios con orla pagada en el proyecto');
+          return;
+        }
+
+        // Group paid users by group_code
+        const usersByGroup = {};
+        paidUsers.forEach(user => {
+          const groupCode = user.group_code;
+          if (!usersByGroup[groupCode]) {
+            usersByGroup[groupCode] = [];
+          }
+          usersByGroup[groupCode].push(user);
+        });
+
+        // Check if there are any users at all
+        if (Object.keys(usersByGroup).length === 0) {
+          this.showInfoModal('Aviso', 'No hay usuarios con orla pagada en el proyecto');
+          return;
+        }
+
+        // Ask user to select export folder
+        const dialogResult = await this.showOpenDialog({
+          title: 'Seleccionar carpeta de exportación',
+          buttonLabel: 'Exportar',
+          properties: ['openDirectory', 'createDirectory']
+        });
+
+        if (!dialogResult || dialogResult.canceled || !dialogResult.filePaths || dialogResult.filePaths.length === 0) {
+          return; // User cancelled
+        }
+
+        const exportPath = dialogResult.filePaths[0];
+
+        // Show progress modal
+        this.showProgressModal('Exportando listado de alumnos pagados en PDF...', 'Preparando exportación...');
+
+        // Call IPC handler to generate PDFs (paid users list)
+        const result = await this.electronAPI.exportPaidUsersListPDF({
+          exportPath,
+          usersByGroup
+        });
+
+        // Close progress modal
+        this.closeProgressModal();
+
+        if (result.success) {
+          const fileCount = result.generatedFiles?.length || 0;
+          this.showInfoModal(
+            'Exportación Completada',
+            `Se ${fileCount === 1 ? 'ha generado' : 'han generado'} ${fileCount} archivo${fileCount !== 1 ? 's' : ''} PDF correctamente con el listado de alumnos de orla pagada.`
+          );
+          this.onExportComplete();
+        } else {
+          this.showInfoModal('Error', result.error || 'Error desconocido al exportar listado PDF');
+        }
+      } catch (error) {
+        console.error('[OrlaExportManager] Error exporting paid users list PDF:', error);
+        this.closeProgressModal();
+        this.showInfoModal('Error', error.message || 'Error al exportar listado PDF de alumnos pagados');
+      }
+    }
   }
 
   // Export (for tests and browser)

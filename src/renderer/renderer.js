@@ -411,6 +411,7 @@ function initializeMenuEventManager() {
     onExportImagesName: handleExportImagesName,
     onExportToRepository: handleExportToRepository,
     onExportOrlaPDF: handleExportOrlaPDF,
+    onExportPaidOrlaPDF: handleExportPaidOrlaPDF,
     onUpdateXML: handleUpdateXML,
     onAddImageTag: handleAddImageTag,
     onShowTaggedImages: handleShowTaggedImages,
@@ -1571,6 +1572,13 @@ async function handleExportToRepository() {
 async function handleExportOrlaPDF() {
   if (orlaExportManager) {
     await orlaExportManager.exportOrlaPDF();
+  }
+}
+
+// Handle paid orla PDF export
+async function handleExportPaidOrlaPDF() {
+  if (orlaExportManager) {
+    await orlaExportManager.exportPaidOrlaPDF();
   }
 }
 
