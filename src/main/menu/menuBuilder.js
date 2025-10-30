@@ -400,6 +400,13 @@ class MenuBuilder {
           click: () => {
             this.mainWindow.webContents.send('menu-show-tagged-images');
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Últimos carnets impresos',
+          click: () => {
+            this.callbacks.openPrintedCardsWindow();
+          }
         }
       ]
     };

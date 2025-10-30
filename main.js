@@ -10,6 +10,7 @@ const MainWindowManager = require('./src/main/window/mainWindow');
 const CameraWindowManager = require('./src/main/window/cameraWindow');
 const ImageGridWindowManager = require('./src/main/window/imageGridWindow');
 const RepositoryGridWindowManager = require('./src/main/window/repositoryGridWindow');
+const PrintedCardsWindowManager = require('./src/main/window/printedCardsWindow');
 const { getLogger } = require('./src/main/logger');
 const {
   loadGlobalConfig,
@@ -48,6 +49,7 @@ const mainWindowManager = new MainWindowManager();
 const cameraWindowManager = new CameraWindowManager();
 const imageGridWindowManager = new ImageGridWindowManager();
 const repositoryGridWindowManager = new RepositoryGridWindowManager();
+const printedCardsWindowManager = new PrintedCardsWindowManager();
 
 let dbManager;
 let folderWatcher;
@@ -271,6 +273,7 @@ function createMenu() {
       },
       openImageGridWindow,
       openRepositoryGridWindow,
+      openPrintedCardsWindow,
       openPOC: () => {
         const { shell } = require('electron');
         const pocPath = path.join(__dirname, 'src', 'renderer', '_poc', 'poc-test.html');
@@ -325,6 +328,22 @@ function openCameraWindow() {
 
 function closeCameraWindow() {
   cameraWindowManager.close();
+}
+
+function openPrintedCardsWindow() {
+  if (!dbManager) {
+    const mainWindow = mainWindowManager.getWindow();
+    dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Proyecto no abierto',
+      message: 'Debes abrir o crear un proyecto primero',
+      buttons: ['Aceptar']
+    });
+    return;
+  }
+
+  const isDev = process.argv.includes('--dev');
+  printedCardsWindowManager.open({ isDev });
 }
 
 function openImageGridWindow() {

@@ -365,6 +365,36 @@ class DatabaseManager {
     });
   }
 
+  async getUserByNIA(nia) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT u.*, g.name as group_name
+        FROM users u
+        LEFT JOIN groups g ON u.group_code = g.code
+        WHERE u.nia = ?
+      `;
+      this.db.get(query, [nia], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  }
+
+  async getUserByDocument(document) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT u.*, g.name as group_name
+        FROM users u
+        LEFT JOIN groups g ON u.group_code = g.code
+        WHERE u.document = ?
+      `;
+      this.db.get(query, [document], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  }
+
   async getGroups() {
     return new Promise((resolve, reject) => {
       this.db.all('SELECT * FROM groups ORDER BY code', [], (err, rows) => {

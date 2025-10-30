@@ -200,6 +200,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCardPrintRequests: () => ipcRenderer.invoke('get-card-print-requests'),
   checkCardPrintRequests: (userIds) => ipcRenderer.invoke('check-card-print-requests', userIds),
   markCardsAsPrinted: (userIds) => ipcRenderer.invoke('mark-cards-as-printed', userIds),
+  getPrintedCards: () => ipcRenderer.invoke('get-printed-cards'),
+  clearPrintedCards: () => ipcRenderer.invoke('clear-printed-cards'),
 
   // Publication requests
   requestPublication: (userIds) => ipcRenderer.invoke('request-publication', userIds),

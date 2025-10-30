@@ -702,6 +702,142 @@ function registerMiscHandlers(context) {
       return { success: false, error: error.message };
     }
   });
+
+  // Get list of printed cards (users with files in Printed-ID folder)
+  ipcMain.handle('get-printed-cards', async () => {
+    try {
+      const fs = require('fs').promises;
+
+      if (!state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado la ruta del depósito de imágenes' };
+      }
+
+      const printedIdFolder = path.join(repositoryPath, 'Printed-ID');
+
+      // Check if Printed-ID folder exists
+      let files = [];
+      try {
+        await fs.access(printedIdFolder);
+        files = await fs.readdir(printedIdFolder);
+      } catch {
+        // Folder doesn't exist, return empty list
+        logger.info('[Card Print] Printed-ID folder does not exist');
+        return { success: true, users: [] };
+      }
+
+      if (files.length === 0) {
+        logger.info('[Card Print] No printed cards found');
+        return { success: true, users: [] };
+      }
+
+      // Get user information for each file
+      const users = [];
+      for (const fileId of files) {
+        // File name is the user ID (NIA or document)
+        // Try to find user by NIA first, then by document
+        let user = null;
+
+        // Try NIA (students)
+        const studentResult = await state.dbManager.getUserByNIA(fileId);
+        if (studentResult) {
+          user = studentResult;
+        } else {
+          // Try document (teachers/staff)
+          const staffResult = await state.dbManager.getUserByDocument(fileId);
+          if (staffResult) {
+            user = staffResult;
+          }
+        }
+
+        if (user) {
+          // Get file modification time (when it was moved to Printed-ID)
+          try {
+            const filePath = path.join(printedIdFolder, fileId);
+            const stats = await fs.stat(filePath);
+            user.printed_date = stats.mtime.toISOString();
+          } catch (error) {
+            logger.warning(`[Card Print] Could not get file stats for ${fileId}: ${error.message}`);
+            user.printed_date = null;
+          }
+
+          users.push(user);
+        } else {
+          logger.warning(`[Card Print] User not found for printed card ID: ${fileId}`);
+        }
+      }
+
+      // Sort by printed date (newest first)
+      users.sort((a, b) => {
+        if (!a.printed_date) return 1;
+        if (!b.printed_date) return -1;
+        return new Date(b.printed_date) - new Date(a.printed_date);
+      });
+
+      logger.info(`[Card Print] Found ${users.length} printed cards`);
+      return { success: true, users };
+    } catch (error) {
+      logger.error('Error getting printed cards:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Clear printed cards list (delete all files in Printed-ID folder)
+  ipcMain.handle('clear-printed-cards', async () => {
+    try {
+      const fs = require('fs').promises;
+
+      if (!state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado la ruta del depósito de imágenes' };
+      }
+
+      const printedIdFolder = path.join(repositoryPath, 'Printed-ID');
+
+      // Check if Printed-ID folder exists
+      try {
+        await fs.access(printedIdFolder);
+      } catch {
+        // Folder doesn't exist, nothing to clear
+        logger.info('[Card Print] Printed-ID folder does not exist, nothing to clear');
+        return { success: true, deletedCount: 0 };
+      }
+
+      // Read all files in the folder
+      const files = await fs.readdir(printedIdFolder);
+
+      if (files.length === 0) {
+        logger.info('[Card Print] Printed-ID folder is already empty');
+        return { success: true, deletedCount: 0 };
+      }
+
+      // Delete all files
+      let deletedCount = 0;
+      for (const file of files) {
+        try {
+          const filePath = path.join(printedIdFolder, file);
+          await fs.unlink(filePath);
+          deletedCount++;
+        } catch (error) {
+          logger.warning(`[Card Print] Could not delete file ${file}: ${error.message}`);
+        }
+      }
+
+      logger.info(`[Card Print] Cleared ${deletedCount} files from Printed-ID folder`);
+      return { success: true, deletedCount };
+    } catch (error) {
+      logger.error('Error clearing printed cards:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerMiscHandlers };
