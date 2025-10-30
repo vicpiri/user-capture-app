@@ -54,7 +54,7 @@ const photosColumnHeader = document.getElementById('photos-column-header');
 const selectedUserInfo = document.getElementById('selected-user-info');
 const userCount = document.getElementById('user-count');
 const linkBtn = document.getElementById('link-btn');
-const payOriaBtn = document.getElementById('pay-oria-btn');
+const payOrlaBtn = document.getElementById('pay-orla-btn');
 const importReceiptBtn = document.getElementById('import-receipt-btn');
 const duplicatesAlert = document.getElementById('duplicates-alert');
 const duplicatesCount = document.getElementById('duplicates-count');
@@ -304,6 +304,8 @@ function initializeSelectionModeManager() {
     },
     onRequestCardPrint: handleRequestCardPrint,
     onRequestPublication: handleRequestPublication,
+    onUnpayOrla: handleUnpayOrla,
+    onUnprintReceipt: handleUnprintReceipt,
     selectedUserInfo: selectedUserInfo,
     tableHeader: document.querySelector('.user-table thead tr')
   });
@@ -607,8 +609,8 @@ function initializeEventListeners() {
   // Action buttons
   linkBtn.addEventListener('click', handleLinkImage);
 
-  if (payOriaBtn) {
-    payOriaBtn.addEventListener('click', handlePayOrla);
+  if (payOrlaBtn) {
+    payOrlaBtn.addEventListener('click', handlePayOrla);
   }
 
   if (importReceiptBtn) {
@@ -1233,63 +1235,172 @@ async function handlePrintReceipt() {
     }
 
     const currentStatus = statusResult.isPrinted;
-    const newStatus = !currentStatus;
 
-    // If trying to mark as printed, check if orla is paid first
-    if (newStatus) {
-      const paidStatusResult = await window.electronAPI.getOrlaPaidStatus(selectedUser.id);
-
-      if (!paidStatusResult.success) {
-        showInfoModal('Error', paidStatusResult.error || 'Error al verificar el estado de pago');
-        return;
-      }
-
-      if (!paidStatusResult.isPaid) {
-        showInfoModal('Aviso', 'No se puede marcar el recibo como impreso sin que la orla esté pagada previamente');
-        return;
-      }
+    // If already printed, show warning and exit
+    if (currentStatus) {
+      showInfoModal('⚠️ Aviso', 'El recibo ya está marcado como impreso. No se puede volver a imprimir.');
+      return;
     }
 
-    const action = newStatus ? 'marcar como impreso' : 'desmarcar como impreso';
+    // If trying to mark as printed, check if orla is paid first
+    const paidStatusResult = await window.electronAPI.getOrlaPaidStatus(selectedUser.id);
+
+    if (!paidStatusResult.success) {
+      showInfoModal('Error', paidStatusResult.error || 'Error al verificar el estado de pago');
+      return;
+    }
+
+    if (!paidStatusResult.isPaid) {
+      showInfoModal('Aviso', 'No se puede marcar el recibo como impreso sin que la orla esté pagada previamente');
+      return;
+    }
 
     // Confirm action
     const confirmed = await showConfirmationModal(
-      `¿Deseas ${action} el recibo de ${selectedUser.first_name} ${selectedUser.last_name1}?`
+      `¿Deseas marcar como impreso el recibo de ${selectedUser.first_name} ${selectedUser.last_name1}?`
     );
 
     if (!confirmed) {
       return;
     }
 
-    // Mark as printed/unprinted
-    const result = await window.electronAPI.markReceiptPrinted(selectedUser.id, newStatus);
+    // Mark as printed
+    const result = await window.electronAPI.markReceiptPrinted(selectedUser.id, true);
 
     if (result.success) {
       // Update the user's printed status in the current data
-      selectedUser.receipt_printed = newStatus ? 1 : 0;
+      selectedUser.receipt_printed = 1;
 
       // Update the printed status in currentUsers array
       const userIndex = currentUsers.findIndex(u => u.id === selectedUser.id);
       if (userIndex !== -1) {
-        currentUsers[userIndex].receipt_printed = newStatus ? 1 : 0;
+        currentUsers[userIndex].receipt_printed = 1;
       }
 
       // Update the printed status in allUsers array
       const allUserIndex = allUsers.findIndex(u => u.id === selectedUser.id);
       if (allUserIndex !== -1) {
-        allUsers[allUserIndex].receipt_printed = newStatus ? 1 : 0;
+        allUsers[allUserIndex].receipt_printed = 1;
       }
 
       // Re-display the current user list to show the new icon
       displayUsers(currentUsers, allUsers);
 
-      showInfoModal('Éxito', `Recibo ${newStatus ? 'marcado como impreso' : 'desmarcado como impreso'} correctamente`);
+      showInfoModal('Éxito', 'Recibo marcado como impreso correctamente');
     } else {
       showInfoModal('Error', result.error || 'Error al actualizar el estado de impresión');
     }
   } catch (error) {
     console.error('[handlePrintReceipt] Error:', error);
     showInfoModal('Error', error.message || 'Error al procesar la impresión del recibo');
+  }
+}
+
+// Handle unpaying orla from context menu
+async function handleUnpayOrla(userId) {
+  try {
+    // Find the user
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) {
+      showInfoModal('Error', 'Usuario no encontrado');
+      return;
+    }
+
+    // Confirm action
+    const confirmed = await showConfirmationModal(
+      `¿Deseas desmarcar como pagada la orla de ${user.first_name} ${user.last_name1}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Mark as unpaid
+    const result = await window.electronAPI.markOrlaPaid(userId, false);
+
+    if (result.success) {
+      // Update the user's paid status in all arrays
+      user.orla_paid = 0;
+
+      const userIndex = currentUsers.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        currentUsers[userIndex].orla_paid = 0;
+      }
+
+      const allUserIndex = allUsers.findIndex(u => u.id === userId);
+      if (allUserIndex !== -1) {
+        allUsers[allUserIndex].orla_paid = 0;
+      }
+
+      // Update selectedUser if it's the current user
+      if (selectedUser && selectedUser.id === userId) {
+        selectedUser.orla_paid = 0;
+      }
+
+      // Re-display the current user list to update the icon
+      displayUsers(currentUsers, allUsers);
+
+      showInfoModal('Éxito', 'Orla desmarcada como pagada correctamente');
+    } else {
+      showInfoModal('Error', result.error || 'Error al actualizar el estado de pago');
+    }
+  } catch (error) {
+    console.error('[handleUnpayOrla] Error:', error);
+    showInfoModal('Error', error.message || 'Error al desmarcar el pago de orla');
+  }
+}
+
+// Handle unprinting receipt from context menu
+async function handleUnprintReceipt(userId) {
+  try {
+    // Find the user
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) {
+      showInfoModal('Error', 'Usuario no encontrado');
+      return;
+    }
+
+    // Confirm action
+    const confirmed = await showConfirmationModal(
+      `¿Deseas desmarcar como impreso el recibo de ${user.first_name} ${user.last_name1}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Mark as unprinted
+    const result = await window.electronAPI.markReceiptPrinted(userId, false);
+
+    if (result.success) {
+      // Update the user's printed status in all arrays
+      user.receipt_printed = 0;
+
+      const userIndex = currentUsers.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        currentUsers[userIndex].receipt_printed = 0;
+      }
+
+      const allUserIndex = allUsers.findIndex(u => u.id === userId);
+      if (allUserIndex !== -1) {
+        allUsers[allUserIndex].receipt_printed = 0;
+      }
+
+      // Update selectedUser if it's the current user
+      if (selectedUser && selectedUser.id === userId) {
+        selectedUser.receipt_printed = 0;
+      }
+
+      // Re-display the current user list to update the icon
+      displayUsers(currentUsers, allUsers);
+
+      showInfoModal('Éxito', 'Recibo desmarcado como impreso correctamente');
+    } else {
+      showInfoModal('Error', result.error || 'Error al actualizar el estado de impresión');
+    }
+  } catch (error) {
+    console.error('[handleUnprintReceipt] Error:', error);
+    showInfoModal('Error', error.message || 'Error al desmarcar la impresión del recibo');
   }
 }
 

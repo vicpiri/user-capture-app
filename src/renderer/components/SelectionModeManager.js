@@ -27,6 +27,8 @@
       this.reRenderUsers = config.reRenderUsers || (() => {}); // Re-render user list
       this.onRequestCardPrint = config.onRequestCardPrint || (() => {}); // Called when requesting card print
       this.onRequestPublication = config.onRequestPublication || (() => {}); // Called when requesting publication
+      this.onUnpayOrla = config.onUnpayOrla || (() => {}); // Called when unpaying orla from context menu
+      this.onUnprintReceipt = config.onUnprintReceipt || (() => {}); // Called when unprinting receipt from context menu
 
       // DOM elements
       this.selectedUserInfo = config.selectedUserInfo; // Element to display selection info
@@ -73,7 +75,7 @@
       menu.style.left = `${event.clientX}px`;
       menu.style.top = `${event.clientY}px`;
 
-      // If not in selection mode, show "Seleccionar" option
+      // If not in selection mode, show "Seleccionar" option and payment/printing options
       if (!this.isActive) {
         const selectOption = document.createElement('div');
         selectOption.className = 'context-menu-item';
@@ -83,6 +85,41 @@
           menu.remove();
         });
         menu.appendChild(selectOption);
+
+        // Add separator if there are payment/printing options
+        if (user.orla_paid === 1 || user.receipt_printed === 1) {
+          const separator = document.createElement('div');
+          separator.className = 'context-menu-separator';
+          menu.appendChild(separator);
+        }
+
+        // Option: Desmarcar recibo impreso (only if printed)
+        if (user.receipt_printed === 1) {
+          const unprintOption = document.createElement('div');
+          unprintOption.className = 'context-menu-item';
+          unprintOption.textContent = 'Desmarcar recibo impreso';
+          unprintOption.addEventListener('click', async () => {
+            menu.remove();
+            if (this.onUnprintReceipt) {
+              await this.onUnprintReceipt(user.id);
+            }
+          });
+          menu.appendChild(unprintOption);
+        }
+
+        // Option: Desmarcar orla pagada (only if paid AND receipt is not printed)
+        if (user.orla_paid === 1 && user.receipt_printed !== 1) {
+          const unpayOption = document.createElement('div');
+          unpayOption.className = 'context-menu-item';
+          unpayOption.textContent = 'Desmarcar orla pagada';
+          unpayOption.addEventListener('click', async () => {
+            menu.remove();
+            if (this.onUnpayOrla) {
+              await this.onUnpayOrla(user.id);
+            }
+          });
+          menu.appendChild(unpayOption);
+        }
       } else {
         // If in selection mode, show selection options
 
