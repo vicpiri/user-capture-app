@@ -22,6 +22,7 @@
       // Required dependencies
       this.exportOptionsModal = config.exportOptionsModal; // ExportOptionsModal instance
       this.inventoryExportOptionsModal = config.inventoryExportOptionsModal; // InventoryExportOptionsModal instance
+      this.confirmModal = config.confirmModal; // ConfirmModal instance
       this.showProgressModal = config.showProgressModal; // Function to show progress
       this.closeProgressModal = config.closeProgressModal; // Function to close progress
       this.showInfoModal = config.showInfoModal; // Function to show info/error
@@ -110,6 +111,13 @@
         const exportResult = await this.electronAPI.exportCSV(folderPath, usersToExport);
 
         if (exportResult.success) {
+          // Check if any of the exported users have card print requests BEFORE showing success modal
+          // Use the exportedUserIds from the backend (users that actually were exported)
+          if (exportResult.exportedUserIds && exportResult.exportedUserIds.length > 0) {
+            await this.checkAndMarkCardsAsPrinted(exportResult.exportedUserIds);
+          }
+
+          // Show success message after card print check
           let message = `CSV exportado correctamente: ${exportResult.filename}\n\n`;
           message += `${exportResult.exported} usuarios exportados`;
 
@@ -121,6 +129,59 @@
         } else {
           this.showInfoModal('Error', 'Error al exportar el CSV: ' + exportResult.error);
         }
+      }
+    }
+
+    /**
+     * Check if exported users have card print requests and ask to mark as printed
+     * @param {Array} exportedUserIds - IDs of users that were exported
+     */
+    async checkAndMarkCardsAsPrinted(exportedUserIds) {
+      try {
+        if (!exportedUserIds || exportedUserIds.length === 0) {
+          return;
+        }
+
+        // Check which users have card print requests
+        const checkResult = await this.electronAPI.checkCardPrintRequests(exportedUserIds);
+
+        if (!checkResult.success) {
+          console.error('Error checking card print requests:', checkResult.error);
+          return;
+        }
+
+        const usersWithRequests = checkResult.usersWithRequests || [];
+
+        if (usersWithRequests.length === 0) {
+          // No users with pending card print requests
+          return;
+        }
+
+        // Ask user if they want to mark cards as printed
+        const shouldMarkAsPrinted = await this.confirmModal.show(
+          `${usersWithRequests.length} de los usuarios exportados tienen solicitud de carnet pendiente.\n\n¿Desea marcarlos como impresos?`
+        );
+
+        if (shouldMarkAsPrinted) {
+          // Mark cards as printed (move from To-Print-ID to Printed-ID)
+          const markResult = await this.electronAPI.markCardsAsPrinted(usersWithRequests);
+
+          if (markResult.success) {
+            this.showInfoModal(
+              'Carnets marcados como impresos',
+              `Se han movido ${markResult.movedCount} solicitud(es) de carnet a la carpeta 'Printed-ID'`
+            );
+
+            // Trigger a refresh of the user list to update indicators
+            if (this.onExportComplete) {
+              this.onExportComplete();
+            }
+          } else {
+            this.showInfoModal('Error', 'Error al marcar carnets como impresos: ' + markResult.error);
+          }
+        }
+      } catch (error) {
+        console.error('Error in checkAndMarkCardsAsPrinted:', error);
       }
     }
 

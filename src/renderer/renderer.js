@@ -214,6 +214,7 @@ function initializeExportManager() {
   exportManager = new ExportManager({
     exportOptionsModal: exportOptionsModalInstance,
     inventoryExportOptionsModal: inventoryExportOptionsModalInstance,
+    confirmModal: confirmModalInstance,
     showProgressModal: showProgressModal,
     closeProgressModal: closeProgressModal,
     showInfoModal: showInfoModal,

@@ -604,6 +604,104 @@ function registerMiscHandlers(context) {
       return { success: false, error: error.message };
     }
   });
+
+  // Check if users have card print requests (To-Print-ID)
+  ipcMain.handle('check-card-print-requests', async (event, userIds) => {
+    try {
+      const fs = require('fs').promises;
+
+      if (!state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+
+      if (!repositoryPath) {
+        return { success: true, usersWithRequests: [] };
+      }
+
+      const toPrintIdFolder = path.join(repositoryPath, 'To-Print-ID');
+
+      // Check if To-Print-ID folder exists
+      try {
+        await fs.access(toPrintIdFolder);
+      } catch {
+        return { success: true, usersWithRequests: [] };
+      }
+
+      // Check which users have files in To-Print-ID
+      const usersWithRequests = [];
+      for (const userId of userIds) {
+        const filePath = path.join(toPrintIdFolder, userId); // No extension
+        try {
+          await fs.access(filePath);
+          usersWithRequests.push(userId);
+        } catch {
+          // File doesn't exist, skip
+        }
+      }
+
+      logger.info(`[Card Print] Found ${usersWithRequests.length} pending requests`);
+      return { success: true, usersWithRequests };
+    } catch (error) {
+      logger.error('Error checking card print requests:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Move card print requests from To-Print-ID to Printed-ID
+  ipcMain.handle('mark-cards-as-printed', async (event, userIds) => {
+    try {
+      const fs = require('fs').promises;
+
+      if (!state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado la ruta del depósito de imágenes' };
+      }
+
+      const toPrintIdFolder = path.join(repositoryPath, 'To-Print-ID');
+      const printedIdFolder = path.join(repositoryPath, 'Printed-ID');
+
+      // Create Printed-ID folder if it doesn't exist
+      try {
+        await fs.access(printedIdFolder);
+      } catch {
+        await fs.mkdir(printedIdFolder, { recursive: true });
+        logger.info(`Created Printed-ID folder: ${printedIdFolder}`);
+      }
+
+      // Move files from To-Print-ID to Printed-ID
+      let movedCount = 0;
+      for (const userId of userIds) {
+        const sourcePath = path.join(toPrintIdFolder, userId); // No extension
+        const destPath = path.join(printedIdFolder, userId); // No extension
+
+        try {
+          await fs.access(sourcePath);
+          await fs.rename(sourcePath, destPath);
+          movedCount++;
+          logger.info(`Moved card print request from To-Print-ID to Printed-ID: ${userId}`);
+        } catch (error) {
+          // File doesn't exist or couldn't be moved, skip
+          logger.warning(`Could not move card print request for user ${userId}: ${error.message}`);
+        }
+      }
+
+      // Invalidate cache after moving files
+      cardPrintRequestsCache = null;
+      cardPrintRequestsCacheTime = null;
+      logger.info('[Card Print] Cache invalidated after marking as printed');
+
+      return { success: true, movedCount };
+    } catch (error) {
+      logger.error('Error marking cards as printed:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerMiscHandlers };

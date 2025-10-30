@@ -51,8 +51,6 @@
           }
         });
       }, options);
-
-      console.log('[LazyImageManager] Initialized');
     }
 
     /**
@@ -137,8 +135,6 @@
           observedForLater++;
         }
       });
-
-      console.log(`[LazyImageManager] Loaded ${loadedImmediately} visible images, observing ${observedForLater} images`);
     }
 
     /**
@@ -171,7 +167,6 @@
     disconnect() {
       if (this.observer) {
         this.observer.disconnect();
-        console.log('[LazyImageManager] Disconnected');
       }
     }
 
@@ -197,8 +192,6 @@
           img.classList.add('lazy-loaded');
         }
       });
-
-      console.log(`[LazyImageManager] Loaded ${lazyImages.length} images immediately`);
     }
 
     /**

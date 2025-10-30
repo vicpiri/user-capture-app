@@ -192,11 +192,17 @@ function registerExportHandlers(context) {
       const totalUsers = usersWithRepositoryImages.length + (users.length - usersWithRepositoryImages.length);
       const ignoredUsers = totalUsers - usersWithRepositoryImages.length;
 
+      // Get exported user IDs for card print request checking
+      const exportedUserIds = usersWithRepositoryImages.map(user => {
+        return user.type === 'student' ? user.nia : user.document;
+      }).filter(id => id);
+
       return {
         success: true,
         filename,
         exported: usersWithRepositoryImages.length,
-        ignored: ignoredUsers
+        ignored: ignoredUsers,
+        exportedUserIds
       };
     } catch (error) {
       console.error('Error exporting CSV:', error);

@@ -7,6 +7,7 @@ const { ExportManager } = require('../../../src/renderer/components/ExportManage
 describe('ExportManager', () => {
   let manager;
   let mockExportOptionsModal;
+  let mockConfirmModal;
   let mockShowProgressModal;
   let mockCloseProgressModal;
   let mockShowInfoModal;
@@ -17,6 +18,11 @@ describe('ExportManager', () => {
   beforeEach(() => {
     // Mock ExportOptionsModal
     mockExportOptionsModal = {
+      show: jest.fn()
+    };
+
+    // Mock ConfirmModal
+    mockConfirmModal = {
       show: jest.fn()
     };
 
@@ -42,12 +48,15 @@ describe('ExportManager', () => {
       exportCSV: jest.fn(),
       exportImages: jest.fn(),
       exportImagesName: jest.fn(),
-      exportToRepository: jest.fn()
+      exportToRepository: jest.fn(),
+      checkCardPrintRequests: jest.fn().mockResolvedValue({ success: true, usersWithRequests: [] }),
+      markCardsAsPrinted: jest.fn().mockResolvedValue({ success: true, movedCount: 0 })
     };
 
     // Create manager instance
     manager = new ExportManager({
       exportOptionsModal: mockExportOptionsModal,
+      confirmModal: mockConfirmModal,
       showProgressModal: mockShowProgressModal,
       closeProgressModal: mockCloseProgressModal,
       showInfoModal: mockShowInfoModal,

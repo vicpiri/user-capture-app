@@ -96,10 +96,10 @@
         });
         menu.appendChild(requestCardPrintOption);
 
-        // Option: Solicitar Petición Oficial
+        // Option: Solicitar publicación oficial
         const requestPublicationOption = document.createElement('div');
         requestPublicationOption.className = 'context-menu-item';
-        requestPublicationOption.textContent = 'Solicitar Petición Oficial';
+        requestPublicationOption.textContent = 'Solicitar publicación oficial';
         requestPublicationOption.addEventListener('click', () => {
           this.onRequestPublication(Array.from(this.selectedUsers));
           menu.remove();

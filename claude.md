@@ -613,7 +613,53 @@ tests/unit/components/
   - Imágenes lazy-loaded
 - **Duración mínima**: Configurada para evitar flashes visuales
 
+#### Sistema de Petición de Carnets (v1.4.0)
+- **Funcionalidad**: Sistema para solicitar la impresión de carnets de usuarios
+- **Acceso**: Menú contextual > "Solicitar impresión de carnet"
+- **Características**:
+  - Funciona con modo multi-selección de usuarios
+  - Genera archivos con ID del usuario en carpeta `To-Print-ID` dentro del repositorio
+  - Nombre de archivos: `{ID}` sin extensión (NIA para alumnos, DNI para personal)
+  - Icono de "ID card" visible en la lista cuando existe archivo en `To-Print-ID`
+  - Solo procesa usuarios que tienen imagen en el repositorio
+  - Filtro en menú Ver > "Mostrar solo usuarios con solicitud de carnet"
+  - El icono desaparece automáticamente cuando se elimina el archivo
+  - **Marcado automático como impresos**: Al exportar CSV para carnets, si algún usuario exportado tiene solicitud pendiente, se pregunta al usuario si desea marcarlos como impresos (mueve archivos de `To-Print-ID` a `Printed-ID`)
+- **Optimización**: Usa caché con TTL para minimizar operaciones de filesystem
+- **Uso**: Ideal para gestionar impresión de carnets en lotes
+
+#### Sistema de Petición de Publicación Oficial (v1.4.0)
+- **Funcionalidad**: Sistema para solicitar publicación oficial de fotografías
+- **Acceso**: Menú contextual > "Solicitar publicación oficial"
+- **Características**:
+  - Funciona con modo multi-selección de usuarios
+  - Copia imágenes del repositorio a carpeta `To-Publish` dentro del repositorio
+  - Nombre de archivos: `{ID}.jpg` (NIA para alumnos, DNI para personal)
+  - Icono de "Upload" visible en la lista cuando existe imagen en `To-Publish`
+  - Solo procesa usuarios que tienen imagen en el repositorio
+  - Filtro en menú Ver > "Mostrar solo usuarios con solicitud de publicación"
+  - El icono desaparece automáticamente cuando se elimina la imagen
+- **Optimización**: Usa caché con TTL para minimizar operaciones de filesystem
+- **Uso**: Ideal para gestionar publicaciones oficiales (sistemas de gestión académica, etc.)
+
 ## Changelog Reciente
+
+### 2025-01-30 - Mejora en Sistema de Petición de Carnets
+
+**Marcado automático de carnets como impresos**:
+- **Funcionalidad**: Al exportar CSV para carnets, la aplicación verifica si algún usuario exportado tiene solicitud de carnet pendiente en `To-Print-ID`
+- **Flujo**:
+  1. Usuario exporta CSV para carnets (Ctrl+E)
+  2. Si algún usuario exportado tiene archivo en `To-Print-ID`, se muestra un modal de confirmación
+  3. Si el usuario confirma, los archivos se mueven de `To-Print-ID` a `Printed-ID`
+  4. Se muestra mensaje de confirmación con cantidad de archivos movidos
+  5. Se refresca la lista de usuarios para actualizar indicadores visuales
+- **Archivos modificados**:
+  - `src/main/ipc/miscHandlers.js`: Agregados handlers `check-card-print-requests` y `mark-cards-as-printed`
+  - `src/preload/preload.js`: Expuestos nuevos métodos IPC al renderer
+  - `src/renderer/components/ExportManager.js`: Agregado método `checkAndMarkCardsAsPrinted()`
+  - `src/renderer/renderer.js`: Pasado `confirmModal` a `ExportManager`
+- **Beneficio**: Automatiza el flujo de trabajo de impresión de carnets, evitando tener que marcar manualmente los carnets como impresos
 
 ### 2025-01-29 - Fixes y limpieza de código
 
@@ -644,7 +690,7 @@ tests/unit/components/
 
 ## Estado Actual
 
-**Versión**: 1.3.1
+**Versión**: 1.4.0
 
 Aplicación completamente funcional con todas las características principales implementadas:
 
@@ -664,7 +710,10 @@ Aplicación completamente funcional con todas las características principales i
   - Exportación a repositorio Google Drive
 - ✅ **Sistema de etiquetado**: tags personalizados para imágenes
 - ✅ **Detección de duplicados**: identificación automática
+- ✅ **Sistema de petición de carnets**: solicitar impresión de carnets con indicadores visuales
+- ✅ **Sistema de petición de publicación**: solicitar publicación oficial con indicadores visuales
 - ✅ **Múltiples ventanas**: principal, cámara, grids (capturadas y repositorio)
+- ✅ **Filtros avanzados**: búsqueda, grupo, duplicados, carnets pendientes, publicación pendiente
 - ✅ **Optimizaciones**:
   - Caché de archivos con TTL
   - Virtual scrolling para listas grandes
