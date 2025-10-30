@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const DatabaseManager = require('./src/main/database');
@@ -70,12 +70,13 @@ let showAdditionalActions = true;
 let availableCameras = [];
 let selectedCameraId = null;
 let repositoryMirror = null; // Repository mirror manager
+let menuBuilder = null; // Menu builder instance
 
 // Repository cache manager
 const repositoryCacheManager = new RepositoryCacheManager();
 
 function createMenu() {
-  const menuBuilder = new MenuBuilder({
+  menuBuilder = new MenuBuilder({
     // Windows
     mainWindow: mainWindowManager.getWindow(),
     cameraWindow: cameraWindowManager.getWindow(),
@@ -750,6 +751,28 @@ function registerIPCHandlers() {
   registerUserGroupImageHandlers(context);
   registerExportHandlers(context);
   registerMiscHandlers(context);
+
+  // Filter toggle handlers from renderer (badge clicks)
+  ipcMain.on('menu-toggle-duplicates-from-renderer', (event, enabled) => {
+    const menu = menuBuilder.callbacks?.toggleDuplicates;
+    if (menu) {
+      menu(enabled);
+    }
+  });
+
+  ipcMain.on('menu-toggle-card-print-requests-from-renderer', (event, enabled) => {
+    const menu = menuBuilder.callbacks?.toggleCardPrintRequests;
+    if (menu) {
+      menu(enabled);
+    }
+  });
+
+  ipcMain.on('menu-toggle-publication-requests-from-renderer', (event, enabled) => {
+    const menu = menuBuilder.callbacks?.togglePublicationRequests;
+    if (menu) {
+      menu(enabled);
+    }
+  });
 }
 
 app.whenReady().then(() => {

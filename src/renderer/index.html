@@ -28,6 +28,15 @@
 
         <!-- Alert badges -->
         <div class="alerts-container">
+          <div id="duplicates-alert" class="alert-badge alert-danger" style="display: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span id="duplicates-count">0</span>
+            <span class="alert-label">asignaciones duplicadas</span>
+          </div>
           <div id="card-print-alert" class="alert-badge alert-warning" style="display: none;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -42,18 +51,6 @@
             <span id="publication-count">0</span>
             <span class="alert-label">fotos pendientes</span>
           </div>
-        </div>
-
-        <div class="filter-options" id="filter-options" style="display: none;">
-          <label class="checkbox-label checkbox-warning">
-            <input type="checkbox" id="duplicates-filter">
-            <svg class="warning-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-            <span>Ver duplicadas</span>
-          </label>
         </div>
       </div>
 

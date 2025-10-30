@@ -49,13 +49,13 @@ let displayedUsers = []; // Currently displayed users (filtered/duplicates)
 const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search-btn');
 const groupFilter = document.getElementById('group-filter');
-const duplicatesFilter = document.getElementById('duplicates-filter');
-const filterOptions = document.getElementById('filter-options');
 const userTableBody = document.getElementById('user-table-body');
 const photosColumnHeader = document.getElementById('photos-column-header');
 const selectedUserInfo = document.getElementById('selected-user-info');
 const userCount = document.getElementById('user-count');
 const linkBtn = document.getElementById('link-btn');
+const duplicatesAlert = document.getElementById('duplicates-alert');
+const duplicatesCount = document.getElementById('duplicates-count');
 const cardPrintAlert = document.getElementById('card-print-alert');
 const cardPrintCount = document.getElementById('card-print-count');
 const publicationAlert = document.getElementById('publication-alert');
@@ -368,9 +368,18 @@ function initializeKeyboardNavigationManager() {
 function initializeMenuEventManager() {
   menuEventManager = new MenuEventManager({
     // State setters
-    setShowDuplicatesOnly: (value) => { showDuplicatesOnly = value; },
-    setShowCardPrintRequestsOnly: (value) => { showCardPrintRequestsOnly = value; },
-    setShowPublicationRequestsOnly: (value) => { showPublicationRequestsOnly = value; },
+    setShowDuplicatesOnly: (value) => {
+      showDuplicatesOnly = value;
+      updateAlertBadges(); // Update badge visibility when filter changes
+    },
+    setShowCardPrintRequestsOnly: (value) => {
+      showCardPrintRequestsOnly = value;
+      updateAlertBadges(); // Update badge visibility when filter changes
+    },
+    setShowPublicationRequestsOnly: (value) => {
+      showPublicationRequestsOnly = value;
+      updateAlertBadges(); // Update badge visibility when filter changes
+    },
     setShowCapturedPhotos: (value) => { showCapturedPhotos = value; },
     setShowRepositoryPhotos: (value) => { showRepositoryPhotos = value; },
     setShowRepositoryIndicators: (value) => { showRepositoryIndicators = value; },
@@ -409,7 +418,6 @@ function initializeMenuEventManager() {
     onLoadRepositoryData: loadRepositoryDataInBackground,
 
     // DOM elements
-    duplicatesFilter: duplicatesFilter,
     additionalActionsSection: document.querySelector('.additional-actions'),
 
     // IPC API
@@ -540,10 +548,6 @@ function initializeEventListeners() {
       await filterUsers();
     }
   });
-  duplicatesFilter.addEventListener('change', () => {
-    showDuplicatesOnly = duplicatesFilter.checked;
-    displayUsers(currentUsers, allUsers);
-  });
 
   // Listen for card print requests filter toggle from menu
   window.electronAPI.onMenuToggleCardPrintRequests((enabled) => {
@@ -553,6 +557,7 @@ function initializeEventListeners() {
       showDuplicatesOnly = false;
       showPublicationRequestsOnly = false;
     }
+    updateAlertBadges(); // Update badge visibility based on filter state
     displayUsers(currentUsers, allUsers);
   });
 
@@ -564,8 +569,38 @@ function initializeEventListeners() {
       showDuplicatesOnly = false;
       showCardPrintRequestsOnly = false;
     }
+    updateAlertBadges(); // Update badge visibility based on filter state
     displayUsers(currentUsers, allUsers);
   });
+
+  // Alert badge click handlers
+  // Note: We only send IPC to main, which will update menu and send back the new state
+  if (cardPrintAlert) {
+    cardPrintAlert.addEventListener('click', () => {
+      const newValue = !showCardPrintRequestsOnly;
+      if (menuEventManager) {
+        menuEventManager.triggerCardPrintRequestsFilter(newValue);
+      }
+    });
+  }
+
+  if (publicationAlert) {
+    publicationAlert.addEventListener('click', () => {
+      const newValue = !showPublicationRequestsOnly;
+      if (menuEventManager) {
+        menuEventManager.triggerPublicationRequestsFilter(newValue);
+      }
+    });
+  }
+
+  if (duplicatesAlert) {
+    duplicatesAlert.addEventListener('click', () => {
+      const newValue = !showDuplicatesOnly;
+      if (menuEventManager) {
+        menuEventManager.triggerDuplicatesFilter(newValue);
+      }
+    });
+  }
 
   // Action buttons
   linkBtn.addEventListener('click', handleLinkImage);
@@ -718,20 +753,7 @@ async function displayUsers(users, allUsers = null) {
     }
   });
 
-  // Check if there are any duplicates
-  const hasDuplicates = Object.values(imageCount).some(count => count > 1);
-
-  // Show/hide duplicates filter based on whether duplicates exist
-  if (hasDuplicates) {
-    filterOptions.style.display = 'flex';
-  } else {
-    filterOptions.style.display = 'none';
-    // If filter was active and there are no duplicates, deactivate it
-    if (showDuplicatesOnly) {
-      showDuplicatesOnly = false;
-      duplicatesFilter.checked = false;
-    }
-  }
+  // Note: Duplicates filter is now managed via badge, not checkbox
 
   // Apply filters
   let usersToDisplay = users;
@@ -837,18 +859,47 @@ function updateAlertBadges() {
   const cardPrintRequestsCount = cardPrintRequests.size;
   const publicationRequestsCount = publicationRequests.size;
 
+  // Calculate duplicates count
+  let duplicatesCountValue = 0;
+  if (allUsers && allUsers.length > 0) {
+    const imageCount = {};
+    allUsers.forEach(user => {
+      if (user.image_path) {
+        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
+      }
+    });
+
+    // Count users with duplicate assignments
+    duplicatesCountValue = allUsers.filter(user =>
+      user.image_path && imageCount[user.image_path] > 1
+    ).length;
+  }
+
   if (cardPrintCount) {
     cardPrintCount.textContent = cardPrintRequestsCount;
   }
   if (cardPrintAlert) {
-    cardPrintAlert.style.display = cardPrintRequestsCount > 0 ? 'flex' : 'none';
+    // Show badge if: (count > 0) OR (count is 0 but filter is active)
+    const shouldShowCardPrint = cardPrintRequestsCount > 0 || (cardPrintRequestsCount === 0 && showCardPrintRequestsOnly);
+    cardPrintAlert.style.display = shouldShowCardPrint ? 'flex' : 'none';
   }
 
   if (publicationCount) {
     publicationCount.textContent = publicationRequestsCount;
   }
   if (publicationAlert) {
-    publicationAlert.style.display = publicationRequestsCount > 0 ? 'flex' : 'none';
+    // Show badge if: (count > 0) OR (count is 0 but filter is active)
+    const shouldShowPublication = publicationRequestsCount > 0 || (publicationRequestsCount === 0 && showPublicationRequestsOnly);
+    publicationAlert.style.display = shouldShowPublication ? 'flex' : 'none';
+  }
+
+  if (duplicatesCount) {
+    duplicatesCount.textContent = duplicatesCountValue;
+  }
+  if (duplicatesAlert) {
+    // Show badge if: (count > 0) OR (count is 0 but filter is active)
+    const shouldShowDuplicates = duplicatesCountValue > 0 || (duplicatesCountValue === 0 && showDuplicatesOnly);
+    duplicatesAlert.style.display = shouldShowDuplicates ? 'flex' : 'none';
   }
 }
 

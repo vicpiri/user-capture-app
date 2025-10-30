@@ -205,5 +205,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Publication requests
   requestPublication: (userIds) => ipcRenderer.invoke('request-publication', userIds),
-  getPublicationRequests: () => ipcRenderer.invoke('get-publication-requests')
+  getPublicationRequests: () => ipcRenderer.invoke('get-publication-requests'),
+
+  // Filter toggle methods (for badge clicks)
+  toggleDuplicatesFilter: (enabled) => ipcRenderer.send('menu-toggle-duplicates-from-renderer', enabled),
+  toggleCardPrintRequestsFilter: (enabled) => ipcRenderer.send('menu-toggle-card-print-requests-from-renderer', enabled),
+  togglePublicationRequestsFilter: (enabled) => ipcRenderer.send('menu-toggle-publication-requests-from-renderer', enabled)
 });

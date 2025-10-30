@@ -467,6 +467,17 @@ body {
   font-size: 11px;
   font-weight: 600;
   animation: pulse 2s ease-in-out infinite;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.alert-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.alert-badge:active {
+  transform: scale(0.98);
 }
 
 .alert-badge svg {
@@ -484,6 +495,12 @@ body {
 }
 
 /* Alert variants */
+.alert-danger {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
 .alert-warning {
   background-color: rgba(255, 193, 7, 0.15);
   color: #ffc107;

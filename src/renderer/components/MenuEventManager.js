@@ -365,6 +365,36 @@
     getIsInitialized() {
       return this.isInitialized;
     }
+
+    /**
+     * Trigger duplicates filter from badge click
+     * @param {boolean} enabled - Filter state
+     */
+    triggerDuplicatesFilter(enabled) {
+      if (this.electronAPI && this.electronAPI.toggleDuplicatesFilter) {
+        this.electronAPI.toggleDuplicatesFilter(enabled);
+      }
+    }
+
+    /**
+     * Trigger card print requests filter from badge click
+     * @param {boolean} enabled - Filter state
+     */
+    triggerCardPrintRequestsFilter(enabled) {
+      if (this.electronAPI && this.electronAPI.toggleCardPrintRequestsFilter) {
+        this.electronAPI.toggleCardPrintRequestsFilter(enabled);
+      }
+    }
+
+    /**
+     * Trigger publication requests filter from badge click
+     * @param {boolean} enabled - Filter state
+     */
+    triggerPublicationRequestsFilter(enabled) {
+      if (this.electronAPI && this.electronAPI.togglePublicationRequestsFilter) {
+        this.electronAPI.togglePublicationRequestsFilter(enabled);
+      }
+    }
   }
 
   // Export (for tests and browser)
