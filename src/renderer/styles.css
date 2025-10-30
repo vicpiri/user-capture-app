@@ -235,6 +235,12 @@ body {
   color: #6ba4ff;
 }
 
+/* Hide photos column (5th column) when all display options are disabled */
+.user-table.hide-photos-column th:nth-child(5),
+.user-table.hide-photos-column td:nth-child(5) {
+  display: none;
+}
+
 .user-table td .photo-indicator-wrapper {
   width: 32px;
   height: 32px;

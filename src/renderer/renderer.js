@@ -52,6 +52,7 @@ const groupFilter = document.getElementById('group-filter');
 const duplicatesFilter = document.getElementById('duplicates-filter');
 const filterOptions = document.getElementById('filter-options');
 const userTableBody = document.getElementById('user-table-body');
+const photosColumnHeader = document.getElementById('photos-column-header');
 const selectedUserInfo = document.getElementById('selected-user-info');
 const userCount = document.getElementById('user-count');
 const linkBtn = document.getElementById('link-btn');
@@ -401,6 +402,7 @@ function initializeMenuEventManager() {
 
     // Display callbacks
     onDisplayUsers: displayUsers,
+    onUpdatePhotosColumnVisibility: updatePhotosColumnVisibility,
     onLoadUsers: loadUsers,
     onLoadRepositoryData: loadRepositoryDataInBackground,
 
@@ -835,6 +837,23 @@ function updateAlertBadges() {
   }
   if (publicationAlert) {
     publicationAlert.style.display = publicationRequestsCount > 0 ? 'flex' : 'none';
+  }
+}
+
+/**
+ * Update photos column visibility based on display preferences
+ */
+function updatePhotosColumnVisibility() {
+  // Hide column if all three options are disabled
+  const shouldShowColumn = showCapturedPhotos || showRepositoryPhotos || showRepositoryIndicators;
+
+  const userTable = document.getElementById('user-table');
+  if (userTable) {
+    if (shouldShowColumn) {
+      userTable.classList.remove('hide-photos-column');
+    } else {
+      userTable.classList.add('hide-photos-column');
+    }
   }
 }
 

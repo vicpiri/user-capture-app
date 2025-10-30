@@ -52,6 +52,7 @@
 
       // Display callbacks
       this.onDisplayUsers = config.onDisplayUsers || (() => {});
+      this.onUpdatePhotosColumnVisibility = config.onUpdatePhotosColumnVisibility || (() => {});
       this.onLoadUsers = config.onLoadUsers || (() => {});
       this.onLoadRepositoryData = config.onLoadRepositoryData || (() => {});
       this.getCurrentFilters = config.getCurrentFilters || (() => ({}));
@@ -96,6 +97,9 @@
         this.setShowCapturedPhotos(prefs.showCapturedPhotos);
         this.setShowRepositoryPhotos(prefs.showRepositoryPhotos);
         this.setShowRepositoryIndicators(prefs.showRepositoryIndicators);
+
+        // Update photos column visibility based on preferences
+        this.onUpdatePhotosColumnVisibility();
 
         // Mark as loading if repository options are enabled in saved preferences
         if (prefs.showRepositoryPhotos) {
@@ -205,6 +209,7 @@
       // Toggle captured photos
       this.electronAPI.onMenuToggleCapturedPhotos(async (enabled) => {
         this.setShowCapturedPhotos(enabled);
+        this.onUpdatePhotosColumnVisibility();
 
         // If enabling, check if captured photo data is loaded
         if (enabled && this.getCurrentUsers().length > 0) {
@@ -225,6 +230,7 @@
       // Toggle repository photos
       this.electronAPI.onMenuToggleRepositoryPhotos((enabled) => {
         this.setShowRepositoryPhotos(enabled);
+        this.onUpdatePhotosColumnVisibility();
 
         if (enabled) {
           // Mark as loading to show spinners and reset sync completed flag
@@ -257,6 +263,7 @@
       // Toggle repository indicators
       this.electronAPI.onMenuToggleRepositoryIndicators((enabled) => {
         this.setShowRepositoryIndicators(enabled);
+        this.onUpdatePhotosColumnVisibility();
 
         if (enabled) {
           // Mark as loading to show spinners and reset sync completed flag
