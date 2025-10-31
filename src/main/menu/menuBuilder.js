@@ -434,13 +434,7 @@ class MenuBuilder {
         {
           label: 'Acerca de User Capture',
           click: () => {
-            dialog.showMessageBox(this.mainWindow, {
-              type: 'info',
-              title: 'Acerca de User Capture',
-              message: 'User Capture',
-              detail: 'Versión 1.0.0\n\nAplicación de captura de imágenes de usuarios para entornos educativos.',
-              buttons: ['Aceptar']
-            });
+            this.mainWindow.webContents.send('menu-show-about');
           }
         },
         { type: 'separator' },

@@ -1438,3 +1438,70 @@ body {
   background-color: #3a3f4e;
   margin: 16px 0;
 }
+
+/* About Modal Specific Styles */
+.about-modal-content {
+  max-width: 500px;
+  min-width: 500px;
+  text-align: center;
+}
+
+.about-modal-header {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #3a3f4e;
+}
+
+.about-modal-header h2 {
+  margin-bottom: 12px;
+  font-size: 28px;
+  color: #e8e8e8;
+  font-weight: 600;
+}
+
+.about-version {
+  font-size: 16px;
+  color: #5a8cd7;
+  font-weight: 500;
+}
+
+.about-modal-body {
+  margin-bottom: 24px;
+}
+
+.about-description {
+  color: #b8bdc8;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.about-info-section {
+  background-color: #232835;
+  border: 1px solid #3a3f4e;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.about-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.about-info-row:not(:last-child) {
+  border-bottom: 1px solid #3a3f4e;
+}
+
+.about-label {
+  font-size: 13px;
+  color: #8a8f9a;
+  font-weight: 500;
+}
+
+.about-value {
+  font-size: 14px;
+  color: #e0e0e0;
+  font-weight: 400;
+}

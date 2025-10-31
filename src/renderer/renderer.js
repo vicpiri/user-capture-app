@@ -697,6 +697,42 @@ function initializeEventListeners() {
     await updateStatusBar();
   });
 
+  // About modal
+  const aboutModal = document.getElementById('about-modal');
+  const aboutVersionEl = document.getElementById('about-version');
+  const aboutCloseBtn = document.getElementById('about-close-btn');
+
+  // Listen for menu event to show about modal
+  window.electronAPI.onMenuShowAbout(async () => {
+    // Get and display version
+    const version = await window.electronAPI.getAppVersion();
+    aboutVersionEl.textContent = `Versión ${version}`;
+
+    // Show modal
+    aboutModal.classList.add('show');
+  });
+
+  // Close about modal
+  if (aboutCloseBtn) {
+    aboutCloseBtn.addEventListener('click', () => {
+      aboutModal.classList.remove('show');
+    });
+  }
+
+  // Close on escape key
+  aboutModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      aboutModal.classList.remove('show');
+    }
+  });
+
+  // Close on backdrop click
+  aboutModal.addEventListener('click', (e) => {
+    if (e.target === aboutModal) {
+      aboutModal.classList.remove('show');
+    }
+  });
+
   // Keyboard navigation is now handled by KeyboardNavigationManager
 }
 

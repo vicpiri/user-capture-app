@@ -4,6 +4,7 @@
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter } = require('../utils/config');
+const VersionManager = require('../utils/version');
 
 // Card print requests cache
 let cardPrintRequestsCache = null;
@@ -836,6 +837,20 @@ function registerMiscHandlers(context) {
     } catch (error) {
       logger.error('Error clearing printed cards:', error);
       return { success: false, error: error.message };
+    }
+  });
+
+  // ============================================================================
+  // Version Handler
+  // ============================================================================
+
+  // Get application version
+  ipcMain.handle('get-app-version', async () => {
+    try {
+      return VersionManager.getVersion();
+    } catch (error) {
+      logger.error('Error getting app version:', error);
+      return '0.0.0';
     }
   });
 }

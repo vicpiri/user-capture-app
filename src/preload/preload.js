@@ -118,6 +118,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('initial-display-preferences', (event, prefs) => callback(prefs));
   },
 
+  onMenuShowAbout: (callback) => {
+    ipcRenderer.on('menu-show-about', callback);
+  },
+
   onMenuImportImagesId: (callback) => {
     ipcRenderer.on('menu-import-images-id', callback);
   },
@@ -228,5 +232,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Filter toggle methods (for badge clicks)
   toggleDuplicatesFilter: (enabled) => ipcRenderer.send('menu-toggle-duplicates-from-renderer', enabled),
   toggleCardPrintRequestsFilter: (enabled) => ipcRenderer.send('menu-toggle-card-print-requests-from-renderer', enabled),
-  togglePublicationRequestsFilter: (enabled) => ipcRenderer.send('menu-toggle-publication-requests-from-renderer', enabled)
+  togglePublicationRequestsFilter: (enabled) => ipcRenderer.send('menu-toggle-publication-requests-from-renderer', enabled),
+
+  // Version
+  getAppVersion: () => ipcRenderer.invoke('get-app-version')
 });
