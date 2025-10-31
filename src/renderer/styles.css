@@ -1507,6 +1507,44 @@ body {
 }
 
 /* Printer Configuration Modal Styles */
+#printer-select {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #1a1f2e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%238a8f9a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 44px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+#printer-select:hover {
+  border-color: #4a9eff;
+  background-color: #1f2534;
+}
+
+#printer-select:focus {
+  outline: none;
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+  background-color: #1f2534;
+}
+
+#printer-select option {
+  background-color: #1a1f2e;
+  color: #e0e0e0;
+  padding: 12px;
+}
+
 .printer-info-box {
   background-color: #1a1f2e;
   border: 1px solid #3a3f4e;
@@ -1583,4 +1621,62 @@ body {
 
 #printer-preferences-btn span {
   font-size: 16px;
+}
+
+/* Receipt Configuration Modal Styles */
+#receipt-config-modal .form-control {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #1a1f2e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+#receipt-config-modal .form-control:hover {
+  border-color: #4a9eff;
+  background-color: #1f2534;
+}
+
+#receipt-config-modal .form-control:focus {
+  outline: none;
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+  background-color: #1f2534;
+}
+
+#receipt-config-modal .form-control::placeholder {
+  color: #5a5f6a;
+  opacity: 1;
+}
+
+#receipt-footer {
+  min-height: 140px;
+  font-family: 'Courier New', Courier, monospace;
+  line-height: 1.6;
+  resize: vertical;
+  font-weight: 400;
+}
+
+/* Custom scrollbar for textarea */
+#receipt-footer::-webkit-scrollbar {
+  width: 10px;
+}
+
+#receipt-footer::-webkit-scrollbar-track {
+  background: #1a1f2e;
+  border-radius: 6px;
+}
+
+#receipt-footer::-webkit-scrollbar-thumb {
+  background: #3a3f4e;
+  border-radius: 6px;
+  border: 2px solid #1a1f2e;
+}
+
+#receipt-footer::-webkit-scrollbar-thumb:hover {
+  background: #4a5566;
 }
