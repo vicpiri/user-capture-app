@@ -1110,9 +1110,10 @@ function registerMiscHandlers(context) {
     }
     body {
       font-family: Arial, sans-serif;
-      width: 80mm;
-      padding: 5mm;
+      width: 72mm;
+      padding: 5mm 5mm 5mm 2mm;
       font-size: 11pt;
+      margin: 0 auto;
     }
     .center {
       text-align: center;
@@ -1125,7 +1126,7 @@ function registerMiscHandlers(context) {
       margin-bottom: 10px;
     }
     .logo img {
-      max-width: 60mm;
+      max-width: 50mm;
       max-height: 25mm;
       object-fit: contain;
     }
