@@ -1131,14 +1131,16 @@ async function displayUsers(users, allUsers = null) {
     // Fallback if allUsers not available
     usersToDisplay = users.filter(user => user.image_path && imageCount[user.image_path] > 1);
   } else if (showCardPrintRequestsOnly) {
-    // Show only users with pending card print requests
-    usersToDisplay = users.filter(user => {
+    // Show only users with pending card print requests (ignore group filter)
+    const sourceUsers = allUsers || users;
+    usersToDisplay = sourceUsers.filter(user => {
       const userId = user.type === 'student' ? user.nia : user.document;
       return userId && cardPrintRequests.has(userId);
     });
   } else if (showPublicationRequestsOnly) {
-    // Show only users with pending publication requests
-    usersToDisplay = users.filter(user => {
+    // Show only users with pending publication requests (ignore group filter)
+    const sourceUsers = allUsers || users;
+    usersToDisplay = sourceUsers.filter(user => {
       const userId = user.type === 'student' ? user.nia : user.document;
       return userId && publicationRequests.has(userId);
     });
