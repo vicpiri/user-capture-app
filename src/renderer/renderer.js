@@ -1574,7 +1574,7 @@ async function handlePayOrla() {
       // Re-display the current user list to show the new icon
       displayUsers(currentUsers, allUsers);
 
-      showInfoModal('Éxito', `Orla ${newStatus ? 'marcada como pagada' : 'desmarcada como pagada'} correctamente`);
+      // Success - no need to show confirmation modal
     } else {
       showInfoModal('Error', result.error || 'Error al actualizar el estado de pago');
     }
@@ -1657,7 +1657,7 @@ async function handlePrintReceipt() {
       // Re-display the current user list to show the new icon
       displayUsers(currentUsers, allUsers);
 
-      showInfoModal('Éxito', 'Recibo marcado como impreso correctamente');
+      // Success - no need to show confirmation modal
     } else {
       showInfoModal('Error', result.error || 'Error al actualizar el estado de impresión');
     }
