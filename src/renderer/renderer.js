@@ -1645,10 +1645,19 @@ async function handlePrintReceipt() {
       return;
     }
 
+    // Find group name from group code
+    let groupName = 'Sin grupo';
+    if (selectedUser.group_code && currentGroups.length > 0) {
+      const group = currentGroups.find(g => g.code === selectedUser.group_code);
+      if (group) {
+        groupName = group.name;
+      }
+    }
+
     // Prepare receipt data
     const receiptData = {
       userName: `${selectedUser.first_name} ${selectedUser.last_name1} ${selectedUser.last_name2 || ''}`.trim(),
-      groupName: selectedUser.group_name || 'Sin grupo'
+      groupName: groupName
     };
 
     // Print the receipt
