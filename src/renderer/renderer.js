@@ -1067,6 +1067,8 @@ async function loadGroups() {
 async function loadUsers(filters = {}) {
   if (userDataManager) {
     await userDataManager.loadUsers(filters);
+    // Update linked photos count after loading users
+    await updateCapturedPhotosCount();
   }
 }
 
@@ -1324,6 +1326,7 @@ async function updateStatusBar() {
     const statusBar = document.getElementById('status-bar');
     const statusProject = document.getElementById('status-project');
     const statusRepository = document.getElementById('status-repository');
+    const statusPhotos = document.getElementById('status-photos');
 
     if (result.success && statusBar && statusProject && statusRepository) {
       // Show the status bar
@@ -1342,12 +1345,46 @@ async function updateStatusBar() {
         statusRepository.textContent = 'No configurado';
         statusRepository.title = '';
       }
+
+      // Update captured photos count
+      if (statusPhotos) {
+        await updateCapturedPhotosCount();
+      }
     } else if (statusBar) {
       // Hide if no project is open
       statusBar.style.display = 'none';
     }
   } catch (error) {
     console.error('Error updating status bar:', error);
+  }
+}
+
+/**
+ * Update linked photos count in status bar
+ */
+async function updateCapturedPhotosCount() {
+  try {
+    const statusPhotos = document.getElementById('status-photos');
+    if (!statusPhotos) return;
+
+    // Count unique linked images from all users
+    if (allUsers && allUsers.length > 0) {
+      const linkedImages = new Set();
+      allUsers.forEach(user => {
+        if (user.image_path) {
+          linkedImages.add(user.image_path);
+        }
+      });
+      statusPhotos.textContent = linkedImages.size.toString();
+    } else {
+      statusPhotos.textContent = '0';
+    }
+  } catch (error) {
+    console.error('Error updating linked photos count:', error);
+    const statusPhotos = document.getElementById('status-photos');
+    if (statusPhotos) {
+      statusPhotos.textContent = '-';
+    }
   }
 }
 
