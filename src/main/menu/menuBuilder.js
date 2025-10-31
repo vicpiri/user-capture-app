@@ -166,7 +166,7 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'Configurar Impresora...',
+          label: 'Configurar impresora de recibos...',
           click: () => {
             this.mainWindow.webContents.send('menu-configure-printer');
           }
