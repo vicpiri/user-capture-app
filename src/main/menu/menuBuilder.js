@@ -113,14 +113,14 @@ class MenuBuilder {
           label: 'Exportar',
           submenu: [
             {
-              label: 'Lista en CSV para carnets',
+              label: 'Archivo CSV para Carnets del grupo seleccionado',
               accelerator: 'CmdOrCtrl+E',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-csv');
               }
             },
             {
-              label: 'CSV de inventario por grupos',
+              label: 'Archivos para Edu Inventory Manager',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-inventory-csv');
               }
@@ -145,7 +145,7 @@ class MenuBuilder {
               }
             },
             {
-              label: 'Exportar orla en PDF',
+              label: 'Orlas en PDF',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-orla-pdf');
               }
