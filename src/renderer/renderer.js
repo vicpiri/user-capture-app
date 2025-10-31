@@ -742,6 +742,7 @@ function initializeEventListeners() {
   const printerCloseBtn = printerCancelBtn; // Alias for clarity when used as "Close"
   const printerPreferencesBtn = document.getElementById('printer-preferences-btn');
   const receiptConfigBtn = document.getElementById('receipt-config-btn');
+  const testReceiptBtn = document.getElementById('test-receipt-btn');
 
   // Receipt configuration modal
   const receiptConfigModal = document.getElementById('receipt-config-modal');
@@ -892,6 +893,29 @@ function initializeEventListeners() {
       } catch (error) {
         console.error('[Printer Preferences] Error:', error);
         showInfoModal('Error', 'Error al abrir las preferencias de la impresora');
+      }
+    });
+  }
+
+  // Test receipt printing
+  if (testReceiptBtn) {
+    testReceiptBtn.addEventListener('click', async () => {
+      try {
+        // Prepare test receipt data
+        const receiptData = {
+          userName: 'Test Test Test',
+          groupName: 'Test'
+        };
+
+        // Print the test receipt
+        const result = await window.electronAPI.printOrlaReceipt(receiptData);
+
+        if (!result.success) {
+          showInfoModal('Error', result.error || 'Error al imprimir el recibo de prueba');
+        }
+      } catch (error) {
+        console.error('[Test Receipt] Error:', error);
+        showInfoModal('Error', 'Error al imprimir el recibo de prueba: ' + error.message);
       }
     });
   }
