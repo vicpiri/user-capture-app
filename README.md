@@ -1,10 +1,10 @@
-# User Capture App
+# Edu User Capture App
 
 Aplicación de escritorio desarrollada con Electron para la captura y gestión de imágenes de usuarios en entornos educativos.
 
 ## Descripción
 
-User Capture App permite la captura, organización y exportación de fotografías de usuarios (estudiantes, docentes y personal no docente) en instituciones educativas. La aplicación facilita la importación de datos desde archivos XML y la gestión de imágenes asociadas a cada usuario.
+Edu User Capture App permite la captura, organización y exportación de fotografías de usuarios (estudiantes, docentes y personal no docente) en instituciones educativas. La aplicación facilita la importación de datos desde archivos XML y la gestión de imágenes asociadas a cada usuario.
 
 ## Características Principales
 

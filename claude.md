@@ -1,4 +1,4 @@
-# User Capture App - Contexto del Proyecto
+# Edu User Capture App - Contexto del Proyecto
 
 ## Descripción General
 
@@ -554,7 +554,7 @@ tests/unit/components/
   - Detiene el vigilante de carpetas (folderWatcher)
   - Limpia el estado del main process (projectPath)
   - Limpia el estado del renderer (usuarios, grupos, imágenes)
-  - Actualiza el título de ventana a "User Capture v{version}"
+  - Actualiza el título de ventana a "Edu User Capture v{version}"
   - Oculta la barra de estado
   - Muestra placeholder de "sin proyecto"
 

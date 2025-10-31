@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the refactored architecture of the renderer process in the User Capture App. The refactoring was completed in 3 phases to improve maintainability, testability, and prevent memory leaks.
+This document describes the refactored architecture of the renderer process in the Edu User Capture App. The refactoring was completed in 3 phases to improve maintainability, testability, and prevent memory leaks.
 
 ## Table of Contents
 

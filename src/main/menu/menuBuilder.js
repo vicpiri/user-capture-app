@@ -439,7 +439,7 @@ class MenuBuilder {
       label: 'Ayuda',
       submenu: [
         {
-          label: 'Acerca de User Capture',
+          label: 'Acerca de Edu User Capture',
           click: () => {
             this.mainWindow.webContents.send('menu-show-about');
           }

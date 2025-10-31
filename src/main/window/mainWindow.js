@@ -23,7 +23,7 @@ class MainWindowManager {
     this.window = new BrowserWindow({
       width: 1400,
       height: 900,
-      title: `User Capture v${this.version}`,
+      title: `Edu User Capture v${this.version}`,
       icon: path.join(__dirname, '../../../assets/icons/icon.png'),
       webPreferences: {
         preload: path.join(__dirname, '../../preload/preload.js'),
@@ -65,9 +65,9 @@ class MainWindowManager {
 
     if (projectPath) {
       const projectName = path.basename(projectPath);
-      this.window.setTitle(`User Capture v${this.version} - ${projectName}`);
+      this.window.setTitle(`Edu User Capture v${this.version} - ${projectName}`);
     } else {
-      this.window.setTitle(`User Capture v${this.version}`);
+      this.window.setTitle(`Edu User Capture v${this.version}`);
     }
   }
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide explains the testing strategy, conventions, and best practices for the User Capture App renderer refactoring.
+This guide explains the testing strategy, conventions, and best practices for the Edu User Capture App renderer refactoring.
 
 ## Test Framework
 

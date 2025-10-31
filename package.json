@@ -1,9 +1,9 @@
 {
-  "name": "user-capture-app",
-  "appId": "com.usercapture.app",
-  "productName": "User Capture",
+  "name": "edu-user-capture-app",
+  "appId": "com.eduusercapture.app",
+  "productName": "Edu User Capture",
   "version": "1.5.0",
-  "description": "User Capture - Aplicación de captura de imágenes de usuarios",
+  "description": "Edu User Capture - Aplicación de captura de imágenes de usuarios",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -51,8 +51,8 @@
     "standard-version": "^9.5.0"
   },
   "build": {
-    "appId": "com.usercaptureapp.app",
-    "productName": "User Capture",
+    "appId": "com.eduusercaptureapp.app",
+    "productName": "Edu User Capture",
     "directories": {
       "output": "dist"
     },
