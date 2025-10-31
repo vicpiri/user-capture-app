@@ -533,6 +533,28 @@ body {
   border: 1px solid rgba(13, 202, 240, 0.3);
 }
 
+/* Active state for alert badges */
+.alert-badge.active {
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.15);
+  animation: none; /* Stop pulsing when active */
+}
+
+.alert-danger.active {
+  background-color: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.alert-warning.active {
+  background-color: rgba(255, 193, 7, 0.25);
+  border-color: rgba(255, 193, 7, 0.5);
+}
+
+.alert-info.active {
+  background-color: rgba(13, 202, 240, 0.25);
+  border-color: rgba(13, 202, 240, 0.5);
+}
+
 /* Pulse animation */
 @keyframes pulse {
   0%, 100% {

@@ -1251,6 +1251,12 @@ function updateAlertBadges() {
     // Show badge if: (count > 0) OR (count is 0 but filter is active)
     const shouldShowCardPrint = cardPrintRequestsCount > 0 || (cardPrintRequestsCount === 0 && showCardPrintRequestsOnly);
     cardPrintAlert.style.display = shouldShowCardPrint ? 'flex' : 'none';
+    // Add/remove active class based on filter state
+    if (showCardPrintRequestsOnly) {
+      cardPrintAlert.classList.add('active');
+    } else {
+      cardPrintAlert.classList.remove('active');
+    }
   }
 
   if (publicationCount) {
@@ -1260,6 +1266,12 @@ function updateAlertBadges() {
     // Show badge if: (count > 0) OR (count is 0 but filter is active)
     const shouldShowPublication = publicationRequestsCount > 0 || (publicationRequestsCount === 0 && showPublicationRequestsOnly);
     publicationAlert.style.display = shouldShowPublication ? 'flex' : 'none';
+    // Add/remove active class based on filter state
+    if (showPublicationRequestsOnly) {
+      publicationAlert.classList.add('active');
+    } else {
+      publicationAlert.classList.remove('active');
+    }
   }
 
   if (duplicatesCount) {
@@ -1269,6 +1281,12 @@ function updateAlertBadges() {
     // Show badge if: (count > 0) OR (count is 0 but filter is active)
     const shouldShowDuplicates = duplicatesCountValue > 0 || (duplicatesCountValue === 0 && showDuplicatesOnly);
     duplicatesAlert.style.display = shouldShowDuplicates ? 'flex' : 'none';
+    // Add/remove active class based on filter state
+    if (showDuplicatesOnly) {
+      duplicatesAlert.classList.add('active');
+    } else {
+      duplicatesAlert.classList.remove('active');
+    }
   }
 }
 
