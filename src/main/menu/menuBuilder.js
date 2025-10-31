@@ -441,7 +441,13 @@ class MenuBuilder {
         {
           label: 'Documentación',
           click: () => {
-            // Open documentation
+            dialog.showMessageBox(this.mainWindow, {
+              type: 'info',
+              title: 'Documentación',
+              message: 'Disponible próximamente',
+              detail: 'La documentación completa estará disponible en una próxima versión.',
+              buttons: ['Aceptar']
+            });
           }
         }
       ]
