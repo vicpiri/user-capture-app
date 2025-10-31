@@ -1176,3 +1176,127 @@ body {
 .status-bar .status-value {
   color: #b0b0b0;
 }
+
+/* Orla Export Modal Specific Styles */
+.orla-modal-content {
+  max-width: 550px;
+  min-width: 550px;
+}
+
+.orla-modal-content h2 {
+  margin-bottom: 28px;
+  font-size: 22px;
+  color: #e8e8e8;
+  border-bottom: 2px solid #3a3f4e;
+  padding-bottom: 12px;
+}
+
+.orla-modal-content h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #b8bdc8;
+  margin-bottom: 12px;
+  margin-top: 0;
+}
+
+.orla-modal-section {
+  background-color: #232835;
+  border: 1px solid #3a3f4e;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.orla-modal-section:last-of-type {
+  margin-bottom: 24px;
+}
+
+.orla-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orla-radio-group .checkbox-label {
+  padding: 10px 12px;
+  background-color: #1a1f2e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.orla-radio-group .checkbox-label:hover {
+  background-color: #242936;
+  border-color: #4a7cc7;
+}
+
+.orla-radio-group .checkbox-label input[type="radio"]:checked + span {
+  font-weight: 500;
+  color: #5a8cd7;
+}
+
+.orla-radio-group .checkbox-label input[type="radio"]:checked {
+  accent-color: #5a8cd7;
+}
+
+.orla-group-select-container {
+  margin-top: 12px;
+}
+
+.orla-group-select-container select {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: #1a1f2e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.orla-group-select-container select:enabled {
+  cursor: pointer;
+}
+
+.orla-group-select-container select:enabled:hover {
+  border-color: #4a7cc7;
+  background-color: #242936;
+}
+
+.orla-group-select-container select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.orla-modal-section .form-group {
+  margin-bottom: 0;
+}
+
+.orla-modal-section .form-group label {
+  color: #b8bdc8;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.orla-modal-section .form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: #1a1f2e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.orla-modal-section .form-group select:hover {
+  border-color: #4a7cc7;
+  background-color: #242936;
+}
+
+.orla-modal-section .form-group select:focus {
+  outline: none;
+  border-color: #5a8cd7;
+  box-shadow: 0 0 0 3px rgba(90, 140, 215, 0.1);
+}

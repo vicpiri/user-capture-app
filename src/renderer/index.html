@@ -398,51 +398,56 @@
 
   <!-- Orla Export Modal -->
   <div id="orla-export-modal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content orla-modal-content">
       <h2>Exportar Orla en PDF</h2>
 
-      <h3>Grupos a exportar</h3>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="radio" name="orla-group-scope" id="orla-export-all-groups" value="all" checked>
-          <span>Todos los grupos</span>
-        </label>
+      <div class="orla-modal-section">
+        <h3>Grupos a exportar</h3>
+        <div class="orla-radio-group">
+          <label class="checkbox-label">
+            <input type="radio" name="orla-group-scope" id="orla-export-all-groups" value="all" checked>
+            <span>Todos los grupos</span>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="radio" name="orla-group-scope" id="orla-export-single-group" value="single">
+            <span>Un solo grupo</span>
+          </label>
+        </div>
+
+        <div class="orla-group-select-container">
+          <select id="orla-export-group-select" class="form-control" disabled>
+            <option value="">Seleccionar grupo...</option>
+          </select>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="radio" name="orla-group-scope" id="orla-export-single-group" value="single">
-          <span>Un solo grupo:</span>
-        </label>
-        <select id="orla-export-group-select" class="form-control" style="margin-left: 20px; margin-top: 5px;" disabled>
-          <option value="">Seleccionar grupo...</option>
-        </select>
+      <div class="orla-modal-section">
+        <h3>Tipo de fotografías a incluir</h3>
+        <div class="orla-radio-group">
+          <label class="checkbox-label">
+            <input type="radio" name="orla-photo-source" id="orla-export-captured" value="captured" checked>
+            <span>Fotografías capturadas</span>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="radio" name="orla-photo-source" id="orla-export-repository" value="repository">
+            <span>Fotografías del depósito</span>
+          </label>
+        </div>
       </div>
 
-      <h3>Tipo de fotografías a incluir</h3>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="radio" name="orla-photo-source" id="orla-export-captured" value="captured" checked>
-          <span>Fotografías capturadas</span>
-        </label>
-      </div>
-
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="radio" name="orla-photo-source" id="orla-export-repository" value="repository">
-          <span>Fotografías del depósito</span>
-        </label>
-      </div>
-
-      <h3>Calidad de imagen</h3>
-      <div class="form-group">
-        <label for="orla-export-quality">Calidad JPEG (0-100):</label>
-        <select id="orla-export-quality" class="form-control">
-          <option value="60">Baja (60) - Archivo más pequeño</option>
-          <option value="80" selected>Alta (80) - Recomendado</option>
-          <option value="90">Muy Alta (90) - Archivo más grande</option>
-          <option value="100">Máxima (100) - Sin compresión</option>
-        </select>
+      <div class="orla-modal-section">
+        <h3>Calidad de imagen</h3>
+        <div class="form-group">
+          <label for="orla-export-quality">Calidad JPEG:</label>
+          <select id="orla-export-quality" class="form-control">
+            <option value="60">Baja (60) - Archivo más pequeño</option>
+            <option value="80" selected>Alta (80) - Recomendado</option>
+            <option value="90">Muy Alta (90) - Archivo más grande</option>
+            <option value="100">Máxima (100) - Sin compresión</option>
+          </select>
+        </div>
       </div>
 
       <div class="modal-buttons">
