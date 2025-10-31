@@ -38,6 +38,14 @@ User Capture App permite la captura, organización y exportación de fotografía
 - Gestión de proyectos recientes
 - Logs detallados de operaciones
 
+### Impresión de Recibos
+- **Impresora recomendada**: Impresora térmica con ancho de rollo de 80mm
+- Configuración personalizable del recibo (nombre del centro, precio, logotipo, texto del pie)
+- Impresión de recibo de prueba para verificar configuración
+- Impresión automática tras marcar orla como pagada
+- Los recibos incluyen nombre del usuario y grupo
+- Diseño optimizado para impresoras térmicas de 80mm
+
 ## Requisitos
 
 - Node.js 16 o superior

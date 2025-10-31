@@ -1,2 +1,2 @@
 - Implementar limpieza de capturas después de exportar al depósito. (Con backup)
-- 
+- Probar formato de CSV de inventario para que funcionen con la aplicación.
