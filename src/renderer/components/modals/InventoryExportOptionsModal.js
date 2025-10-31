@@ -99,7 +99,11 @@
       const isEnabled = this.exportImagesCheckbox.checked;
 
       // Enable/disable image options
-      this.imageOptionsContainer.style.opacity = isEnabled ? '1' : '0.5';
+      if (isEnabled) {
+        this.imageOptionsContainer.classList.add('active');
+      } else {
+        this.imageOptionsContainer.classList.remove('active');
+      }
       this.copyOriginalRadio.disabled = !isEnabled;
       this.resizeRadio.disabled = !isEnabled;
 
@@ -116,7 +120,11 @@
 
       // Enable/disable resize inputs
       const shouldEnableResize = isExportEnabled && isResizeMode;
-      this.resizeOptionsContainer.style.opacity = shouldEnableResize ? '1' : '0.5';
+      if (shouldEnableResize) {
+        this.resizeOptionsContainer.classList.add('active');
+      } else {
+        this.resizeOptionsContainer.classList.remove('active');
+      }
       this.boxSizeInput.disabled = !shouldEnableResize;
       this.maxSizeInput.disabled = !shouldEnableResize;
     }
@@ -130,7 +138,11 @@
 
       // ZIP only available when image export is enabled
       const shouldEnableZip = isExportEnabled && isZipEnabled;
-      this.zipOptionsContainer.style.opacity = shouldEnableZip ? '1' : '0.5';
+      if (shouldEnableZip) {
+        this.zipOptionsContainer.classList.add('active');
+      } else {
+        this.zipOptionsContainer.classList.remove('active');
+      }
       this.zipMaxSizeInput.disabled = !shouldEnableZip;
 
       // Disable ZIP checkbox if images not exported

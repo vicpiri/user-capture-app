@@ -1300,3 +1300,141 @@ body {
   border-color: #5a8cd7;
   box-shadow: 0 0 0 3px rgba(90, 140, 215, 0.1);
 }
+
+/* Inventory Export Modal Specific Styles */
+.inventory-modal-section {
+  background-color: #232835;
+  border: 1px solid #3a3f4e;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.inventory-modal-section h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #b8bdc8;
+  margin-bottom: 12px;
+  margin-top: 0;
+}
+
+.inventory-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inventory-radio-group .checkbox-label {
+  padding: 10px 12px;
+  background-color: #1a1f2e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.inventory-radio-group .checkbox-label:hover {
+  background-color: #242936;
+  border-color: #4a7cc7;
+}
+
+.inventory-radio-group .checkbox-label input[type="radio"]:checked + span,
+.inventory-radio-group .checkbox-label input[type="checkbox"]:checked + span {
+  font-weight: 500;
+  color: #5a8cd7;
+}
+
+.inventory-radio-group .checkbox-label input[type="radio"]:checked,
+.inventory-radio-group .checkbox-label input[type="checkbox"]:checked {
+  accent-color: #5a8cd7;
+}
+
+.inventory-section-header {
+  margin-bottom: 16px;
+}
+
+.inventory-section-header .checkbox-label {
+  padding: 12px 14px;
+  background-color: #1e2331;
+  border: 1px solid #4a4f5e;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.inventory-section-header .checkbox-label:hover {
+  background-color: #252a3a;
+  border-color: #5a7cc7;
+}
+
+.inventory-section-header .checkbox-label input[type="checkbox"]:checked + span {
+  color: #5a8cd7;
+}
+
+.inventory-section-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inventory-subsection {
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 2px solid #3a3f4e;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.inventory-subsection.active {
+  opacity: 1;
+}
+
+.inventory-nested-options {
+  margin-left: 16px;
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #1a1f2e;
+  border-radius: 6px;
+  border: 1px solid #3a3f4e;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.inventory-nested-options.active {
+  opacity: 1;
+}
+
+.inventory-nested-options .form-group {
+  margin-bottom: 12px;
+}
+
+.inventory-nested-options .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.inventory-nested-options .form-group label {
+  color: #b0b5c0;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.inventory-nested-options .form-group input[type="number"] {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #0f1419;
+  border: 1px solid #3a3f4e;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.inventory-nested-options .form-group input[type="number"]:focus {
+  outline: none;
+  border-color: #5a8cd7;
+  box-shadow: 0 0 0 3px rgba(90, 140, 215, 0.1);
+}
+
+.inventory-subsection-divider {
+  height: 1px;
+  background-color: #3a3f4e;
+  margin: 16px 0;
+}
