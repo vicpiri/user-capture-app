@@ -733,6 +733,297 @@ function initializeEventListeners() {
     }
   });
 
+  // Printer configuration modal
+  const printerModal = document.getElementById('printer-config-modal');
+  const printerSelect = document.getElementById('printer-select');
+  const printerInfo = document.getElementById('printer-info');
+  const printerSaveBtn = document.getElementById('printer-config-save');
+  const printerCancelBtn = document.getElementById('printer-config-cancel');
+  const printerCloseBtn = printerCancelBtn; // Alias for clarity when used as "Close"
+  const printerPreferencesBtn = document.getElementById('printer-preferences-btn');
+  const receiptConfigBtn = document.getElementById('receipt-config-btn');
+
+  // Receipt configuration modal
+  const receiptConfigModal = document.getElementById('receipt-config-modal');
+  const receiptCenterName = document.getElementById('receipt-center-name');
+  const receiptSubtitle = document.getElementById('receipt-subtitle');
+  const receiptPrice = document.getElementById('receipt-price');
+  const receiptLogo = document.getElementById('receipt-logo');
+  const receiptLogoBtn = document.getElementById('receipt-logo-btn');
+  const receiptLogoClearBtn = document.getElementById('receipt-logo-clear-btn');
+  const receiptFooter = document.getElementById('receipt-footer');
+  const receiptConfigSaveBtn = document.getElementById('receipt-config-save');
+  const receiptConfigCancelBtn = document.getElementById('receipt-config-cancel');
+
+  let availablePrinters = [];
+  let selectedPrinter = null;
+
+  // Listen for menu event to show printer config modal
+  window.electronAPI.onMenuConfigurePrinter(async () => {
+    // Get available printers
+    availablePrinters = await window.electronAPI.getPrinters();
+    console.log('[Printer Config] Received printers:', availablePrinters);
+
+    // Get modal content elements
+    const printerConfigContent = document.getElementById('printer-config-content');
+    const printerSystemFallback = document.getElementById('printer-system-fallback');
+
+    if (!availablePrinters || availablePrinters.length === 0) {
+      // No printers detected - show fallback message
+      printerConfigContent.style.display = 'none';
+      printerSystemFallback.style.display = 'block';
+      printerSaveBtn.style.display = 'none';
+      printerCloseBtn.textContent = 'Cerrar';
+    } else {
+      // Printers detected - show normal configuration
+      printerConfigContent.style.display = 'block';
+      printerSystemFallback.style.display = 'none';
+      printerSaveBtn.style.display = 'inline-block';
+      printerCloseBtn.textContent = 'Cancelar';
+
+      // Populate printer select
+      printerSelect.innerHTML = '<option value="">Seleccionar impresora...</option>';
+      availablePrinters.forEach(printer => {
+        const option = document.createElement('option');
+        option.value = printer.name;
+        option.textContent = printer.displayName || printer.name;
+        printerSelect.appendChild(option);
+      });
+      printerSaveBtn.disabled = false;
+
+      // Load saved configuration
+      const savedConfig = await window.electronAPI.getPrinterConfig();
+      if (savedConfig && savedConfig.name) {
+        printerSelect.value = savedConfig.name;
+        updatePrinterInfo(savedConfig.name);
+      }
+    }
+
+    // Show modal
+    printerModal.classList.add('show');
+  });
+
+  // Update printer info when selection changes
+  printerSelect.addEventListener('change', (e) => {
+    updatePrinterInfo(e.target.value);
+  });
+
+  function updatePrinterInfo(printerName) {
+    if (!printerName) {
+      printerInfo.innerHTML = '<p class="printer-info-empty">Seleccione una impresora para ver su información</p>';
+      selectedPrinter = null;
+      printerPreferencesBtn.style.display = 'none';
+      return;
+    }
+
+    selectedPrinter = availablePrinters.find(p => p.name === printerName);
+    if (!selectedPrinter) {
+      printerInfo.innerHTML = '<p class="printer-info-empty">Impresora no encontrada</p>';
+      printerPreferencesBtn.style.display = 'none';
+      return;
+    }
+
+    // Display printer information
+    printerInfo.innerHTML = `
+      <div class="printer-info-row">
+        <span class="printer-info-label">Nombre:</span>
+        <span class="printer-info-value">${selectedPrinter.displayName || selectedPrinter.name}</span>
+      </div>
+      <div class="printer-info-row">
+        <span class="printer-info-label">Estado:</span>
+        <span class="printer-info-value">${selectedPrinter.status === 0 ? 'Lista' : 'No disponible'}</span>
+      </div>
+      <div class="printer-info-row">
+        <span class="printer-info-label">Predeterminada:</span>
+        <span class="printer-info-value">${selectedPrinter.isDefault ? 'Sí' : 'No'}</span>
+      </div>
+      ${selectedPrinter.description ? `
+      <div class="printer-info-row">
+        <span class="printer-info-label">Descripción:</span>
+        <span class="printer-info-value">${selectedPrinter.description}</span>
+      </div>
+      ` : ''}
+    `;
+
+    // Show preferences button when a printer is selected
+    printerPreferencesBtn.style.display = 'block';
+  }
+
+  // Save printer configuration
+  if (printerSaveBtn) {
+    printerSaveBtn.addEventListener('click', async () => {
+      if (!selectedPrinter) {
+        showInfoModal('Aviso', 'Por favor, selecciona una impresora');
+        return;
+      }
+
+      const config = {
+        name: selectedPrinter.name,
+        displayName: selectedPrinter.displayName || selectedPrinter.name,
+        isDefault: selectedPrinter.isDefault,
+        status: selectedPrinter.status
+      };
+
+      // Save printer configuration
+      const result = await window.electronAPI.savePrinterConfig(config);
+      if (!result.success) {
+        showInfoModal('Error', 'Error al guardar la configuración de impresora: ' + result.error);
+        return;
+      }
+
+      printerModal.classList.remove('show');
+      showInfoModal('Éxito', 'Configuración de impresora guardada correctamente');
+    });
+  }
+
+  // Open printer preferences
+  if (printerPreferencesBtn) {
+    printerPreferencesBtn.addEventListener('click', async () => {
+      if (!selectedPrinter) {
+        showInfoModal('Aviso', 'Por favor, selecciona una impresora primero');
+        return;
+      }
+
+      try {
+        const result = await window.electronAPI.openPrinterPreferences(selectedPrinter.name);
+        if (!result.success) {
+          showInfoModal('Error', 'No se pudo abrir las preferencias de la impresora: ' + result.error);
+        }
+      } catch (error) {
+        console.error('[Printer Preferences] Error:', error);
+        showInfoModal('Error', 'Error al abrir las preferencias de la impresora');
+      }
+    });
+  }
+
+  // Cancel printer configuration
+  if (printerCancelBtn) {
+    printerCancelBtn.addEventListener('click', () => {
+      printerModal.classList.remove('show');
+    });
+  }
+
+  // Close on escape key
+  printerModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      printerModal.classList.remove('show');
+    }
+  });
+
+  // Close on backdrop click
+  printerModal.addEventListener('click', (e) => {
+    if (e.target === printerModal) {
+      printerModal.classList.remove('show');
+    }
+  });
+
+  // ============================================================================
+  // Receipt Configuration Modal
+  // ============================================================================
+
+  let currentLogoPath = '';
+
+  // Open receipt config modal
+  if (receiptConfigBtn) {
+    receiptConfigBtn.addEventListener('click', async () => {
+      // Load current configuration
+      const config = await window.electronAPI.getReceiptConfig();
+
+      receiptCenterName.value = config.centerName || '';
+      receiptSubtitle.value = config.subtitle || '';
+      receiptPrice.value = config.price || 18;
+      receiptFooter.value = config.footerText || '';
+      currentLogoPath = config.logoPath || '';
+
+      if (currentLogoPath) {
+        receiptLogo.value = currentLogoPath;
+        receiptLogoClearBtn.style.display = 'inline-block';
+      } else {
+        receiptLogo.value = '';
+        receiptLogoClearBtn.style.display = 'none';
+      }
+
+      receiptConfigModal.classList.add('show');
+    });
+  }
+
+  // Select logo
+  if (receiptLogoBtn) {
+    receiptLogoBtn.addEventListener('click', async () => {
+      const result = await window.electronAPI.showOpenDialog({
+        title: 'Seleccionar logotipo',
+        filters: [
+          { name: 'Imágenes', extensions: ['png', 'jpg', 'jpeg'] }
+        ],
+        properties: ['openFile']
+      });
+
+      if (!result.canceled && result.filePaths.length > 0) {
+        currentLogoPath = result.filePaths[0];
+        receiptLogo.value = currentLogoPath;
+        receiptLogoClearBtn.style.display = 'inline-block';
+      }
+    });
+  }
+
+  // Clear logo
+  if (receiptLogoClearBtn) {
+    receiptLogoClearBtn.addEventListener('click', () => {
+      currentLogoPath = '';
+      receiptLogo.value = '';
+      receiptLogoClearBtn.style.display = 'none';
+    });
+  }
+
+  // Save receipt configuration
+  if (receiptConfigSaveBtn) {
+    receiptConfigSaveBtn.addEventListener('click', async () => {
+      // Validate price
+      const price = parseFloat(receiptPrice.value);
+      if (isNaN(price) || price < 0) {
+        showInfoModal('Error', 'Por favor, introduce un precio válido');
+        return;
+      }
+
+      const config = {
+        centerName: receiptCenterName.value.trim() || 'IES La Marxadella',
+        subtitle: receiptSubtitle.value.trim() || 'Reserva de una copia de Orla',
+        price: price,
+        footerText: receiptFooter.value.trim() || '',
+        logoPath: currentLogoPath
+      };
+
+      const result = await window.electronAPI.setReceiptConfig(config);
+      if (result.success) {
+        receiptConfigModal.classList.remove('show');
+        showInfoModal('Éxito', 'Configuración de recibos guardada correctamente');
+      } else {
+        showInfoModal('Error', 'Error al guardar la configuración: ' + result.error);
+      }
+    });
+  }
+
+  // Cancel receipt configuration
+  if (receiptConfigCancelBtn) {
+    receiptConfigCancelBtn.addEventListener('click', () => {
+      receiptConfigModal.classList.remove('show');
+    });
+  }
+
+  // Close on escape key
+  receiptConfigModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      receiptConfigModal.classList.remove('show');
+    }
+  });
+
+  // Close on backdrop click
+  receiptConfigModal.addEventListener('click', (e) => {
+    if (e.target === receiptConfigModal) {
+      receiptConfigModal.classList.remove('show');
+    }
+  });
+
   // Keyboard navigation is now handled by KeyboardNavigationManager
 }
 
@@ -1280,7 +1571,7 @@ async function handlePrintReceipt() {
       return;
     }
 
-    // If trying to mark as printed, check if orla is paid first
+    // Check if orla is paid first
     const paidStatusResult = await window.electronAPI.getOrlaPaidStatus(selectedUser.id);
 
     if (!paidStatusResult.success) {
@@ -1289,20 +1580,25 @@ async function handlePrintReceipt() {
     }
 
     if (!paidStatusResult.isPaid) {
-      showInfoModal('Aviso', 'No se puede marcar el recibo como impreso sin que la orla esté pagada previamente');
+      showInfoModal('Aviso', 'No se puede imprimir el recibo sin que la orla esté pagada previamente');
       return;
     }
 
-    // Confirm action
-    const confirmed = await showConfirmationModal(
-      `¿Deseas marcar como impreso el recibo de ${selectedUser.first_name} ${selectedUser.last_name1}?`
-    );
+    // Prepare receipt data
+    const receiptData = {
+      userName: `${selectedUser.first_name} ${selectedUser.last_name1} ${selectedUser.last_name2 || ''}`.trim(),
+      groupName: selectedUser.group_name || 'Sin grupo'
+    };
 
-    if (!confirmed) {
+    // Print the receipt
+    const printResult = await window.electronAPI.printOrlaReceipt(receiptData);
+
+    if (!printResult.success) {
+      showInfoModal('Error', 'Error al imprimir el recibo: ' + (printResult.error || 'Error desconocido'));
       return;
     }
 
-    // Mark as printed
+    // Mark as printed after successful print
     const result = await window.electronAPI.markReceiptPrinted(selectedUser.id, true);
 
     if (result.success) {

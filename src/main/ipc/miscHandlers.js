@@ -853,6 +853,358 @@ function registerMiscHandlers(context) {
       return '0.0.0';
     }
   });
+
+  // ============================================================================
+  // Printer Configuration Handler
+  // ============================================================================
+
+  // Get list of available printers
+  ipcMain.handle('get-printers', async () => {
+    try {
+      const mainWindow = getMainWindow();
+      if (!mainWindow) {
+        logger.error('[Printer] Main window not available');
+        return [];
+      }
+
+      // Use getPrintersAsync() instead of deprecated getPrinters()
+      let printers = await mainWindow.webContents.getPrintersAsync();
+      logger.info(`[Printer] webContents.getPrintersAsync() returned ${printers.length} printers`);
+
+      if (printers.length === 0) {
+        logger.warn('[Printer] No printers found via webContents.getPrintersAsync()');
+      } else {
+        logger.info(`[Printer] Available printers:`, printers.map(p => ({
+          name: p.name,
+          displayName: p.displayName,
+          status: p.status,
+          isDefault: p.isDefault
+        })));
+      }
+
+      return printers;
+    } catch (error) {
+      logger.error('[Printer] Error getting printers:', error);
+      return [];
+    }
+  });
+
+  // Save printer configuration
+  ipcMain.handle('save-printer-config', async (event, printerConfig) => {
+    try {
+      const { loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
+      const config = loadGlobalConfig();
+      config.printer = printerConfig;
+      saveGlobalConfig(config);
+      logger.info('[Printer] Configuration saved:', printerConfig);
+      return { success: true };
+    } catch (error) {
+      logger.error('Error saving printer config:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Open printer preferences
+  ipcMain.handle('open-printer-preferences', async (event, printerName) => {
+    try {
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execPromise = promisify(exec);
+
+      logger.info(`[Printer] Opening preferences for: ${printerName}`);
+
+      // Windows command to open printer properties
+      // rundll32 printui.dll,PrintUIEntry /e /n "PrinterName"
+      const command = `rundll32 printui.dll,PrintUIEntry /e /n "${printerName}"`;
+
+      await execPromise(command);
+      logger.info('[Printer] Preferences dialog opened successfully');
+      return { success: true };
+    } catch (error) {
+      logger.error('[Printer] Error opening printer preferences:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Get saved printer configuration
+  ipcMain.handle('get-printer-config', async () => {
+    try {
+      const { loadGlobalConfig } = require('../utils/config');
+      const config = loadGlobalConfig();
+      return config.printer || null;
+    } catch (error) {
+      logger.error('Error getting printer config:', error);
+      return null;
+    }
+  });
+
+  // ============================================================================
+  // Receipt Configuration Handler
+  // ============================================================================
+
+  // Get receipt configuration
+  ipcMain.handle('get-receipt-config', async () => {
+    try {
+      const { loadGlobalConfig } = require('../utils/config');
+      const config = loadGlobalConfig();
+
+      // Default configuration
+      const defaultConfig = {
+        centerName: 'IES La Marxadella',
+        subtitle: 'Reserva de una copia de Orla',
+        price: 18,
+        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.',
+        logoPath: '' // Path to logo image
+      };
+
+      return config.receiptConfig || defaultConfig;
+    } catch (error) {
+      logger.error('Error getting receipt config:', error);
+      return {
+        centerName: 'IES La Marxadella',
+        subtitle: 'Reserva de una copia de Orla',
+        price: 18,
+        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.',
+        logoPath: ''
+      };
+    }
+  });
+
+  // Save receipt configuration
+  ipcMain.handle('set-receipt-config', async (event, receiptConfig) => {
+    try {
+      const { loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
+      const config = loadGlobalConfig();
+      config.receiptConfig = receiptConfig;
+      saveGlobalConfig(config);
+      logger.info('[Config] Receipt configuration saved');
+      return { success: true };
+    } catch (error) {
+      logger.error('Error saving receipt config:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ============================================================================
+  // Receipt Printing Handler
+  // ============================================================================
+
+  // Print receipt for orla payment
+  ipcMain.handle('print-orla-receipt', async (event, receiptData) => {
+    try {
+      const { BrowserWindow } = require('electron');
+      const { loadGlobalConfig } = require('../utils/config');
+      const fs = require('fs');
+      const path = require('path');
+
+      logger.info('[Receipt] Printing receipt for user:', receiptData.userName);
+
+      // Get printer and receipt configuration
+      const config = loadGlobalConfig();
+      const printerConfig = config.printer;
+      const receiptConfig = config.receiptConfig || {
+        centerName: 'IES La Marxadella',
+        subtitle: 'Reserva de una copia de Orla',
+        price: 18,
+        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.',
+        logoPath: ''
+      };
+
+      // Load logo as base64 if exists
+      let logoBase64 = '';
+      if (receiptConfig.logoPath && fs.existsSync(receiptConfig.logoPath)) {
+        try {
+          const logoData = fs.readFileSync(receiptConfig.logoPath);
+          const ext = path.extname(receiptConfig.logoPath).toLowerCase();
+          const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+          logoBase64 = `data:${mimeType};base64,${logoData.toString('base64')}`;
+        } catch (err) {
+          logger.warn('[Receipt] Could not load logo:', err.message);
+        }
+      }
+
+      // Create a hidden window for printing
+      const printWindow = new BrowserWindow({
+        show: false,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+
+      // Generate receipt HTML
+      const receiptHTML = generateReceiptHTML(receiptData, receiptConfig, logoBase64);
+
+      // Load HTML content
+      await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHTML)}`);
+
+      // Wait for content to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Print options for thermal printer (80mm width)
+      const printOptions = {
+        silent: true, // Silent printing (no dialog)
+        printBackground: true,
+        margins: {
+          marginType: 'none'
+        },
+        pageSize: {
+          width: 80000, // 80mm in microns
+          height: 297000 // A4 height, will be cut by printer
+        }
+      };
+
+      // Set printer if configured
+      if (printerConfig && printerConfig.name) {
+        printOptions.deviceName = printerConfig.name;
+        logger.info('[Receipt] Using configured printer:', printerConfig.name);
+      } else {
+        logger.warn('[Receipt] No printer configured, using default');
+      }
+
+      // Print
+      printWindow.webContents.print(printOptions, (success, errorType) => {
+        if (success) {
+          logger.info('[Receipt] Receipt printed successfully');
+        } else {
+          logger.error('[Receipt] Print failed:', errorType);
+        }
+        // Close the print window after printing
+        printWindow.close();
+      });
+
+      return { success: true };
+    } catch (error) {
+      logger.error('[Receipt] Error printing receipt:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Helper function to generate receipt HTML
+  function generateReceiptHTML(data, config, logoBase64) {
+    const currentDate = new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const currentTime = new Date().toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    // Format footer text with line breaks
+    const footerLines = config.footerText.split('\n').map(line => line.trim()).filter(line => line);
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Recibo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      width: 80mm;
+      padding: 5mm;
+      font-size: 11pt;
+    }
+    .center {
+      text-align: center;
+    }
+    .bold {
+      font-weight: bold;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .logo img {
+      max-width: 60mm;
+      max-height: 25mm;
+      object-fit: contain;
+    }
+    .header {
+      margin-bottom: 8px;
+    }
+    .center-name {
+      font-size: 16pt;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+    .subtitle {
+      font-size: 11pt;
+      margin-bottom: 8px;
+    }
+    .user-section {
+      margin: 12px 0;
+      font-size: 13pt;
+    }
+    .group-row {
+      margin-top: 8px;
+      font-size: 11pt;
+    }
+    .date-section {
+      margin: 12px 0;
+      font-size: 10pt;
+    }
+    .entrega-section {
+      margin: 15px 0;
+      font-size: 13pt;
+    }
+    .footer {
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px solid #000;
+      font-size: 9pt;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .footer-line {
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  ${logoBase64 ? `
+  <div class="logo">
+    <img src="${logoBase64}" alt="Logo">
+  </div>
+  ` : ''}
+
+  <div class="header center">
+    <div class="center-name">${config.centerName}</div>
+    <div class="subtitle">${config.subtitle}</div>
+  </div>
+
+  <div class="user-section center bold">
+    ${data.userName}
+  </div>
+
+  <div class="group-row center">
+    Grupo: ${data.groupName}
+  </div>
+
+  <div class="date-section center">
+    Fecha:${currentDate} ${currentTime}
+  </div>
+
+  <div class="entrega-section center">
+    <strong>Entrega: ${config.price.toFixed(2)}€</strong>
+  </div>
+
+  <div class="footer">
+    ${footerLines.map(line => `<div class="footer-line">${line}</div>`).join('')}
+  </div>
+</body>
+</html>
+    `.trim();
+  }
 }
 
 module.exports = { registerMiscHandlers };

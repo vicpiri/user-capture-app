@@ -166,6 +166,13 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
+          label: 'Configurar Impresora...',
+          click: () => {
+            this.mainWindow.webContents.send('menu-configure-printer');
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Salir',
           accelerator: 'CmdOrCtrl+Q',
           role: 'quit'

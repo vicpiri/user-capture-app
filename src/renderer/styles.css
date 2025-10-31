@@ -1505,3 +1505,82 @@ body {
   color: #e0e0e0;
   font-weight: 400;
 }
+
+/* Printer Configuration Modal Styles */
+.printer-info-box {
+  background-color: #1a1f2e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  padding: 16px;
+  min-height: 120px;
+}
+
+.printer-info-empty {
+  color: #8a8f9a;
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
+  padding: 32px 16px;
+}
+
+.printer-fallback-message {
+  background-color: #2a2f3e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  padding: 24px;
+  margin: 16px 0;
+}
+
+.printer-fallback-message p {
+  color: #e0e0e0;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.printer-fallback-message p:last-child {
+  margin-bottom: 0;
+}
+
+.printer-fallback-message strong {
+  color: #ffa726;
+  font-weight: 600;
+}
+
+.printer-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #2a2f3e;
+}
+
+.printer-info-row:last-child {
+  border-bottom: none;
+}
+
+.printer-info-label {
+  font-size: 13px;
+  color: #8a8f9a;
+  font-weight: 500;
+}
+
+.printer-info-value {
+  font-size: 13px;
+  color: #e0e0e0;
+  text-align: right;
+}
+
+#printer-preferences-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+#printer-preferences-btn span {
+  font-size: 16px;
+}

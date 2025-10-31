@@ -235,5 +235,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   togglePublicationRequestsFilter: (enabled) => ipcRenderer.send('menu-toggle-publication-requests-from-renderer', enabled),
 
   // Version
-  getAppVersion: () => ipcRenderer.invoke('get-app-version')
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
+  // Printer configuration
+  getPrinters: () => ipcRenderer.invoke('get-printers'),
+  savePrinterConfig: (config) => ipcRenderer.invoke('save-printer-config', config),
+  getPrinterConfig: () => ipcRenderer.invoke('get-printer-config'),
+  openPrinterPreferences: (printerName) => ipcRenderer.invoke('open-printer-preferences', printerName),
+  onMenuConfigurePrinter: (callback) => {
+    ipcRenderer.on('menu-configure-printer', callback);
+  },
+
+  // Receipt configuration
+  getReceiptConfig: () => ipcRenderer.invoke('get-receipt-config'),
+  setReceiptConfig: (config) => ipcRenderer.invoke('set-receipt-config', config),
+
+  // Receipt printing
+  printOrlaReceipt: (receiptData) => ipcRenderer.invoke('print-orla-receipt', receiptData)
 });

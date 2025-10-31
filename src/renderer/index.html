@@ -454,6 +454,95 @@
     </div>
   </div>
 
+  <!-- Printer Configuration Modal -->
+  <div id="printer-config-modal" class="modal">
+    <div class="modal-content">
+      <h2>Configurar Impresora</h2>
+
+      <div id="printer-config-content">
+        <div class="form-group">
+          <label for="printer-select">Seleccionar impresora:</label>
+          <select id="printer-select" class="form-control">
+            <option value="">Cargando impresoras...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Información de la impresora:</label>
+          <div id="printer-info" class="printer-info-box">
+            <p class="printer-info-empty">Seleccione una impresora para ver su información</p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <button id="printer-preferences-btn" class="btn btn-secondary" style="display: none;">
+            <span>⚙️</span> Abrir Preferencias de Impresora
+          </button>
+        </div>
+
+        <div class="form-group">
+          <button id="receipt-config-btn" class="btn btn-secondary" style="width: 100%;">
+            <span>📄</span> Configurar Recibos
+          </button>
+        </div>
+      </div>
+
+      <div id="printer-system-fallback" style="display: none;">
+        <div class="printer-fallback-message">
+          <p><strong>No se detectaron impresoras mediante la API de Electron.</strong></p>
+          <p>La aplicación utilizará el cuadro de diálogo del sistema de Windows para seleccionar la impresora al imprimir tickets.</p>
+          <p>No es necesaria ninguna configuración adicional.</p>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="printer-config-cancel" class="btn btn-secondary">Cancelar</button>
+        <button id="printer-config-save" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receipt Configuration Modal -->
+  <div id="receipt-config-modal" class="modal">
+    <div class="modal-content">
+      <h2>Configuración de Recibos</h2>
+
+      <div class="form-group">
+        <label for="receipt-center-name">Nombre del centro:</label>
+        <input type="text" id="receipt-center-name" class="form-control" placeholder="IES La Marxadella" />
+      </div>
+
+      <div class="form-group">
+        <label for="receipt-subtitle">Subtítulo:</label>
+        <input type="text" id="receipt-subtitle" class="form-control" placeholder="Reserva de una copia de Orla" />
+      </div>
+
+      <div class="form-group">
+        <label for="receipt-price">Precio (€):</label>
+        <input type="number" id="receipt-price" class="form-control" min="0" step="0.01" value="18.00" />
+      </div>
+
+      <div class="form-group">
+        <label for="receipt-logo">Logotipo:</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="receipt-logo" class="form-control" readonly placeholder="Ningún logotipo seleccionado" style="flex: 1;" />
+          <button id="receipt-logo-btn" class="btn btn-secondary">Seleccionar</button>
+          <button id="receipt-logo-clear-btn" class="btn btn-secondary" style="display: none;">✕</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="receipt-footer">Texto del pie:</label>
+        <textarea id="receipt-footer" class="form-control" rows="6" style="resize: vertical;"></textarea>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="receipt-config-cancel" class="btn btn-secondary">Cancelar</button>
+        <button id="receipt-config-save" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- About Modal -->
   <div id="about-modal" class="modal">
     <div class="modal-content about-modal-content">
