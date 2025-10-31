@@ -789,6 +789,17 @@ Aplicación completamente funcional con todas las características principales i
 - Al asociar imagen a usuario que ya tiene una: pedir confirmación.
 - Formatos de imagen aceptados desde carpeta externa: JPG
 
+## Impresión de recibos
+- **Impresora recomendada**: Impresora térmica con ancho de rollo de 80mm
+- **Configuración**: Menú > Herramientas > Configurar Impresora
+- **Funcionalidades**:
+  - Configuración de impresora térmica
+  - Personalización del contenido del recibo (nombre del centro, precio, logotipo, texto del pie)
+  - Impresión de recibo de prueba para verificar configuración
+  - Impresión automática tras marcar orla como pagada
+  - Los recibos incluyen nombre del usuario y grupo
+- **Nota**: El diseño del recibo está optimizado para impresoras térmicas de 80mm de ancho
+
 ## Exportación de datos
 
 ### 1. CSV para carnets
