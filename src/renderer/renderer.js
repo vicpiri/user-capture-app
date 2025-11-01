@@ -28,6 +28,7 @@ let showPublicationRequestsOnly = false;
 let showCapturedPhotos = true;
 let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
 let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
+let showAdditionalActions = true;  // Show/hide additional actions section and related indicators
 let isLoadingRepositoryPhotos = false;  // Track if repository photos are being loaded
 let isLoadingRepositoryIndicators = false;  // Track if repository indicators are being loaded
 let repositorySyncCompleted = false;  // Track if initial repository sync has completed
@@ -177,6 +178,7 @@ function initializeUserRowRenderer() {
     showCapturedPhotos: showCapturedPhotos,
     showRepositoryPhotos: showRepositoryPhotos,
     showRepositoryIndicators: showRepositoryIndicators,
+    showAdditionalActions: showAdditionalActions,
     isLoadingRepositoryPhotos: isLoadingRepositoryPhotos,
     isLoadingRepositoryIndicators: isLoadingRepositoryIndicators,
     selectionMode: selectionMode,
@@ -395,6 +397,7 @@ function initializeMenuEventManager() {
     setShowCapturedPhotos: (value) => { showCapturedPhotos = value; },
     setShowRepositoryPhotos: (value) => { showRepositoryPhotos = value; },
     setShowRepositoryIndicators: (value) => { showRepositoryIndicators = value; },
+    setShowAdditionalActions: (value) => { showAdditionalActions = value; },
     setIsLoadingRepositoryPhotos: (value) => { isLoadingRepositoryPhotos = value; },
     setIsLoadingRepositoryIndicators: (value) => { isLoadingRepositoryIndicators = value; },
     setRepositorySyncCompleted: (value) => { repositorySyncCompleted = value; },
@@ -428,6 +431,7 @@ function initializeMenuEventManager() {
     // Display callbacks
     onDisplayUsers: displayUsers,
     onUpdatePhotosColumnVisibility: updatePhotosColumnVisibility,
+    onUpdateUserRowRenderer: updateUserRowRendererConfig,
     onLoadUsers: loadUsers,
     onLoadRepositoryData: loadRepositoryDataInBackground,
 
@@ -1007,6 +1011,20 @@ function updatePhotosColumnVisibility() {
     } else {
       userTable.classList.add('hide-photos-column');
     }
+  }
+}
+
+/**
+ * Update UserRowRenderer configuration with current display preferences
+ */
+function updateUserRowRendererConfig() {
+  if (userRowRenderer) {
+    userRowRenderer.updateConfig({
+      showCapturedPhotos: showCapturedPhotos,
+      showRepositoryPhotos: showRepositoryPhotos,
+      showRepositoryIndicators: showRepositoryIndicators,
+      showAdditionalActions: showAdditionalActions
+    });
   }
 }
 
@@ -1793,11 +1811,22 @@ async function handlePreferences() {
       showCapturedPhotos = newPreferences.showCapturedPhotos;
       showRepositoryPhotos = newPreferences.showRepositoryPhotos;
       showRepositoryIndicators = newPreferences.showRepositoryIndicators;
+      showAdditionalActions = newPreferences.showAdditionalActions;
 
       // Update additional actions visibility
       const additionalActionsSection = document.querySelector('.additional-actions');
       if (additionalActionsSection) {
         additionalActionsSection.style.display = newPreferences.showAdditionalActions ? 'flex' : 'none';
+      }
+
+      // Update UserRowRenderer config BEFORE reloading users
+      if (userRowRenderer) {
+        userRowRenderer.updateConfig({
+          showCapturedPhotos: showCapturedPhotos,
+          showRepositoryPhotos: showRepositoryPhotos,
+          showRepositoryIndicators: showRepositoryIndicators,
+          showAdditionalActions: showAdditionalActions
+        });
       }
 
       // Reload users to apply display changes

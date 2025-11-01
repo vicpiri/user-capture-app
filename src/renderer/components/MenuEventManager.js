@@ -25,6 +25,7 @@
       this.setShowCapturedPhotos = config.setShowCapturedPhotos || ((value) => {});
       this.setShowRepositoryPhotos = config.setShowRepositoryPhotos || ((value) => {});
       this.setShowRepositoryIndicators = config.setShowRepositoryIndicators || ((value) => {});
+      this.setShowAdditionalActions = config.setShowAdditionalActions || ((value) => {});
       this.setIsLoadingRepositoryPhotos = config.setIsLoadingRepositoryPhotos || ((value) => {});
       this.setIsLoadingRepositoryIndicators = config.setIsLoadingRepositoryIndicators || ((value) => {});
       this.setRepositorySyncCompleted = config.setRepositorySyncCompleted || ((value) => {});
@@ -57,6 +58,7 @@
       // Display callbacks
       this.onDisplayUsers = config.onDisplayUsers || (() => {});
       this.onUpdatePhotosColumnVisibility = config.onUpdatePhotosColumnVisibility || (() => {});
+      this.onUpdateUserRowRenderer = config.onUpdateUserRowRenderer || (() => {});
       this.onLoadUsers = config.onLoadUsers || (() => {});
       this.onLoadRepositoryData = config.onLoadRepositoryData || (() => {});
       this.getCurrentFilters = config.getCurrentFilters || (() => ({}));
@@ -362,9 +364,17 @@
      */
     setupUIToggles() {
       this.electronAPI.onMenuToggleAdditionalActions((enabled) => {
+        // Update DOM visibility
         if (this.additionalActionsSection) {
           this.additionalActionsSection.style.display = enabled ? 'block' : 'none';
         }
+
+        // Update state
+        this.setShowAdditionalActions(enabled);
+
+        // Update UserRowRenderer config and re-render table
+        this.onUpdateUserRowRenderer();
+        this.onLoadUsers(this.getCurrentFilters());
       });
     }
 

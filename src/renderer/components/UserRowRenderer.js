@@ -22,6 +22,7 @@ class UserRowRenderer {
       showCapturedPhotos: config.showCapturedPhotos ?? true,
       showRepositoryPhotos: config.showRepositoryPhotos ?? false,
       showRepositoryIndicators: config.showRepositoryIndicators ?? false,
+      showAdditionalActions: config.showAdditionalActions ?? true,
       isLoadingRepositoryPhotos: config.isLoadingRepositoryPhotos ?? false,
       isLoadingRepositoryIndicators: config.isLoadingRepositoryIndicators ?? false,
       selectionMode: config.selectionMode ?? false,
@@ -221,6 +222,11 @@ class UserRowRenderer {
    * @private
    */
   _buildOrlaPaidIndicator(user) {
+    // Only show if additional actions are visible
+    if (!this.config.showAdditionalActions) {
+      return '';
+    }
+
     // Check if orla has been paid
     if (user.orla_paid === 1) {
       return `<svg class="orla-paid-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Orla pagada">
@@ -237,6 +243,11 @@ class UserRowRenderer {
    * @private
    */
   _buildReceiptPrintedIndicator(user) {
+    // Only show if additional actions are visible
+    if (!this.config.showAdditionalActions) {
+      return '';
+    }
+
     // Check if receipt has been printed
     if (user.receipt_printed === 1) {
       return `<svg class="receipt-printed-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Recibo impreso">
