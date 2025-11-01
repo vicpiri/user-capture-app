@@ -250,9 +250,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   savePrinterConfig: (config) => ipcRenderer.invoke('save-printer-config', config),
   getPrinterConfig: () => ipcRenderer.invoke('get-printer-config'),
   openPrinterPreferences: (printerName) => ipcRenderer.invoke('open-printer-preferences', printerName),
-  onMenuConfigurePrinter: (callback) => {
-    ipcRenderer.on('menu-configure-printer', callback);
-  },
 
   // Receipt configuration
   getReceiptConfig: () => ipcRenderer.invoke('get-receipt-config'),

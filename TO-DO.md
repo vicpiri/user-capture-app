@@ -1,3 +1,0 @@
-- Implementar limpieza de capturas después de exportar al depósito. (Con backup)
-- Crear un cuadro de preferencias general del programa:
-  - Logotipo

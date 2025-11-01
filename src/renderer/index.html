@@ -454,87 +454,6 @@
     </div>
   </div>
 
-  <!-- Printer Configuration Modal -->
-  <div id="printer-config-modal" class="modal">
-    <div class="modal-content">
-      <h2>Configurar impresora de recibos</h2>
-
-      <div id="printer-config-content">
-        <div class="form-group">
-          <label for="printer-select">Seleccionar impresora:</label>
-          <select id="printer-select" class="form-control">
-            <option value="">Cargando impresoras...</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Información de la impresora:</label>
-          <div id="printer-info" class="printer-info-box">
-            <p class="printer-info-empty">Seleccione una impresora para ver su información</p>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <button id="printer-preferences-btn" class="btn btn-secondary" style="display: none;">
-            <span>⚙️</span> Abrir Preferencias de Impresora
-          </button>
-        </div>
-
-        <div class="form-group">
-          <button id="receipt-config-btn" class="btn btn-secondary" style="width: 100%;">
-            <span>📄</span> Configurar Recibos
-          </button>
-        </div>
-
-        <div class="form-group">
-          <button id="test-receipt-btn" class="btn btn-secondary" style="width: 100%;">
-            <span>🖨️</span> Imprimir Recibo de Prueba
-          </button>
-        </div>
-      </div>
-
-      <div id="printer-system-fallback" style="display: none;">
-        <div class="printer-fallback-message">
-          <p><strong>No se detectaron impresoras mediante la API de Electron.</strong></p>
-          <p>La aplicación utilizará el cuadro de diálogo del sistema de Windows para seleccionar la impresora al imprimir tickets.</p>
-          <p>No es necesaria ninguna configuración adicional.</p>
-        </div>
-      </div>
-
-      <div class="modal-buttons">
-        <button id="printer-config-cancel" class="btn btn-secondary">Cancelar</button>
-        <button id="printer-config-save" class="btn btn-primary">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Receipt Configuration Modal -->
-  <div id="receipt-config-modal" class="modal">
-    <div class="modal-content">
-      <h2>Configuración de Recibos</h2>
-
-      <div class="form-group">
-        <label for="receipt-subtitle">Subtítulo:</label>
-        <input type="text" id="receipt-subtitle" class="form-control" placeholder="Reserva de una copia de Orla" />
-      </div>
-
-      <div class="form-group">
-        <label for="receipt-price">Precio (€):</label>
-        <input type="number" id="receipt-price" class="form-control" min="0" step="0.01" value="18.00" />
-      </div>
-
-      <div class="form-group">
-        <label for="receipt-footer">Texto del pie:</label>
-        <textarea id="receipt-footer" class="form-control" rows="6" style="resize: vertical;"></textarea>
-      </div>
-
-      <div class="modal-buttons">
-        <button id="receipt-config-cancel" class="btn btn-secondary">Cancelar</button>
-        <button id="receipt-config-save" class="btn btn-primary">Guardar</button>
-      </div>
-    </div>
-  </div>
-
   <!-- About Modal -->
   <div id="about-modal" class="modal">
     <div class="modal-content about-modal-content">
@@ -598,47 +517,14 @@
       <div class="preferences-body">
         <!-- Sidebar Navigation -->
         <div class="preferences-sidebar">
-          <div class="preferences-category active" data-category="display">Visualización</div>
-          <div class="preferences-category" data-category="institution">Datos de la Institución</div>
+          <div class="preferences-category active" data-category="institution">Datos de la Institución</div>
+          <div class="preferences-category" data-category="receipt-printer">Impresora de Recibos</div>
         </div>
 
         <!-- Content Area -->
         <div class="preferences-content">
-          <!-- Display Category -->
-          <div class="preferences-panel active" data-panel="display">
-            <h3>Visualización</h3>
-
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="pref-show-captured-photos" checked>
-                <span>Mostrar miniaturas de fotos capturadas</span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="pref-show-repository-photos">
-                <span>Mostrar miniaturas de fotos del repositorio</span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="pref-show-repository-indicators">
-                <span>Mostrar indicadores del repositorio</span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="pref-show-additional-actions" checked>
-                <span>Mostrar acciones adicionales (Pagar orla, Imprimir recibo)</span>
-              </label>
-            </div>
-          </div>
-
           <!-- Institution Category -->
-          <div class="preferences-panel" data-panel="institution">
+          <div class="preferences-panel active" data-panel="institution">
             <h3>Datos de la Institución</h3>
 
             <div class="form-group">
@@ -655,6 +541,70 @@
                 <button id="pref-logo-clear-btn" class="btn btn-secondary" style="display: none;">✕</button>
               </div>
               <small class="form-help">Este logotipo se utilizará en recibos, exportaciones PDF y otros documentos</small>
+            </div>
+          </div>
+
+          <!-- Receipt Printer Category -->
+          <div class="preferences-panel" data-panel="receipt-printer">
+            <h3>Configuración de Impresora de Recibos</h3>
+
+            <div id="pref-printer-config-content">
+              <div class="form-group">
+                <label for="pref-printer-select">Seleccionar impresora:</label>
+                <select id="pref-printer-select" class="form-control">
+                  <option value="">Cargando impresoras...</option>
+                </select>
+                <small class="form-help">Impresora térmica para imprimir recibos de pago de orla</small>
+              </div>
+
+              <div class="form-group">
+                <label>Información de la impresora:</label>
+                <div id="pref-printer-info" class="printer-info-box">
+                  <p class="printer-info-empty">Seleccione una impresora para ver su información</p>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <button id="pref-printer-preferences-btn" class="btn btn-secondary" style="display: none;">
+                  <span>⚙️</span> Abrir Preferencias de Impresora
+                </button>
+              </div>
+
+              <div class="form-group">
+                <button id="pref-test-receipt-btn" class="btn btn-secondary">
+                  <span>🖨️</span> Imprimir Recibo de Prueba
+                </button>
+              </div>
+            </div>
+
+            <div id="pref-printer-system-fallback" style="display: none;">
+              <div class="printer-fallback-message">
+                <p><strong>No se detectaron impresoras mediante la API de Electron.</strong></p>
+                <p>La aplicación utilizará el cuadro de diálogo del sistema de Windows para seleccionar la impresora al imprimir recibos.</p>
+                <p>No es necesaria ninguna configuración adicional.</p>
+              </div>
+            </div>
+
+            <hr style="margin: 24px 0; border: none; border-top: 1px solid #3a3f4e;">
+
+            <h4 style="margin: 20px 0 16px 0; color: #e0e0e0; font-size: 16px; font-weight: 600;">Contenido del Recibo</h4>
+
+            <div class="form-group">
+              <label for="pref-receipt-subtitle">Subtítulo del recibo:</label>
+              <input type="text" id="pref-receipt-subtitle" class="form-control" placeholder="Reserva de una copia de Orla" />
+              <small class="form-help">Texto que aparecerá como subtítulo en el recibo</small>
+            </div>
+
+            <div class="form-group">
+              <label for="pref-receipt-price">Precio (€):</label>
+              <input type="number" id="pref-receipt-price" class="form-control" min="0" step="0.01" value="18.00" style="max-width: 150px;" />
+              <small class="form-help">Precio de la orla que aparecerá en el recibo</small>
+            </div>
+
+            <div class="form-group">
+              <label for="pref-receipt-footer">Texto del pie del recibo:</label>
+              <textarea id="pref-receipt-footer" class="form-control" rows="6" style="resize: vertical;"></textarea>
+              <small class="form-help">Texto informativo que aparecerá al pie del recibo</small>
             </div>
           </div>
         </div>

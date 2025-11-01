@@ -1303,6 +1303,9 @@ function registerMiscHandlers(context) {
     try {
       const config = loadGlobalConfig();
 
+      // Get receipt config for preferences
+      const receiptConfig = config.receiptConfig || {};
+
       return {
         success: true,
         preferences: {
@@ -1311,7 +1314,10 @@ function registerMiscHandlers(context) {
           showRepositoryIndicators: config.showRepositoryIndicators === true,
           showAdditionalActions: config.showAdditionalActions !== false,
           centerName: config.centerName || '',
-          logoPath: config.logoPath || ''
+          logoPath: config.logoPath || '',
+          receiptSubtitle: receiptConfig.subtitle || '',
+          receiptPrice: receiptConfig.price || 18,
+          receiptFooter: receiptConfig.footerText || ''
         }
       };
     } catch (error) {
@@ -1332,6 +1338,13 @@ function registerMiscHandlers(context) {
       config.showAdditionalActions = preferences.showAdditionalActions;
       config.centerName = preferences.centerName || '';
       config.logoPath = preferences.logoPath || '';
+
+      // Update receipt config
+      config.receiptConfig = {
+        subtitle: preferences.receiptSubtitle || '',
+        price: preferences.receiptPrice || 18,
+        footerText: preferences.receiptFooter || ''
+      };
 
       const success = saveGlobalConfig(config);
 

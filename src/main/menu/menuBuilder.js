@@ -166,12 +166,6 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'Configurar impresora de recibos...',
-          click: () => {
-            this.mainWindow.webContents.send('menu-configure-printer');
-          }
-        },
-        {
           label: 'Preferencias...',
           accelerator: 'CmdOrCtrl+,',
           click: () => {
