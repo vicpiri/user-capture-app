@@ -229,7 +229,7 @@
 }
 
 .no-project-placeholder.visible {
-  display: flex;
+  display: flex !important;
   pointer-events: auto;
 }
 
