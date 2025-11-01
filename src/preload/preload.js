@@ -74,6 +74,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-restore-image-links', callback);
   },
 
+  onMenuPreferences: (callback) => {
+    ipcRenderer.on('menu-preferences', callback);
+  },
+
   onMenuToggleCamera: (callback) => {
     ipcRenderer.on('menu-toggle-camera', (event, enabled) => callback(enabled));
   },
@@ -262,5 +266,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearCapturedImages: () => ipcRenderer.invoke('clear-captured-images'),
   restoreImageRelationships: (backupDate) => ipcRenderer.invoke('restore-image-relationships', backupDate),
   getImageBackups: () => ipcRenderer.invoke('get-image-backups'),
-  deleteImageBackup: (backupDate) => ipcRenderer.invoke('delete-image-backup', backupDate)
+  deleteImageBackup: (backupDate) => ipcRenderer.invoke('delete-image-backup', backupDate),
+
+  // Preferences
+  getPreferences: () => ipcRenderer.invoke('get-preferences'),
+  savePreferences: (preferences) => ipcRenderer.invoke('save-preferences', preferences)
 });

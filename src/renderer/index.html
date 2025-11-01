@@ -514,11 +514,6 @@
       <h2>Configuración de Recibos</h2>
 
       <div class="form-group">
-        <label for="receipt-center-name">Nombre del centro:</label>
-        <input type="text" id="receipt-center-name" class="form-control" placeholder="IES La Marxadella" />
-      </div>
-
-      <div class="form-group">
         <label for="receipt-subtitle">Subtítulo:</label>
         <input type="text" id="receipt-subtitle" class="form-control" placeholder="Reserva de una copia de Orla" />
       </div>
@@ -526,15 +521,6 @@
       <div class="form-group">
         <label for="receipt-price">Precio (€):</label>
         <input type="number" id="receipt-price" class="form-control" min="0" step="0.01" value="18.00" />
-      </div>
-
-      <div class="form-group">
-        <label for="receipt-logo">Logotipo:</label>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="text" id="receipt-logo" class="form-control" readonly placeholder="Ningún logotipo seleccionado" style="flex: 1;" />
-          <button id="receipt-logo-btn" class="btn btn-secondary">Seleccionar</button>
-          <button id="receipt-logo-clear-btn" class="btn btn-secondary" style="display: none;">✕</button>
-        </div>
       </div>
 
       <div class="form-group">
@@ -601,6 +587,70 @@
     </div>
   </div>
 
+  <!-- Preferences Modal -->
+  <div id="preferences-modal" class="modal">
+    <div class="modal-content preferences-modal-content">
+      <h2>Preferencias</h2>
+
+      <div class="preferences-section">
+        <h3>Visualización</h3>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="pref-show-captured-photos" checked>
+            <span>Mostrar miniaturas de fotos capturadas</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="pref-show-repository-photos">
+            <span>Mostrar miniaturas de fotos del repositorio</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="pref-show-repository-indicators">
+            <span>Mostrar indicadores del repositorio</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="pref-show-additional-actions" checked>
+            <span>Mostrar acciones adicionales (Pagar orla, Imprimir recibo)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="preferences-section">
+        <h3>Datos de la Institución</h3>
+
+        <div class="form-group">
+          <label for="pref-center-name">Nombre del centro:</label>
+          <input type="text" id="pref-center-name" class="form-control" placeholder="IES La Marxadella" />
+          <small class="form-help">Este nombre se utilizará en recibos, exportaciones PDF y otros documentos</small>
+        </div>
+
+        <div class="form-group">
+          <label for="pref-logo">Logotipo:</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" id="pref-logo" class="form-control" readonly placeholder="Ningún logotipo seleccionado" style="flex: 1;" />
+            <button id="pref-logo-btn" class="btn btn-secondary">Seleccionar</button>
+            <button id="pref-logo-clear-btn" class="btn btn-secondary" style="display: none;">✕</button>
+          </div>
+          <small class="form-help">Este logotipo se utilizará en recibos, exportaciones PDF y otros documentos</small>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="preferences-save-btn" class="btn btn-primary">Guardar</button>
+        <button id="preferences-cancel-btn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Load modules in dependency order -->
   <script src="core/store.js"></script>
   <script src="core/BaseModal.js"></script>
@@ -611,6 +661,7 @@
   <script src="components/modals/InventoryExportOptionsModal.js"></script>
   <script src="components/modals/AddTagModal.js"></script>
   <script src="components/modals/RestoreBackupModal.js"></script>
+  <script src="components/modals/PreferencesModal.js"></script>
   <!-- Status Bar -->
   <div id="status-bar" class="status-bar" style="display: none;">
     <div class="status-bar-section">

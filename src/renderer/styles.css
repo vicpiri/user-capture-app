@@ -1778,3 +1778,70 @@ body {
 .backups-list::-webkit-scrollbar-thumb:hover {
   background: #4a5566;
 }
+
+/* ==================== Preferences Modal ==================== */
+.preferences-modal-content {
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.preferences-section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #3a3f4e;
+}
+
+.preferences-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 16px;
+  padding-bottom: 0;
+}
+
+.preferences-section h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #e0e0e0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.preferences-modal-content .form-group {
+  margin-bottom: 16px;
+}
+
+.preferences-modal-content .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.preferences-modal-content .form-control {
+  width: 200px;
+}
+
+.form-help {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8a8f9a;
+  font-style: italic;
+}
+
+/* Custom scrollbar for preferences modal */
+.preferences-modal-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.preferences-modal-content::-webkit-scrollbar-track {
+  background: #1a1f2e;
+  border-radius: 6px;
+}
+
+.preferences-modal-content::-webkit-scrollbar-thumb {
+  background: #3a3f4e;
+  border-radius: 6px;
+  border: 2px solid #1a1f2e;
+}
+
+.preferences-modal-content::-webkit-scrollbar-thumb:hover {
+  background: #4a5566;
+}

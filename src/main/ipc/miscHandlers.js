@@ -3,7 +3,7 @@
  */
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
-const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter } = require('../utils/config');
+const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
 
 // Card print requests cache
@@ -950,22 +950,18 @@ function registerMiscHandlers(context) {
 
       // Default configuration
       const defaultConfig = {
-        centerName: 'IES La Marxadella',
         subtitle: 'Reserva de una copia de Orla',
         price: 18,
-        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.',
-        logoPath: '' // Path to logo image
+        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.'
       };
 
       return config.receiptConfig || defaultConfig;
     } catch (error) {
       logger.error('Error getting receipt config:', error);
       return {
-        centerName: 'IES La Marxadella',
         subtitle: 'Reserva de una copia de Orla',
         price: 18,
-        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.',
-        logoPath: ''
+        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.'
       };
     }
   });
@@ -1003,19 +999,21 @@ function registerMiscHandlers(context) {
       const config = loadGlobalConfig();
       const printerConfig = config.printer;
       const receiptConfig = config.receiptConfig || {
-        centerName: 'IES La Marxadella',
         subtitle: 'Reserva de una copia de Orla',
         price: 18,
-        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.',
-        logoPath: ''
+        footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.'
       };
 
-      // Load logo as base64 if exists
+      // Get center name from global config
+      const centerName = config.centerName || 'IES La Marxadella';
+
+      // Load logo from global config as base64 if exists
       let logoBase64 = '';
-      if (receiptConfig.logoPath && fs.existsSync(receiptConfig.logoPath)) {
+      const logoPath = config.logoPath || '';
+      if (logoPath && fs.existsSync(logoPath)) {
         try {
-          const logoData = fs.readFileSync(receiptConfig.logoPath);
-          const ext = path.extname(receiptConfig.logoPath).toLowerCase();
+          const logoData = fs.readFileSync(logoPath);
+          const ext = path.extname(logoPath).toLowerCase();
           const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
           logoBase64 = `data:${mimeType};base64,${logoData.toString('base64')}`;
         } catch (err) {
@@ -1033,7 +1031,7 @@ function registerMiscHandlers(context) {
       });
 
       // Generate receipt HTML
-      const receiptHTML = generateReceiptHTML(receiptData, receiptConfig, logoBase64);
+      const receiptHTML = generateReceiptHTML(receiptData, receiptConfig, logoBase64, centerName);
 
       // Load HTML content
       await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHTML)}`);
@@ -1081,7 +1079,7 @@ function registerMiscHandlers(context) {
   });
 
   // Helper function to generate receipt HTML
-  function generateReceiptHTML(data, config, logoBase64) {
+  function generateReceiptHTML(data, config, logoBase64, centerName) {
     const currentDate = new Date().toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
@@ -1179,7 +1177,7 @@ function registerMiscHandlers(context) {
   ` : ''}
 
   <div class="header center">
-    <div class="center-name">${config.centerName}</div>
+    <div class="center-name">${centerName}</div>
     <div class="subtitle">${config.subtitle}</div>
   </div>
 
@@ -1292,6 +1290,59 @@ function registerMiscHandlers(context) {
       return { success: true, ...result };
     } catch (error) {
       logger.error('Error deleting image backup:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ============================================================================
+  // Preferences Handlers
+  // ============================================================================
+
+  // Get application preferences
+  ipcMain.handle('get-preferences', async () => {
+    try {
+      const config = loadGlobalConfig();
+
+      return {
+        success: true,
+        preferences: {
+          showCapturedPhotos: config.showCapturedPhotos !== false,
+          showRepositoryPhotos: config.showRepositoryPhotos === true,
+          showRepositoryIndicators: config.showRepositoryIndicators === true,
+          showAdditionalActions: config.showAdditionalActions !== false,
+          centerName: config.centerName || '',
+          logoPath: config.logoPath || ''
+        }
+      };
+    } catch (error) {
+      logger.error('Error getting preferences:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Save application preferences
+  ipcMain.handle('save-preferences', async (event, preferences) => {
+    try {
+      const config = loadGlobalConfig();
+
+      // Update preferences
+      config.showCapturedPhotos = preferences.showCapturedPhotos;
+      config.showRepositoryPhotos = preferences.showRepositoryPhotos;
+      config.showRepositoryIndicators = preferences.showRepositoryIndicators;
+      config.showAdditionalActions = preferences.showAdditionalActions;
+      config.centerName = preferences.centerName || '';
+      config.logoPath = preferences.logoPath || '';
+
+      const success = saveGlobalConfig(config);
+
+      if (success) {
+        logger.info('Preferences saved successfully');
+        return { success: true };
+      } else {
+        throw new Error('Failed to save preferences');
+      }
+    } catch (error) {
+      logger.error('Error saving preferences:', error);
       return { success: false, error: error.message };
     }
   });

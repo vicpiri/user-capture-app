@@ -171,6 +171,13 @@ class MenuBuilder {
             this.mainWindow.webContents.send('menu-configure-printer');
           }
         },
+        {
+          label: 'Preferencias...',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => {
+            this.mainWindow.webContents.send('menu-preferences');
+          }
+        },
         { type: 'separator' },
         {
           label: 'Salir',

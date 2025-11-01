@@ -82,6 +82,7 @@ let addTagModalInstance = null;
 let userImageModalInstance = null;
 let orlaExportModalInstance = null;
 let restoreBackupModalInstance = null;
+let preferencesModalInstance = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -165,6 +166,9 @@ function initializeModals() {
 
   restoreBackupModalInstance = new RestoreBackupModal();
   restoreBackupModalInstance.init();
+
+  preferencesModalInstance = new PreferencesModal();
+  preferencesModalInstance.init();
 }
 
 // Initialize user row renderer
@@ -742,6 +746,11 @@ function initializeEventListeners() {
     await handleRestoreImageLinks();
   });
 
+  // Listen for preferences menu event
+  window.electronAPI.onMenuPreferences(async () => {
+    await handlePreferences();
+  });
+
   // Printer configuration modal
   const printerModal = document.getElementById('printer-config-modal');
   const printerSelect = document.getElementById('printer-select');
@@ -755,12 +764,8 @@ function initializeEventListeners() {
 
   // Receipt configuration modal
   const receiptConfigModal = document.getElementById('receipt-config-modal');
-  const receiptCenterName = document.getElementById('receipt-center-name');
   const receiptSubtitle = document.getElementById('receipt-subtitle');
   const receiptPrice = document.getElementById('receipt-price');
-  const receiptLogo = document.getElementById('receipt-logo');
-  const receiptLogoBtn = document.getElementById('receipt-logo-btn');
-  const receiptLogoClearBtn = document.getElementById('receipt-logo-clear-btn');
   const receiptFooter = document.getElementById('receipt-footer');
   const receiptConfigSaveBtn = document.getElementById('receipt-config-save');
   const receiptConfigCancelBtn = document.getElementById('receipt-config-cancel');
@@ -954,57 +959,17 @@ function initializeEventListeners() {
   // Receipt Configuration Modal
   // ============================================================================
 
-  let currentLogoPath = '';
-
   // Open receipt config modal
   if (receiptConfigBtn) {
     receiptConfigBtn.addEventListener('click', async () => {
       // Load current configuration
       const config = await window.electronAPI.getReceiptConfig();
 
-      receiptCenterName.value = config.centerName || '';
       receiptSubtitle.value = config.subtitle || '';
       receiptPrice.value = config.price || 18;
       receiptFooter.value = config.footerText || '';
-      currentLogoPath = config.logoPath || '';
-
-      if (currentLogoPath) {
-        receiptLogo.value = currentLogoPath;
-        receiptLogoClearBtn.style.display = 'inline-block';
-      } else {
-        receiptLogo.value = '';
-        receiptLogoClearBtn.style.display = 'none';
-      }
 
       receiptConfigModal.classList.add('show');
-    });
-  }
-
-  // Select logo
-  if (receiptLogoBtn) {
-    receiptLogoBtn.addEventListener('click', async () => {
-      const result = await window.electronAPI.showOpenDialog({
-        title: 'Seleccionar logotipo',
-        filters: [
-          { name: 'Imágenes', extensions: ['png', 'jpg', 'jpeg'] }
-        ],
-        properties: ['openFile']
-      });
-
-      if (!result.canceled && result.filePaths.length > 0) {
-        currentLogoPath = result.filePaths[0];
-        receiptLogo.value = currentLogoPath;
-        receiptLogoClearBtn.style.display = 'inline-block';
-      }
-    });
-  }
-
-  // Clear logo
-  if (receiptLogoClearBtn) {
-    receiptLogoClearBtn.addEventListener('click', () => {
-      currentLogoPath = '';
-      receiptLogo.value = '';
-      receiptLogoClearBtn.style.display = 'none';
     });
   }
 
@@ -1019,11 +984,9 @@ function initializeEventListeners() {
       }
 
       const config = {
-        centerName: receiptCenterName.value.trim() || 'IES La Marxadella',
         subtitle: receiptSubtitle.value.trim() || 'Reserva de una copia de Orla',
         price: price,
-        footerText: receiptFooter.value.trim() || '',
-        logoPath: currentLogoPath
+        footerText: receiptFooter.value.trim() || ''
       };
 
       const result = await window.electronAPI.setReceiptConfig(config);
@@ -2063,6 +2026,56 @@ async function handleRestoreImageLinks() {
   } catch (error) {
     console.error('[Renderer] Error in handleRestoreImageLinks:', error);
     closeProgressModal();
+    await showInfoModal('Error', 'Error inesperado: ' + error.message);
+  }
+}
+
+// Handle preferences
+async function handlePreferences() {
+  console.log('[Renderer] handlePreferences called');
+
+  try {
+    // Get current preferences
+    const prefsResult = await window.electronAPI.getPreferences();
+
+    if (!prefsResult.success) {
+      await showInfoModal('Error', 'Error al cargar preferencias: ' + prefsResult.error);
+      return;
+    }
+
+    // Show preferences modal
+    const newPreferences = await preferencesModalInstance.show(prefsResult.preferences);
+
+    if (!newPreferences) {
+      // User cancelled
+      console.log('[Renderer] User cancelled preferences');
+      return;
+    }
+
+    // Save new preferences
+    const saveResult = await window.electronAPI.savePreferences(newPreferences);
+
+    if (saveResult.success) {
+      await showInfoModal('Preferencias guardadas', 'Las preferencias se han guardado correctamente.\n\nAlgunos cambios requieren reiniciar la aplicación para aplicarse.');
+
+      // Apply immediate changes
+      showCapturedPhotos = newPreferences.showCapturedPhotos;
+      showRepositoryPhotos = newPreferences.showRepositoryPhotos;
+      showRepositoryIndicators = newPreferences.showRepositoryIndicators;
+
+      // Update additional actions visibility
+      const additionalActionsSection = document.querySelector('.additional-actions');
+      if (additionalActionsSection) {
+        additionalActionsSection.style.display = newPreferences.showAdditionalActions ? 'flex' : 'none';
+      }
+
+      // Reload users to apply display changes
+      await loadUsers(getCurrentFilters());
+    } else {
+      await showInfoModal('Error', 'Error al guardar preferencias: ' + saveResult.error);
+    }
+  } catch (error) {
+    console.error('[Renderer] Error in handlePreferences:', error);
     await showInfoModal('Error', 'Error inesperado: ' + error.message);
   }
 }
