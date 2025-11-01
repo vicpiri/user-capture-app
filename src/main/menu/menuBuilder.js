@@ -263,6 +263,13 @@ class MenuBuilder {
               }
             }
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Restaurar enlaces de imágenes...',
+          click: () => {
+            this.mainWindow.webContents.send('menu-restore-image-links');
+          }
         }
       ]
     };

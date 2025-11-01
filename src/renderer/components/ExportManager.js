@@ -456,12 +456,66 @@
           }
         }
 
-        this.showInfoModal('Exportación completada', message);
+        // Show export result first
+        await this.showInfoModal('Exportación completada', message);
+
+        // Ask if user wants to clear captured images
+        if (results.exported > 0) {
+          const shouldClear = await this.confirmModal.show(
+            '¿Deseas limpiar los enlaces de las imágenes capturadas?\n\n' +
+            'Se creará una copia de seguridad automáticamente antes de eliminarlos.'
+          );
+
+          if (shouldClear) {
+            await this.clearCapturedImagesWithBackup();
+          }
+        }
 
         // Notify completion (for reloading users, etc.)
         this.onExportComplete();
       } else {
         this.showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
+      }
+    }
+
+    /**
+     * Clear captured images with automatic backup
+     */
+    async clearCapturedImagesWithBackup() {
+      try {
+        // Show progress
+        this.showProgressModal('Limpiando enlaces', 'Creando copia de seguridad...');
+
+        // Create backup first
+        const backupResult = await this.electronAPI.backupImageRelationships();
+
+        if (!backupResult.success) {
+          this.closeProgressModal();
+          this.showInfoModal('Error', 'Error al crear copia de seguridad: ' + backupResult.error);
+          return;
+        }
+
+        // Clear captured images
+        const clearResult = await this.electronAPI.clearCapturedImages();
+
+        this.closeProgressModal();
+
+        if (clearResult.success) {
+          await this.showInfoModal(
+            'Enlaces limpiados',
+            `Se han limpiado ${clearResult.cleared} enlaces de imágenes capturadas.\n\n` +
+            `Copia de seguridad creada con ${backupResult.count} registros.\n` +
+            `Fecha de backup: ${new Date(backupResult.backupDate).toLocaleString('es-ES')}`
+          );
+
+          // Notify completion to reload users
+          this.onExportComplete();
+        } else {
+          await this.showInfoModal('Error', 'Error al limpiar enlaces: ' + clearResult.error);
+        }
+      } catch (error) {
+        this.closeProgressModal();
+        await this.showInfoModal('Error', 'Error inesperado: ' + error.message);
       }
     }
 

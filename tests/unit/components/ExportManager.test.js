@@ -29,7 +29,7 @@ describe('ExportManager', () => {
     // Mock modal functions
     mockShowProgressModal = jest.fn();
     mockCloseProgressModal = jest.fn();
-    mockShowInfoModal = jest.fn();
+    mockShowInfoModal = jest.fn().mockResolvedValue(undefined);
     mockShowOpenDialog = jest.fn();
 
     // Mock getters
@@ -50,7 +50,9 @@ describe('ExportManager', () => {
       exportImagesName: jest.fn(),
       exportToRepository: jest.fn(),
       checkCardPrintRequests: jest.fn().mockResolvedValue({ success: true, usersWithRequests: [] }),
-      markCardsAsPrinted: jest.fn().mockResolvedValue({ success: true, movedCount: 0 })
+      markCardsAsPrinted: jest.fn().mockResolvedValue({ success: true, movedCount: 0 }),
+      backupImageRelationships: jest.fn().mockResolvedValue({ success: true, backupDate: '2025-01-01T00:00:00.000Z', count: 5 }),
+      clearCapturedImages: jest.fn().mockResolvedValue({ success: true, cleared: 5 })
     };
 
     // Create manager instance
@@ -433,6 +435,9 @@ describe('ExportManager', () => {
         resize: { boxSize: 800, maxSize: 500 }
       });
 
+      // User declines to clear images
+      mockConfirmModal.show.mockResolvedValue(false);
+
       mockElectronAPI.exportToRepository.mockResolvedValue({
         success: true,
         results: {
@@ -454,6 +459,7 @@ describe('ExportManager', () => {
         'Exportación completada',
         expect.stringContaining('Total de usuarios')
       );
+      expect(mockConfirmModal.show).toHaveBeenCalled();
       expect(onExportComplete).toHaveBeenCalled();
     });
 
@@ -462,6 +468,9 @@ describe('ExportManager', () => {
         mode: 'copy',
         resize: null
       });
+
+      // User declines to clear images
+      mockConfirmModal.show.mockResolvedValue(false);
 
       const errors = Array(10).fill(null).map((_, i) => ({
         user: `User ${i}`,
@@ -501,6 +510,60 @@ describe('ExportManager', () => {
         'Error',
         'Error al exportar imágenes: Network error'
       );
+      expect(mockConfirmModal.show).not.toHaveBeenCalled();
+    });
+
+    test('should clear images when user confirms', async () => {
+      mockExportOptionsModal.show.mockResolvedValue({
+        mode: 'copy',
+        resize: null
+      });
+
+      // User accepts to clear images
+      mockConfirmModal.show.mockResolvedValue(true);
+
+      mockElectronAPI.exportToRepository.mockResolvedValue({
+        success: true,
+        results: {
+          total: 10,
+          exported: 10,
+          errors: []
+        }
+      });
+
+      const onExportComplete = jest.fn();
+      manager.onExportComplete = onExportComplete;
+
+      await manager.exportToRepository();
+
+      expect(mockConfirmModal.show).toHaveBeenCalled();
+      expect(mockElectronAPI.backupImageRelationships).toHaveBeenCalled();
+      expect(mockElectronAPI.clearCapturedImages).toHaveBeenCalled();
+      expect(mockShowInfoModal).toHaveBeenCalledWith(
+        'Enlaces limpiados',
+        expect.stringContaining('Se han limpiado')
+      );
+      expect(onExportComplete).toHaveBeenCalledTimes(2); // Once after export, once after clearing
+    });
+
+    test('should not show clear confirmation if no images exported', async () => {
+      mockExportOptionsModal.show.mockResolvedValue({
+        mode: 'copy',
+        resize: null
+      });
+
+      mockElectronAPI.exportToRepository.mockResolvedValue({
+        success: true,
+        results: {
+          total: 10,
+          exported: 0,
+          errors: []
+        }
+      });
+
+      await manager.exportToRepository();
+
+      expect(mockConfirmModal.show).not.toHaveBeenCalled();
     });
   });
 

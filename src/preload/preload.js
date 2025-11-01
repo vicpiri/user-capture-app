@@ -70,6 +70,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-close-project', callback);
   },
 
+  onMenuRestoreImageLinks: (callback) => {
+    ipcRenderer.on('menu-restore-image-links', callback);
+  },
+
   onMenuToggleCamera: (callback) => {
     ipcRenderer.on('menu-toggle-camera', (event, enabled) => callback(enabled));
   },
@@ -251,5 +255,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setReceiptConfig: (config) => ipcRenderer.invoke('set-receipt-config', config),
 
   // Receipt printing
-  printOrlaReceipt: (receiptData) => ipcRenderer.invoke('print-orla-receipt', receiptData)
+  printOrlaReceipt: (receiptData) => ipcRenderer.invoke('print-orla-receipt', receiptData),
+
+  // Image relationships backup
+  backupImageRelationships: () => ipcRenderer.invoke('backup-image-relationships'),
+  clearCapturedImages: () => ipcRenderer.invoke('clear-captured-images'),
+  restoreImageRelationships: (backupDate) => ipcRenderer.invoke('restore-image-relationships', backupDate),
+  getImageBackups: () => ipcRenderer.invoke('get-image-backups'),
+  deleteImageBackup: (backupDate) => ipcRenderer.invoke('delete-image-backup', backupDate)
 });

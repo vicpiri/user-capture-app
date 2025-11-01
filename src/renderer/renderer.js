@@ -81,6 +81,7 @@ let inventoryExportOptionsModalInstance = null;
 let addTagModalInstance = null;
 let userImageModalInstance = null;
 let orlaExportModalInstance = null;
+let restoreBackupModalInstance = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -161,6 +162,9 @@ function initializeModals() {
 
   orlaExportModalInstance = new OrlaExportModal();
   orlaExportModalInstance.init();
+
+  restoreBackupModalInstance = new RestoreBackupModal();
+  restoreBackupModalInstance.init();
 }
 
 // Initialize user row renderer
@@ -731,6 +735,11 @@ function initializeEventListeners() {
     if (e.target === aboutModal) {
       aboutModal.classList.remove('show');
     }
+  });
+
+  // Listen for restore image links menu event
+  window.electronAPI.onMenuRestoreImageLinks(async () => {
+    await handleRestoreImageLinks();
   });
 
   // Printer configuration modal
@@ -1988,6 +1997,73 @@ async function handleExportImagesName() {
 async function handleExportToRepository() {
   if (exportManager) {
     await exportManager.exportToRepository();
+  }
+}
+
+// Restore image links from backup
+async function handleRestoreImageLinks() {
+  console.log('[Renderer] handleRestoreImageLinks called');
+
+  if (!projectOpen) {
+    await showInfoModal('Aviso', 'Debes abrir un proyecto primero');
+    return;
+  }
+
+  try {
+    console.log('[Renderer] Showing restore backup modal');
+    // Show modal and get selected backup date
+    const backupDate = await restoreBackupModalInstance.show();
+
+    console.log('[Renderer] Selected backup date:', backupDate);
+
+    if (!backupDate) {
+      // User cancelled
+      console.log('[Renderer] User cancelled backup selection');
+      return;
+    }
+
+    // Show confirmation before restoring
+    console.log('[Renderer] Showing confirmation dialog');
+    const confirmed = await showConfirmationModal(
+      `¿Estás seguro de que deseas restaurar los enlaces desde esta copia de seguridad?\n\n` +
+      `Fecha: ${new Date(backupDate).toLocaleString('es-ES')}\n\n` +
+      `Esto reemplazará todos los enlaces actuales de imágenes capturadas.`
+    );
+
+    console.log('[Renderer] User confirmed:', confirmed);
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Show progress
+    showProgressModal('Restaurando enlaces', 'Restaurando enlaces de imágenes...');
+
+    console.log('[Renderer] Calling restoreImageRelationships with date:', backupDate);
+    // Restore from backup
+    const result = await window.electronAPI.restoreImageRelationships(backupDate);
+
+    console.log('[Renderer] Restore result:', result);
+
+    closeProgressModal();
+
+    if (result.success) {
+      await showInfoModal(
+        'Restauración completada',
+        `Se han restaurado ${result.restored} enlaces de imágenes capturadas.\n\n` +
+        `Fecha de backup: ${new Date(backupDate).toLocaleString('es-ES')}`
+      );
+
+      // Reload users to reflect changes
+      console.log('[Renderer] Reloading users');
+      await loadUsers(getCurrentFilters());
+    } else {
+      await showInfoModal('Error', 'Error al restaurar enlaces: ' + result.error);
+    }
+  } catch (error) {
+    console.error('[Renderer] Error in handleRestoreImageLinks:', error);
+    closeProgressModal();
+    await showInfoModal('Error', 'Error inesperado: ' + error.message);
   }
 }
 

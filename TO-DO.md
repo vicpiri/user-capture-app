@@ -1,2 +1,3 @@
 - Implementar limpieza de capturas después de exportar al depósito. (Con backup)
-- Probar formato de CSV de inventario para que funcionen con la aplicación.
+- Crear un cuadro de preferencias general del programa:
+  - Logotipo

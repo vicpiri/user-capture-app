@@ -74,6 +74,17 @@ class DatabaseManager {
           )
         `);
 
+        // Image relationships backup table
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS image_relationships_backup (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            backup_date TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
+            image_path TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
         // Create indexes for performance optimization
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_group ON users(group_code)');
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_type ON users(type)');
@@ -86,6 +97,7 @@ class DatabaseManager {
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_image ON users(image_path)');
 
         this.db.run('CREATE INDEX IF NOT EXISTS idx_image_tags_path ON image_tags(image_path)');
+        this.db.run('CREATE INDEX IF NOT EXISTS idx_backup_date ON image_relationships_backup(backup_date)');
 
         // Add orla_paid column if it doesn't exist (for backward compatibility)
         this.db.run(`
@@ -620,6 +632,174 @@ class DatabaseManager {
         if (err) reject(err);
         else resolve(row ? row.receipt_printed === 1 : false);
       });
+    });
+  }
+
+  // Image relationships backup methods
+  async backupUserImageRelationships() {
+    return new Promise((resolve, reject) => {
+      const backupDate = new Date().toISOString();
+      console.log('[Database] Creating backup with date:', backupDate);
+
+      this.db.serialize(() => {
+        // Get all users with image_path
+        this.db.all(
+          'SELECT id, image_path FROM users WHERE image_path IS NOT NULL AND image_path != ""',
+          [],
+          (err, users) => {
+            if (err) {
+              console.error('[Database] Error getting users for backup:', err);
+              reject(err);
+              return;
+            }
+
+            console.log('[Database] Found users with images:', users.length);
+            if (users.length > 0) {
+              console.log('[Database] Sample user:', users[0]);
+            }
+
+            if (users.length === 0) {
+              resolve({ backupDate, count: 0 });
+              return;
+            }
+
+            // Insert all relationships into backup table
+            const stmt = this.db.prepare(
+              'INSERT INTO image_relationships_backup (backup_date, user_id, image_path) VALUES (?, ?, ?)'
+            );
+
+            let completed = 0;
+            let hasError = false;
+
+            users.forEach(user => {
+              stmt.run([backupDate, user.id, user.image_path], (err) => {
+                if (err && !hasError) {
+                  console.error('[Database] Error inserting backup:', err);
+                  hasError = true;
+                  stmt.finalize();
+                  reject(err);
+                  return;
+                }
+
+                completed++;
+                if (completed === users.length && !hasError) {
+                  stmt.finalize();
+                  console.log('[Database] Successfully backed up', users.length, 'relationships');
+                  resolve({ backupDate, count: users.length });
+                }
+              });
+            });
+          }
+        );
+      });
+    });
+  }
+
+  async clearCapturedImages() {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'UPDATE users SET image_path = NULL WHERE image_path IS NOT NULL AND image_path != ""',
+        [],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ cleared: this.changes });
+        }
+      );
+    });
+  }
+
+  async restoreUserImageRelationships(backupDate) {
+    return new Promise((resolve, reject) => {
+      console.log('[Database] Restoring from backup date:', backupDate);
+
+      this.db.serialize(() => {
+        // Get all backed up relationships for this date
+        this.db.all(
+          'SELECT user_id, image_path FROM image_relationships_backup WHERE backup_date = ?',
+          [backupDate],
+          (err, backups) => {
+            if (err) {
+              console.error('[Database] Error getting backups:', err);
+              reject(err);
+              return;
+            }
+
+            console.log('[Database] Found backups:', backups.length);
+            if (backups.length > 0) {
+              console.log('[Database] Sample backup:', backups[0]);
+            }
+
+            if (backups.length === 0) {
+              resolve({ restored: 0 });
+              return;
+            }
+
+            // First, clear current image paths
+            this.db.run('UPDATE users SET image_path = NULL', [], (err) => {
+              if (err) {
+                console.error('[Database] Error clearing image paths:', err);
+                reject(err);
+                return;
+              }
+
+              console.log('[Database] Cleared existing image paths');
+
+              // Restore backed up relationships
+              const stmt = this.db.prepare('UPDATE users SET image_path = ? WHERE id = ?');
+              let completed = 0;
+              let hasError = false;
+
+              backups.forEach(backup => {
+                stmt.run([backup.image_path, backup.user_id], (err) => {
+                  if (err && !hasError) {
+                    console.error('[Database] Error restoring backup:', err);
+                    hasError = true;
+                    stmt.finalize();
+                    reject(err);
+                    return;
+                  }
+
+                  completed++;
+                  if (completed === backups.length && !hasError) {
+                    stmt.finalize();
+                    console.log('[Database] Successfully restored', backups.length, 'relationships');
+                    resolve({ restored: backups.length });
+                  }
+                });
+              });
+            });
+          }
+        );
+      });
+    });
+  }
+
+  async getBackups() {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT backup_date, COUNT(*) as count, MIN(created_at) as created_at
+         FROM image_relationships_backup
+         GROUP BY backup_date
+         ORDER BY backup_date DESC`,
+        [],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+  }
+
+  async deleteBackup(backupDate) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'DELETE FROM image_relationships_backup WHERE backup_date = ?',
+        [backupDate],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ deleted: this.changes });
+        }
+      );
     });
   }
 

@@ -1206,6 +1206,95 @@ function registerMiscHandlers(context) {
 </html>
     `.trim();
   }
+
+  // ============================================================================
+  // Image Relationships Backup Handlers
+  // ============================================================================
+
+  // Backup user-image relationships
+  ipcMain.handle('backup-image-relationships', async () => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const result = await state.dbManager.backupUserImageRelationships();
+      logger.info(`Backed up ${result.count} image relationships at ${result.backupDate}`);
+
+      return { success: true, ...result };
+    } catch (error) {
+      logger.error('Error backing up image relationships:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Clear captured images
+  ipcMain.handle('clear-captured-images', async () => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const result = await state.dbManager.clearCapturedImages();
+      logger.info(`Cleared ${result.cleared} captured image links`);
+
+      return { success: true, ...result };
+    } catch (error) {
+      logger.error('Error clearing captured images:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Restore image relationships from backup
+  ipcMain.handle('restore-image-relationships', async (event, backupDate) => {
+    try {
+      logger.info(`[IPC] Restore image relationships called with backup date: ${backupDate}`);
+
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const result = await state.dbManager.restoreUserImageRelationships(backupDate);
+      logger.info(`[IPC] Restored ${result.restored} image relationships from backup ${backupDate}`);
+
+      return { success: true, ...result };
+    } catch (error) {
+      logger.error('[IPC] Error restoring image relationships:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Get list of backups
+  ipcMain.handle('get-image-backups', async () => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const backups = await state.dbManager.getBackups();
+      return { success: true, backups };
+    } catch (error) {
+      logger.error('Error getting image backups:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Delete backup
+  ipcMain.handle('delete-image-backup', async (event, backupDate) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const result = await state.dbManager.deleteBackup(backupDate);
+      logger.info(`Deleted backup ${backupDate} (${result.deleted} records)`);
+
+      return { success: true, ...result };
+    } catch (error) {
+      logger.error('Error deleting image backup:', error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 module.exports = { registerMiscHandlers };

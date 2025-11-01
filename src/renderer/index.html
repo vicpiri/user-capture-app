@@ -580,6 +580,27 @@
     </div>
   </div>
 
+  <!-- Restore Backup Modal -->
+  <div id="restore-backup-modal" class="modal">
+    <div class="modal-content">
+      <h2>Restaurar Enlaces de Imágenes</h2>
+      <p style="margin-bottom: 16px;">Selecciona una copia de seguridad para restaurar los enlaces de imágenes capturadas:</p>
+
+      <div id="backups-list" class="backups-list">
+        <!-- Backups will be populated here -->
+      </div>
+
+      <p id="no-backups-message" class="no-backups-message" style="display: none;">
+        No hay copias de seguridad disponibles.
+      </p>
+
+      <div class="modal-buttons">
+        <button id="restore-backup-btn" class="btn btn-primary" disabled>Restaurar</button>
+        <button id="cancel-restore-backup-btn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Load modules in dependency order -->
   <script src="core/store.js"></script>
   <script src="core/BaseModal.js"></script>
@@ -589,6 +610,7 @@
   <script src="components/modals/ExportOptionsModal.js"></script>
   <script src="components/modals/InventoryExportOptionsModal.js"></script>
   <script src="components/modals/AddTagModal.js"></script>
+  <script src="components/modals/RestoreBackupModal.js"></script>
   <!-- Status Bar -->
   <div id="status-bar" class="status-bar" style="display: none;">
     <div class="status-bar-section">
