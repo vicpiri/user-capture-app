@@ -103,9 +103,13 @@
         this.setShowCapturedPhotos(prefs.showCapturedPhotos);
         this.setShowRepositoryPhotos(prefs.showRepositoryPhotos);
         this.setShowRepositoryIndicators(prefs.showRepositoryIndicators);
+        this.setShowAdditionalActions(prefs.showAdditionalActions);
 
         // Update photos column visibility based on preferences
         this.onUpdatePhotosColumnVisibility();
+
+        // Update UserRowRenderer config with initial preferences
+        this.onUpdateUserRowRenderer();
 
         // Mark as loading if repository options are enabled in saved preferences
         if (prefs.showRepositoryPhotos) {

@@ -1,0 +1,2 @@
+- Hacer que todas las exportaciones pregunten si se exportan todos los usuarios, el grupo seleccionado o los usuarios filtrados.
+- 
