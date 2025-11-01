@@ -590,63 +590,79 @@
   <!-- Preferences Modal -->
   <div id="preferences-modal" class="modal">
     <div class="modal-content preferences-modal-content">
-      <h2>Preferencias</h2>
-
-      <div class="preferences-section">
-        <h3>Visualización</h3>
-
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="pref-show-captured-photos" checked>
-            <span>Mostrar miniaturas de fotos capturadas</span>
-          </label>
-        </div>
-
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="pref-show-repository-photos">
-            <span>Mostrar miniaturas de fotos del repositorio</span>
-          </label>
-        </div>
-
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="pref-show-repository-indicators">
-            <span>Mostrar indicadores del repositorio</span>
-          </label>
-        </div>
-
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="pref-show-additional-actions" checked>
-            <span>Mostrar acciones adicionales (Pagar orla, Imprimir recibo)</span>
-          </label>
-        </div>
+      <div class="preferences-header">
+        <h2>Preferencias</h2>
+        <button id="preferences-close-x" class="modal-close-btn">&times;</button>
       </div>
 
-      <div class="preferences-section">
-        <h3>Datos de la Institución</h3>
-
-        <div class="form-group">
-          <label for="pref-center-name">Nombre del centro:</label>
-          <input type="text" id="pref-center-name" class="form-control" placeholder="IES La Marxadella" />
-          <small class="form-help">Este nombre se utilizará en recibos, exportaciones PDF y otros documentos</small>
+      <div class="preferences-body">
+        <!-- Sidebar Navigation -->
+        <div class="preferences-sidebar">
+          <div class="preferences-category active" data-category="display">Visualización</div>
+          <div class="preferences-category" data-category="institution">Datos de la Institución</div>
         </div>
 
-        <div class="form-group">
-          <label for="pref-logo">Logotipo:</label>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <input type="text" id="pref-logo" class="form-control" readonly placeholder="Ningún logotipo seleccionado" style="flex: 1;" />
-            <button id="pref-logo-btn" class="btn btn-secondary">Seleccionar</button>
-            <button id="pref-logo-clear-btn" class="btn btn-secondary" style="display: none;">✕</button>
+        <!-- Content Area -->
+        <div class="preferences-content">
+          <!-- Display Category -->
+          <div class="preferences-panel active" data-panel="display">
+            <h3>Visualización</h3>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="pref-show-captured-photos" checked>
+                <span>Mostrar miniaturas de fotos capturadas</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="pref-show-repository-photos">
+                <span>Mostrar miniaturas de fotos del repositorio</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="pref-show-repository-indicators">
+                <span>Mostrar indicadores del repositorio</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="pref-show-additional-actions" checked>
+                <span>Mostrar acciones adicionales (Pagar orla, Imprimir recibo)</span>
+              </label>
+            </div>
           </div>
-          <small class="form-help">Este logotipo se utilizará en recibos, exportaciones PDF y otros documentos</small>
+
+          <!-- Institution Category -->
+          <div class="preferences-panel" data-panel="institution">
+            <h3>Datos de la Institución</h3>
+
+            <div class="form-group">
+              <label for="pref-center-name">Nombre del centro:</label>
+              <input type="text" id="pref-center-name" class="form-control" placeholder="IES La Marxadella" />
+              <small class="form-help">Este nombre se utilizará en recibos, exportaciones PDF y otros documentos</small>
+            </div>
+
+            <div class="form-group">
+              <label for="pref-logo">Logotipo:</label>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="pref-logo" class="form-control" readonly placeholder="Ningún logotipo seleccionado" style="flex: 1;" />
+                <button id="pref-logo-btn" class="btn btn-secondary">Seleccionar</button>
+                <button id="pref-logo-clear-btn" class="btn btn-secondary" style="display: none;">✕</button>
+              </div>
+              <small class="form-help">Este logotipo se utilizará en recibos, exportaciones PDF y otros documentos</small>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="modal-buttons">
-        <button id="preferences-save-btn" class="btn btn-primary">Guardar</button>
+      <div class="preferences-footer">
         <button id="preferences-cancel-btn" class="btn btn-secondary">Cancelar</button>
+        <button id="preferences-save-btn" class="btn btn-primary">Guardar</button>
       </div>
     </div>
   </div>

@@ -1781,41 +1781,119 @@ body {
 
 /* ==================== Preferences Modal ==================== */
 .preferences-modal-content {
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
+  max-width: 800px;
+  max-height: 85vh;
+  width: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.preferences-section {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
+.preferences-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
   border-bottom: 1px solid #3a3f4e;
 }
 
-.preferences-section:last-of-type {
-  border-bottom: none;
-  margin-bottom: 16px;
-  padding-bottom: 0;
-}
-
-.preferences-section h3 {
-  margin-top: 0;
-  margin-bottom: 16px;
+.preferences-header h2 {
+  margin: 0;
+  font-size: 20px;
   color: #e0e0e0;
-  font-size: 16px;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #8a8f9a;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  background: #3a3f4e;
+  color: #e0e0e0;
+}
+
+.preferences-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.preferences-sidebar {
+  width: 200px;
+  background: #1a1f2e;
+  border-right: 1px solid #3a3f4e;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.preferences-category {
+  padding: 12px 20px;
+  cursor: pointer;
+  color: #b0b5bf;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.preferences-category:hover {
+  background: #252a3a;
+  color: #e0e0e0;
+}
+
+.preferences-category.active {
+  background: #252a3a;
+  color: #4a9eff;
+  border-left-color: #4a9eff;
+  font-weight: 500;
+}
+
+.preferences-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background: #242938;
+}
+
+.preferences-panel {
+  display: none;
+}
+
+.preferences-panel.active {
+  display: block;
+}
+
+.preferences-panel h3 {
+  margin: 0 0 20px 0;
+  color: #e0e0e0;
+  font-size: 18px;
   font-weight: 600;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #3a3f4e;
 }
 
-.preferences-modal-content .form-group {
-  margin-bottom: 16px;
+.preferences-panel .form-group {
+  margin-bottom: 20px;
 }
 
-.preferences-modal-content .form-group:last-child {
+.preferences-panel .form-group:last-child {
   margin-bottom: 0;
 }
 
-.preferences-modal-content .form-control {
-  width: 200px;
+.preferences-panel .form-control {
+  width: 100%;
+  max-width: 400px;
 }
 
 .form-help {
@@ -1824,24 +1902,52 @@ body {
   font-size: 12px;
   color: #8a8f9a;
   font-style: italic;
+  line-height: 1.4;
 }
 
-/* Custom scrollbar for preferences modal */
-.preferences-modal-content::-webkit-scrollbar {
+.preferences-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #3a3f4e;
+  background: #1a1f2e;
+}
+
+/* Custom scrollbar for preferences sidebar */
+.preferences-sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.preferences-sidebar::-webkit-scrollbar-track {
+  background: #1a1f2e;
+}
+
+.preferences-sidebar::-webkit-scrollbar-thumb {
+  background: #3a3f4e;
+  border-radius: 4px;
+}
+
+.preferences-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #4a5566;
+}
+
+/* Custom scrollbar for preferences content */
+.preferences-content::-webkit-scrollbar {
   width: 10px;
 }
 
-.preferences-modal-content::-webkit-scrollbar-track {
-  background: #1a1f2e;
+.preferences-content::-webkit-scrollbar-track {
+  background: #242938;
   border-radius: 6px;
 }
 
-.preferences-modal-content::-webkit-scrollbar-thumb {
+.preferences-content::-webkit-scrollbar-thumb {
   background: #3a3f4e;
   border-radius: 6px;
-  border: 2px solid #1a1f2e;
+  border: 2px solid #242938;
 }
 
-.preferences-modal-content::-webkit-scrollbar-thumb:hover {
+.preferences-content::-webkit-scrollbar-thumb:hover {
   background: #4a5566;
 }

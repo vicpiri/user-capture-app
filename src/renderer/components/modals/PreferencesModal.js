@@ -29,6 +29,11 @@
 
       this.saveBtn = document.getElementById('preferences-save-btn');
       this.cancelBtn = document.getElementById('preferences-cancel-btn');
+      this.closeXBtn = document.getElementById('preferences-close-x');
+
+      // Get sidebar categories
+      this.categories = document.querySelectorAll('.preferences-category');
+      this.panels = document.querySelectorAll('.preferences-panel');
 
       // Store logo path
       this.currentLogoPath = '';
@@ -38,6 +43,7 @@
       this.handleCancel = this.handleCancel.bind(this);
       this.handleSelectLogo = this.handleSelectLogo.bind(this);
       this.handleClearLogo = this.handleClearLogo.bind(this);
+      this.handleCategoryClick = this.handleCategoryClick.bind(this);
     }
 
     /**
@@ -60,6 +66,10 @@
         this.cancelBtn.addEventListener('click', this.handleCancel);
       }
 
+      if (this.closeXBtn) {
+        this.closeXBtn.addEventListener('click', this.handleCancel);
+      }
+
       if (this.logoBtn) {
         this.logoBtn.addEventListener('click', this.handleSelectLogo);
       }
@@ -67,6 +77,34 @@
       if (this.logoClearBtn) {
         this.logoClearBtn.addEventListener('click', this.handleClearLogo);
       }
+
+      // Setup category navigation
+      this.categories.forEach(category => {
+        category.addEventListener('click', this.handleCategoryClick);
+      });
+    }
+
+    /**
+     * Handle category click for navigation
+     */
+    handleCategoryClick(event) {
+      const clickedCategory = event.currentTarget;
+      const categoryName = clickedCategory.dataset.category;
+
+      console.log('[PreferencesModal] Category clicked:', categoryName);
+
+      // Update active category
+      this.categories.forEach(cat => cat.classList.remove('active'));
+      clickedCategory.classList.add('active');
+
+      // Update active panel
+      this.panels.forEach(panel => {
+        if (panel.dataset.panel === categoryName) {
+          panel.classList.add('active');
+        } else {
+          panel.classList.remove('active');
+        }
+      });
     }
 
     /**
