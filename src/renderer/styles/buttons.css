@@ -1,0 +1,110 @@
+/* ============================================
+   BUTTONS.CSS - Button Styles and Variants
+   ============================================ */
+
+/* Base Button */
+.btn {
+  flex: 1;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+/* Button Variants */
+.btn-primary {
+  background-color: #4a7cc7;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #5a8cd7;
+}
+
+.btn-primary:disabled {
+  background-color: #3a4f5e;
+  color: #707580;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #3a3f4e;
+  color: #e0e0e0;
+}
+
+.btn-secondary:hover {
+  background-color: #4a4f5e;
+}
+
+.btn-secondary:disabled {
+  background-color: #2a2f3e;
+  color: #707580;
+  cursor: not-allowed;
+}
+
+.btn-warning {
+  background-color: #d97706;
+  color: white;
+}
+
+.btn-warning:hover {
+  background-color: #f59e0b;
+}
+
+/* Button Sizes */
+.btn-small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* Action Buttons Container */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* Navigation Buttons */
+.nav-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(30, 35, 48, 0.8);
+  border: none;
+  color: #e0e0e0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.nav-button:hover {
+  background-color: rgba(40, 45, 58, 0.9);
+}
+
+/* Additional Actions */
+.additional-actions {
+  background-color: #0f1419;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.additional-actions h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #e0e0e0;
+}
+
+.additional-actions-buttons {
+  display: flex;
+  gap: 12px;
+}
