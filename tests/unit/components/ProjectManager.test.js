@@ -54,6 +54,9 @@ describe('ProjectManager', () => {
       onShowConfirmModal: jest.fn(),
       onShowProgressModal: jest.fn(),
       onCloseProgressModal: jest.fn(),
+      onUpdateLastFilterValue: jest.fn(),
+      onUpdateStatusBar: jest.fn(),
+      onUpdateWindowTitle: jest.fn(),
       searchInput: mockSearchInput,
       groupFilter: mockGroupFilter,
       noProjectPlaceholder: mockNoProjectPlaceholder,
@@ -220,6 +223,7 @@ describe('ProjectManager', () => {
       await manager.loadProjectData();
 
       expect(mockConfig.groupFilter.value).toBe('GRP1');
+      expect(mockConfig.onUpdateLastFilterValue).toHaveBeenCalledWith('GRP1');
     });
 
     test('should not apply filter if load fails', async () => {
