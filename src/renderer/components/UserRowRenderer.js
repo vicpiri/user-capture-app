@@ -70,11 +70,14 @@ class UserRowRenderer {
     const receiptPrintedIndicator = this._buildReceiptPrintedIndicator(user);
     const checkboxCell = this._buildCheckboxCell(user);
 
+    // Show NIA for students, document (DNI) for teachers and non-teaching staff
+    const userId = user.type === 'student' ? (user.nia || '-') : (user.document || '-');
+
     row.innerHTML = `
       ${checkboxCell}
       <td class="name">${user.first_name}</td>
       <td>${user.last_name1} ${user.last_name2 || ''}</td>
-      <td>${user.nia || '-'}</td>
+      <td>${userId}</td>
       <td>${user.group_code}</td>
       <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}${publicationIndicator}${orlaPaidIndicator}${receiptPrintedIndicator}</td>
     `;
