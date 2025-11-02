@@ -300,6 +300,15 @@ describe('ProjectManager', () => {
   });
 
   describe('handleUpdateXML()', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
+    });
+
     test('should show warning if no project open', async () => {
       mockConfig.getProjectOpen.mockReturnValue(false);
 
@@ -350,7 +359,9 @@ describe('ProjectManager', () => {
       });
       mockConfig.onShowConfirmModal.mockResolvedValue(false); // User cancels
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfig.onShowProgressModal).toHaveBeenCalledWith(
         'Actualizando XML',
@@ -371,7 +382,9 @@ describe('ProjectManager', () => {
         error: 'Invalid XML format'
       });
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfig.onCloseProgressModal).toHaveBeenCalled();
       expect(mockConfig.onShowInfoModal).toHaveBeenCalledWith(
@@ -396,7 +409,9 @@ describe('ProjectManager', () => {
       });
       mockConfig.onShowConfirmModal.mockResolvedValue(false);
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfig.onShowConfirmModal).toHaveBeenCalled();
       const confirmMessage = mockConfig.onShowConfirmModal.mock.calls[0][0];
@@ -423,7 +438,9 @@ describe('ProjectManager', () => {
       });
       mockConfig.onShowConfirmModal.mockResolvedValue(false);
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockElectronAPI.confirmUpdateXML).not.toHaveBeenCalled();
     });
@@ -452,7 +469,9 @@ describe('ProjectManager', () => {
       });
       mockElectronAPI.getSelectedGroupFilter.mockResolvedValue({ success: false });
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfig.onShowProgressModal).toHaveBeenCalledWith(
         'Actualizando XML',
@@ -483,7 +502,9 @@ describe('ProjectManager', () => {
       });
       mockElectronAPI.getSelectedGroupFilter.mockResolvedValue({ success: false });
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfig.onLoadGroups).toHaveBeenCalled();
       expect(mockConfig.onLoadUsers).toHaveBeenCalled();
@@ -511,7 +532,9 @@ describe('ProjectManager', () => {
       });
       mockElectronAPI.getSelectedGroupFilter.mockResolvedValue({ success: false });
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfig.onShowInfoModal).toHaveBeenCalledWith(
         'Actualización completada',
@@ -543,7 +566,9 @@ describe('ProjectManager', () => {
         error: 'Database error'
       });
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfig.onShowInfoModal).toHaveBeenCalledWith(
         'Error',
@@ -603,6 +628,7 @@ describe('ProjectManager', () => {
     });
 
     test('should handle update XML with zero changes', async () => {
+      jest.useFakeTimers();
       mockConfig.getProjectOpen.mockReturnValue(true);
       mockElectronAPI.showOpenDialog.mockResolvedValue({
         canceled: false,
@@ -618,7 +644,10 @@ describe('ProjectManager', () => {
       });
       mockConfig.onShowConfirmModal.mockResolvedValue(false);
 
-      await manager.handleUpdateXML();
+      const promise = manager.handleUpdateXML();
+      await jest.runAllTimersAsync();
+      await promise;
+      jest.useRealTimers();
 
       const confirmMessage = mockConfig.onShowConfirmModal.mock.calls[0][0];
       expect(confirmMessage).toContain('Usuarios nuevos: 0');

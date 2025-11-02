@@ -16,6 +16,7 @@ describe('UserRowRenderer', () => {
       first_name: 'John',
       last_name1: 'Doe',
       last_name2: 'Smith',
+      type: 'student',
       nia: '12345',
       group_code: 'A1',
       image_path: '/path/to/image.jpg',
