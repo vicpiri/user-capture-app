@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const archiver = require('archiver');
-const { getImageRepositoryPath } = require('../utils/config');
+const { getImageRepositoryPath, loadGlobalConfig } = require('../utils/config');
 const { capitalizeWords } = require('../utils/formatting');
 
 /**
@@ -83,6 +83,79 @@ function sendProgressUpdate(getMainWindow, processedCount, total, message) {
     message,
     details: `${processedCount} de ${total} imágenes procesadas`
   });
+}
+
+/**
+ * Helper function to add logo to PDF page
+ * @param {PDFDocument} doc - PDFKit document instance
+ * @param {Object} logger - Logger instance
+ * @param {Object} options - Optional configuration
+ * @param {boolean} options.useFixedPosition - If true, position at top of page (y=20) instead of using margins
+ * @param {number} options.alignX - If provided, use this X position instead of default
+ * @returns {Promise<void>}
+ */
+async function addLogoToPDFPage(doc, logger, options = {}) {
+  try {
+    // Load global config to get logo path
+    const globalConfig = loadGlobalConfig();
+
+    if (!globalConfig || !globalConfig.logoPath) {
+      logger.info('[addLogoToPDFPage] No institution logo configured - skipping logo addition');
+      return;
+    }
+
+    const logoPath = globalConfig.logoPath;
+    logger.info(`[addLogoToPDFPage] Logo path: ${logoPath}`);
+
+    // Check if logo file exists
+    if (!fs.existsSync(logoPath)) {
+      logger.warning(`[addLogoToPDFPage] Logo file not found: ${logoPath}`);
+      return;
+    }
+
+    logger.info('[addLogoToPDFPage] Logo file exists, processing...');
+
+    // Process logo image with sharp to ensure it loads correctly
+    // Resize to max height of 60pt while maintaining aspect ratio
+    const logoBuffer = await sharp(logoPath)
+      .resize({ height: 180, withoutEnlargement: true }) // 3x for better quality
+      .png() // Convert to PNG for transparency support
+      .toBuffer();
+
+    // Get image dimensions to calculate width
+    const logoMetadata = await sharp(logoBuffer).metadata();
+    const aspectRatio = logoMetadata.width / logoMetadata.height;
+    const logoHeight = 60; // Display height in points (increased from 40pt)
+    const logoWidth = logoHeight * aspectRatio;
+
+    logger.info(`[addLogoToPDFPage] Logo dimensions: ${logoWidth}x${logoHeight}pt`);
+
+    // Calculate position
+    let x, y;
+    if (options.useFixedPosition) {
+      // For orlas: fixed position at top of page
+      x = options.alignX !== undefined ? options.alignX : 20; // Use alignX if provided, else 20pt from left edge
+      y = 20; // 20pt from top edge
+    } else {
+      // For other PDFs: use document margins but move logo up a bit
+      x = doc.page.margins.left;
+      y = 30; // 30pt from top edge (instead of 50pt margin)
+    }
+
+    logger.info(`[addLogoToPDFPage] Logo position: x=${x}, y=${y} (fixedPosition=${options.useFixedPosition}, alignX=${options.alignX})`);
+
+    // Add logo to current page
+    doc.image(logoBuffer, x, y, {
+      width: logoWidth,
+      height: logoHeight
+    });
+
+    logger.success('[addLogoToPDFPage] Logo added successfully');
+
+  } catch (error) {
+    logger.error('[addLogoToPDFPage] Error adding logo to PDF page:', error);
+    // Don't fail the entire export if logo fails, just log the error
+  }
 }
 
 /**
@@ -1290,6 +1363,14 @@ function registerExportHandlers(context) {
         const writeStream = fs.createWriteStream(filePath);
         doc.pipe(writeStream);
 
+        // Calculate starting X position to center the grid (needed for logo alignment)
+        const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+        const totalGridWidth = (imageWidth + imageSpacing) * imagesPerRow - imageSpacing;
+        const startX = doc.page.margins.left + (pageWidth - totalGridWidth) / 2;
+
+        // Add logo to first page (aligned with first column of photos)
+        await addLogoToPDFPage(doc, logger, { useFixedPosition: true, alignX: startX });
+
         // Add title
         doc.fontSize(20)
            .font('Helvetica-Bold')
@@ -1299,12 +1380,7 @@ function registerExportHandlers(context) {
         const titleY = doc.y; // Save Y position after title
 
         // Page dimensions
-        const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
         const pageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
-
-        // Calculate starting X position to center the grid
-        const totalGridWidth = (imageWidth + imageSpacing) * imagesPerRow - imageSpacing;
-        const startX = doc.page.margins.left + (pageWidth - totalGridWidth) / 2;
 
         let currentX = startX;
         let currentY = titleY;
@@ -1348,7 +1424,10 @@ function registerExportHandlers(context) {
               doc.addPage({
                 margins: { top: topMarginFullPage, bottom: topMarginFullPage, left: 20, right: 20 }
               });
-              currentY = doc.page.margins.top;
+              // Add logo to new page (aligned with first column of photos)
+              await addLogoToPDFPage(doc, logger, { useFixedPosition: true, alignX: startX });
+              // Start grid below logo (logo is at y=20 with height=60pt, so start at y=90 with some spacing)
+              currentY = 90; // 20 (logo Y) + 60 (logo height) + 10 (spacing) = 90
               currentX = startX;
               count = 0;
             }
@@ -1494,6 +1573,9 @@ function registerExportHandlers(context) {
       const stream = fs.createWriteStream(filePath);
       doc.pipe(stream);
 
+      // Add logo to first page
+      await addLogoToPDFPage(doc, logger);
+
       // Main title
       doc.fontSize(20)
          .font('Helvetica-Bold')
@@ -1505,7 +1587,8 @@ function registerExportHandlers(context) {
       let globalIndex = 1;
 
       // Process each group
-      groupCodes.forEach((groupCode, groupIndex) => {
+      for (let groupIndex = 0; groupIndex < groupCodes.length; groupIndex++) {
+        const groupCode = groupCodes[groupIndex];
         const users = usersByGroup[groupCode];
 
         // Sort users alphabetically by last_name1, then last_name2, then first_name
@@ -1540,13 +1623,17 @@ function registerExportHandlers(context) {
         doc.fontSize(11)
            .font('Helvetica');
 
-        users.forEach((user) => {
+        for (const user of users) {
           const lastName2 = user.last_name2 ? ` ${user.last_name2}` : '';
           const fullName = `${user.last_name1}${lastName2}, ${user.first_name}`;
 
           // Check if we need a new page
           if (doc.y > 750) {
             doc.addPage();
+            // Add logo to new page
+            await addLogoToPDFPage(doc, logger);
+            // Move cursor below logo (logo at y=30 with height=60pt, so start at y=120)
+            doc.y = 120; // 30 (logo Y) + 60 (logo height) + 30 (spacing) = 120
             doc.fontSize(11).font('Helvetica');
           }
 
@@ -1555,7 +1642,7 @@ function registerExportHandlers(context) {
 
           doc.moveDown(0.3);
           globalIndex++;
-        });
+        }
 
         // Group subtotal
         doc.fontSize(10)
@@ -1563,10 +1650,14 @@ function registerExportHandlers(context) {
            .text(`Subtotal grupo ${groupCode}: ${users.length} alumno${users.length !== 1 ? 's' : ''}`, 50, doc.y);
 
         doc.moveDown(0.5);
-      });
+      }
 
       // Add final page with total
       doc.addPage();
+      // Add logo to summary page
+      await addLogoToPDFPage(doc, logger);
+      // Move cursor below logo
+      doc.y = 120; // 30 (logo Y) + 60 (logo height) + 30 (spacing) = 120
       doc.fontSize(16)
          .font('Helvetica-Bold')
          .text('Resumen', { align: 'center' });
