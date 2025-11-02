@@ -517,6 +517,7 @@ function initializeProjectManager() {
     onShowConfirmModal: showConfirmationModal,
     onShowProgressModal: showProgressModal,
     onCloseProgressModal: closeProgressModal,
+    onUpdateLastFilterValue: updateLastFilterValue,
 
     // DOM elements
     searchInput: searchInput,
@@ -532,6 +533,14 @@ function initializeProjectManager() {
 
 }
 
+// Group filter state (needs to be accessible from ProjectManager)
+let lastFilterValue = groupFilter.value; // Track last value to detect actual changes
+
+// Function to update lastFilterValue when filter is programmatically changed
+function updateLastFilterValue(value) {
+  lastFilterValue = value;
+}
+
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
@@ -540,7 +549,6 @@ function initializeEventListeners() {
     filterUsers();
   });
   clearSearchBtn.addEventListener('click', clearSearch);
-  let lastFilterValue = groupFilter.value; // Track last value to detect actual changes
 
   groupFilter.addEventListener('change', async () => {
     const newValue = groupFilter.value;

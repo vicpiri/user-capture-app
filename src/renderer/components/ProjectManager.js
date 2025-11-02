@@ -43,6 +43,7 @@
       this.onShowProgressModal = config.onShowProgressModal || ((title, message) => {});
       this.onCloseProgressModal = config.onCloseProgressModal || (() => {});
       this.onClearImages = config.onClearImages || (() => {});
+      this.onUpdateLastFilterValue = config.onUpdateLastFilterValue || ((value) => {});
 
       // DOM elements
       this.searchInput = config.searchInput;
@@ -157,6 +158,8 @@
       const filterResult = await this.electronAPI.getSelectedGroupFilter();
       if (filterResult.success && filterResult.groupCode && this.groupFilter) {
         this.groupFilter.value = filterResult.groupCode;
+        // Update lastFilterValue to sync with restored filter value
+        this.onUpdateLastFilterValue(filterResult.groupCode);
       }
 
       await this.onLoadUsers(this.onGetCurrentFilters());

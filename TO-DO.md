@@ -1,3 +1,1 @@
 - Hacer que todas las exportaciones pregunten si se exportan todos los usuarios, el grupo seleccionado o los usuarios filtrados.
-- Mostrar DNIS en la tabla.
-- Cambiar el titulo de la columna e NIA.
