@@ -88,6 +88,8 @@ describe('LazyImageManager', () => {
     let mockImg;
 
     beforeEach(() => {
+      jest.useFakeTimers();
+
       mockImg = {
         dataset: { src: 'path/to/image.jpg' },
         src: '',
@@ -95,10 +97,16 @@ describe('LazyImageManager', () => {
           remove: jest.fn(),
           add: jest.fn()
         },
-        removeAttribute: jest.fn()
+        removeAttribute: jest.fn(),
+        onload: null
       };
 
       manager.init();
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
     });
 
     test('should load image from data-src', () => {
@@ -108,15 +116,31 @@ describe('LazyImageManager', () => {
       expect(mockImg.removeAttribute).toHaveBeenCalledWith('data-src');
     });
 
-    test('should update image classes', () => {
+    test('should update image classes', async () => {
       manager.loadImage(mockImg, mockObserver);
+
+      // Trigger onload handler
+      if (mockImg.onload) {
+        mockImg.onload();
+      }
+
+      // Advance timers to execute setTimeout
+      await jest.runAllTimersAsync();
 
       expect(mockImg.classList.remove).toHaveBeenCalledWith('lazy-image');
       expect(mockImg.classList.add).toHaveBeenCalledWith('lazy-loaded');
     });
 
-    test('should unobserve image after loading', () => {
+    test('should unobserve image after loading', async () => {
       manager.loadImage(mockImg, mockObserver);
+
+      // Trigger onload handler
+      if (mockImg.onload) {
+        mockImg.onload();
+      }
+
+      // Advance timers to execute setTimeout
+      await jest.runAllTimersAsync();
 
       expect(mockObserver.unobserve).toHaveBeenCalledWith(mockImg);
     });
@@ -133,11 +157,39 @@ describe('LazyImageManager', () => {
 
   describe('observeAll()', () => {
     beforeEach(() => {
+      // Mock window.innerHeight and innerWidth
+      global.window.innerHeight = 768;
+      global.window.innerWidth = 1024;
+
+      // Mock document.documentElement
+      global.document.documentElement = {
+        clientHeight: 768,
+        clientWidth: 1024
+      };
+
       // Mock document.querySelectorAll
       const mockImages = [
-        { dataset: { src: 'img1.jpg' } },
-        { dataset: { src: 'img2.jpg' } },
-        { dataset: { src: 'img3.jpg' } }
+        {
+          dataset: { src: 'img1.jpg' },
+          src: '',
+          classList: { remove: jest.fn(), add: jest.fn() },
+          removeAttribute: jest.fn(),
+          getBoundingClientRect: jest.fn(() => ({ top: 0, left: 0, bottom: 100, right: 100, width: 100, height: 100 }))
+        },
+        {
+          dataset: { src: 'img2.jpg' },
+          src: '',
+          classList: { remove: jest.fn(), add: jest.fn() },
+          removeAttribute: jest.fn(),
+          getBoundingClientRect: jest.fn(() => ({ top: 0, left: 0, bottom: 100, right: 100, width: 100, height: 100 }))
+        },
+        {
+          dataset: { src: 'img3.jpg' },
+          src: '',
+          classList: { remove: jest.fn(), add: jest.fn() },
+          removeAttribute: jest.fn(),
+          getBoundingClientRect: jest.fn(() => ({ top: 0, left: 0, bottom: 100, right: 100, width: 100, height: 100 }))
+        }
       ];
 
       document.querySelectorAll = jest.fn(() => mockImages);
@@ -156,6 +208,33 @@ describe('LazyImageManager', () => {
     });
 
     test('should observe all lazy images', () => {
+      // Position images outside viewport so they will be observed
+      const mockImagesOutsideViewport = [
+        {
+          dataset: { src: 'img1.jpg' },
+          src: '',
+          classList: { remove: jest.fn(), add: jest.fn() },
+          removeAttribute: jest.fn(),
+          getBoundingClientRect: jest.fn(() => ({ top: 1000, left: 0, bottom: 1100, right: 100, width: 100, height: 100 }))
+        },
+        {
+          dataset: { src: 'img2.jpg' },
+          src: '',
+          classList: { remove: jest.fn(), add: jest.fn() },
+          removeAttribute: jest.fn(),
+          getBoundingClientRect: jest.fn(() => ({ top: 2000, left: 0, bottom: 2100, right: 100, width: 100, height: 100 }))
+        },
+        {
+          dataset: { src: 'img3.jpg' },
+          src: '',
+          classList: { remove: jest.fn(), add: jest.fn() },
+          removeAttribute: jest.fn(),
+          getBoundingClientRect: jest.fn(() => ({ top: 3000, left: 0, bottom: 3100, right: 100, width: 100, height: 100 }))
+        }
+      ];
+
+      document.querySelectorAll = jest.fn(() => mockImagesOutsideViewport);
+
       manager.observeAll();
 
       expect(mockObserver.observe).toHaveBeenCalledTimes(3);

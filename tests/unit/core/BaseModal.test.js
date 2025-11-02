@@ -94,9 +94,9 @@ describe('BaseModal', () => {
       modal.init();
     });
 
-    test('should set display to block', () => {
+    test('should set display to flex', () => {
       modal.open();
-      expect(mockElement.style.display).toBe('block');
+      expect(mockElement.style.display).toBe('flex');
     });
 
     test('should add show class', () => {
