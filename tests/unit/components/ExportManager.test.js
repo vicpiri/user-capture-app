@@ -256,9 +256,15 @@ describe('ExportManager', () => {
 
   describe('exportImagesByID()', () => {
     beforeEach(() => {
+      jest.useFakeTimers();
       mockGetters.getCurrentUsers.mockReturnValue([
         { id: 1, name: 'User 1', image_path: '/img1.jpg' }
       ]);
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
     });
 
     test('should not export when project is closed', async () => {
@@ -308,7 +314,9 @@ describe('ExportManager', () => {
 
       mockElectronAPI.exportImages.mockResolvedValue({ success: true });
 
-      await manager.exportImagesByID();
+      const promise = manager.exportImagesByID();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockShowProgressModal).toHaveBeenCalledWith('Exportando Imágenes', 'Procesando archivos...');
       expect(mockElectronAPI.exportImages).toHaveBeenCalledWith(
@@ -337,7 +345,9 @@ describe('ExportManager', () => {
 
       mockElectronAPI.exportImages.mockResolvedValue({ success: true });
 
-      await manager.exportImagesByID();
+      const promise = manager.exportImagesByID();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockElectronAPI.exportImages).toHaveBeenCalledWith(
         '/export/path',
@@ -367,7 +377,9 @@ describe('ExportManager', () => {
         error: 'Disk full'
       });
 
-      await manager.exportImagesByID();
+      const promise = manager.exportImagesByID();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockShowInfoModal).toHaveBeenCalledWith(
         'Error',
@@ -378,9 +390,15 @@ describe('ExportManager', () => {
 
   describe('exportImagesByName()', () => {
     beforeEach(() => {
+      jest.useFakeTimers();
       mockGetters.getCurrentUsers.mockReturnValue([
         { id: 1, name: 'User 1', image_path: '/img1.jpg' }
       ]);
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
     });
 
     test('should call exportImagesName API', async () => {
@@ -396,7 +414,9 @@ describe('ExportManager', () => {
 
       mockElectronAPI.exportImagesName.mockResolvedValue({ success: true });
 
-      await manager.exportImagesByName();
+      const promise = manager.exportImagesByName();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockElectronAPI.exportImagesName).toHaveBeenCalledWith(
         '/export/path',
@@ -408,9 +428,15 @@ describe('ExportManager', () => {
 
   describe('exportToRepository()', () => {
     beforeEach(() => {
+      jest.useFakeTimers();
       mockGetters.getCurrentUsers.mockReturnValue([
         { id: 1, name: 'User 1', image_path: '/img1.jpg' }
       ]);
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
     });
 
     test('should not export when project is closed', async () => {
@@ -450,7 +476,9 @@ describe('ExportManager', () => {
       const onExportComplete = jest.fn();
       manager.onExportComplete = onExportComplete;
 
-      await manager.exportToRepository();
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockShowProgressModal).toHaveBeenCalledWith('Exportando al Depósito', 'Procesando archivos...');
       expect(mockElectronAPI.exportToRepository).toHaveBeenCalled();
@@ -486,7 +514,9 @@ describe('ExportManager', () => {
         }
       });
 
-      await manager.exportToRepository();
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
 
       const message = mockShowInfoModal.mock.calls[0][1];
       expect(message).toContain('Errores (10)');
@@ -504,7 +534,9 @@ describe('ExportManager', () => {
         error: 'Network error'
       });
 
-      await manager.exportToRepository();
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockShowInfoModal).toHaveBeenCalledWith(
         'Error',
@@ -534,7 +566,9 @@ describe('ExportManager', () => {
       const onExportComplete = jest.fn();
       manager.onExportComplete = onExportComplete;
 
-      await manager.exportToRepository();
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfirmModal.show).toHaveBeenCalled();
       expect(mockElectronAPI.backupImageRelationships).toHaveBeenCalled();
@@ -561,7 +595,9 @@ describe('ExportManager', () => {
         }
       });
 
-      await manager.exportToRepository();
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
 
       expect(mockConfirmModal.show).not.toHaveBeenCalled();
     });

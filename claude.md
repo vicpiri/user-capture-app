@@ -877,3 +877,4 @@ Aplicación completamente funcional con todas las características principales i
     - Implement file existence cache with 5-minute TTL to reduce filesystem operations
     - Add IPC event 'repository-changed' to notify renderer when repository contents change
     ```
+- Es obligatorio preguntar si se deben ejecutar los test antes de hacer un commit (se pueden ejecutar solo los tests cercanos a los cambios realizados).
