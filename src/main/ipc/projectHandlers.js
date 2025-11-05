@@ -274,24 +274,35 @@ function registerProjectHandlers(context) {
 
         reportMessage += `\nConsulte el archivo 'import-report.log' en la carpeta del proyecto para más detalles.`;
 
-        dialog.showMessageBox(mainWindow, {
-          type: 'warning',
-          title: 'Informe de Importación',
-          message: 'Proyecto creado con advertencias',
-          detail: reportMessage,
-          buttons: ['Aceptar']
-        });
+        const mainWindow = getMainWindow();
+        if (mainWindow) {
+          dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            title: 'Informe de Importación',
+            message: 'Proyecto creado con advertencias',
+            detail: reportMessage,
+            buttons: ['Aceptar']
+          });
+        }
       }
 
       return {
         success: true,
         message: 'Proyecto creado exitosamente',
+        project: {
+          folderPath: folderPath,
+          xmlFilePath: xmlPath,
+          ingestFolderPath: ingestPath,
+          importsFolderPath: importsPath
+        },
         importReport: {
           imported: importReport.imported,
           withoutIdentifier: importReport.withoutIdentifier.length,
           withoutGroup: importReport.withoutGroup.length,
           duplicates: importReport.duplicates.length
-        }
+        },
+        users: await state.dbManager.getUsers(),
+        groups: await state.dbManager.getGroups()
       };
     } catch (error) {
       logger.error('Error creating project', error);

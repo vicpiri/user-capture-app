@@ -141,7 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initialize modal instances
 function initializeModals() {
-  newProjectModalInstance = new NewProjectModal();
+  newProjectModalInstance = new NewProjectModal({
+    showProgressModal: showProgressModal,
+    closeProgressModal: closeProgressModal
+  });
   newProjectModalInstance.init();
 
   confirmModalInstance = new ConfirmModal();

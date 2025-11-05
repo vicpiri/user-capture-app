@@ -21,10 +21,14 @@
   }
 
   class NewProjectModal extends BaseModal {
-  constructor() {
+  constructor(config = {}) {
     super('new-project-modal', {
       defaultButtonSelector: '#create-project-btn'
     });
+
+    // Callbacks
+    this.showProgressModal = config.showProgressModal || (() => {});
+    this.closeProgressModal = config.closeProgressModal || (() => {});
 
     // Form elements
     this.projectFolderInput = null;
@@ -89,12 +93,15 @@
    */
   async handleSelectFolder() {
     try {
-      const result = await window.electronAPI.selectFolder();
+      const result = await window.electronAPI.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Seleccionar carpeta del proyecto'
+      });
 
-      if (result.success && result.path) {
-        this.selectedFolder = result.path;
-        this.projectFolderInput.value = result.path;
-        this._log('Folder selected:', result.path);
+      if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+        this.selectedFolder = result.filePaths[0];
+        this.projectFolderInput.value = result.filePaths[0];
+        this._log('Folder selected:', result.filePaths[0]);
       }
     } catch (error) {
       console.error('[NewProjectModal] Error selecting folder:', error);
@@ -107,12 +114,16 @@
    */
   async handleSelectXml() {
     try {
-      const result = await window.electronAPI.selectXmlFile();
+      const result = await window.electronAPI.showOpenDialog({
+        properties: ['openFile'],
+        filters: [{ name: 'XML Files', extensions: ['xml'] }],
+        title: 'Seleccionar archivo XML'
+      });
 
-      if (result.success && result.path) {
-        this.selectedXmlFile = result.path;
-        this.xmlFileInput.value = result.path;
-        this._log('XML file selected:', result.path);
+      if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+        this.selectedXmlFile = result.filePaths[0];
+        this.xmlFileInput.value = result.filePaths[0];
+        this._log('XML file selected:', result.filePaths[0]);
       }
     } catch (error) {
       console.error('[NewProjectModal] Error selecting XML:', error);
@@ -142,10 +153,16 @@
     try {
       this._log('Creating project...');
 
+      // Show progress modal
+      this.showProgressModal('Creando Proyecto', 'Inicializando...');
+
       const result = await window.electronAPI.createProject({
         folderPath: this.selectedFolder,
-        xmlFilePath: this.selectedXmlFile
+        xmlPath: this.selectedXmlFile
       });
+
+      // Close progress modal
+      this.closeProgressModal();
 
       if (result.success) {
         this._log('Project created successfully');
@@ -182,10 +199,13 @@
           this.close();
         }
       } else {
+        // Close progress modal before showing error
+        this.closeProgressModal();
         this._showError(result.error || 'Error al crear proyecto');
       }
     } catch (error) {
       console.error('[NewProjectModal] Error creating project:', error);
+      this.closeProgressModal();
       this._showError('Error al crear proyecto: ' + error.message);
     } finally {
       this.createBtn.disabled = false;
