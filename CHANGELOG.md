@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/vicpiri/user-capture-app/compare/v1.5.0...v1.6.0) (2025-11-05)
+
+
+### Features
+
+* add 'coming soon' notification for documentation menu ([0fb1040](https://github.com/vicpiri/user-capture-app/commit/0fb104079600b0ed8e3ae0c8d29781ad81b9459b))
+* add backup and restore system for captured image links ([44aabd2](https://github.com/vicpiri/user-capture-app/commit/44aabd21cb5ef81dfd6d6b53c030c48a0c86a498))
+* add configurable thermal receipt printing system ([2698600](https://github.com/vicpiri/user-capture-app/commit/2698600e650991cc2ca3bef7f287dbb21b21b8d8))
+* add global preferences modal with institution settings ([627ac34](https://github.com/vicpiri/user-capture-app/commit/627ac34bf18a8cfc6dcfa29e2071bab4d2478a35))
+* add institution logo to PDF exports ([4eb1064](https://github.com/vicpiri/user-capture-app/commit/4eb10642268032a0b05787947f7b3f62519fbb07))
+* add linked photos counter to status bar ([1e7319a](https://github.com/vicpiri/user-capture-app/commit/1e7319a09c1b3275670956ccd24c2129817f97b2))
+* add test receipt printing button to printer configuration ([534f25d](https://github.com/vicpiri/user-capture-app/commit/534f25d65bd6d29785678144feeb95212aebaf9d))
+* add visual active state to filter badges ([cc2a972](https://github.com/vicpiri/user-capture-app/commit/cc2a972e999426b4f6c6b19737fd86d7104a9a65))
+* card print and publication filters now ignore group filter ([d3d196e](https://github.com/vicpiri/user-capture-app/commit/d3d196e58316b0031c4466b67944688990fa35ab))
+* improve About modal with modern design and accurate information ([6fde2f6](https://github.com/vicpiri/user-capture-app/commit/6fde2f62e5a29b40b7af5ef56275333abf97fa6b))
+* improve inventory export modal UI/UX design ([4666f43](https://github.com/vicpiri/user-capture-app/commit/4666f43dd97d37d80ec3c49dda6ecafe5ff4ac09))
+* improve orla export modal UI/UX design ([c93303d](https://github.com/vicpiri/user-capture-app/commit/c93303dca225124fdbd5a1a38454590df4205503))
+* improve orla PDF layout with consistent 6x6 grid and group selection ([28c0a8f](https://github.com/vicpiri/user-capture-app/commit/28c0a8f6916e6c09db372b13387a96d52b847dc8))
+* improve printer and receipt configuration modal UI styles ([cc08c92](https://github.com/vicpiri/user-capture-app/commit/cc08c921b2a3165614e34e64d5ee375051a6d3b6))
+* link orla paid and receipt printed indicators to additional actions visibility ([6eeb84a](https://github.com/vicpiri/user-capture-app/commit/6eeb84a3329bbbca70fff56f16e99fa811928b79))
+* rename NIA column to ID and show DNI for teachers/staff ([83938e3](https://github.com/vicpiri/user-capture-app/commit/83938e36d3a1a72b22246ecdf8b2d0eb410ab4cc))
+* simplify and clarify export menu labels ([8c2cba3](https://github.com/vicpiri/user-capture-app/commit/8c2cba385ad49dd5a610c6eb2560579b42469c76))
+
+
+### Bug Fixes
+
+* add !important to no-project-placeholder display property ([560b667](https://github.com/vicpiri/user-capture-app/commit/560b667c324e776f25bd0e27986385e0700f77bf))
+* adjust receipt layout to prevent right-side displacement ([90f5979](https://github.com/vicpiri/user-capture-app/commit/90f59798a66ee8cf6541a20e2e9a871e6fbe2e36))
+* apply showAdditionalActions preference on initial load ([390bb26](https://github.com/vicpiri/user-capture-app/commit/390bb26ddf333611778e045b6981e0541fb9c389))
+* correctly display group name in receipt printing ([c3503ae](https://github.com/vicpiri/user-capture-app/commit/c3503ae18f44975f518d782e1a986a300ba6ec9d))
+* group filter not refreshing on first 'All groups' selection after opening project ([0121f31](https://github.com/vicpiri/user-capture-app/commit/0121f314f07b727589c3c36cc116df464435c5fb))
+* normalize jpeg extension to jpg when exporting to repository ([4ce9490](https://github.com/vicpiri/user-capture-app/commit/4ce9490c09ad362d291f7e2cab8e76e20a029032))
+* resolve ExportManager test timeout failures ([e193590](https://github.com/vicpiri/user-capture-app/commit/e1935900f84725f1945c0ab4f0290b3f6f71183c))
+* resolve LazyImageManager and BaseModal test failures ([bf063ef](https://github.com/vicpiri/user-capture-app/commit/bf063efdc0ba7847a0dfdda6bc21b1c428263bce))
+* resolve new project creation dialog issues ([3b5dc80](https://github.com/vicpiri/user-capture-app/commit/3b5dc801e7d7be896d9a3f78fd2f2a33defad5f6))
+* resolve test failures after recent changes ([de268f0](https://github.com/vicpiri/user-capture-app/commit/de268f031ad8d97ffd46e1c502253856b95f0cd0))
+* update printed-cards.html to use modular CSS ([da3db45](https://github.com/vicpiri/user-capture-app/commit/da3db45a2e9bfcfd35decdaef0d615f6b9a1622e))
+
 ## [1.5.0](https://github.com/vicpiri/user-capture-app/compare/v1.4.0...v1.5.0) (2025-10-30)
 
 
