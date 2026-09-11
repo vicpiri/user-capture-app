@@ -1,1 +1,2 @@
 - Hacer que todas las exportaciones pregunten si se exportan todos los usuarios, el grupo seleccionado o los usuarios filtrados.
+- Escapar las rutas al construir URLs `file://`: los caracteres `#` y `%` en la ruta del proyecto o del depósito hacen que la imagen no cargue y se oculte en silencio. Ver [docs/FILE_URL_ESCAPING.md](docs/FILE_URL_ESCAPING.md). Pendiente de hacerse junto al protocolo custom de miniaturas.
