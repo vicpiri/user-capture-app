@@ -19,7 +19,15 @@ const FolderWatcher = require('../folderWatcher');
  * @param {Function} context.updateWindowTitle - Function to update window title
  */
 function registerProjectHandlers(context) {
-  const { mainWindow: getMainWindow, logger, state, addRecentProject, updateWindowTitle } = context;
+  const {
+    mainWindow: getMainWindow,
+    logger,
+    state,
+    addRecentProject,
+    updateWindowTitle,
+    closeCurrentProject,
+    ensureRepositoryMirrorStarted
+  } = context;
 
   // Create new project
   ipcMain.handle('create-project', async (event, data) => {
@@ -322,6 +330,9 @@ function registerProjectHandlers(context) {
         throw new Error('La carpeta del proyecto no existe');
       }
 
+      // Release the previous project before taking over its globals
+      await closeCurrentProject();
+
       state.projectPath = folderPath;
       const dataPath = path.join(folderPath, 'data');
       const dbPath = path.join(dataPath, 'users.db');
@@ -371,6 +382,11 @@ function registerProjectHandlers(context) {
 
       // Update window title
       updateWindowTitle();
+
+      // Same as the recent-project path: without this the repository mirror
+      // never starts here, leaving repository indicators empty until something
+      // else happens to trigger it
+      await ensureRepositoryMirrorStarted();
 
       return { success: true, message: 'Proyecto abierto exitosamente' };
     } catch (error) {
@@ -834,20 +850,7 @@ function registerProjectHandlers(context) {
     try {
       logger.info('Closing project');
 
-      // Close database
-      if (state.dbManager) {
-        state.dbManager.close();
-        state.dbManager = null;
-      }
-
-      // Stop folder watcher
-      if (state.folderWatcher) {
-        state.folderWatcher.stop();
-        state.folderWatcher = null;
-      }
-
-      // Clear project path
-      state.projectPath = null;
+      await closeCurrentProject();
 
       // Update window title to default (without project name)
       updateWindowTitle();

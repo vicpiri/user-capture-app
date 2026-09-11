@@ -156,11 +156,30 @@ class FolderWatcher extends EventEmitter {
     return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 
-  stop() {
+  /**
+   * Stop watching and release the watcher
+   *
+   * Awaiting the close matters when another watcher is about to be created for
+   * the same folder, as happens when a project is reopened.
+   *
+   * @returns {Promise<void>}
+   */
+  async stop() {
     if (this.watcher) {
-      this.watcher.close();
+      const watcher = this.watcher;
+      this.watcher = null;
+
+      try {
+        await watcher.close();
+      } catch (error) {
+        console.error('Error closing folder watcher:', error);
+      }
+
       console.log('Folder watcher stopped');
     }
+
+    this.isProcessing.clear();
+    this.removeAllListeners();
   }
 }
 

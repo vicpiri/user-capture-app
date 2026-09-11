@@ -291,7 +291,9 @@ function createMenu() {
           await repositoryMirror.forceFullResync();
 
           // Broadcast to all windows
-          mainWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
+          if (mainWindow) {
+            mainWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
+          }
           const imageGridWindow = imageGridWindowManager.getWindow();
           if (imageGridWindow) {
             imageGridWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
@@ -317,6 +319,10 @@ function createMenu() {
   menuBuilder.build();
 }
 
+// did-finish-load fires on every navigation, including a renderer reload, but
+// the recent project must only be opened on the first one
+let hasAutoOpenedRecentProject = false;
+
 function createWindow() {
   const isDev = process.argv.includes('--dev');
   const mainWindow = mainWindowManager.create({ isDev });
@@ -336,7 +342,8 @@ function createWindow() {
 
     // Auto-open most recent project if available
     // Repository mirror will be started after project opens (if preferences enabled)
-    if (recentProjects && recentProjects.length > 0) {
+    if (!hasAutoOpenedRecentProject && recentProjects && recentProjects.length > 0) {
+      hasAutoOpenedRecentProject = true;
       const mostRecentProjectPath = recentProjects[0];
       logger.info(`[STARTUP] Auto-opening most recent project: ${mostRecentProjectPath}`);
 
@@ -450,6 +457,37 @@ async function ensureDeletedGroup() {
   }
 
   return deletedGroup;
+}
+
+/**
+ * Release everything tied to the currently open project
+ *
+ * Must run before opening another project. Every resource here belongs to one
+ * project: the sqlite connection holds a file lock, the folder watcher keeps
+ * reporting images from the old ingest folder, and the repository mirror is
+ * built from the project's own repository path, so leaving it running would
+ * resolve the new project's photos against the previous project's repository.
+ */
+async function closeCurrentProject() {
+  if (folderWatcher) {
+    await folderWatcher.stop();
+    folderWatcher = null;
+  }
+
+  if (repositoryMirror) {
+    await repositoryMirror.stopWatch();
+    repositoryMirror = null;
+  }
+
+  repositoryCacheManager.invalidateCache();
+
+  if (dbManager) {
+    await dbManager.close();
+    dbManager = null;
+  }
+
+  imageManager = null;
+  projectPath = null;
 }
 
 // Repository mirror management
@@ -631,6 +669,9 @@ async function openRecentProject(folderPath) {
       throw new Error('La carpeta del proyecto no existe');
     }
 
+    // Release the previous project before taking over its globals
+    await closeCurrentProject();
+
     projectPath = folderPath;
     const dataPath = path.join(folderPath, 'data');
     const dbPath = path.join(dataPath, 'users.db');
@@ -743,7 +784,8 @@ function registerIPCHandlers() {
     updateWindowTitle,
     ensureDeletedGroup,
     ensureRepositoryMirrorStarted,
-    reinitializeRepositoryMirror
+    reinitializeRepositoryMirror,
+    closeCurrentProject
   };
 
   // Register all handler modules

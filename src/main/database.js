@@ -803,10 +803,31 @@ class DatabaseManager {
     });
   }
 
+  /**
+   * Close the database connection
+   *
+   * sqlite3 closes asynchronously and keeps the file locked until it finishes,
+   * so reopening a project must await this before opening the new connection.
+   *
+   * @returns {Promise<void>}
+   */
   close() {
-    if (this.db) {
-      this.db.close();
-    }
+    return new Promise((resolve) => {
+      if (!this.db) {
+        resolve();
+        return;
+      }
+
+      const db = this.db;
+      this.db = null;
+
+      db.close((err) => {
+        if (err) {
+          console.error('Error closing database:', err.message);
+        }
+        resolve();
+      });
+    });
   }
 }
 

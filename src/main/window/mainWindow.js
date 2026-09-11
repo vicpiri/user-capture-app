@@ -40,6 +40,10 @@ class MainWindowManager {
       this.window.show();
     });
 
+    this.window.on('closed', () => {
+      this.window = null;
+    });
+
     // Open DevTools in development
     if (isDev) {
       this.window.webContents.openDevTools();
@@ -50,9 +54,17 @@ class MainWindowManager {
 
   /**
    * Get the main window instance
+   *
+   * Returns null once the window is gone, so the callers' `if (mainWindow)`
+   * checks are enough to keep them from sending to a destroyed window.
+   *
    * @returns {BrowserWindow|null}
    */
   getWindow() {
+    if (this.window && this.window.isDestroyed()) {
+      this.window = null;
+    }
+
     return this.window;
   }
 
