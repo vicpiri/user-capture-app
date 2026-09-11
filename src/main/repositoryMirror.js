@@ -12,7 +12,13 @@ const chokidar = require('chokidar');
  * Watches for changes in the repository and automatically syncs them.
  */
 class RepositoryMirror extends EventEmitter {
-  constructor(repositoryPath, mirrorPath, logger) {
+  /**
+   * @param {string} repositoryPath - Source folder to mirror
+   * @param {string} mirrorPath - Local destination folder
+   * @param {Object} logger - Logger instance
+   * @param {Object} [options] - Timing overrides, mainly so tests can run fast
+   */
+  constructor(repositoryPath, mirrorPath, logger, options = {}) {
     super();
     this.repositoryPath = repositoryPath;
     this.mirrorPath = mirrorPath;
@@ -30,10 +36,23 @@ class RepositoryMirror extends EventEmitter {
     this.watcher = null;
     this.watchEnabled = false;
     this.syncDebounceTimer = null;
-    this.SYNC_DEBOUNCE_DELAY = 2000; // Wait 2 seconds after last change before syncing
+    this.SYNC_DEBOUNCE_DELAY = options.syncDebounceDelay ?? 2000; // Wait after last change before syncing
     this.forceResyncFiles = new Set(); // Files that must be re-synced regardless of metadata
     this.pollingTimer = null; // Periodic polling timer
-    this.POLLING_INTERVAL = 5000; // Check for changes every 5 seconds
+
+    // The watcher polls because network drives and Google Drive do not deliver
+    // reliable native filesystem events. Cost is one stat per watched file per
+    // interval, so with a large repository this dominates the main process:
+    // keep it high enough to stay cheap, low enough to feel responsive.
+    this.WATCH_POLL_INTERVAL = options.watchPollInterval ?? 5000;
+    this.AWAIT_WRITE_FINISH = options.awaitWriteFinish ?? 500;
+
+    // Safety net for the one case the watcher cannot see: a file replaced with
+    // identical size and mtime. Only a content comparison detects that, and it
+    // reads from the repository, so it runs rarely and on a rotating sample.
+    this.POLLING_INTERVAL = options.pollingInterval ?? 60000;
+    this.CONTENT_CHECK_SAMPLE_SIZE = options.contentCheckSampleSize ?? 25;
+    this.contentCheckCursor = 0;
 
     // Batch configuration
     this.BATCH_SIZE = 50;  // Process 50 files at a time
@@ -436,9 +455,13 @@ class RepositoryMirror extends EventEmitter {
         persistent: true,
         ignoreInitial: true, // Don't trigger events for existing files
         usePolling: true, // Use polling for better compatibility with network drives and certain file systems
-        interval: 1000, // Poll every second
+        // binaryInterval must be set explicitly: it defaults to 300ms and is the
+        // one that applies to images, so leaving it out polls every photo more
+        // than three times per second regardless of `interval`.
+        interval: this.WATCH_POLL_INTERVAL,
+        binaryInterval: this.WATCH_POLL_INTERVAL,
         awaitWriteFinish: {
-          stabilityThreshold: 500, // Wait 500ms for file to finish writing
+          stabilityThreshold: this.AWAIT_WRITE_FINISH, // Wait for file to finish writing
           pollInterval: 100
         },
         // Only watch jpg/jpeg files. Chokidar tests directories against this
@@ -575,6 +598,40 @@ class RepositoryMirror extends EventEmitter {
   }
 
   /**
+   * Compare the first 64KB of a repository file against its mirrored copy
+   * @param {string} filename - File name, relative to repository and mirror
+   * @param {string} sourcePath - Absolute path in the repository
+   * @returns {Promise<boolean>} - True if the mirror is missing or out of date
+   */
+  async hasContentChanged(filename, sourcePath) {
+    const mirrorPath = path.join(this.mirrorPath, filename);
+
+    try {
+      await fs.promises.access(mirrorPath);
+    } catch (error) {
+      this.logger.info(`[Polling] Mirror file missing: ${filename}`);
+      return true;
+    }
+
+    try {
+      const [sourceHash, mirrorHash] = await Promise.all([
+        this.calculateFileHash(sourcePath),
+        this.calculateFileHash(mirrorPath)
+      ]);
+
+      if (sourceHash !== mirrorHash) {
+        this.logger.info(`[Polling] Content change detected in file (hash mismatch): ${filename}`);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(`[Polling] Error checking hash for ${filename}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
    * Check if there are changes in the repository
    */
   async checkForChanges() {
@@ -587,96 +644,59 @@ class RepositoryMirror extends EventEmitter {
         return ext === '.jpg' || ext === '.jpeg';
       });
 
-      this.logger.info(`[Polling] Checking repository: ${jpgFiles.length} JPG files, ${this.mirrorIndex.size} in mirror index`);
-
       // Quick check: if file count changed, trigger sync immediately
       if (jpgFiles.length !== this.mirrorIndex.size) {
         this.logger.info(`[Polling] File count mismatch detected (${jpgFiles.length} vs ${this.mirrorIndex.size}) - triggering sync`);
         return true;
       }
 
-      // Get file stats for all JPG files to sort by modification time
-      const fileStats = [];
-      for (const file of jpgFiles) {
-        try {
-          const sourcePath = path.join(this.repositoryPath, file);
-          const stats = await fs.promises.stat(sourcePath);
-          fileStats.push({ file, stats, sourcePath });
-        } catch (error) {
-          // File might have been deleted
-          this.logger.info(`[Polling] File inaccessible: ${file}`);
-        }
+      if (jpgFiles.length === 0) {
+        return false;
       }
 
-      // Sort by modification time (most recent first)
-      fileStats.sort((a, b) => b.stats.mtimeMs - a.stats.mtimeMs);
-
-      // Strategy: Check a random sample of 50 files with hash verification
-      // This catches file replacements regardless of when they were modified
-      const sampleSize = Math.min(50, fileStats.length);
-      const step = Math.floor(fileStats.length / sampleSize);
-
-      this.logger.info(`[Polling] Checking ${sampleSize} random files with hash verification (step: ${step})`);
+      // The watcher already compares size and mtime on every file continuously,
+      // so re-checking all of them here would be redundant. This only samples a
+      // slice, advancing the cursor each poll so every file is eventually
+      // covered, and compares content to catch replacements that kept their
+      // metadata (the copy-over case the watcher cannot detect).
+      const sampleSize = Math.min(this.CONTENT_CHECK_SAMPLE_SIZE, jpgFiles.length);
 
       for (let i = 0; i < sampleSize; i++) {
-        const index = i * step;
-        const { file, stats, sourcePath } = fileStats[index];
+        const file = jpgFiles[(this.contentCheckCursor + i) % jpgFiles.length];
         const filenameLower = file.toLowerCase();
+        const sourcePath = path.join(this.repositoryPath, file);
         const mirrorEntry = this.mirrorIndex.get(filenameLower);
 
         if (!mirrorEntry) {
-          // New file found
           this.logger.info(`[Polling] New file detected: ${file}`);
-          // Mark it for force resync
           this.forceResyncFiles.add(filenameLower);
           this.emit('repository-changed', { type: 'add', filename: file });
           return true;
         }
 
-        // First quick check: mtime or size changed
-        const mtimeChanged = stats.mtimeMs !== mirrorEntry.mtime;
-        const sizeChanged = stats.size !== mirrorEntry.size;
+        let stats;
+        try {
+          stats = await fs.promises.stat(sourcePath);
+        } catch (error) {
+          // File disappeared between readdir and stat
+          continue;
+        }
 
-        if (mtimeChanged || sizeChanged) {
+        if (stats.mtimeMs !== mirrorEntry.mtime || stats.size !== mirrorEntry.size) {
           this.logger.info(`[Polling] Change detected in file: ${file} (mtime: ${mirrorEntry.mtime} -> ${stats.mtimeMs}, size: ${mirrorEntry.size} -> ${stats.size})`);
-          // Mark it for force resync
           this.forceResyncFiles.add(filenameLower);
           this.emit('repository-changed', { type: 'change', filename: file });
           return true;
         }
 
-        // Always check hash for sampled files to catch Windows copy-over behavior
-        try {
-          const sourceHash = await this.calculateFileHash(sourcePath);
-          const mirrorPath = path.join(this.mirrorPath, file);
-
-          if (fs.existsSync(mirrorPath)) {
-            const mirrorHash = await this.calculateFileHash(mirrorPath);
-
-            // Log first 3 files for debugging
-            if (i < 3) {
-              this.logger.info(`[Polling] Hash check: ${file} - source: ${sourceHash.substring(0, 8)}, mirror: ${mirrorHash.substring(0, 8)}, match: ${sourceHash === mirrorHash}`);
-            }
-
-            if (sourceHash !== mirrorHash) {
-              this.logger.info(`[Polling] Content change detected in file (hash mismatch): ${file}`);
-              this.forceResyncFiles.add(filenameLower);
-              this.emit('repository-changed', { type: 'change', filename: file });
-              return true;
-            }
-          } else {
-            // Mirror file doesn't exist
-            this.logger.info(`[Polling] Mirror file missing: ${file}`);
-            this.forceResyncFiles.add(filenameLower);
-            this.emit('repository-changed', { type: 'change', filename: file });
-            return true;
-          }
-        } catch (error) {
-          this.logger.error(`[Polling] Error checking hash for ${file}:`, error.message);
+        if (await this.hasContentChanged(file, sourcePath)) {
+          this.forceResyncFiles.add(filenameLower);
+          this.emit('repository-changed', { type: 'change', filename: file });
+          return true;
         }
       }
 
-      this.logger.info('[Polling] No changes detected');
+      this.contentCheckCursor = (this.contentCheckCursor + sampleSize) % jpgFiles.length;
       return false;
     } catch (error) {
       this.logger.error('Error checking for changes:', error);
@@ -697,11 +717,18 @@ class RepositoryMirror extends EventEmitter {
 
   /**
    * Stop watching the repository folder
+   *
+   * Awaiting the returned promise matters when another watcher is about to be
+   * created for the same path: chokidar polling is backed by fs.watchFile, which
+   * Node keys globally per path, so a half-closed watcher swallows the events of
+   * its replacement.
+   *
+   * @returns {Promise<void>}
    */
-  stopWatch() {
+  async stopWatch() {
     if (this.watcher) {
       this.logger.info('Stopping repository folder watch...');
-      this.watcher.close();
+      const watcher = this.watcher;
       this.watcher = null;
       this.watchEnabled = false;
 
@@ -709,6 +736,12 @@ class RepositoryMirror extends EventEmitter {
       if (this.syncDebounceTimer) {
         clearTimeout(this.syncDebounceTimer);
         this.syncDebounceTimer = null;
+      }
+
+      try {
+        await watcher.close();
+      } catch (error) {
+        this.logger.warning('Error closing repository watcher:', error);
       }
 
       this.logger.success('Repository folder watch stopped');

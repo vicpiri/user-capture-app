@@ -65,12 +65,29 @@ ignored: (filePath, stats) => {
 Verificado fuera de Jest: `repository-changed` se emite ahora a los ~1550 ms
 (1 s de intervalo de polling + 500 ms de `awaitWriteFinish`).
 
-## Nota para futuras optimizaciones
+## Seguimiento: coste del polling (ya abordado)
 
-El polling periódico de 5 segundos (`POLLING_INTERVAL`) es costoso: hace `readdir`,
-un `stat` por archivo y verificación MD5 de una muestra, de forma indefinida mientras
-la aplicación está abierta. Era, además, el único mecanismo que funcionaba de verdad.
+El polling periódico de 5 segundos era costoso y, mientras el watcher estuvo roto, era
+el único mecanismo que funcionaba. Una vez arreglado el watcher se redujo su coste:
 
-Ahora que el watcher emite eventos correctamente, ese polling puede reducirse o
-eliminarse con seguridad. Cualquier cambio en esa dirección debe mantener los 19 tests
-de esta suite en verde, ya que son los que cubren la detección de cambios.
+- `binaryInterval` de chokidar se fija explícitamente. Por defecto vale 300 ms y es el
+  que se aplica a las imágenes, así que cada foto se consultaba más de tres veces por
+  segundo pese a que el código fijaba `interval: 1000`.
+- `checkForChanges` ya no hace `stat` de todos los archivos en cada pasada. El watcher
+  ya compara tamaño y fecha de forma continua; el poll solo cubre el caso que el watcher
+  no puede ver (reemplazo con metadatos idénticos) y lo hace sobre una muestra rotatoria.
+- Los intervalos son inyectables por constructor, para que los tests no dependan de los
+  valores de producción.
+
+La suite cubre ahora también `checkForChanges` (24 tests), incluido el caso de un archivo
+reemplazado conservando tamaño y `mtime`, que es lo único que justifica la comparación
+por hash. Cualquier cambio futuro en esa lógica debe mantener esos tests en verde.
+
+### Limitación conocida (no abordada)
+
+`mirrorIndex` guarda el `mtime` del archivo **copiado**, y `checkForChanges` lo compara
+contra el `mtime` del archivo **origen**. Esto solo funciona porque en Windows
+`fs.copyFile` preserva la marca de tiempo del origen. En Linux y macOS no lo hace, así
+que la comparación detectaría un cambio en cada pasada y provocaría resincronizaciones
+continuas. La aplicación se distribuye principalmente para Windows, pero conviene tenerlo
+presente si alguna vez se usa en serio en otra plataforma.

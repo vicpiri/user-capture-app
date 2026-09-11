@@ -23,10 +23,35 @@ const mockLogger = {
   section: jest.fn()
 };
 
+// Production polls slowly on purpose, to stay cheap on network drives. These
+// tests drive real filesystem events, so they override the timings to keep the
+// suite fast and well inside the default timeout.
+// pollingInterval is kept high so the periodic content check never fires on its
+// own during a test: the watching tests must be driven by the watcher, not by a
+// background poll that happens to trigger a sync at the right moment.
+const TEST_TIMINGS = {
+  watchPollInterval: 100,
+  awaitWriteFinish: 100,
+  syncDebounceDelay: 300,
+  pollingInterval: 60000
+};
+
 describe('RepositoryMirror', () => {
   let repositoryMirror;
   let repositoryPath;
   let mirrorPath;
+
+  const fixturesPath = path.join(__dirname, 'fixtures');
+  let testId = 0;
+
+  beforeAll(() => {
+    fs.rmSync(fixturesPath, { recursive: true, force: true });
+    fs.mkdirSync(fixturesPath, { recursive: true });
+  });
+
+  afterAll(() => {
+    fs.rmSync(fixturesPath, { recursive: true, force: true });
+  });
 
   // The shared setup enables fake timers for the renderer suites, but this one
   // drives real filesystem work: sync yields to the event loop via setImmediate
@@ -39,26 +64,22 @@ describe('RepositoryMirror', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Create temporary paths for testing
-    repositoryPath = path.join(__dirname, 'fixtures', 'test-repository');
-    mirrorPath = path.join(__dirname, 'fixtures', 'test-mirror');
-
-    // Ensure clean state
-    if (fs.existsSync(mirrorPath)) {
-      fs.rmSync(mirrorPath, { recursive: true, force: true });
-    }
-    if (fs.existsSync(repositoryPath)) {
-      fs.rmSync(repositoryPath, { recursive: true, force: true });
-    }
+    // A fresh directory per test. Polling watchers are backed by fs.watchFile,
+    // which Node registers globally per path, so reusing one path across tests
+    // lets a closing watcher interfere with the next one.
+    testId++;
+    repositoryPath = path.join(fixturesPath, `repository-${testId}`);
+    mirrorPath = path.join(fixturesPath, `mirror-${testId}`);
 
     // Create repository directory
     fs.mkdirSync(repositoryPath, { recursive: true });
   });
 
-  afterEach(() => {
-    // Cleanup
+  afterEach(async () => {
+    // Cleanup. The close must complete before the next test watches the same
+    // path, or the replacement watcher receives no events.
     if (repositoryMirror) {
-      repositoryMirror.stopWatch();
+      await repositoryMirror.stopWatch();
       repositoryMirror = null;
     }
 
@@ -72,7 +93,7 @@ describe('RepositoryMirror', () => {
 
   describe('Initialization', () => {
     test('should create mirror directory on initialize', async () => {
-      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger);
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
 
       await repositoryMirror.initialize();
 
@@ -86,7 +107,7 @@ describe('RepositoryMirror', () => {
       fs.writeFileSync(path.join(mirrorPath, 'test1.jpg'), 'content1');
       fs.writeFileSync(path.join(mirrorPath, 'test2.jpeg'), 'content2');
 
-      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger);
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
       await repositoryMirror.initialize();
 
       const stats = repositoryMirror.getStats();
@@ -94,7 +115,7 @@ describe('RepositoryMirror', () => {
     });
 
     test('should handle non-existent mirror directory', async () => {
-      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger);
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
 
       const result = await repositoryMirror.initialize();
 
@@ -105,7 +126,7 @@ describe('RepositoryMirror', () => {
 
   describe('File Synchronization', () => {
     beforeEach(async () => {
-      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger);
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
       await repositoryMirror.initialize();
     });
 
@@ -231,7 +252,7 @@ describe('RepositoryMirror', () => {
 
   describe('File Watching', () => {
     beforeEach(async () => {
-      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger);
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
       await repositoryMirror.initialize();
     });
 
@@ -339,9 +360,91 @@ describe('RepositoryMirror', () => {
     });
   });
 
+  describe('Periodic content check', () => {
+    const syncAll = async () => {
+      const syncPromise = new Promise(resolve => {
+        repositoryMirror.once('sync-completed', resolve);
+      });
+      repositoryMirror.startSync();
+      await syncPromise;
+    };
+
+    beforeEach(async () => {
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
+      await repositoryMirror.initialize();
+    });
+
+    test('should report no changes when repository matches mirror', async () => {
+      fs.writeFileSync(path.join(repositoryPath, 'image1.jpg'), 'content1');
+      fs.writeFileSync(path.join(repositoryPath, 'image2.jpg'), 'content2');
+      await syncAll();
+
+      expect(await repositoryMirror.checkForChanges()).toBe(false);
+    });
+
+    test('should report changes when the file count differs', async () => {
+      fs.writeFileSync(path.join(repositoryPath, 'image1.jpg'), 'content1');
+      await syncAll();
+
+      fs.writeFileSync(path.join(repositoryPath, 'image2.jpg'), 'content2');
+
+      expect(await repositoryMirror.checkForChanges()).toBe(true);
+    });
+
+    test('should detect a replacement that kept its size and mtime', async () => {
+      const filePath = path.join(repositoryPath, 'image1.jpg');
+      // Whole second, so restoring it later loses no sub-millisecond fraction
+      const fixedTime = new Date(Math.floor(Date.now() / 1000) * 1000);
+
+      fs.writeFileSync(filePath, 'aaaaaaaa');
+      fs.utimesSync(filePath, fixedTime, fixedTime);
+      await syncAll();
+
+      // Same byte length, different content, timestamp restored: neither the
+      // watcher nor a size/mtime comparison can see this, only the hash check
+      fs.writeFileSync(filePath, 'bbbbbbbb');
+      fs.utimesSync(filePath, fixedTime, fixedTime);
+
+      const entry = repositoryMirror.mirrorIndex.get('image1.jpg');
+      const stats = fs.statSync(filePath);
+      expect(stats.size).toBe(entry.size);
+      expect(stats.mtimeMs).toBe(entry.mtime);
+
+      expect(await repositoryMirror.checkForChanges()).toBe(true);
+    });
+
+    test('should detect a missing mirror file', async () => {
+      fs.writeFileSync(path.join(repositoryPath, 'image1.jpg'), 'content1');
+      await syncAll();
+
+      fs.unlinkSync(path.join(mirrorPath, 'image1.jpg'));
+
+      expect(await repositoryMirror.checkForChanges()).toBe(true);
+    });
+
+    test('should advance the sample cursor so every file is eventually checked', async () => {
+      repositoryMirror.CONTENT_CHECK_SAMPLE_SIZE = 2;
+
+      for (let i = 0; i < 6; i++) {
+        fs.writeFileSync(path.join(repositoryPath, `image${i}.jpg`), `content${i}`);
+      }
+      await syncAll();
+
+      expect(repositoryMirror.contentCheckCursor).toBe(0);
+      await repositoryMirror.checkForChanges();
+      expect(repositoryMirror.contentCheckCursor).toBe(2);
+      await repositoryMirror.checkForChanges();
+      expect(repositoryMirror.contentCheckCursor).toBe(4);
+
+      // Wraps back around instead of running off the end
+      await repositoryMirror.checkForChanges();
+      expect(repositoryMirror.contentCheckCursor).toBe(0);
+    });
+  });
+
   describe('Mirror Utilities', () => {
     beforeEach(async () => {
-      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger);
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
       await repositoryMirror.initialize();
     });
 
