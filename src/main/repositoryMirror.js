@@ -426,6 +426,11 @@ class RepositoryMirror extends EventEmitter {
 
       this.logger.info('Starting repository folder watch...');
 
+      const isImageFile = (filePath) => {
+        const ext = path.extname(filePath).toLowerCase();
+        return ext === '.jpg' || ext === '.jpeg';
+      };
+
       // Create chokidar watcher
       this.watcher = chokidar.watch(this.repositoryPath, {
         persistent: true,
@@ -436,15 +441,20 @@ class RepositoryMirror extends EventEmitter {
           stabilityThreshold: 500, // Wait 500ms for file to finish writing
           pollInterval: 100
         },
-        // Only watch jpg/jpeg files
-        ignored: (filePath) => {
-          const ext = path.extname(filePath).toLowerCase();
-          return ext !== '.jpg' && ext !== '.jpeg';
+        // Only watch jpg/jpeg files. Chokidar tests directories against this
+        // predicate too, and a directory has no extension, so entries without
+        // one must never be ignored: ignoring them would exclude the repository
+        // root itself and no event would ever be emitted.
+        ignored: (filePath, stats) => {
+          if (stats && stats.isDirectory()) return false;
+          if (!path.extname(filePath)) return false;
+          return !isImageFile(filePath);
         }
       });
 
       // File added
       this.watcher.on('add', (filePath) => {
+        if (!isImageFile(filePath)) return;
         const filename = path.basename(filePath);
         this.logger.info(`Repository file added: ${filename}`);
         this.forceResyncFiles.add(filename.toLowerCase());
@@ -454,6 +464,7 @@ class RepositoryMirror extends EventEmitter {
 
       // File changed
       this.watcher.on('change', (filePath) => {
+        if (!isImageFile(filePath)) return;
         const filename = path.basename(filePath);
         this.logger.info(`Repository file changed: ${filename}`);
         this.forceResyncFiles.add(filename.toLowerCase());
@@ -463,6 +474,7 @@ class RepositoryMirror extends EventEmitter {
 
       // File removed
       this.watcher.on('unlink', (filePath) => {
+        if (!isImageFile(filePath)) return;
         const filename = path.basename(filePath);
         this.logger.info(`Repository file removed: ${filename}`);
         this.forceResyncFiles.add(filename.toLowerCase());
