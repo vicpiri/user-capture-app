@@ -2,6 +2,11 @@
  * RepositoryMirror Tests
  *
  * Tests for repository mirror synchronization and file watching functionality
+ *
+ * Runs in the node environment: this is main-process code and relies on Node
+ * globals such as setImmediate, which jsdom does not provide.
+ *
+ * @jest-environment node
  */
 
 const fs = require('fs');
@@ -22,6 +27,14 @@ describe('RepositoryMirror', () => {
   let repositoryMirror;
   let repositoryPath;
   let mirrorPath;
+
+  // The shared setup enables fake timers for the renderer suites, but this one
+  // drives real filesystem work: sync yields to the event loop via setImmediate
+  // and the watcher debounces with a real delay, so neither ever fires unless
+  // the clock is real.
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();

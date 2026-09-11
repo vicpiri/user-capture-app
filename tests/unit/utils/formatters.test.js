@@ -160,20 +160,16 @@ describe('Formatters Utilities', () => {
   });
 
   describe('calculateAge', () => {
-    test('should calculate age from ISO date', () => {
-      const birthDate = '2000-01-01';
-      const age = calculateAge(birthDate);
+    // Birthday is January 1st, so it has always already passed in the current
+    // year and the expected age is exact regardless of when the suite runs
+    const birthYear = new Date().getFullYear() - 25;
 
-      expect(age).toBeGreaterThanOrEqual(24);
-      expect(age).toBeLessThanOrEqual(25);
+    test('should calculate age from ISO date', () => {
+      expect(calculateAge(`${birthYear}-01-01`)).toBe(25);
     });
 
     test('should calculate age from Spanish date', () => {
-      const birthDate = '01/01/2000';
-      const age = calculateAge(birthDate);
-
-      expect(age).toBeGreaterThanOrEqual(24);
-      expect(age).toBeLessThanOrEqual(25);
+      expect(calculateAge(`01/01/${birthYear}`)).toBe(25);
     });
 
     test('should return null for invalid date', () => {
