@@ -32,6 +32,9 @@ let showAdditionalActions = true;  // Show/hide additional actions section and r
 let isLoadingRepositoryPhotos = false;  // Track if repository photos are being loaded
 let isLoadingRepositoryIndicators = false;  // Track if repository indicators are being loaded
 let repositorySyncCompleted = false;  // Track if initial repository sync has completed
+// Bumped whenever the repository changes. Repository files keep their name when
+// the mirror overwrites them, so this is what makes their image URLs change.
+let repositoryImageVersion = 0;
 
 // Selection mode state (deprecated - now managed by SelectionModeManager)
 // Kept for backward compatibility during transition
@@ -544,12 +547,28 @@ function updateLastFilterValue(value) {
   lastFilterValue = value;
 }
 
+// Search debounce: each search reloads the user list over IPC and repaints the
+// table, so keystrokes are coalesced instead of triggering one reload each
+const SEARCH_DEBOUNCE_MS = 250;
+let searchDebounceTimer = null;
+
+function cancelPendingSearch() {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+  }
+}
+
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
   searchInput.addEventListener('input', () => {
     toggleClearButton();
-    filterUsers();
+    cancelPendingSearch();
+    searchDebounceTimer = setTimeout(() => {
+      searchDebounceTimer = null;
+      filterUsers();
+    }, SEARCH_DEBOUNCE_MS);
   });
   clearSearchBtn.addEventListener('click', clearSearch);
 
@@ -565,6 +584,7 @@ function initializeEventListeners() {
 
     // Save filter selection and broadcast to other windows
     await window.electronAPI.setSelectedGroupFilter(newValue);
+    cancelPendingSearch();
     await filterUsers();
   });
 
@@ -697,6 +717,12 @@ function initializeEventListeners() {
     // Mark repository sync as completed
     repositorySyncCompleted = true;
 
+    // Invalidate cached repository images before anything re-renders
+    repositoryImageVersion++;
+    if (userRowRenderer) {
+      userRowRenderer.updateConfig({ repositoryVersion: repositoryImageVersion });
+    }
+
     // Refresh only repository indicators to preserve scroll position
     if (userDataManager && userRowRenderer) {
       await userDataManager.refreshRepositoryIndicators((updatedUsers) => {
@@ -806,9 +832,9 @@ async function loadGroups() {
   }
 }
 
-async function loadUsers(filters = {}) {
+async function loadUsers(filters = {}, options = {}) {
   if (userDataManager) {
-    await userDataManager.loadUsers(filters);
+    await userDataManager.loadUsers(filters, options);
     // Update linked photos count after loading users
     await updateCapturedPhotosCount();
   }
@@ -1051,6 +1077,7 @@ function toggleClearButton() {
 async function clearSearch() {
   searchInput.value = '';
   clearSearchBtn.style.display = 'none';
+  cancelPendingSearch();
   await filterUsers();
 }
 
@@ -1075,7 +1102,9 @@ function getCurrentFilters() {
 // Filter users
 async function filterUsers() {
   const filters = getCurrentFilters();
-  await loadUsers(filters);
+  // Changing search/group filters never alters user data, so the cached full
+  // list used for duplicate detection can be reused instead of refetched
+  await loadUsers(filters, { reuseAllUsers: true });
 }
 
 // Image management

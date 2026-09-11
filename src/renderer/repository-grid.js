@@ -5,6 +5,9 @@ let selectedGroupCode = '';
 let imageObserver = null;
 let isSyncing = false;  // Track if repository is currently syncing
 let initialSyncCompleted = false;  // Track if initial mirror sync has completed
+// Bumped whenever the repository changes. Repository files keep their name when
+// the mirror overwrites them, so this is what makes their image URLs change.
+let repositoryImageVersion = 0;
 
 // DOM Elements
 const gridContainer = document.getElementById('grid-container');
@@ -90,6 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Listen for repository changes
   window.electronAPI.onRepositoryChanged(async (data) => {
     console.log('[Repository Grid] Repository changed:', data);
+    repositoryImageVersion++;
     await loadUsers();
     displayGrid();
   });
@@ -119,6 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         // Subsequent syncs - just reload repository data
         console.log('[SYNC] Reloading repository images after sync completed');
+        repositoryImageVersion++;
         isSyncing = true;
         updateSyncStatus('Actualizando imágenes...');
         await loadRepositoryDataInBackground(allUsers);
@@ -274,9 +279,9 @@ function createGridItem(user) {
     // User has an image in repository - use lazy loading
     const img = document.createElement('img');
     img.className = 'grid-item-image lazy-image';
-    // Store the actual path in data attribute with cache buster
-    const cacheBuster = `?t=${Date.now()}`;
-    img.dataset.src = `file://${user.repository_image_path}${cacheBuster}`;
+    // Store the actual path in data attribute. The version keeps the URL stable
+    // across re-renders while still invalidating it when the repository changes.
+    img.dataset.src = `file://${user.repository_image_path}?v=${repositoryImageVersion}`;
     img.alt = `${user.first_name} ${user.last_name1}`;
 
     // Show placeholder initially

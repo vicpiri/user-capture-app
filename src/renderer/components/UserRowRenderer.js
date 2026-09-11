@@ -15,6 +15,9 @@
 (function(global) {
   'use strict';
 
+// Placeholder shown until the lazy loader swaps in the real image
+const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 class UserRowRenderer {
   constructor(config = {}) {
     // Configuration
@@ -28,7 +31,8 @@ class UserRowRenderer {
       selectionMode: config.selectionMode ?? false,
       selectedUsers: config.selectedUsers ?? new Set(),
       cardPrintRequests: config.cardPrintRequests ?? new Set(),
-      publicationRequests: config.publicationRequests ?? new Set()
+      publicationRequests: config.publicationRequests ?? new Set(),
+      repositoryVersion: config.repositoryVersion ?? 0
     };
 
     // Callbacks (provided by renderer)
@@ -98,13 +102,11 @@ class UserRowRenderer {
     }
 
     if (user.image_path) {
-      // Add timestamp to prevent browser caching
-      const cacheBuster = `?t=${Date.now()}`;
-      // Use transparent 1x1 pixel as placeholder to avoid broken image icon
-      const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      // No cache buster: captured files always get a unique name, so the path
+      // itself identifies the content and the browser cache stays valid.
       // Wrap img in div to support ::after spinner (img elements don't support pseudo-elements)
       // Add 'loading' class to wrapper for CSS spinner
-      return `<div class="photo-indicator-wrapper loading ${duplicateClass}"><img src="${transparentPixel}" data-src="file://${user.image_path}${cacheBuster}" class="photo-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
+      return `<div class="photo-indicator-wrapper loading ${duplicateClass}"><img src="${TRANSPARENT_PIXEL}" data-src="file://${user.image_path}" class="photo-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
     }
 
     return `<div class="photo-placeholder">
@@ -125,13 +127,13 @@ class UserRowRenderer {
     }
 
     if (user.repository_image_path) {
-      // Add timestamp to prevent browser caching
-      const cacheBuster = `?t=${Date.now()}`;
-      // Use transparent 1x1 pixel as placeholder to avoid broken image icon
-      const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      // The mirror overwrites repository files in place, so the path alone is not
+      // enough to identify the content. repositoryVersion is bumped only when the
+      // repository actually changes, keeping URLs stable across scroll/re-render.
+      const cacheBuster = `?v=${this.config.repositoryVersion}`;
       // Wrap img in div to support ::after spinner (img elements don't support pseudo-elements)
       // Add 'loading' class to wrapper for CSS spinner
-      return `<div class="repository-indicator-wrapper loading"><img src="${transparentPixel}" data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
+      return `<div class="repository-indicator-wrapper loading"><img src="${TRANSPARENT_PIXEL}" data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
     }
 
     if (this.config.isLoadingRepositoryPhotos) {

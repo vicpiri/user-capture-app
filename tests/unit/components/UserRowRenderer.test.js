@@ -126,6 +126,30 @@ describe('UserRowRenderer', () => {
       expect(repoIndicator.getAttribute('data-src')).toContain('repo/image.jpg');
     });
 
+    test('should keep captured photo URL stable across renders', () => {
+      renderer.updateConfig({ showCapturedPhotos: true });
+
+      const first = renderer.createRow(mockUser).querySelector('.photo-indicator');
+      const second = renderer.createRow(mockUser).querySelector('.photo-indicator');
+
+      expect(first.getAttribute('data-src')).toBe(second.getAttribute('data-src'));
+      expect(first.getAttribute('data-src')).not.toContain('?');
+    });
+
+    test('should keep repository photo URL stable until repositoryVersion changes', () => {
+      renderer.updateConfig({ showRepositoryPhotos: true });
+
+      const first = renderer.createRow(mockUser).querySelector('.repository-indicator');
+      const second = renderer.createRow(mockUser).querySelector('.repository-indicator');
+      expect(first.getAttribute('data-src')).toBe(second.getAttribute('data-src'));
+
+      renderer.updateConfig({ repositoryVersion: 1 });
+      const afterChange = renderer.createRow(mockUser).querySelector('.repository-indicator');
+
+      expect(afterChange.getAttribute('data-src')).not.toBe(first.getAttribute('data-src'));
+      expect(afterChange.getAttribute('data-src')).toContain('?v=1');
+    });
+
     test('should show photo placeholder when user has no image', () => {
       const userWithoutImage = { ...mockUser, image_path: null };
       const row = renderer.createRow(userWithoutImage);

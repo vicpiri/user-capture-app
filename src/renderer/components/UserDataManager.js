@@ -52,6 +52,10 @@
 
       // Config
       this.minSpinnerDisplayTime = config.minSpinnerDisplayTime || 300; // ms
+
+      // Identifies the newest loadUsers() call so slower earlier responses,
+      // which may arrive out of order while typing, can be discarded
+      this.loadRequestId = 0;
     }
 
     /**
@@ -86,9 +90,15 @@
     /**
      * Load users with filters
      * @param {Object} filters - Filter options
+     * @param {Object} options - Load options
+     * @param {boolean} options.reuseAllUsers - Skip reloading the full user list.
+     *   Only safe when nothing but the filters changed, since the full list is
+     *   used for duplicate detection and must stay in sync with the database.
      * @returns {Promise<void>}
      */
-    async loadUsers(filters = {}) {
+    async loadUsers(filters = {}, options = {}) {
+      const requestId = ++this.loadRequestId;
+
       // Hide no-project placeholder and show loading spinner
       if (this.noProjectPlaceholder) {
         this.noProjectPlaceholder.classList.remove('visible');
@@ -114,28 +124,50 @@
 
         const result = await this.electronAPI.getUsers(filters, loadOptions);
 
+        // A newer load started while this one was in flight
+        if (requestId !== this.loadRequestId) {
+          return;
+        }
+
         if (result.success) {
           this.setCurrentUsers(result.users);
 
-          // Always reload all users for accurate duplicate checking
-          // Only load image_path for duplicate checking, no need for repository images
-          const allLoadOptions = {
-            loadCapturedImages: true,
-            loadRepositoryImages: false
-          };
-          const allResult = await this.electronAPI.getUsers({}, allLoadOptions);
-          if (allResult.success) {
-            this.setAllUsers(allResult.users);
+          // Reload all users for accurate duplicate checking, unless the caller
+          // guarantees the underlying data is unchanged and a copy is cached
+          const cachedAllUsers = this.getAllUsers();
+          const canReuseAllUsers = options.reuseAllUsers === true &&
+            Array.isArray(cachedAllUsers) && cachedAllUsers.length > 0;
+
+          if (!canReuseAllUsers) {
+            // Only load image_path for duplicate checking, no need for repository images
+            const allLoadOptions = {
+              loadCapturedImages: true,
+              loadRepositoryImages: false
+            };
+            const allResult = await this.electronAPI.getUsers({}, allLoadOptions);
+
+            if (requestId !== this.loadRequestId) {
+              return;
+            }
+
+            if (allResult.success) {
+              this.setAllUsers(allResult.users);
+            }
           }
 
           this.onDisplayUsers(this.getCurrentUsers(), this.getAllUsers());
           this.onUpdateUserCount();
 
-          // Load card print requests (async, non-blocking)
-          this.loadCardPrintRequests();
-
-          // Load publication requests (async, non-blocking)
-          this.loadPublicationRequests();
+          // Load both request types (async, non-blocking) and repaint once,
+          // instead of re-rendering the whole table for each response
+          Promise.all([
+            this.loadCardPrintRequests({ refreshDisplay: false }),
+            this.loadPublicationRequests({ refreshDisplay: false })
+          ]).then(() => {
+            if (requestId === this.loadRequestId) {
+              this.updateRepositoryDataInDisplay();
+            }
+          });
 
           // Load repository data in background if needed
           if (this.getShowRepositoryPhotos() || this.getShowRepositoryIndicators()) {
@@ -152,8 +184,8 @@
           }
         }
       } finally {
-        // Hide loading spinner
-        if (this.loadingSpinner) {
+        // Hide loading spinner, unless a newer load now owns it
+        if (requestId === this.loadRequestId && this.loadingSpinner) {
           this.loadingSpinner.style.display = 'none';
         }
       }
@@ -203,8 +235,11 @@
 
     /**
      * Load card print requests (async, non-blocking)
+     * @param {Object} options - Options
+     * @param {boolean} options.refreshDisplay - Re-render the table when done.
+     *   Disabled when the caller batches several updates into a single repaint.
      */
-    async loadCardPrintRequests() {
+    async loadCardPrintRequests({ refreshDisplay = true } = {}) {
       try {
         const result = await this.electronAPI.getCardPrintRequests();
 
@@ -216,7 +251,9 @@
           this.onUpdateUserRowRenderer({ cardPrintRequests: new Set(result.userIds) });
 
           // Refresh display to show indicators
-          this.updateRepositoryDataInDisplay();
+          if (refreshDisplay) {
+            this.updateRepositoryDataInDisplay();
+          }
         } else {
           console.error('Error loading card print requests:', result.error);
         }
@@ -227,8 +264,11 @@
 
     /**
      * Load publication requests from 'To-Publish' folder
+     * @param {Object} options - Options
+     * @param {boolean} options.refreshDisplay - Re-render the table when done.
+     *   Disabled when the caller batches several updates into a single repaint.
      */
-    async loadPublicationRequests() {
+    async loadPublicationRequests({ refreshDisplay = true } = {}) {
       try {
         const result = await this.electronAPI.getPublicationRequests();
 
@@ -240,7 +280,9 @@
           this.onUpdateUserRowRenderer({ publicationRequests: new Set(result.userIds) });
 
           // Refresh display to show indicators
-          this.updateRepositoryDataInDisplay();
+          if (refreshDisplay) {
+            this.updateRepositoryDataInDisplay();
+          }
         } else {
           console.error('Error loading publication requests:', result.error);
         }

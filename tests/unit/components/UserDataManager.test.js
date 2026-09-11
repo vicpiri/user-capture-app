@@ -226,6 +226,40 @@ describe('UserDataManager', () => {
       });
     });
 
+    test('should reuse cached all users when only filters changed', async () => {
+      mockConfig.getAllUsers.mockReturnValue([{ id: 1 }, { id: 2 }]);
+
+      await manager.loadUsers({ search: 'ana' }, { reuseAllUsers: true });
+
+      expect(mockElectronAPI.getUsers).toHaveBeenCalledTimes(1);
+      expect(mockConfig.setAllUsers).not.toHaveBeenCalled();
+    });
+
+    test('should still load all users when the cache is empty', async () => {
+      mockConfig.getAllUsers.mockReturnValue([]);
+
+      await manager.loadUsers({ search: 'ana' }, { reuseAllUsers: true });
+
+      expect(mockElectronAPI.getUsers).toHaveBeenCalledTimes(2);
+      expect(mockConfig.setAllUsers).toHaveBeenCalled();
+    });
+
+    test('should discard a load superseded by a newer one', async () => {
+      let resolveStale;
+      mockElectronAPI.getUsers
+        .mockImplementationOnce(() => new Promise(resolve => { resolveStale = resolve; }))
+        .mockResolvedValue({ success: true, users: [{ id: 9 }] });
+
+      const stalePromise = manager.loadUsers({ search: 'an' });
+      await manager.loadUsers({ search: 'ana' });
+
+      mockConfig.setCurrentUsers.mockClear();
+      resolveStale({ success: true, users: [{ id: 1 }] });
+      await stalePromise;
+
+      expect(mockConfig.setCurrentUsers).not.toHaveBeenCalled();
+    });
+
     test('should call display users callback', async () => {
       const mockUsers = [{ id: 1 }];
       const mockAllUsers = [{ id: 1 }, { id: 2 }];
