@@ -37,7 +37,8 @@ describe('MenuEventManager', () => {
       onMenuAddImageTag: jest.fn(),
       onMenuShowTaggedImages: jest.fn(),
       onMenuToggleAdditionalActions: jest.fn(),
-      onMenuToggleCaptureHistory: jest.fn()
+      onMenuToggleCaptureHistory: jest.fn(),
+      onMenuProjectInfo: jest.fn()
     };
 
     // Mock config
@@ -312,6 +313,17 @@ describe('MenuEventManager', () => {
       handler();
 
       expect(mockConfig.onUpdateXML).toHaveBeenCalled();
+    });
+
+    test('should handle project info event', () => {
+      mockConfig.onShowProjectInfo = jest.fn();
+      manager = new MenuEventManager(mockConfig);
+      manager.init();
+
+      const handler = mockElectronAPI.onMenuProjectInfo.mock.calls[0][0];
+      handler();
+
+      expect(mockConfig.onShowProjectInfo).toHaveBeenCalled();
     });
   });
 

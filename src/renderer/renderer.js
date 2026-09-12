@@ -92,6 +92,7 @@ let userImageModalInstance = null;
 let orlaExportModalInstance = null;
 let restoreBackupModalInstance = null;
 let preferencesModalInstance = null;
+let projectInfoModalInstance = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -184,6 +185,9 @@ function initializeModals() {
 
   preferencesModalInstance = new PreferencesModal();
   preferencesModalInstance.init();
+
+  projectInfoModalInstance = new ProjectInfoModal();
+  projectInfoModalInstance.init();
 }
 
 // Initialize user row renderer
@@ -429,7 +433,8 @@ function initializeKeyboardNavigationManager() {
         (newProjectModalInstance && newProjectModalInstance.modal && newProjectModalInstance.modal.classList.contains('show')) ||
         (confirmModalInstance && confirmModalInstance.modal && confirmModalInstance.modal.classList.contains('show')) ||
         (progressModal && progressModal.classList.contains('show')) ||
-        (infoModalInstance && infoModalInstance.modal && infoModalInstance.modal.classList.contains('show'))
+        (infoModalInstance && infoModalInstance.modal && infoModalInstance.modal.classList.contains('show')) ||
+        (projectInfoModalInstance && projectInfoModalInstance.modal && projectInfoModalInstance.modal.classList.contains('show'))
       );
     },
     hasImages: () => imageGridManager && imageGridManager.getImageCount() > 0
@@ -486,6 +491,7 @@ function initializeMenuEventManager() {
     onExportPaidOrlaPDF: handleExportPaidOrlaPDF,
     onExportPaidUsersCSV: handleExportPaidUsersCSV,
     onUpdateXML: handleUpdateXML,
+    onShowProjectInfo: handleShowProjectInfo,
     onAddImageTag: handleAddImageTag,
     onShowTaggedImages: handleShowTaggedImages,
 
@@ -1735,6 +1741,16 @@ async function showInfoModal(title, message) {
   await infoModalInstance.show(title, message);
   // Restore focus to search input after closing
   searchInput.focus();
+}
+
+// Show the project information modal (Proyecto > Información del proyecto)
+async function handleShowProjectInfo() {
+  if (!projectOpen) {
+    await showInfoModal('Aviso', 'No hay ningún proyecto abierto');
+    return;
+  }
+
+  await projectInfoModalInstance.show();
 }
 
 // Progress modal functions (delegated to ProgressManager)

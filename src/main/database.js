@@ -621,6 +621,72 @@ class DatabaseManager {
     });
   }
 
+  /**
+   * Counts describing the contents of the project
+   *
+   * Everything is counted in SQL rather than by loading the rows: a project
+   * holds thousands of users, and this only needs the totals.
+   *
+   * @returns {Promise<Object>} totals, plus usersByType keyed by user type
+   */
+  async getProjectStatistics() {
+    const totals = await new Promise((resolve, reject) => {
+      this.db.get(`
+        SELECT
+          COUNT(*) AS totalUsers,
+          SUM(CASE WHEN image_path IS NOT NULL AND image_path != '' THEN 1 ELSE 0 END) AS usersWithImage
+        FROM users
+      `, [], (err, row) => {
+        if (err) reject(err);
+        else resolve(row || {});
+      });
+    });
+
+    const byType = await new Promise((resolve, reject) => {
+      this.db.all(`
+        SELECT type, COUNT(*) AS count
+        FROM users
+        GROUP BY type
+      `, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+
+    const groups = await new Promise((resolve, reject) => {
+      this.db.get('SELECT COUNT(*) AS count FROM groups', [], (err, row) => {
+        if (err) reject(err);
+        else resolve(row || {});
+      });
+    });
+
+    const taggedImages = await new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT COUNT(DISTINCT image_path) AS count FROM image_tags',
+        [],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row || {});
+        }
+      );
+    });
+
+    const totalUsers = totals.totalUsers || 0;
+    const usersWithImage = totals.usersWithImage || 0;
+
+    return {
+      totalUsers,
+      usersWithImage,
+      usersWithoutImage: totalUsers - usersWithImage,
+      totalGroups: groups.count || 0,
+      taggedImages: taggedImages.count || 0,
+      usersByType: byType.reduce((acc, row) => {
+        acc[row.type] = row.count;
+        return acc;
+      }, {})
+    };
+  }
+
   // Project settings methods
   async getProjectSetting(key) {
     return new Promise((resolve, reject) => {

@@ -41,7 +41,7 @@ function isListingCacheValid(cache, cachedAt, cachedKey, repositoryPath, ttl) {
  * @param {Function} context.createMenu - Create menu function
  */
 function registerMiscHandlers(context) {
-  const { mainWindow: getMainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu, reinitializeRepositoryMirror } = context;
+  const { mainWindow: getMainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu, reinitializeRepositoryMirror, repositoryMirror: getRepositoryMirror } = context;
 
   // ============================================================================
   // Dialog Handlers
@@ -1316,6 +1316,55 @@ function registerMiscHandlers(context) {
       return { success: true, ...result };
     } catch (error) {
       logger.error('Error deleting image backup:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ============================================================================
+  // Project Details Handler
+  // ============================================================================
+
+  // Everything the project information modal shows. Kept apart from
+  // 'get-project-info', which the status bar refreshes often and must stay
+  // cheap: this one runs four counts and lists the imports folder.
+  ipcMain.handle('get-project-details', async () => {
+    try {
+      if (!state.projectPath || !state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+
+      const projectPath = state.projectPath;
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+      const statistics = await state.dbManager.getProjectStatistics();
+
+      // Recorded from the project's second opening onwards; older projects
+      // never stored it, so the modal has to cope with it being missing
+      const xmlFilePath = await state.dbManager.getProjectSetting('xmlFilePath');
+
+      // The captures live on disk, not in the database
+      const capturedImages = state.imageManager
+        ? (await state.imageManager.getImages()).length
+        : 0;
+
+      const mirror = getRepositoryMirror ? getRepositoryMirror() : null;
+
+      return {
+        success: true,
+        info: {
+          name: path.basename(projectPath),
+          projectPath,
+          xmlFilePath: xmlFilePath || null,
+          ingestPath: path.join(projectPath, 'ingest'),
+          importsPath: path.join(projectPath, 'imports'),
+          databasePath: path.join(projectPath, 'data', 'users.db'),
+          repositoryPath: repositoryPath || null,
+          mirrorPath: mirror ? mirror.mirrorPath : null,
+          capturedImages,
+          ...statistics
+        }
+      };
+    } catch (error) {
+      logger.error('Error getting project info', error);
       return { success: false, error: error.message };
     }
   });

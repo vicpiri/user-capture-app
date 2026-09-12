@@ -51,6 +51,7 @@ user-capture-app/
 │   │   │   │   ├── InfoModal.js             # Modal informativo genérico
 │   │   │   │   ├── NewProjectModal.js       # Modal de creación de proyectos
 │   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
+│   │   │   │   ├── ProjectInfoModal.js      # Modal de información del proyecto
 │   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
 │   │   │   ├── CaptureHistoryManager.js # Tira de miniaturas del historial de capturas
 │   │   │   ├── DragDropManager.js       # Gestión de drag & drop de imágenes
@@ -289,6 +290,18 @@ Todos los modales extienden `BaseModal` para comportamiento consistente.
   - Muestra imagen capturada o del repositorio
   - Título con nombre completo del usuario
   - Etiqueta distintiva para imágenes del repositorio
+
+- **ProjectInfoModal.js**: Modal de información del proyecto (Proyecto > Información
+  del proyecto)
+  - Nombre del proyecto y ubicación de todas sus carpetas: proyecto, `ingest`,
+    `imports`, base de datos, depósito de imágenes y su copia local
+  - Recuento de usuarios (total y por tipo), grupos, fotos enlazadas, usuarios
+    sin foto, imágenes en `imports` e imágenes con etiquetas
+  - Los datos llegan del proceso principal en una sola llamada
+    (`get-project-details`), separada de `get-project-info` porque esta última
+    la refresca la barra de estado a menudo y debe seguir siendo barata
+  - La ruta del XML se registra al crear el proyecto y al actualizarlo; los
+    proyectos anteriores a esto la muestran como "No configurado"
 
 - **OrlaExportModal.js**: Modal de configuración de exportación de orlas PDF
   - Selección de fuente de fotos (capturadas vs repositorio)

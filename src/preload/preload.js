@@ -271,5 +271,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Preferences
   getPreferences: () => ipcRenderer.invoke('get-preferences'),
-  savePreferences: (preferences) => ipcRenderer.invoke('save-preferences', preferences)
+  savePreferences: (preferences) => ipcRenderer.invoke('save-preferences', preferences),
+
+  // Project information modal
+  getProjectDetails: () => ipcRenderer.invoke('get-project-details'),
+  onMenuProjectInfo: (callback) => {
+    ipcRenderer.on('menu-project-info', callback);
+  }
 });

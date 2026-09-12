@@ -167,6 +167,72 @@ describe('DatabaseManager', () => {
     });
   });
 
+  describe('getProjectStatistics()', () => {
+    test('should report zeros on an empty project', async () => {
+      const stats = await db.getProjectStatistics();
+
+      expect(stats).toMatchObject({
+        totalUsers: 0,
+        usersWithImage: 0,
+        usersWithoutImage: 0,
+        totalGroups: 0,
+        taggedImages: 0,
+        usersByType: {}
+      });
+    });
+
+    test('should count users, groups and linked photos', async () => {
+      await importUsers([student(3001), student(3002), student(3003)], [staff('X1')]);
+      const users = await db.getUsers({});
+      await db.linkImageToUser(users[0].id, 'photo0.jpg');
+      await db.linkImageToUser(users[1].id, 'photo1.jpg');
+
+      const stats = await db.getProjectStatistics();
+
+      expect(stats.totalUsers).toBe(4);
+      expect(stats.usersWithImage).toBe(2);
+      expect(stats.usersWithoutImage).toBe(2);
+      // The imported group plus the default one the teacher lands in
+      expect(stats.totalGroups).toBeGreaterThanOrEqual(1);
+    });
+
+    test('should break the users down by type', async () => {
+      await importUsers([student(4001), student(4002)], [staff('X2')]);
+
+      const stats = await db.getProjectStatistics();
+
+      expect(stats.usersByType.student).toBe(2);
+      expect(stats.usersByType.teacher).toBe(1);
+    });
+
+    test('should not count an empty image_path as a linked photo', async () => {
+      await importUsers([student(5001), student(5002)]);
+      const users = await db.getUsers({});
+      await new Promise((resolve, reject) => {
+        db.db.run(
+          'UPDATE users SET image_path = ? WHERE id = ?',
+          ['', users[0].id],
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+
+      const stats = await db.getProjectStatistics();
+
+      expect(stats.usersWithImage).toBe(0);
+      expect(stats.usersWithoutImage).toBe(2);
+    });
+
+    test('should count each tagged image once', async () => {
+      await db.addImageTag('photo0.jpg', 'revisar');
+      await db.addImageTag('photo0.jpg', 'repetir');
+      await db.addImageTag('photo1.jpg', 'revisar');
+
+      const stats = await db.getProjectStatistics();
+
+      expect(stats.taggedImages).toBe(2);
+    });
+  });
+
   describe('image relationship backup', () => {
     const linkImages = async () => {
       const users = await db.getUsers({});

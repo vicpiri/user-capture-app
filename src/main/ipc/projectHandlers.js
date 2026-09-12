@@ -89,6 +89,10 @@ function registerProjectHandlers(context) {
       await state.dbManager.initialize();
       logger.success('Database initialized successfully');
 
+      // Remembered so the project information can report where the users came
+      // from; nothing else recorded it
+      await state.dbManager.setProjectSetting('xmlFilePath', xmlPath);
+
       // Progress: 40%
       getMainWindow()?.webContents.send('progress', {
         percentage: 40,
@@ -404,6 +408,9 @@ function registerProjectHandlers(context) {
 
       logger.section('UPDATING XML FILE');
       logger.info(`New XML file: ${xmlPath}`);
+
+      // Keep the project information pointing at the file actually in use
+      await state.dbManager.setProjectSetting('xmlFilePath', xmlPath);
 
       // Validate XML path
       if (!fs.existsSync(xmlPath)) {

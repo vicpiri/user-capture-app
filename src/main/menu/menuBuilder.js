@@ -224,6 +224,13 @@ class MenuBuilder {
       label: 'Proyecto',
       submenu: [
         {
+          label: 'Información del proyecto',
+          click: () => {
+            this.mainWindow.webContents.send('menu-project-info');
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Actualizar archivo XML',
           click: () => {
             this.mainWindow.webContents.send('menu-update-xml');

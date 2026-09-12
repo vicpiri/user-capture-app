@@ -752,6 +752,56 @@
   font-weight: 400;
 }
 
+/* Project Information Modal Styles */
+.project-info-modal-content {
+  min-width: 640px;
+  max-width: 760px;
+  /* Enough rows to outgrow a short window, so the panel scrolls instead of
+     pushing the close button off screen */
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.project-info-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #4a9eff;
+  margin-bottom: 20px;
+  word-break: break-word;
+}
+
+.project-info-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a8f9a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.project-info-section {
+  margin-bottom: 20px;
+}
+
+/* Paths are long: let the value take the room it needs and wrap rather than
+   push the label out of the modal */
+.project-info-value {
+  text-align: right;
+  margin-left: 24px;
+  word-break: break-all;
+}
+
+.project-info-value-empty {
+  color: #707580;
+  font-style: italic;
+}
+
+.project-info-error {
+  color: #ef4444;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
 /* Printer Configuration Modal Styles */
 #printer-select {
   width: 100%;

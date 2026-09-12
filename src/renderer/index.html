@@ -237,6 +237,25 @@
     </div>
   </div>
 
+  <!-- Project Information Modal -->
+  <div id="project-info-modal" class="modal">
+    <div class="modal-content project-info-modal-content">
+      <h2>Información del proyecto</h2>
+      <div id="project-info-modal-name" class="project-info-name"></div>
+      <p id="project-info-modal-error" class="project-info-error" style="display: none;"></p>
+
+      <h3 class="project-info-section-title">Ubicaciones</h3>
+      <div id="project-info-modal-paths" class="about-info-section project-info-section"></div>
+
+      <h3 class="project-info-section-title">Contenido</h3>
+      <div id="project-info-modal-counts" class="about-info-section project-info-section"></div>
+
+      <div class="modal-buttons">
+        <button id="project-info-modal-close-btn" class="btn btn-primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Progress Modal -->
   <div id="progress-modal" class="modal">
     <div class="modal-content">
@@ -646,6 +665,7 @@
   <script src="components/modals/AddTagModal.js"></script>
   <script src="components/modals/RestoreBackupModal.js"></script>
   <script src="components/modals/PreferencesModal.js"></script>
+  <script src="components/modals/ProjectInfoModal.js"></script>
   <!-- Status Bar -->
   <div id="status-bar" class="status-bar" style="display: none;">
     <div class="status-bar-section">
