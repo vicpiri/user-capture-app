@@ -829,16 +829,33 @@ class DatabaseManager {
     });
   }
 
-  async clearCapturedImages() {
+  /**
+   * Unlink captured images from users
+   *
+   * @param {number[]} [userIds] - Restrict to these users. Omit to clear the
+   *   whole project, which is what restoring a backup relies on.
+   * @returns {Promise<{cleared: number}>}
+   */
+  async clearCapturedImages(userIds) {
+    const restricted = Array.isArray(userIds);
+
+    if (restricted && userIds.length === 0) {
+      return { cleared: 0 };
+    }
+
     return new Promise((resolve, reject) => {
-      this.db.run(
-        'UPDATE users SET image_path = NULL WHERE image_path IS NOT NULL AND image_path != ""',
-        [],
-        function(err) {
-          if (err) reject(err);
-          else resolve({ cleared: this.changes });
-        }
-      );
+      let query = 'UPDATE users SET image_path = NULL WHERE image_path IS NOT NULL AND image_path != ""';
+      const params = [];
+
+      if (restricted) {
+        query += ` AND id IN (${userIds.map(() => '?').join(',')})`;
+        params.push(...userIds);
+      }
+
+      this.db.run(query, params, function(err) {
+        if (err) reject(err);
+        else resolve({ cleared: this.changes });
+      });
     });
   }
 

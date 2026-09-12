@@ -459,15 +459,25 @@
         // Show export result first
         await this.showInfoModal('Exportación completada', message);
 
-        // Ask if user wants to clear captured images
+        // Offer to unlink what was exported, and only that: clearing the whole
+        // project would also drop the links of users left out by the current
+        // filter, whose photos never reached the repository
         if (results.exported > 0) {
+          const exportedUserIds = results.exportedUserIds || [];
+          const count = exportedUserIds.length || results.exported;
+
           const shouldClear = await this.confirmModal.show(
-            '¿Deseas limpiar los enlaces de las imágenes capturadas?\n\n' +
-            'Se creará una copia de seguridad automáticamente antes de eliminarlos.'
+            `Sus fotos ya están en el depósito. ¿Deseas desvincularlas de los ${count} ` +
+            'usuarios exportados?\n\n' +
+            'Sus fichas quedarán sin foto capturada, listas para una nueva ronda. No se ' +
+            'borra ninguna imagen: las fotos siguen en la carpeta del proyecto y en el ' +
+            'depósito.\n\n' +
+            'Antes se guardará una copia de seguridad de los enlaces, que puedes ' +
+            'restaurar desde Proyecto > Restaurar enlaces de imágenes.'
           );
 
           if (shouldClear) {
-            await this.clearCapturedImagesWithBackup();
+            await this.clearCapturedImagesWithBackup(exportedUserIds);
           }
         }
 
@@ -480,11 +490,17 @@
 
     /**
      * Clear captured images with automatic backup
+     *
+     * The backup deliberately covers every link in the project, not just the
+     * ones about to be cleared: restoring it puts the project back exactly as
+     * it was, which is the point of the safety net.
+     *
+     * @param {number[]} [userIds] - Users to unlink. Omit to clear them all.
      */
-    async clearCapturedImagesWithBackup() {
+    async clearCapturedImagesWithBackup(userIds) {
       try {
         // Show progress
-        this.showProgressModal('Limpiando enlaces', 'Creando copia de seguridad...');
+        this.showProgressModal('Desvinculando fotos', 'Creando copia de seguridad...');
 
         // Create backup first
         const backupResult = await this.electronAPI.backupImageRelationships();
@@ -496,16 +512,17 @@
         }
 
         // Clear captured images
-        const clearResult = await this.electronAPI.clearCapturedImages();
+        const clearResult = await this.electronAPI.clearCapturedImages(userIds);
 
         this.closeProgressModal();
 
         if (clearResult.success) {
           await this.showInfoModal(
-            'Enlaces limpiados',
-            `Se han limpiado ${clearResult.cleared} enlaces de imágenes capturadas.\n\n` +
-            `Copia de seguridad creada con ${backupResult.count} registros.\n` +
-            `Fecha de backup: ${new Date(backupResult.backupDate).toLocaleString('es-ES')}`
+            'Fotos desvinculadas',
+            `Se han desvinculado ${clearResult.cleared} fotos. Los archivos no se han borrado.\n\n` +
+            `Copia de seguridad con ${backupResult.count} enlaces de todo el proyecto.\n` +
+            `Fecha: ${new Date(backupResult.backupDate).toLocaleString('es-ES')}\n\n` +
+            'Puedes deshacerlo desde Proyecto > Restaurar enlaces de imágenes.'
           );
 
           // Notify completion to reload users

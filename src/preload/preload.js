@@ -264,7 +264,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Image relationships backup
   backupImageRelationships: () => ipcRenderer.invoke('backup-image-relationships'),
-  clearCapturedImages: () => ipcRenderer.invoke('clear-captured-images'),
+  clearCapturedImages: (userIds) => ipcRenderer.invoke('clear-captured-images', userIds),
   restoreImageRelationships: (backupDate) => ipcRenderer.invoke('restore-image-relationships', backupDate),
   getImageBackups: () => ipcRenderer.invoke('get-image-backups'),
   deleteImageBackup: (backupDate) => ipcRenderer.invoke('delete-image-backup', backupDate),

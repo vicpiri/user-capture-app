@@ -895,8 +895,20 @@ Aplicación completamente funcional con todas las características principales i
 
 ### 5. Imágenes a repositorio
 - **Comando de menú**: Archivo > Exportar > Imágenes a repositorio
-- **Destino**: Google Drive configurado
-- **Formato**: Según configuración del repositorio
+- **Destino**: carpeta del depósito configurada en Proyecto > Configurar depósito
+- **Alcance**: los usuarios seleccionados si hay modo selección activo; si no,
+  los que hay en pantalla con el filtro de grupo y la búsqueda aplicados
+- **Formato**: `{NIA}.jpg` para alumnado y `{documento}.jpg` para el resto,
+  siempre `.jpg` y en la raíz del depósito, **sobrescribiendo** lo que hubiera
+- **Opciones**: copia original o redimensionado (tamaño y peso máximo)
+- **Se descartan**: usuarios sin NIA/DNI y aquellos cuyo archivo de origen falta
+- **Desvinculación posterior**: si se exportó al menos una imagen, se ofrece
+  quitar la foto capturada de la ficha de **los usuarios exportados, y solo
+  ellos**. No borra ningún archivo: las fotos siguen en `imports` y en el
+  depósito. Antes se guarda una copia de seguridad de los enlaces de todo el
+  proyecto, restaurable desde Proyecto > Restaurar enlaces de imágenes
+  - `clearCapturedImages(userIds)` acepta la lista de usuarios; sin ella limpia
+    el proyecto entero, que es de lo que depende la restauración de una copia
 
 ### 6. Orla PDF
 - **Comando de menú**: Archivo > Exportar > Orla PDF

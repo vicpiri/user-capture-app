@@ -629,6 +629,9 @@ function registerExportHandlers(context) {
       const results = {
         total: usersWithImages.length,
         exported: 0,
+        // Who actually reached the repository, so the caller can offer to
+        // unlink exactly those and nobody else
+        exportedUserIds: [],
         errors: []
       };
 
@@ -674,6 +677,7 @@ function registerExportHandlers(context) {
           await writeExportedImage(sourceImagePath, destPath, exportOptions, logger);
 
           results.exported++;
+          results.exportedUserIds.push(user.id);
           logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${destFileName}`);
         } catch (error) {
           results.errors.push({

@@ -1252,15 +1252,18 @@ function registerMiscHandlers(context) {
     }
   });
 
-  // Clear captured images
-  ipcMain.handle('clear-captured-images', async () => {
+  // Clear captured images. Without userIds it clears the whole project.
+  ipcMain.handle('clear-captured-images', async (event, userIds) => {
     try {
       if (!state.dbManager) {
         throw new Error('No hay ningún proyecto abierto');
       }
 
-      const result = await state.dbManager.clearCapturedImages();
-      logger.info(`Cleared ${result.cleared} captured image links`);
+      const result = await state.dbManager.clearCapturedImages(userIds);
+      logger.info(
+        `Cleared ${result.cleared} captured image links` +
+        (Array.isArray(userIds) ? ` (restricted to ${userIds.length} users)` : ' (whole project)')
+      );
 
       return { success: true, ...result };
     } catch (error) {

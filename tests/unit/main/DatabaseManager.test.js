@@ -233,6 +233,59 @@ describe('DatabaseManager', () => {
     });
   });
 
+  describe('clearCapturedImages()', () => {
+    const linkAll = async () => {
+      const users = await db.getUsers({});
+      await Promise.all(
+        users.map((user, index) => db.linkImageToUser(user.id, `photo${index}.jpg`))
+      );
+      return users;
+    };
+
+    beforeEach(async () => {
+      await importUsers([student(6001), student(6002), student(6003)]);
+    });
+
+    test('should clear the whole project when given no users', async () => {
+      await linkAll();
+
+      const result = await db.clearCapturedImages();
+
+      expect(result.cleared).toBe(3);
+      const remaining = (await db.getUsers({})).filter(u => u.image_path);
+      expect(remaining).toHaveLength(0);
+    });
+
+    test('should clear only the users it is given', async () => {
+      const users = await linkAll();
+
+      const result = await db.clearCapturedImages([users[0].id, users[1].id]);
+
+      expect(result.cleared).toBe(2);
+      const remaining = (await db.getUsers({})).filter(u => u.image_path);
+      expect(remaining.map(u => u.id)).toEqual([users[2].id]);
+    });
+
+    test('should leave everyone linked when given an empty list', async () => {
+      await linkAll();
+
+      const result = await db.clearCapturedImages([]);
+
+      expect(result.cleared).toBe(0);
+      const remaining = (await db.getUsers({})).filter(u => u.image_path);
+      expect(remaining).toHaveLength(3);
+    });
+
+    test('should ignore users that are not linked', async () => {
+      const users = await db.getUsers({});
+      await db.linkImageToUser(users[0].id, 'photo0.jpg');
+
+      const result = await db.clearCapturedImages(users.map(u => u.id));
+
+      expect(result.cleared).toBe(1);
+    });
+  });
+
   describe('image relationship backup', () => {
     const linkImages = async () => {
       const users = await db.getUsers({});

@@ -559,6 +559,7 @@ describe('ExportManager', () => {
         results: {
           total: 10,
           exported: 10,
+          exportedUserIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
           errors: []
         }
       });
@@ -574,10 +575,87 @@ describe('ExportManager', () => {
       expect(mockElectronAPI.backupImageRelationships).toHaveBeenCalled();
       expect(mockElectronAPI.clearCapturedImages).toHaveBeenCalled();
       expect(mockShowInfoModal).toHaveBeenCalledWith(
-        'Enlaces limpiados',
-        expect.stringContaining('Se han limpiado')
+        'Fotos desvinculadas',
+        expect.stringContaining('Se han desvinculado')
       );
       expect(onExportComplete).toHaveBeenCalledTimes(2); // Once after export, once after clearing
+    });
+
+    /**
+     * Unlinking used to run over the whole project. Since the export normally
+     * covers only the group on screen, answering yes dropped the links of
+     * users whose photos never reached the repository.
+     */
+    test('should unlink only the users that were exported', async () => {
+      mockExportOptionsModal.show.mockResolvedValue({ mode: 'copy', resize: null });
+      mockConfirmModal.show.mockResolvedValue(true);
+
+      mockElectronAPI.exportToRepository.mockResolvedValue({
+        success: true,
+        results: {
+          total: 3,
+          exported: 2,
+          exportedUserIds: [7, 9],
+          errors: [{ user: 'Sin NIA', error: 'Usuario sin identificador (NIA/DNI)' }]
+        }
+      });
+
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
+
+      expect(mockElectronAPI.clearCapturedImages).toHaveBeenCalledWith([7, 9]);
+    });
+
+    test('should say how many users the question is about', async () => {
+      mockExportOptionsModal.show.mockResolvedValue({ mode: 'copy', resize: null });
+      mockConfirmModal.show.mockResolvedValue(false);
+
+      mockElectronAPI.exportToRepository.mockResolvedValue({
+        success: true,
+        results: { total: 3, exported: 2, exportedUserIds: [7, 9], errors: [] }
+      });
+
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
+
+      expect(mockConfirmModal.show).toHaveBeenCalledWith(expect.stringContaining('2 usuarios'));
+    });
+
+    test('should make clear that no image file is deleted', async () => {
+      mockExportOptionsModal.show.mockResolvedValue({ mode: 'copy', resize: null });
+      mockConfirmModal.show.mockResolvedValue(false);
+
+      mockElectronAPI.exportToRepository.mockResolvedValue({
+        success: true,
+        results: { total: 1, exported: 1, exportedUserIds: [7], errors: [] }
+      });
+
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
+
+      expect(mockConfirmModal.show).toHaveBeenCalledWith(
+        expect.stringContaining('No se borra ninguna imagen')
+      );
+    });
+
+    test('should not unlink anything when the user declines', async () => {
+      mockExportOptionsModal.show.mockResolvedValue({ mode: 'copy', resize: null });
+      mockConfirmModal.show.mockResolvedValue(false);
+
+      mockElectronAPI.exportToRepository.mockResolvedValue({
+        success: true,
+        results: { total: 1, exported: 1, exportedUserIds: [7], errors: [] }
+      });
+
+      const promise = manager.exportToRepository();
+      await jest.runAllTimersAsync();
+      await promise;
+
+      expect(mockElectronAPI.backupImageRelationships).not.toHaveBeenCalled();
+      expect(mockElectronAPI.clearCapturedImages).not.toHaveBeenCalled();
     });
 
     test('should not show clear confirmation if no images exported', async () => {
