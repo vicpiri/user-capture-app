@@ -685,7 +685,8 @@ describe('ExportManager', () => {
     const withPhoto = (id) => ({ id, image_path: `photo${id}.jpg` });
     const withoutPhoto = (id) => ({ id, image_path: null });
 
-    const valueFor = (rows, label) => {
+    const valueFor = (scope, label) => {
+      const rows = Array.isArray(scope) ? scope : scope.rows;
       const row = rows.find(r => r.label === label);
       return row ? row.value : undefined;
     };
@@ -762,6 +763,22 @@ describe('ExportManager', () => {
       ]);
     });
 
+    /**
+     * The repository breakdown must not leak into an export to a folder, where
+     * "already in the repository" says nothing about the destination.
+     */
+    test('should not break a folder export down by repository', () => {
+      const users = [
+        { id: 1, image_path: 'a.jpg', has_repository_image: true },
+        { id: 2, image_path: 'b.jpg', has_repository_image: false }
+      ];
+
+      const scope = manager.describeExportScope(users, 'a la carpeta');
+
+      expect(valueFor(scope, 'Reemplazarán una foto existente')).toBeUndefined();
+      expect(scope.note).toBeNull();
+    });
+
     test('should summarise the export by full name too', async () => {
       manager.getCurrentUsers = () => [withPhoto(1), withPhoto(2), withoutPhoto(3)];
       manager.getGroupFilterLabel = () => 'Todos los grupos';
@@ -777,6 +794,69 @@ describe('ExportManager', () => {
       ]);
     });
 
+    describe('repository breakdown', () => {
+      const inRepo = (id) => ({ id, image_path: `p${id}.jpg`, has_repository_image: true });
+      const notInRepo = (id) => ({ id, image_path: `p${id}.jpg`, has_repository_image: false });
+
+      test('should split the images into replacements and new ones', () => {
+        const scope = manager.describeExportScope(
+          [inRepo(1), inRepo(2), notInRepo(3), withoutPhoto(4)],
+          'al depósito',
+          { repository: true }
+        );
+
+        expect(valueFor(scope, 'Reemplazarán una foto existente')).toBe('2');
+        expect(valueFor(scope, 'Son fotos nuevas en el depósito')).toBe('1');
+      });
+
+      test('should ignore users with no captured photo in the split', () => {
+        const scope = manager.describeExportScope(
+          [inRepo(1), { id: 9, image_path: null, has_repository_image: true }],
+          'al depósito',
+          { repository: true }
+        );
+
+        expect(valueFor(scope, 'Reemplazarán una foto existente')).toBe('1');
+        expect(valueFor(scope, 'Son fotos nuevas en el depósito')).toBe('0');
+      });
+
+      test('should warn that the figures come from the last sync', () => {
+        const scope = manager.describeExportScope([inRepo(1)], 'al depósito', { repository: true });
+
+        expect(scope.note).toContain('última sincronización');
+        expect(scope.note).toContain('Reemplazadas');
+      });
+
+      /**
+       * has_repository_image only reaches the renderer when the repository
+       * preferences are on. With them off nobody knows, and reporting zero
+       * replacements would send the user into an export believing nothing gets
+       * overwritten.
+       */
+      test('should say nothing when the repository state is unknown', () => {
+        const scope = manager.describeExportScope(
+          [{ id: 1, image_path: 'a.jpg' }, { id: 2, image_path: 'b.jpg' }],
+          'al depósito',
+          { repository: true }
+        );
+
+        expect(valueFor(scope, 'Reemplazarán una foto existente')).toBeUndefined();
+        expect(valueFor(scope, 'Son fotos nuevas en el depósito')).toBeUndefined();
+        expect(scope.note).toBeNull();
+      });
+
+      test('should still report when every photo is new', () => {
+        const scope = manager.describeExportScope(
+          [notInRepo(1), notInRepo(2)],
+          'al depósito',
+          { repository: true }
+        );
+
+        expect(valueFor(scope, 'Reemplazarán una foto existente')).toBe('0');
+        expect(valueFor(scope, 'Son fotos nuevas en el depósito')).toBe('2');
+      });
+    });
+
     test('should hand the summary to the options dialog before exporting', async () => {
       manager.getCurrentUsers = () => [withPhoto(1), withPhoto(2), withoutPhoto(3)];
       manager.getGroupFilterLabel = () => '1CFMA - 1ACC CARROCERIA';
@@ -784,11 +864,30 @@ describe('ExportManager', () => {
 
       await manager.exportToRepository();
 
-      expect(mockExportOptionsModal.show).toHaveBeenCalledWith([
-        { label: 'Se exportará', value: '1CFMA - 1ACC CARROCERIA' },
-        { label: 'Imágenes a enviar al depósito', value: '2' },
-        { label: 'Usuarios sin foto capturada', value: '1' }
-      ]);
+      expect(mockExportOptionsModal.show).toHaveBeenCalledWith(
+        [
+          { label: 'Se exportará', value: '1CFMA - 1ACC CARROCERIA' },
+          { label: 'Imágenes a enviar al depósito', value: '2' },
+          { label: 'Usuarios sin foto capturada', value: '1' }
+        ],
+        null
+      );
+    });
+
+    test('should hand the repository breakdown and its caveat to the dialog', async () => {
+      manager.getCurrentUsers = () => [
+        { id: 1, image_path: 'a.jpg', has_repository_image: true },
+        { id: 2, image_path: 'b.jpg', has_repository_image: false }
+      ];
+      manager.getGroupFilterLabel = () => 'Todos los grupos';
+      mockExportOptionsModal.show.mockResolvedValue(null);
+
+      await manager.exportToRepository();
+
+      const [rows, note] = mockExportOptionsModal.show.mock.calls[0];
+      expect(rows).toContainEqual({ label: 'Reemplazarán una foto existente', value: '1' });
+      expect(rows).toContainEqual({ label: 'Son fotos nuevas en el depósito', value: '1' });
+      expect(note).toContain('última sincronización');
     });
   });
 

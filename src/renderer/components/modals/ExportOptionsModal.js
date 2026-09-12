@@ -34,6 +34,7 @@
     this.confirmBtn = null;
     this.cancelBtn = null;
     this.summaryEl = null;
+    this.noteEl = null;
 
     // State
     this.resolvePromise = null;
@@ -57,6 +58,7 @@
     this.confirmBtn = this.modal.querySelector('#export-confirm-btn');
     this.cancelBtn = this.modal.querySelector('#export-cancel-btn');
     this.summaryEl = this.modal.querySelector('#export-options-modal-summary');
+    this.noteEl = this.modal.querySelector('#export-options-modal-note');
 
     // Setup event listeners
     this.addEventListener(this.copyOriginalRadio, 'change', () => this.handleModeChange());
@@ -76,9 +78,11 @@
    * @param {Array<{label: string, value: string}>} [summary] - What is about to
    *   be exported. Shown above the options so the scope is visible before
    *   confirming; omit it and the section stays hidden.
+   * @param {string} [note] - Caveat shown under the summary, for figures that
+   *   cannot be promised to be exact
    * @returns {Promise<object|null>} Promise that resolves with export options or null if cancelled
    */
-  show(summary) {
+  show(summary, note) {
     return new Promise((resolve, reject) => {
       this.resolvePromise = resolve;
       this.rejectPromise = reject;
@@ -86,6 +90,7 @@
       // Reset to defaults
       this.resetForm();
       this.renderSummary(summary);
+      this.renderNote(note);
 
       // Open modal
       this.open();
@@ -125,6 +130,17 @@
     });
 
     this.summaryEl.appendChild(fragment);
+  }
+
+  /**
+   * Show the caveat under the summary, or hide it when there is none
+   * @param {string} [note]
+   */
+  renderNote(note) {
+    if (!this.noteEl) return;
+
+    this.noteEl.textContent = note || '';
+    this.noteEl.style.display = note ? 'block' : 'none';
   }
 
   /**

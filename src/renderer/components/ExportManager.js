@@ -342,7 +342,7 @@
 
         // Show export options modal and wait for user choice
         const options = await this.exportOptionsModal.show(
-          this.describeExportScope(usersToExport, 'a la carpeta')
+          this.describeExportScope(usersToExport, 'a la carpeta').rows
         );
 
         if (!options) {
@@ -390,7 +390,7 @@
 
         // Show export options modal and wait for user choice
         const options = await this.exportOptionsModal.show(
-          this.describeExportScope(usersToExport, 'a la carpeta')
+          this.describeExportScope(usersToExport, 'a la carpeta').rows
         );
 
         if (!options) {
@@ -427,9 +427,13 @@
      *
      * @param {Array} usersToExport
      * @param {string} destination - Where the images are going, for the wording
-     * @returns {Array<{label: string, value: string}>}
+     * @param {Object} [options]
+     * @param {boolean} [options.repository] - Also break the images down into
+     *   the ones that replace a photo already in the repository and the ones
+     *   that are new there
+     * @returns {{rows: Array<{label: string, value: string}>, note: string|null}}
      */
-    describeExportScope(usersToExport, destination) {
+    describeExportScope(usersToExport, destination, options = {}) {
       const selectionMode = this.getSelectionMode();
       const selectedUsers = this.getSelectedUsers();
       const searchTerm = this.getSearchTerm();
@@ -446,13 +450,35 @@
         scope = this.getGroupFilterLabel() || 'Todos los grupos';
       }
 
-      const withImage = usersToExport.filter(user => user.image_path).length;
+      const withImage = usersToExport.filter(user => user.image_path);
 
-      return [
+      const rows = [
         { label: 'Se exportará', value: scope },
-        { label: `Imágenes a enviar ${destination}`, value: String(withImage) },
-        { label: 'Usuarios sin foto capturada', value: String(usersToExport.length - withImage) }
+        { label: `Imágenes a enviar ${destination}`, value: String(withImage.length) },
+        { label: 'Usuarios sin foto capturada', value: String(usersToExport.length - withImage.length) }
       ];
+
+      // has_repository_image only arrives when the repository preferences are
+      // on. With them off nobody knows, and reporting zero replacements would
+      // be worse than saying nothing.
+      const repositoryKnown = options.repository
+        && withImage.some(user => user.has_repository_image !== undefined);
+
+      if (!repositoryKnown) {
+        return { rows, note: null };
+      }
+
+      const replacing = withImage.filter(user => user.has_repository_image).length;
+
+      rows.push({ label: 'Reemplazarán una foto existente', value: String(replacing) });
+      rows.push({ label: 'Son fotos nuevas en el depósito', value: String(withImage.length - replacing) });
+
+      return {
+        rows,
+        note: 'Las cifras del depósito salen de la última sincronización, así que pueden '
+          + 'variar si otro equipo acaba de exportar. Las anteriores no se pierden: se '
+          + 'guardan en la carpeta "Reemplazadas" del depósito.'
+      };
     }
 
     /**
@@ -465,9 +491,8 @@
       const usersToExport = this.getUsersToExport();
 
       // Show export options modal and wait for user choice
-      const options = await this.exportOptionsModal.show(
-        this.describeExportScope(usersToExport, 'al depósito')
-      );
+      const scope = this.describeExportScope(usersToExport, 'al depósito', { repository: true });
+      const options = await this.exportOptionsModal.show(scope.rows, scope.note);
 
       if (!options) {
         // User cancelled

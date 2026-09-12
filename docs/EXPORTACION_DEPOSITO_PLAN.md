@@ -1,7 +1,8 @@
 # Exportación al depósito: escritura segura y conservación de lo reemplazado
 
-**Estado**: ✅ Fases 1 y 2 implementadas y probadas en real (2026-09-12).
-Fase 3 sin implementar.
+**Estado**: ✅ Completado. Las tres fases implementadas y probadas en real
+(2026-09-12). Queda abierto lo listado en "Fuera de alcance" y la purga manual
+de `Reemplazadas`.
 **Depósito de pruebas**: `G:\Mi unidad\_Borrar`, utilizable libremente.
 **Redactado**: 2026-09-12. **Revisado**: 2026-09-12 (la fase 2 pasa de copiar
 a mover; la fase 1 absorbe el arreglo de la "copia original").
@@ -328,6 +329,20 @@ los otros crecimientos sin límite ya detectados (`app.log`, caché de miniatura
 ---
 
 ## Fase 3 — Aviso previo en el diálogo
+
+> **Implementada y probada en real** el 2026-09-12 en `ExportManager.js` y
+> `ExportOptionsModal.js`. `describeExportScope()` pasa a devolver
+> `{rows, note}`, y el modal acepta una nota opcional bajo el resumen.
+>
+> **Añadido sobre lo planificado**: `has_repository_image` solo llega al
+> renderer cuando las preferencias del depósito están activas. Con ellas
+> apagadas el dato es desconocido, y publicar "0 reemplazos" mandaría al usuario
+> a exportar creyendo que no pisa nada. En ese caso las dos filas y la nota **no
+> se muestran**. El desglose tampoco aparece en las exportaciones a carpeta,
+> donde "ya está en el depósito" no dice nada del destino.
+>
+> Verificado en real: con las 33 fotos del grupo ya en el depósito, el diálogo
+> mostró 33 reemplazos y 0 nuevas.
 
 El resumen del diálogo de exportación ya existe
 (`ExportManager.describeExportScope()`). Añadir una fila:

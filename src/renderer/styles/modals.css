@@ -764,6 +764,14 @@
   font-weight: 600;
 }
 
+.export-summary-note {
+  display: none;
+  margin: -12px 0 20px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8a8f9a;
+}
+
 /* Project Information Modal Styles */
 .project-info-modal-content {
   min-width: 640px;
