@@ -29,7 +29,11 @@ class VirtualScrollManager {
     this.visibleStartIndex = 0;
     this.visibleEndIndex = 0;
     this.isActive = false;
-    this.scrollTimeout = null;
+    this.scrollFrame = null;
+
+    // Row height depends on CSS and on which indicators are shown, so the
+    // configured value is only a starting point until a row can be measured
+    this.needsMeasure = true;
 
     // DOM elements
     this.topSpacer = null;
@@ -51,8 +55,9 @@ class VirtualScrollManager {
     // Create spacer elements if they don't exist
     this.createSpacers();
 
-    // Setup scroll listener
-    this.container.addEventListener('scroll', this.handleScroll);
+    // Passive: the handler never calls preventDefault, and saying so lets the
+    // browser scroll without waiting for it
+    this.container.addEventListener('scroll', this.handleScroll, { passive: true });
 
     console.log('[VirtualScrollManager] Initialized');
   }
@@ -86,6 +91,9 @@ class VirtualScrollManager {
    */
   setItems(items) {
     this.items = items || [];
+
+    // The rows about to be built may have a different shape than the last set
+    this.needsMeasure = true;
 
     // Determine if virtual scrolling should be active
     const shouldActivate = this.items.length >= this.minItemsForVirtualization;
@@ -121,7 +129,39 @@ class VirtualScrollManager {
    * Use this when the rendering config changes (e.g., selection mode toggle)
    */
   forceRerender() {
+    this.needsMeasure = true;
     this.render(true);
+  }
+
+  /**
+   * Adopt the real rendered row height
+   *
+   * The configured height is a guess: the actual one depends on CSS and on
+   * which indicator columns are visible, and getting it wrong makes the spacers
+   * lie about the total height, so the scrollbar and the rendered range drift
+   * apart. Reading offsetHeight forces layout, so this only runs when the rows
+   * may have changed shape, never on a scroll frame.
+   *
+   * @returns {boolean} True if the height changed and a re-render is needed
+   * @private
+   */
+  measureItemHeight() {
+    this.needsMeasure = false;
+
+    const row = this.topSpacer && this.topSpacer.nextElementSibling;
+    if (!row || row === this.bottomSpacer) {
+      return false;
+    }
+
+    const height = row.offsetHeight;
+
+    // jsdom and hidden containers report 0, which is not a usable measurement
+    if (!height || height === this.itemHeight) {
+      return false;
+    }
+
+    this.itemHeight = height;
+    return true;
   }
 
   /**
@@ -142,11 +182,17 @@ class VirtualScrollManager {
     );
     existingRows.forEach(row => row.remove());
 
-    // Render all items
+    // Build off-document and insert once, so the browser lays out the batch a
+    // single time instead of on every row
+    const fragment = document.createDocumentFragment();
     this.items.forEach(item => {
-      const row = this.createRowCallback(item);
-      this.bottomSpacer.parentNode.insertBefore(row, this.bottomSpacer);
+      fragment.appendChild(this.createRowCallback(item));
     });
+    this.tbody.insertBefore(fragment, this.bottomSpacer);
+
+    if (this.needsMeasure) {
+      this.measureItemHeight();
+    }
 
     // Observe lazy images
     if (this.observeImagesCallback) {
@@ -189,12 +235,20 @@ class VirtualScrollManager {
       );
       existingRows.forEach(row => row.remove());
 
-      // Render visible rows
-      const visibleItems = this.items.slice(startIndex, endIndex);
-      visibleItems.forEach(item => {
-        const row = this.createRowCallback(item);
-        this.bottomSpacer.parentNode.insertBefore(row, this.bottomSpacer);
+      // Build off-document and insert once, so the browser lays out the batch a
+      // single time instead of on every row
+      const fragment = document.createDocumentFragment();
+      this.items.slice(startIndex, endIndex).forEach(item => {
+        fragment.appendChild(this.createRowCallback(item));
       });
+      this.tbody.insertBefore(fragment, this.bottomSpacer);
+
+      // A corrected height changes both the visible range and the spacers, so
+      // the range has to be recomputed with it
+      if (this.needsMeasure && this.measureItemHeight()) {
+        this.renderVirtualized(true);
+        return;
+      }
 
       // Observe lazy images
       if (this.observeImagesCallback) {
@@ -230,37 +284,22 @@ class VirtualScrollManager {
       }
     });
 
-    // Add or reuse rows for visible items
-    visibleItems.forEach((item, index) => {
+    // Add or reuse rows for visible items.
+    // Walking the siblings keeps this linear: looking each row up by index
+    // meant rebuilding an array of the tbody children on every single item.
+    let expectedNode = this.topSpacer.nextSibling;
+
+    visibleItems.forEach(item => {
       const userId = String(item.id);
-      const existingRow = existingRowsMap.get(userId);
+      const row = existingRowsMap.get(userId) || this.createRowCallback(item);
 
-      if (existingRow) {
-        // Row already exists - reuse it (move if necessary)
-        // Check if row is in correct position
-        const currentIndex = Array.from(this.tbody.children).indexOf(existingRow);
-        const targetIndex = index + 1; // +1 for top spacer
-
-        if (currentIndex !== targetIndex) {
-          // Move row to correct position
-          const referenceNode = this.tbody.children[targetIndex];
-          if (referenceNode && referenceNode !== existingRow) {
-            this.tbody.insertBefore(existingRow, referenceNode);
-          }
-        }
+      if (row === expectedNode) {
+        // Already in place, move on to the next slot
+        expectedNode = expectedNode.nextSibling;
       } else {
-        // Row doesn't exist - create new one
-        const row = this.createRowCallback(item);
-
-        // Insert at correct position
-        const targetIndex = index + 1; // +1 for top spacer
-        const referenceNode = this.tbody.children[targetIndex];
-
-        if (referenceNode && referenceNode.id !== 'bottom-spacer') {
-          this.tbody.insertBefore(row, referenceNode);
-        } else {
-          this.bottomSpacer.parentNode.insertBefore(row, this.bottomSpacer);
-        }
+        // Put it in this slot; the node we expected here shifts down and stays
+        // the reference for the next item
+        this.tbody.insertBefore(row, expectedNode);
       }
     });
 
@@ -279,14 +318,17 @@ class VirtualScrollManager {
       return;
     }
 
-    // Debounce scroll events for better performance
-    if (this.scrollTimeout) {
-      clearTimeout(this.scrollTimeout);
+    // One render per frame. A burst of scroll events used to schedule a render
+    // every 10ms, which is more often than the screen repaints, so the extra
+    // renders were work thrown away while competing with painting.
+    if (this.scrollFrame !== null) {
+      return;
     }
 
-    this.scrollTimeout = setTimeout(() => {
+    this.scrollFrame = requestAnimationFrame(() => {
+      this.scrollFrame = null;
       this.renderVirtualized();
-    }, 10); // 10ms debounce
+    });
   }
 
   /**
@@ -333,8 +375,9 @@ class VirtualScrollManager {
       this.container.removeEventListener('scroll', this.handleScroll);
     }
 
-    if (this.scrollTimeout) {
-      clearTimeout(this.scrollTimeout);
+    if (this.scrollFrame !== null) {
+      cancelAnimationFrame(this.scrollFrame);
+      this.scrollFrame = null;
     }
 
     console.log('[VirtualScrollManager] Destroyed');

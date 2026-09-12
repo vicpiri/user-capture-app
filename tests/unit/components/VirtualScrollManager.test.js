@@ -104,7 +104,11 @@ describe('VirtualScrollManager', () => {
 
       manager.init();
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', manager.handleScroll);
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'scroll',
+        manager.handleScroll,
+        { passive: true }
+      );
 
       addEventListenerSpy.mockRestore();
     });
@@ -307,7 +311,7 @@ describe('VirtualScrollManager', () => {
       jest.useRealTimers();
     });
 
-    test('should debounce scroll events', () => {
+    test('should render at most once per frame while scrolling', () => {
       const items = Array.from({ length: 100 }, (_, i) => ({
         id: i + 1,
         name: `User ${i + 1}`
@@ -321,14 +325,19 @@ describe('VirtualScrollManager', () => {
       manager.handleScroll();
       manager.handleScroll();
 
-      // Should not render yet (debounced)
+      // Nothing renders until the frame arrives
       expect(renderSpy).not.toHaveBeenCalled();
 
-      // Fast-forward debounce timeout
-      jest.advanceTimersByTime(10);
+      jest.advanceTimersByTime(20);
 
-      // Should render once after debounce
+      // The burst collapses into a single render
       expect(renderSpy).toHaveBeenCalledTimes(1);
+
+      // The next burst is free to schedule another frame
+      manager.handleScroll();
+      jest.advanceTimersByTime(20);
+
+      expect(renderSpy).toHaveBeenCalledTimes(2);
 
       renderSpy.mockRestore();
     });
@@ -340,7 +349,7 @@ describe('VirtualScrollManager', () => {
       const renderSpy = jest.spyOn(manager, 'renderVirtualized');
 
       manager.handleScroll();
-      jest.advanceTimersByTime(10);
+      jest.advanceTimersByTime(20);
 
       expect(renderSpy).not.toHaveBeenCalled();
 
@@ -353,7 +362,7 @@ describe('VirtualScrollManager', () => {
       const renderSpy = jest.spyOn(manager, 'renderVirtualized');
 
       manager.handleScroll();
-      jest.advanceTimersByTime(10);
+      jest.advanceTimersByTime(20);
 
       expect(renderSpy).not.toHaveBeenCalled();
 
@@ -468,7 +477,7 @@ describe('VirtualScrollManager', () => {
 
       manager.destroy();
 
-      jest.advanceTimersByTime(10);
+      jest.advanceTimersByTime(20);
 
       // If timeout was cleared, renderVirtualized shouldn't be called
       const renderSpy = jest.spyOn(manager, 'renderVirtualized');
@@ -476,6 +485,133 @@ describe('VirtualScrollManager', () => {
 
       renderSpy.mockRestore();
       jest.useRealTimers();
+    });
+  });
+
+  describe('Row height measurement', () => {
+    const ROW_HEIGHT = 57;
+
+    // jsdom reports 0 for every layout property, so rows have to declare the
+    // height they would really have
+    const withHeight = (height) => (item) => {
+      const row = document.createElement('tr');
+      row.dataset.userId = item.id;
+      Object.defineProperty(row, 'offsetHeight', { configurable: true, value: height });
+      return row;
+    };
+
+    const manyItems = () =>
+      Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `User ${i + 1}` }));
+
+    beforeEach(() => {
+      Object.defineProperty(mockContainer, 'clientHeight', { configurable: true, value: 400 });
+      Object.defineProperty(mockContainer, 'scrollTop', {
+        configurable: true,
+        writable: true,
+        value: 0
+      });
+    });
+
+    test('should adopt the rendered row height over the configured one', () => {
+      manager.createRowCallback = withHeight(ROW_HEIGHT);
+      manager.init();
+
+      manager.setItems(manyItems());
+
+      expect(manager.itemHeight).toBe(ROW_HEIGHT);
+    });
+
+    test('should size the spacers with the measured height', () => {
+      manager.createRowCallback = withHeight(ROW_HEIGHT);
+      manager.init();
+
+      manager.setItems(manyItems());
+
+      // Whatever is not rendered has to be accounted for at its real height,
+      // otherwise the scrollbar does not match the content
+      const bottomSpacer = mockTbody.querySelector('#bottom-spacer');
+      const hidden = 100 - manager.visibleEndIndex;
+      expect(bottomSpacer.style.height).toBe(`${hidden * ROW_HEIGHT}px`);
+    });
+
+    test('should keep the configured height when rows cannot be measured', () => {
+      manager.init();
+
+      manager.setItems(manyItems());
+
+      expect(manager.itemHeight).toBe(40);
+    });
+
+    test('should scroll to an index using the measured height', () => {
+      manager.createRowCallback = withHeight(ROW_HEIGHT);
+      manager.init();
+      manager.setItems(manyItems());
+
+      manager.scrollToIndex(50);
+
+      expect(mockContainer.scrollTop).toBe(50 * ROW_HEIGHT);
+    });
+  });
+
+  describe('Row reuse while scrolling', () => {
+    const renderedIds = () =>
+      Array.from(mockTbody.querySelectorAll('tr[data-user-id]')).map(
+        row => Number(row.dataset.userId)
+      );
+
+    beforeEach(() => {
+      manager.init();
+      Object.defineProperty(mockContainer, 'clientHeight', { configurable: true, value: 400 });
+      Object.defineProperty(mockContainer, 'scrollTop', {
+        configurable: true,
+        writable: true,
+        value: 0
+      });
+
+      manager.setItems(
+        Array.from({ length: 200 }, (_, i) => ({ id: i + 1, name: `User ${i + 1}` }))
+      );
+    });
+
+    test('should keep rows in item order after scrolling', () => {
+      mockContainer.scrollTop = 40 * 30;
+      manager.renderVirtualized();
+
+      const ids = renderedIds();
+      const expected = manager.items
+        .slice(manager.visibleStartIndex, manager.visibleEndIndex)
+        .map(item => item.id);
+
+      expect(ids).toEqual(expected);
+    });
+
+    test('should reuse the rows that stay visible instead of rebuilding them', () => {
+      const before = new Map(
+        Array.from(mockTbody.querySelectorAll('tr[data-user-id]')).map(row => [
+          row.dataset.userId,
+          row
+        ])
+      );
+
+      // A small scroll keeps most of the range on screen
+      mockContainer.scrollTop = 40 * 3;
+      manager.renderVirtualized();
+
+      const stillRendered = Array.from(mockTbody.querySelectorAll('tr[data-user-id]')).filter(
+        row => before.has(row.dataset.userId)
+      );
+
+      expect(stillRendered.length).toBeGreaterThan(0);
+      stillRendered.forEach(row => {
+        expect(row).toBe(before.get(row.dataset.userId));
+      });
+    });
+
+    test('should drop rows that scrolled out of range', () => {
+      mockContainer.scrollTop = 40 * 120;
+      manager.renderVirtualized();
+
+      expect(renderedIds()).not.toContain(1);
     });
   });
 });

@@ -204,7 +204,10 @@ function initializeVirtualScroll() {
   const tbody = document.getElementById('user-table-body');
 
   virtualScrollManager = new VirtualScrollManager({
-    itemHeight: 40,
+    // Starting estimate only: a row with a photo indicator is 32px plus 12px of
+    // padding either side and the bottom border. The manager measures the real
+    // height once rows exist, which is what handles rows without indicators.
+    itemHeight: 57,
     bufferSize: 10,
     minItemsForVirtualization: 50,
     container: container,
