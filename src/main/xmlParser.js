@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { XMLParser } = require('fast-xml-parser');
+const { XMLParser, XMLValidator } = require('fast-xml-parser');
 
 class XMLUserParser {
   constructor(xmlPath) {
@@ -14,6 +14,17 @@ class XMLUserParser {
   async parse() {
     try {
       const xmlData = fs.readFileSync(this.xmlPath, 'utf8');
+
+      // Validate before parsing. The parser is lenient: given a truncated file
+      // it returns whatever it managed to read, so a half-downloaded XML would
+      // import as a smaller school, and an update would then treat every user
+      // it could not see as deleted.
+      const validation = XMLValidator.validate(xmlData);
+      if (validation !== true) {
+        const { line, col, msg } = validation.err;
+        throw new Error(`El archivo XML no es válido (línea ${line}, columna ${col}): ${msg}`);
+      }
+
       const jsonData = this.parser.parse(xmlData);
 
       const result = {
@@ -27,11 +38,17 @@ class XMLUserParser {
       // Tags: grupos, alumnos, docentes, no_docentes
       // Fields are XML attributes, not child nodes
 
-      if (!jsonData.centro) {
+      if (!('centro' in jsonData)) {
         throw new Error('Invalid XML structure: missing <centro> root element');
       }
 
       const centro = jsonData.centro;
+
+      // A centro with nothing in it is almost always a wrong or truncated file,
+      // and accepting it would let an update empty the whole project
+      if (!centro || typeof centro !== 'object') {
+        throw new Error('El archivo XML no contiene ningún grupo ni usuario');
+      }
 
       // Parse groups (grupos)
       if (centro.grupos && centro.grupos.grupo) {
