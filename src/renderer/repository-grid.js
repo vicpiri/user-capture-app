@@ -78,24 +78,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     selectedGroupCode = groupFilter.value;
     // Save filter selection and broadcast to other windows
     await window.electronAPI.setSelectedGroupFilter(selectedGroupCode);
-    await loadUsers();
-    displayGrid();
+    await reloadUsersWithPhotos();
   });
 
   // Listen for group filter changes from other windows
   window.electronAPI.onGroupFilterChanged(async (groupCode) => {
     selectedGroupCode = groupCode;
     groupFilter.value = groupCode;
-    await loadUsers();
-    displayGrid();
+    await reloadUsersWithPhotos();
   });
 
   // Listen for repository changes
   window.electronAPI.onRepositoryChanged(async (data) => {
     console.log('[Repository Grid] Repository changed:', data);
     repositoryImageVersion++;
-    await loadUsers();
-    displayGrid();
+    await reloadUsersWithPhotos();
   });
 
   // Listen for sync progress events
@@ -195,6 +192,25 @@ async function loadUsers() {
 }
 
 // Load repository data in background (non-blocking)
+/**
+ * Reload the users on display together with their repository photos
+ *
+ * getUsers deliberately leaves repository_image_path out, so reloading users
+ * on its own produces a grid where nobody has a photo. Changing group used to
+ * do exactly that, and since the paths were never fetched again, going back to
+ * the first group showed nothing either.
+ */
+async function reloadUsersWithPhotos() {
+  await loadUsers();
+
+  // Show the grid straight away with placeholders, then fill the photos in
+  isSyncing = true;
+  updateSyncStatus('Cargando imágenes del depósito...');
+  displayGrid();
+
+  await loadRepositoryDataInBackground(allUsers);
+}
+
 async function loadRepositoryDataInBackground(users) {
   try {
     console.log('[SYNC] Loading repository data in background...');
