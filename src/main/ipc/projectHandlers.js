@@ -243,7 +243,7 @@ function registerProjectHandlers(context) {
         state.imageManager.invalidateCache();
         getMainWindow()?.webContents.send('new-image-detected', filename);
       });
-      state.folderWatcher.start();
+      await state.folderWatcher.start();
       logger.success('Folder watcher started', { watchPath: ingestPath });
 
       // Progress: 100%
@@ -371,7 +371,7 @@ function registerProjectHandlers(context) {
         state.imageManager.invalidateCache();
         getMainWindow()?.webContents.send('new-image-detected', filename);
       });
-      state.folderWatcher.start();
+      await state.folderWatcher.start();
       logger.success('Folder watcher started', { watchPath: ingestPath });
 
       logger.section('PROJECT OPENED SUCCESSFULLY');
@@ -856,6 +856,10 @@ function registerProjectHandlers(context) {
       updateWindowTitle();
 
       logger.info('Project closed successfully');
+
+      // Flush and release the project's log file, so the folder is not left
+      // with an open handle once the project is no longer in use
+      await logger.close();
 
       return { success: true };
     } catch (error) {

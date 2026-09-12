@@ -96,7 +96,7 @@ describe('Project lifecycle teardown', () => {
     test('should release the watcher and its listeners', async () => {
       const watcher = createWatcher();
       watcher.on('image-added', () => {});
-      watcher.start();
+      await watcher.start();
 
       await watcher.stop();
 
@@ -106,7 +106,7 @@ describe('Project lifecycle teardown', () => {
 
     test('should be safe to call twice', async () => {
       const watcher = createWatcher();
-      watcher.start();
+      await watcher.start();
 
       await watcher.stop();
 
@@ -117,7 +117,7 @@ describe('Project lifecycle teardown', () => {
       const watcher = createWatcher();
       const detected = [];
       watcher.on('image-added', (filename) => detected.push(filename));
-      watcher.start();
+      await watcher.start();
 
       await watcher.stop();
 
@@ -127,19 +127,32 @@ describe('Project lifecycle teardown', () => {
       expect(detected).toEqual([]);
     });
 
+    test('should leave no pending timers after processing an image', async () => {
+      const watcher = createWatcher();
+      const detected = new Promise(resolve => watcher.once('image-added', resolve));
+      await watcher.start();
+
+      fs.writeFileSync(path.join(ingestPath(), 'processed.jpg'), 'content');
+      await detected;
+
+      // The stability check resolves as soon as the size settles, so its
+      // timeout must be cleared instead of being left to fire later
+      expect(watcher.pendingTimers.size).toBe(0);
+
+      await watcher.stop();
+    });
+
     test('should allow watching the same folder again', async () => {
       // The reopen case: a replacement watcher over the same path must still
       // receive events, which requires the previous close to have completed
       const first = createWatcher();
-      first.start();
+      await first.start();
       await first.stop();
 
       const second = new FolderWatcher(ingestPath(), importsPath());
       const detected = new Promise(resolve => second.once('image-added', resolve));
-      second.start();
+      await second.start();
 
-      // chokidar needs its initial scan to settle before the write lands
-      await new Promise(resolve => setTimeout(resolve, 300));
       fs.writeFileSync(path.join(ingestPath(), 'reopened.jpg'), 'content');
 
       // The watcher moves the image into imports first, so it reports the

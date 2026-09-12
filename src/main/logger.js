@@ -5,22 +5,32 @@ class Logger {
   constructor(logPath) {
     this.logPath = logPath;
     this.logFile = null;
+    this.stream = null;
   }
 
   initialize(projectPath) {
-    if (projectPath) {
-      this.logFile = path.join(projectPath, 'app.log');
+    // Opening another project must not keep writing to the previous log
+    this.closeStream();
 
-      // Create log file if it doesn't exist
-      if (!fs.existsSync(this.logFile)) {
-        fs.writeFileSync(this.logFile, '');
-      }
-
-      this.log('INFO', '========================================');
-      this.log('INFO', 'Logger initialized');
-      this.log('INFO', `Project path: ${projectPath}`);
-      this.log('INFO', '========================================');
+    if (!projectPath) {
+      return;
     }
+
+    this.logFile = path.join(projectPath, 'app.log');
+
+    // A stream buffers writes instead of hitting the disk once per line, which
+    // matters because logging happens inside per-image and per-user loops.
+    // 'a' creates the file when it does not exist.
+    this.stream = fs.createWriteStream(this.logFile, { flags: 'a' });
+    this.stream.on('error', (error) => {
+      console.error('Error writing to log file:', error.message);
+      this.stream = null;
+    });
+
+    this.log('INFO', '========================================');
+    this.log('INFO', 'Logger initialized');
+    this.log('INFO', `Project path: ${projectPath}`);
+    this.log('INFO', '========================================');
   }
 
   log(level, message, details = null) {
@@ -41,12 +51,8 @@ class Logger {
     console.log(logEntry);
 
     // File output
-    if (this.logFile) {
-      try {
-        fs.appendFileSync(this.logFile, logEntry);
-      } catch (error) {
-        console.error('Error writing to log file:', error);
-      }
+    if (this.stream) {
+      this.stream.write(logEntry);
     }
   }
 
@@ -79,12 +85,30 @@ class Logger {
     this.log('INFO', `\n>>> ${title} <<<`);
   }
 
+  /**
+   * Flush and release the log file
+   * @returns {Promise<void>} Resolves once buffered entries reach disk
+   */
+  closeStream() {
+    const stream = this.stream;
+    this.stream = null;
+    this.logFile = null;
+
+    if (!stream) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => stream.end(resolve));
+  }
+
   close() {
-    if (this.logFile) {
+    if (this.stream) {
       this.log('INFO', '========================================');
       this.log('INFO', 'Logger closed');
       this.log('INFO', '========================================\n');
     }
+
+    return this.closeStream();
   }
 }
 

@@ -29,12 +29,21 @@ const mockLogger = {
 // pollingInterval is kept high so the periodic content check never fires on its
 // own during a test: the watching tests must be driven by the watcher, not by a
 // background poll that happens to trigger a sync at the right moment.
+// Not as low as they could be: at 100ms the polling watcher intermittently
+// missed additions entirely when the suite ran in parallel and the workers
+// competed for CPU. These stay fast while leaving room for scheduling noise.
 const TEST_TIMINGS = {
-  watchPollInterval: 100,
-  awaitWriteFinish: 100,
+  watchPollInterval: 250,
+  awaitWriteFinish: 250,
   syncDebounceDelay: 300,
   pollingInterval: 60000
 };
+
+// The watching tests drive a real polling watcher over the filesystem. Running
+// alongside the rest of the suite they compete for CPU with the other Jest
+// workers, and a starved poll can take far longer than it does in isolation, so
+// they get a generous ceiling instead of failing on scheduling noise.
+const WATCH_TEST_TIMEOUT = 25000;
 
 describe('RepositoryMirror', () => {
   let repositoryMirror;
@@ -251,6 +260,13 @@ describe('RepositoryMirror', () => {
   });
 
   describe('File Watching', () => {
+    // 'ready' only means the initial scan finished. A polling watcher still has
+    // to take its first stat snapshot of the folder, and anything written
+    // before that can be folded into the baseline and never reported. Giving it
+    // a couple of poll intervals is what makes these tests deterministic.
+    const settleWatcher = () =>
+      new Promise(resolve => setTimeout(resolve, TEST_TIMINGS.watchPollInterval * 2));
+
     beforeEach(async () => {
       repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
       await repositoryMirror.initialize();
@@ -265,6 +281,7 @@ describe('RepositoryMirror', () => {
 
     test('should detect when new file is added to repository', async () => {
       await repositoryMirror.startWatch();
+      await settleWatcher();
 
       const changePromise = new Promise(resolve => {
         repositoryMirror.once('repository-changed', resolve);
@@ -276,7 +293,7 @@ describe('RepositoryMirror', () => {
       const result = await changePromise;
       expect(result.type).toBe('add');
       expect(result.filename).toBe('new-image.jpg');
-    });
+    }, WATCH_TEST_TIMEOUT);
 
     test('should detect when file is modified in repository', async () => {
       // Create initial file
@@ -295,7 +312,7 @@ describe('RepositoryMirror', () => {
       const result = await changePromise;
       expect(result.type).toBe('change');
       expect(result.filename).toBe('image1.jpg');
-    });
+    }, WATCH_TEST_TIMEOUT);
 
     test('should detect when file is deleted from repository', async () => {
       // Create initial file
@@ -313,10 +330,11 @@ describe('RepositoryMirror', () => {
       const result = await changePromise;
       expect(result.type).toBe('unlink');
       expect(result.filename).toBe('image1.jpg');
-    });
+    }, WATCH_TEST_TIMEOUT);
 
     test('should ignore non-image files in watch', async () => {
       await repositoryMirror.startWatch();
+      await settleWatcher();
 
       let changeDetected = false;
       repositoryMirror.once('repository-changed', () => {
@@ -334,6 +352,7 @@ describe('RepositoryMirror', () => {
 
     test('should trigger auto-sync after detecting changes (with debounce)', async () => {
       await repositoryMirror.startWatch();
+      await settleWatcher();
 
       const syncPromise = new Promise(resolve => {
         repositoryMirror.once('sync-completed', resolve);
@@ -349,7 +368,7 @@ describe('RepositoryMirror', () => {
 
       expect(result.success).toBe(true);
       expect(result.synced).toBe(3);
-    });
+    }, WATCH_TEST_TIMEOUT);
 
     test('should stop watching when stopWatch is called', async () => {
       await repositoryMirror.startWatch();

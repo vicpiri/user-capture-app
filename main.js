@@ -347,10 +347,12 @@ function createWindow() {
       const mostRecentProjectPath = recentProjects[0];
       logger.info(`[STARTUP] Auto-opening most recent project: ${mostRecentProjectPath}`);
 
-      // Use setTimeout to avoid blocking the UI during startup
-      setTimeout(() => {
+      // Deferred so the synchronous start of openRecentProject does not run
+      // inside this handler. setImmediate yields without the arbitrary wait a
+      // fixed timeout would add to every startup.
+      setImmediate(() => {
         openRecentProject(mostRecentProjectPath);
-      }, 500);
+      });
     }
   });
 
@@ -716,7 +718,7 @@ async function openRecentProject(folderPath) {
         mainWindow.webContents.send('new-image-detected', filename);
       }
     });
-    folderWatcher.start();
+    await folderWatcher.start();
     logger.success('Folder watcher started', { watchPath: ingestPath });
 
     logger.section('PROJECT OPENED SUCCESSFULLY');
@@ -851,6 +853,9 @@ app.on('window-all-closed', () => {
   if (repositoryMirror) {
     repositoryMirror.stopWatch();
   }
+
+  // Log writes are buffered, so the tail of the log would be lost without this
+  logger.close();
 
   if (process.platform !== 'darwin') {
     app.quit();

@@ -8,7 +8,19 @@ const VersionManager = require('../utils/version');
 class MainWindowManager {
   constructor() {
     this.window = null;
-    this.version = VersionManager.getVersion();
+  }
+
+  /**
+   * Application version, resolved on first use
+   *
+   * This manager is constructed while the module loads, before Electron is
+   * ready, and resolving the version can shell out to git. VersionManager
+   * memoises the result, so reading this repeatedly costs nothing.
+   *
+   * @returns {string}
+   */
+  get version() {
+    return VersionManager.getVersion();
   }
 
   /**

@@ -20,8 +20,18 @@ class FolderWatcher extends EventEmitter {
     this.importsPath = importsPath;
     this.watcher = null;
     this.isProcessing = new Set();
+    this.pendingTimers = new Set();
   }
 
+  /**
+   * Start watching the ingest folder
+   *
+   * Resolves once chokidar has finished its initial scan. Files that appear
+   * before that are treated as pre-existing and never reported, so anything
+   * that needs its writes to be seen must wait for this.
+   *
+   * @returns {Promise<void>}
+   */
   start() {
     // Watch the ingest folder for new images
     this.watcher = chokidar.watch(this.ingestPath, {
@@ -39,7 +49,13 @@ class FolderWatcher extends EventEmitter {
       .on('add', (filePath) => this.handleNewFile(filePath))
       .on('error', (error) => console.error('Watcher error:', error));
 
-    console.log('Folder watcher started on:', this.ingestPath);
+    const watcher = this.watcher;
+    return new Promise((resolve) => {
+      watcher.once('ready', () => {
+        console.log('Folder watcher started on:', this.ingestPath);
+        resolve();
+      });
+    });
   }
 
   async handleNewFile(filePath) {
@@ -110,11 +126,21 @@ class FolderWatcher extends EventEmitter {
       let stableCount = 0;
       const requiredStableCount = 2;
 
+      // Both timers are cleared on every exit path and tracked on the instance,
+      // so settling early does not leave the timeout pending and stopping the
+      // watcher cancels whatever is still in flight
+      const settle = (finishPromise, value) => {
+        clearInterval(interval);
+        clearTimeout(timeoutTimer);
+        this.pendingTimers.delete(interval);
+        this.pendingTimers.delete(timeoutTimer);
+        finishPromise(value);
+      };
+
       const interval = setInterval(() => {
         try {
           if (!fs.existsSync(filePath)) {
-            clearInterval(interval);
-            reject(new Error('File disappeared'));
+            settle(reject, new Error('File disappeared'));
             return;
           }
 
@@ -124,24 +150,22 @@ class FolderWatcher extends EventEmitter {
           if (currentSize === lastSize) {
             stableCount++;
             if (stableCount >= requiredStableCount) {
-              clearInterval(interval);
-              resolve();
+              settle(resolve);
             }
           } else {
             stableCount = 0;
             lastSize = currentSize;
           }
         } catch (error) {
-          clearInterval(interval);
-          reject(error);
+          settle(reject, error);
         }
       }, 100);
 
-      // Timeout
-      setTimeout(() => {
-        clearInterval(interval);
-        resolve(); // Resolve anyway after timeout
-      }, timeout);
+      // Give up waiting and take the file as it is
+      const timeoutTimer = setTimeout(() => settle(resolve), timeout);
+
+      this.pendingTimers.add(interval);
+      this.pendingTimers.add(timeoutTimer);
     });
   }
 
@@ -177,6 +201,13 @@ class FolderWatcher extends EventEmitter {
 
       console.log('Folder watcher stopped');
     }
+
+    // Cancel any stability check still waiting on a half-written file
+    for (const timer of this.pendingTimers) {
+      clearTimeout(timer);
+      clearInterval(timer);
+    }
+    this.pendingTimers.clear();
 
     this.isProcessing.clear();
     this.removeAllListeners();
