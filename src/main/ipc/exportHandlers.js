@@ -4,10 +4,21 @@
 const { ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const sharp = require('sharp');
-const archiver = require('archiver');
 const { getImageRepositoryPath, loadGlobalConfig } = require('../utils/config');
 const { capitalizeWords } = require('../utils/formatting');
+
+// Loaded on first use rather than at startup. sharp is a native module built on
+// libvips and archiver drags in a stream toolchain, but neither is needed until
+// something is actually exported, and this module is required while the app
+// boots.
+let sharpModule = null;
+function sharp(...args) {
+  if (!sharpModule) {
+    sharpModule = require('sharp');
+  }
+
+  return sharpModule(...args);
+}
 
 // How many images to process at once. sharp releases the event loop while it
 // works, but libuv's thread pool is four threads by default, so going much
@@ -702,6 +713,7 @@ function registerExportHandlers(context) {
   async function createZipArchive(zipPath, images) {
     return new Promise((resolve, reject) => {
       const output = fs.createWriteStream(zipPath);
+      const archiver = require('archiver');
       const archive = archiver('zip', {
         zlib: { level: 9 } // Maximum compression
       });

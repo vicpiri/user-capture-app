@@ -388,24 +388,35 @@ describe('RepositoryMirror', () => {
       await syncPromise;
     };
 
+    // The comparison this describe exercises is size and mtime against the
+    // mirrored copy. Pinning the source timestamps to a whole second keeps
+    // sub-millisecond filesystem precision out of the assertions.
+    const writePhoto = (name, contents) => {
+      const filePath = path.join(repositoryPath, name);
+      fs.writeFileSync(filePath, contents);
+      const whole = new Date(Math.floor(Date.now() / 1000) * 1000);
+      fs.utimesSync(filePath, whole, whole);
+      return filePath;
+    };
+
     beforeEach(async () => {
       repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
       await repositoryMirror.initialize();
     });
 
     test('should report no changes when repository matches mirror', async () => {
-      fs.writeFileSync(path.join(repositoryPath, 'image1.jpg'), 'content1');
-      fs.writeFileSync(path.join(repositoryPath, 'image2.jpg'), 'content2');
+      writePhoto('image1.jpg', 'content1');
+      writePhoto('image2.jpg', 'content2');
       await syncAll();
 
       expect(await repositoryMirror.checkForChanges()).toBe(false);
     });
 
     test('should report changes when the file count differs', async () => {
-      fs.writeFileSync(path.join(repositoryPath, 'image1.jpg'), 'content1');
+      writePhoto('image1.jpg', 'content1');
       await syncAll();
 
-      fs.writeFileSync(path.join(repositoryPath, 'image2.jpg'), 'content2');
+      writePhoto('image2.jpg', 'content2');
 
       expect(await repositoryMirror.checkForChanges()).toBe(true);
     });
@@ -433,7 +444,7 @@ describe('RepositoryMirror', () => {
     });
 
     test('should detect a missing mirror file', async () => {
-      fs.writeFileSync(path.join(repositoryPath, 'image1.jpg'), 'content1');
+      writePhoto('image1.jpg', 'content1');
       await syncAll();
 
       fs.unlinkSync(path.join(mirrorPath, 'image1.jpg'));
@@ -445,7 +456,7 @@ describe('RepositoryMirror', () => {
       repositoryMirror.CONTENT_CHECK_SAMPLE_SIZE = 2;
 
       for (let i = 0; i < 6; i++) {
-        fs.writeFileSync(path.join(repositoryPath, `image${i}.jpg`), `content${i}`);
+        writePhoto(`image${i}.jpg`, `content${i}`);
       }
       await syncAll();
 
