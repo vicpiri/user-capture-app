@@ -105,9 +105,24 @@ describe('Logger', () => {
     logger.info('belongs to the second project');
     await logger.close();
 
-    expect(readLog()).toContain('belongs to the first project');
-    expect(readLog()).not.toContain('belongs to the second project');
     expect(readLog(otherPath)).toContain('belongs to the second project');
+    expect(readLog(otherPath)).not.toContain('belongs to the first project');
+  });
+
+  test('should flush the previous log when switching projects', async () => {
+    const otherPath = path.join(fixturesPath, `project-${testId}-switched`);
+    fs.mkdirSync(otherPath, { recursive: true });
+
+    logger.initialize(projectPath);
+    logger.info('written before the switch');
+
+    logger.initialize(otherPath);
+    // Closing the previous stream flushes asynchronously
+    await logger.pendingFlush;
+
+    expect(readLog()).toContain('written before the switch');
+
+    await logger.close();
   });
 
   test('should ignore writes once closed', async () => {

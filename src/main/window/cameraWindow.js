@@ -26,7 +26,11 @@ class CameraWindowManager {
       webPreferences: {
         preload: path.join(__dirname, '../../preload/preload.js'),
         contextIsolation: true,
-        nodeIntegration: false
+        nodeIntegration: false,
+        // Chromium throttles timers and animation frames in background windows,
+        // which stalls the live preview. The whole point of this window is to
+        // stay usable while the user works in the main one.
+        backgroundThrottling: false
       },
       backgroundColor: '#1a1f2e',
       show: false,

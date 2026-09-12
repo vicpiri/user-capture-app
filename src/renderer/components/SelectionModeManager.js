@@ -25,6 +25,8 @@
       this.onSelectionChange = config.onSelectionChange || (() => {}); // Called when selection state changes
       this.getDisplayedUsers = config.getDisplayedUsers || (() => []); // Get currently displayed users
       this.reRenderUsers = config.reRenderUsers || (() => {}); // Re-render user list
+      // Tick the existing checkboxes without rebuilding the rows around them
+      this.syncCheckboxes = config.syncCheckboxes || (() => {});
       this.onRequestCardPrint = config.onRequestCardPrint || (() => {}); // Called when requesting card print
       this.onRequestPublication = config.onRequestPublication || (() => {}); // Called when requesting publication
       this.onUnpayOrla = config.onUnpayOrla || (() => {}); // Called when unpaying orla from context menu
@@ -255,7 +257,7 @@
     selectAll() {
       const displayedUsers = this.getDisplayedUsers();
       displayedUsers.forEach(user => this.selectedUsers.add(user.id));
-      this.reRenderUsers();
+      this.syncCheckboxes(this.selectedUsers);
       this.updateSelectionInfo();
       this.onSelectionChange(this.isActive, this.selectedUsers);
     }
@@ -265,7 +267,7 @@
      */
     deselectAll() {
       this.selectedUsers.clear();
-      this.reRenderUsers();
+      this.syncCheckboxes(this.selectedUsers);
       this.updateSelectionInfo();
       // Don't call onSelectionChange here, let toggleSelection or disable handle it
     }

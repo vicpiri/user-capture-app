@@ -6,11 +6,16 @@ class Logger {
     this.logPath = logPath;
     this.logFile = null;
     this.stream = null;
+
+    // Flush of the previous project's log, still in progress
+    this.pendingFlush = Promise.resolve();
   }
 
   initialize(projectPath) {
-    // Opening another project must not keep writing to the previous log
-    this.closeStream();
+    // Opening another project must not keep writing to the previous log.
+    // Closing flushes asynchronously, so the promise is kept: anything that
+    // needs the previous entries to be on disk can wait for it.
+    this.pendingFlush = this.closeStream();
 
     if (!projectPath) {
       return;
@@ -101,14 +106,17 @@ class Logger {
     return new Promise((resolve) => stream.end(resolve));
   }
 
-  close() {
+  async close() {
     if (this.stream) {
       this.log('INFO', '========================================');
       this.log('INFO', 'Logger closed');
       this.log('INFO', '========================================\n');
     }
 
-    return this.closeStream();
+    await this.closeStream();
+
+    // A previous project's log may still be flushing
+    await this.pendingFlush;
   }
 }
 

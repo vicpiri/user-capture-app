@@ -18,7 +18,8 @@ describe('SelectionModeManager', () => {
         { id: 2, first_name: 'User', last_name1: '2' },
         { id: 3, first_name: 'User', last_name1: '3' }
       ]),
-      reRenderUsers: jest.fn()
+      reRenderUsers: jest.fn(),
+      syncCheckboxes: jest.fn()
     };
 
     // Mock DOM elements
@@ -177,8 +178,16 @@ describe('SelectionModeManager', () => {
       expect(manager.getSelectedUsers().has(1)).toBe(true);
       expect(manager.getSelectedUsers().has(2)).toBe(true);
       expect(manager.getSelectedUsers().has(3)).toBe(true);
-      expect(mockCallbacks.reRenderUsers).toHaveBeenCalled();
       expect(mockCallbacks.onSelectionChange).toHaveBeenCalled();
+    });
+
+    test('should tick the boxes without rebuilding the rows', () => {
+      mockCallbacks.reRenderUsers.mockClear();
+
+      manager.selectAll();
+
+      expect(mockCallbacks.syncCheckboxes).toHaveBeenCalledWith(manager.getSelectedUsers());
+      expect(mockCallbacks.reRenderUsers).not.toHaveBeenCalled();
     });
   });
 
@@ -194,7 +203,15 @@ describe('SelectionModeManager', () => {
       manager.deselectAll();
 
       expect(manager.getSelectedUsers().size).toBe(0);
-      expect(mockCallbacks.reRenderUsers).toHaveBeenCalled();
+    });
+
+    test('should untick the boxes without rebuilding the rows', () => {
+      mockCallbacks.reRenderUsers.mockClear();
+
+      manager.deselectAll();
+
+      expect(mockCallbacks.syncCheckboxes).toHaveBeenCalledWith(manager.getSelectedUsers());
+      expect(mockCallbacks.reRenderUsers).not.toHaveBeenCalled();
     });
 
     test('should not trigger onSelectionChange', () => {

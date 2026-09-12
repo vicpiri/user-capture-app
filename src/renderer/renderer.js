@@ -306,20 +306,34 @@ function initializeSelectionModeManager() {
       selectionMode = isActive;
       selectedUsers = selected;
 
-      // Update user row renderer state
-      if (userRowRenderer) {
-        userRowRenderer.selectionMode = isActive;
-        userRowRenderer.selectedUsers = selected;
-      }
+      // Rows read this from the config, so setting the properties directly
+      // would have no effect on what gets rendered
+      syncUserRowRendererConfig();
     },
     getDisplayedUsers: () => displayedUsers,
     reRenderUsers: () => {
       // Force re-render to update checkboxes when selection mode changes
+      syncUserRowRendererConfig();
+
       if (virtualScrollManager) {
         virtualScrollManager.forceRerender();
       } else {
         displayUsers(currentUsers, allUsers);
       }
+
+      restoreSelectedRowHighlight();
+    },
+    syncCheckboxes: (selected) => {
+      if (!userTableBody) return;
+
+      // Ticking boxes does not change anything else about a row, so the rows
+      // are updated in place instead of being rebuilt
+      userTableBody.querySelectorAll('tr[data-user-id]').forEach(row => {
+        const checkbox = row.querySelector('.user-checkbox');
+        if (checkbox) {
+          checkbox.checked = selected.has(Number(row.dataset.userId));
+        }
+      });
     },
     onRequestCardPrint: handleRequestCardPrint,
     onRequestPublication: handleRequestPublication,
@@ -899,26 +913,58 @@ async function displayUsers(users, allUsers = null) {
   // Store imageCount globally for row rendering
   window._imageCountCache = imageCount;
 
+  // Once for the whole batch rather than once per row
+  syncUserRowRendererConfig();
+
   // Use virtual scroll manager to render users
   if (virtualScrollManager) {
     virtualScrollManager.setItems(displayedUsers);
   }
+
+  restoreSelectedRowHighlight();
+}
+
+/**
+ * Push the current display state into the row renderer
+ *
+ * Rows read this while being built, so it has to be current before a render
+ * starts. Doing it here means one object per batch instead of one per row.
+ */
+function syncUserRowRendererConfig() {
+  if (!userRowRenderer) return;
+
+  userRowRenderer.updateConfig({
+    showCapturedPhotos: showCapturedPhotos,
+    showRepositoryPhotos: showRepositoryPhotos,
+    showRepositoryIndicators: showRepositoryIndicators,
+    showAdditionalActions: showAdditionalActions,
+    isLoadingRepositoryPhotos: isLoadingRepositoryPhotos,
+    isLoadingRepositoryIndicators: isLoadingRepositoryIndicators,
+    selectionMode: selectionMode,
+    selectedUsers: selectedUsers
+  });
+}
+
+/**
+ * Re-mark the selected row after a render
+ *
+ * Rows are rebuilt from scratch, so the highlight would otherwise disappear
+ * whenever anything refreshed the table under the user.
+ */
+function restoreSelectedRowHighlight() {
+  if (!selectedUser || !userTableBody) return;
+
+  const row = userTableBody.querySelector(`tr[data-user-id="${selectedUser.id}"]`);
+  if (row) {
+    row.classList.add('selected');
+    selectedRowElement = row;
+  }
 }
 
 // Create a user row element (uses UserRowRenderer)
+// Config is refreshed once per batch by syncUserRowRendererConfig, not here
 function createUserRow(user, imageCount) {
-  // Update renderer config with current state
   if (userRowRenderer) {
-    userRowRenderer.updateConfig({
-      showCapturedPhotos: showCapturedPhotos,
-      showRepositoryPhotos: showRepositoryPhotos,
-      showRepositoryIndicators: showRepositoryIndicators,
-      isLoadingRepositoryPhotos: isLoadingRepositoryPhotos,
-      isLoadingRepositoryIndicators: isLoadingRepositoryIndicators,
-      selectionMode: selectionMode,
-      selectedUsers: selectedUsers
-    });
-
     return userRowRenderer.createRow(user, imageCount);
   }
 
@@ -929,17 +975,13 @@ function createUserRow(user, imageCount) {
   return row;
 }
 
-function selectUserRow(row, user) {
-  // Remove previous selection
-  document.querySelectorAll('.user-table tbody tr').forEach(tr => {
-    tr.classList.remove('selected');
-  });
+// Row currently carrying the 'selected' class, kept so deselecting does not
+// have to walk every row in the table
+let selectedRowElement = null;
 
-  // Select new row
-  row.classList.add('selected');
+function updateSelectedUserInfo(user) {
   selectedUser = user;
 
-  // Update selected user info in selection mode manager
   if (selectionModeManager) {
     selectionModeManager.setCurrentSelectedUser(user);
   } else {
@@ -950,6 +992,19 @@ function selectUserRow(row, user) {
 
   // Enable link button if image is selected
   updateLinkButtonState();
+}
+
+function selectUserRow(row, user) {
+  // Remove previous selection
+  if (selectedRowElement && selectedRowElement !== row) {
+    selectedRowElement.classList.remove('selected');
+  }
+
+  // Select new row
+  row.classList.add('selected');
+  selectedRowElement = row;
+
+  updateSelectedUserInfo(user);
 }
 
 function updateUserCount() {
@@ -975,20 +1030,16 @@ function updateAlertBadges() {
   const cardPrintRequestsCount = cardPrintRequests.size;
   const publicationRequestsCount = publicationRequests.size;
 
-  // Calculate duplicates count
+  // Calculate duplicates count. displayUsers already counted image usage over
+  // the same set, so reuse it rather than walking every user twice more.
   let duplicatesCountValue = 0;
   if (allUsers && allUsers.length > 0) {
-    const imageCount = {};
-    allUsers.forEach(user => {
-      if (user.image_path) {
-        imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
-      }
-    });
+    const imageCount = window._imageCountCache || {};
 
-    // Count users with duplicate assignments
-    duplicatesCountValue = allUsers.filter(user =>
-      user.image_path && imageCount[user.image_path] > 1
-    ).length;
+    duplicatesCountValue = allUsers.reduce(
+      (count, user) => count + (user.image_path && imageCount[user.image_path] > 1 ? 1 : 0),
+      0
+    );
   }
 
   if (cardPrintCount) {
@@ -1220,53 +1271,46 @@ async function navigateImages(direction) {
 }
 
 function navigateUsers(direction) {
-  // Get the currently displayed users in the table
-  const userRows = Array.from(document.querySelectorAll('.user-table tbody tr'));
+  // Walk the list that is actually on display, not the handful of rows the
+  // virtual scroll happens to have rendered, so navigation reaches every user
+  if (!displayedUsers || displayedUsers.length === 0) return;
 
-  if (userRows.length === 0) return;
+  const currentIndex = selectedUser
+    ? displayedUsers.findIndex(user => user.id === selectedUser.id)
+    : -1;
 
-  // Find the currently selected row
-  let currentIndex = userRows.findIndex(row => row.classList.contains('selected'));
-
-  // If no row is selected, select the first one
+  let targetIndex;
   if (currentIndex === -1) {
-    currentIndex = 0;
+    targetIndex = 0;
   } else {
-    // Move to the next/previous user
-    currentIndex += direction;
+    targetIndex = currentIndex + direction;
 
     // Wrap around
-    if (currentIndex < 0) {
-      currentIndex = userRows.length - 1;
-    } else if (currentIndex >= userRows.length) {
-      currentIndex = 0;
+    if (targetIndex < 0) {
+      targetIndex = displayedUsers.length - 1;
+    } else if (targetIndex >= displayedUsers.length) {
+      targetIndex = 0;
     }
   }
 
-  // Get the user data from the row
-  const selectedRow = userRows[currentIndex];
-  const userId = parseInt(selectedRow.dataset.userId);
+  const user = displayedUsers[targetIndex];
+  if (!user) return;
 
-  // Find the user in the displayed users list
-  const displayedUsers = showDuplicatesOnly && allUsers
-    ? allUsers.filter(user => {
-        const imageCount = {};
-        allUsers.forEach(u => {
-          if (u.image_path) {
-            imageCount[u.image_path] = (imageCount[u.image_path] || 0) + 1;
-          }
-        });
-        return user.image_path && imageCount[user.image_path] > 1;
-      })
-    : currentUsers;
+  // Bring the target into view first: with virtual scrolling its row may not
+  // exist yet, and scrollToIndex is what causes it to be rendered
+  if (virtualScrollManager) {
+    virtualScrollManager.scrollToIndex(targetIndex);
+    virtualScrollManager.render();
+  }
 
-  const user = displayedUsers.find(u => u.id === userId);
-
-  if (user) {
-    selectUserRow(selectedRow, user);
-
-    // Scroll the row into view if it's not visible
-    selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const row = userTableBody.querySelector(`tr[data-user-id="${user.id}"]`);
+  if (row) {
+    selectUserRow(row, user);
+    row.scrollIntoView({ block: 'nearest' });
+  } else {
+    // Rendered range did not reach it; keep the selection state in step anyway
+    selectedUser = user;
+    updateSelectedUserInfo(user);
   }
 }
 
