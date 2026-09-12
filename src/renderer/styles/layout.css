@@ -246,11 +246,30 @@
   display: block;
 }
 
+/* Day heading */
+.capture-history-day {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a8f9a;
+  padding: 6px 0 2px;
+  border-bottom: 1px solid #3a3f4e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The first heading sits right under the title, which already spaces it */
+.capture-history-day:first-child {
+  padding-top: 0;
+}
+
 /* Thumbnail */
 .capture-history-item {
   flex: 0 0 auto;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  display: flex;
+  flex-direction: column;
   border: 2px solid transparent;
   border-radius: 8px;
   overflow: hidden;
@@ -258,6 +277,35 @@
   cursor: pointer;
   padding: 0;
   transition: border-color 0.15s, transform 0.15s;
+}
+
+.capture-history-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+}
+
+/* Capture time, or the file name when it carries no timestamp */
+.capture-history-caption {
+  display: block;
+  padding: 3px 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #b0b0b0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.capture-history-caption-name {
+  font-size: 10px;
+  color: #8a8f9a;
+}
+
+.capture-history-item.current .capture-history-caption {
+  color: #e0e0e0;
 }
 
 .capture-history-item:hover {

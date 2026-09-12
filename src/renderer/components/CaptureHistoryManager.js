@@ -20,6 +20,48 @@
     ? require('../utils/imageUrl').imageUrl
     : global.imageUrl;
 
+  // folderWatcher names every capture YYYYMMDDHHMMSS, adding _1, _2... when
+  // several land in the same second. Images brought in by the bulk ID import
+  // keep their original name and will not match.
+  const CAPTURE_NAME = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:_\d+)?$/;
+
+  const UNDATED_KEY = 'sin-fecha';
+  const UNDATED_LABEL = 'Sin fecha en el nombre';
+
+  /**
+   * @param {string} imagePath
+   * @returns {string} Name of the file, without its folders
+   */
+  function fileNameOf(imagePath) {
+    return String(imagePath).split(/[\\/]/).pop() || '';
+  }
+
+  /**
+   * Read the capture time out of the file name
+   *
+   * The name is the only record of when a capture was taken, so this is what
+   * lets the strip be scanned by day and hour.
+   *
+   * @param {string} imagePath
+   * @returns {{dayKey: string, dayLabel: string, time: string}|null}
+   */
+  function parseCaptureName(imagePath) {
+    const baseName = fileNameOf(imagePath).replace(/\.[^.]*$/, '');
+    const match = CAPTURE_NAME.exec(baseName);
+
+    if (!match) {
+      return null;
+    }
+
+    const [, year, month, day, hours, minutes, seconds] = match;
+
+    return {
+      dayKey: `${year}${month}${day}`,
+      dayLabel: `${day}/${month}/${year}`,
+      time: `${hours}:${minutes}:${seconds}`
+    };
+  }
+
   class CaptureHistoryManager {
     /**
      * @param {Object} config
@@ -113,8 +155,20 @@
 
       const fragment = document.createDocumentFragment();
       const reused = new Map();
+      let currentDayKey = null;
 
       this.images.forEach((imagePath, index) => {
+        // A heading every time the day changes, so the strip can be scanned
+        // for the session a wrong link was made in
+        const capture = parseCaptureName(imagePath);
+        const dayKey = capture ? capture.dayKey : UNDATED_KEY;
+        if (dayKey !== currentDayKey) {
+          currentDayKey = dayKey;
+          fragment.appendChild(
+            this.createDaySeparator(capture ? capture.dayLabel : UNDATED_LABEL)
+          );
+        }
+
         const item = this.itemsByPath.get(imagePath) || this.createItem(imagePath);
         item.dataset.index = String(index);
         reused.set(imagePath, item);
@@ -140,10 +194,20 @@
      * @private
      */
     createItem(imagePath) {
+      const capture = parseCaptureName(imagePath);
+      const fileName = fileNameOf(imagePath);
+
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'capture-history-item';
       item.dataset.path = imagePath;
+      // The name is what identifies a capture when a wrong link is chased down
+      item.title = capture
+        ? `${fileName}\n${capture.dayLabel} ${capture.time}`
+        : fileName;
+
+      const frame = document.createElement('span');
+      frame.className = 'capture-history-thumb';
 
       const img = document.createElement('img');
       img.alt = '';
@@ -151,7 +215,17 @@
         ? imageUrlUtil.thumbnail(imagePath, this.thumbnailSize)
         : imagePath;
       img.addEventListener('load', () => img.classList.add('loaded'));
-      item.appendChild(img);
+      frame.appendChild(img);
+      item.appendChild(frame);
+
+      const caption = document.createElement('span');
+      caption.className = 'capture-history-caption';
+      // Without a timestamp in the name the file name is all there is to go on
+      caption.textContent = capture ? capture.time : fileName;
+      if (!capture) {
+        caption.classList.add('capture-history-caption-name');
+      }
+      item.appendChild(caption);
 
       item.addEventListener('click', () => {
         this.onSelect(Number(item.dataset.index));
@@ -165,6 +239,20 @@
       }
 
       return item;
+    }
+
+    /**
+     * Heading marking the start of a day's captures
+     * @param {string} label
+     * @returns {HTMLElement}
+     * @private
+     */
+    createDaySeparator(label) {
+      const separator = document.createElement('div');
+      separator.className = 'capture-history-day';
+      separator.textContent = label;
+      separator.title = label;
+      return separator;
     }
 
     /**

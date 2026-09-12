@@ -183,6 +183,92 @@ describe('CaptureHistoryManager', () => {
     });
   });
 
+  describe('capture time', () => {
+    beforeEach(() => {
+      manager.setVisible(true);
+    });
+
+    const captions = () =>
+      Array.from(list.querySelectorAll('.capture-history-caption')).map((el) => el.textContent);
+
+    const days = () =>
+      Array.from(list.querySelectorAll('.capture-history-day')).map((el) => el.textContent);
+
+    test('should show the time each capture was taken', () => {
+      manager.render(IMAGES, 0);
+
+      expect(captions()).toEqual(['12:00:03', '12:00:02', '12:00:01']);
+    });
+
+    test('should read the time through the ordinal of a same-second capture', () => {
+      manager.render(['D:\\Proyecto\\imports\\20260101120003_2.jpg'], 0);
+
+      expect(captions()).toEqual(['12:00:03']);
+    });
+
+    test('should head each day of captures', () => {
+      manager.render([
+        'D:\\Proyecto\\imports\\20260112090000.jpg',
+        'D:\\Proyecto\\imports\\20260111170000.jpg',
+        'D:\\Proyecto\\imports\\20260111083000.jpg'
+      ], 0);
+
+      expect(days()).toEqual(['12/01/2026', '11/01/2026']);
+    });
+
+    test('should head a day once, however many captures it holds', () => {
+      manager.render(IMAGES, 0);
+
+      expect(days()).toEqual(['01/01/2026']);
+    });
+
+    test('should put the name and the moment in the tooltip', () => {
+      manager.render(IMAGES, 0);
+
+      expect(items()[0].title).toBe('20260101120003.jpg\n01/01/2026 12:00:03');
+    });
+
+    test('should fall back to the file name when it carries no timestamp', () => {
+      manager.render(['D:\\Proyecto\\imports\\10894357.jpg'], 0);
+
+      expect(captions()).toEqual(['10894357.jpg']);
+      expect(items()[0].title).toBe('10894357.jpg');
+    });
+
+    test('should group the undated captures apart', () => {
+      manager.render([
+        'D:\\Proyecto\\imports\\20260101120003.jpg',
+        'D:\\Proyecto\\imports\\10894357.jpg'
+      ], 0);
+
+      expect(days()).toEqual(['01/01/2026', 'Sin fecha en el nombre']);
+    });
+
+    test('should not mistake a name that only looks like a timestamp', () => {
+      manager.render(['D:\\Proyecto\\imports\\202601011200031.jpg'], 0);
+
+      expect(captions()).toEqual(['202601011200031.jpg']);
+    });
+
+    test('should keep the headings correct after a re-render', () => {
+      manager.render(IMAGES, 0);
+      manager.render(['D:\\Proyecto\\imports\\20260102080000.jpg', ...IMAGES], 0);
+
+      expect(days()).toEqual(['02/01/2026', '01/01/2026']);
+    });
+
+    test('should still map a click to the right index despite the headings', () => {
+      manager.render([
+        'D:\\Proyecto\\imports\\20260112090000.jpg',
+        'D:\\Proyecto\\imports\\20260111170000.jpg'
+      ], 0);
+
+      items()[1].click();
+
+      expect(onSelect).toHaveBeenCalledWith(1);
+    });
+  });
+
   describe('selection', () => {
     beforeEach(() => {
       manager.setVisible(true);

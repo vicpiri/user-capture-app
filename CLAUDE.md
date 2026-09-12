@@ -382,8 +382,18 @@ historial de capturas del proyecto
 - Lista todas las capturas de la carpeta `imports`, las más recientes primero
 - Al pulsar una miniatura, el visor grande se desplaza hasta esa foto
 - Marca la miniatura que el visor está mostrando y la trae a la vista si queda fuera
+- Cabecera con la fecha cada vez que cambia el día, y la hora de captura bajo
+  cada miniatura, para localizar la sesión en la que se hizo un enlace erróneo
 - Carga diferida de las miniaturas con IntersectionObserver
 - Se activa y desactiva desde Ver > Historial de capturas (preferencia persistente)
+
+**Fecha y hora**: se leen del nombre del archivo, que es el único registro que
+existe de cuándo se capturó (`folderWatcher` renombra a `YYYYMMDDHHMMSS`, con
+`_1`, `_2`... si coinciden en el mismo segundo). Las imágenes traídas por la
+importación masiva por ID conservan su nombre original, no pasan por el
+vigilante y por tanto no tienen marca temporal: se agrupan bajo "Sin fecha en el
+nombre" y muestran el nombre del archivo en lugar de la hora. El nombre completo
+está siempre en el tooltip.
 
 **Nota**: no tiene fuente de datos propia. Es un índice visual del mismo array
 que ya navega `ImageGridManager`, así que pulsar una miniatura sólo mueve el
