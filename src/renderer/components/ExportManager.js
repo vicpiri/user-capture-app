@@ -341,7 +341,9 @@
         const folderPath = result.filePaths[0];
 
         // Show export options modal and wait for user choice
-        const options = await this.exportOptionsModal.show();
+        const options = await this.exportOptionsModal.show(
+          this.describeExportScope(usersToExport, 'a la carpeta')
+        );
 
         if (!options) {
           // User cancelled
@@ -387,7 +389,9 @@
         const folderPath = result.filePaths[0];
 
         // Show export options modal and wait for user choice
-        const options = await this.exportOptionsModal.show();
+        const options = await this.exportOptionsModal.show(
+          this.describeExportScope(usersToExport, 'a la carpeta')
+        );
 
         if (!options) {
           // User cancelled

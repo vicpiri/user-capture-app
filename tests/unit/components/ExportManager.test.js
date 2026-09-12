@@ -747,6 +747,36 @@ describe('ExportManager', () => {
       expect(valueFor(rows, 'Se exportará')).toBe('Usuarios con asignaciones duplicadas');
     });
 
+    test('should word the destination for an export to a folder', async () => {
+      manager.getCurrentUsers = () => [withPhoto(1), withoutPhoto(2)];
+      manager.getGroupFilterLabel = () => '1CFMA - 1ACC CARROCERIA';
+      mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:\\destino'] });
+      mockExportOptionsModal.show.mockResolvedValue(null);
+
+      await manager.exportImagesByID();
+
+      expect(mockExportOptionsModal.show).toHaveBeenCalledWith([
+        { label: 'Se exportará', value: '1CFMA - 1ACC CARROCERIA' },
+        { label: 'Imágenes a enviar a la carpeta', value: '1' },
+        { label: 'Usuarios sin foto capturada', value: '1' }
+      ]);
+    });
+
+    test('should summarise the export by full name too', async () => {
+      manager.getCurrentUsers = () => [withPhoto(1), withPhoto(2), withoutPhoto(3)];
+      manager.getGroupFilterLabel = () => 'Todos los grupos';
+      mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:\\destino'] });
+      mockExportOptionsModal.show.mockResolvedValue(null);
+
+      await manager.exportImagesByName();
+
+      expect(mockExportOptionsModal.show).toHaveBeenCalledWith([
+        { label: 'Se exportará', value: 'Todos los grupos' },
+        { label: 'Imágenes a enviar a la carpeta', value: '2' },
+        { label: 'Usuarios sin foto capturada', value: '1' }
+      ]);
+    });
+
     test('should hand the summary to the options dialog before exporting', async () => {
       manager.getCurrentUsers = () => [withPhoto(1), withPhoto(2), withoutPhoto(3)];
       manager.getGroupFilterLabel = () => '1CFMA - 1ACC CARROCERIA';
