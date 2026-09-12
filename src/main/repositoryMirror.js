@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
-const chokidar = require('chokidar');
 
 /**
  * Repository Mirror Manager
@@ -33,18 +32,22 @@ class RepositoryMirror extends EventEmitter {
     this.lastSyncTime = null;
 
     // Watch state
-    this.watcher = null;
     this.watchEnabled = false;
+    this.watchTimer = null;
+    this.watchSnapshot = null; // Last scan: lower-cased filename -> { name, size, mtime }
+    this.watchGeneration = 0; // Bumped on stop, so a scan in flight knows to drop its result
     this.syncDebounceTimer = null;
     this.SYNC_DEBOUNCE_DELAY = options.syncDebounceDelay ?? 2000; // Wait after last change before syncing
     this.forceResyncFiles = new Set(); // Files that must be re-synced regardless of metadata
     this.pollingTimer = null; // Periodic polling timer
 
-    // The watcher polls because network drives and Google Drive do not deliver
-    // reliable native filesystem events. Cost is one stat per watched file per
-    // interval, so with a large repository this dominates the main process:
-    // keep it high enough to stay cheap, low enough to feel responsive.
-    this.WATCH_POLL_INTERVAL = options.watchPollInterval ?? 5000;
+    // The watcher scans because network drives and Google Drive do not deliver
+    // reliable native filesystem events. A scan is one readdir plus a stat per
+    // photo, and the pause is measured from the end of one scan to the start
+    // of the next, so a slow drive gets a rest between them.
+    this.WATCH_POLL_INTERVAL = options.watchPollInterval ?? 10000;
+    // A file whose mtime is younger than this is treated as still being
+    // written and reported on a later scan
     this.AWAIT_WRITE_FINISH = options.awaitWriteFinish ?? 500;
 
     // Safety net for the one case the watcher cannot see: a file replaced with
@@ -61,7 +64,12 @@ class RepositoryMirror extends EventEmitter {
     // How many filesystem operations to have in flight. The repository is
     // normally a network or virtual drive, where each call is dominated by
     // waiting, so overlapping them is what makes a large repository tractable.
-    this.STAT_CONCURRENCY = options.statConcurrency ?? 16;
+    // Kept well under the thread pool size on purpose: each one occupies a
+    // libuv thread for as long as Google Drive takes to answer, and the same
+    // pool serves the thumbnails the interface is waiting for. Sixteen in
+    // flight, on top of the old per-file watcher, left none free and the user
+    // list showed spinners for twenty seconds after a scroll.
+    this.STAT_CONCURRENCY = options.statConcurrency ?? 4;
     this.COPY_CONCURRENCY = options.copyConcurrency ?? 6;
 
     // Resolves once the index of already mirrored files is loaded. Asking which
@@ -506,6 +514,15 @@ class RepositoryMirror extends EventEmitter {
 
   /**
    * Start watching the repository folder for changes
+   *
+   * Implemented as a periodic scan rather than a per-file polling watcher.
+   * chokidar's polling mode registers one fs.watchFile per photo, and each of
+   * those stats its file on every interval: thousands of stats against Google
+   * Drive every few seconds, all queued on the libuv thread pool that the
+   * thumbnail service and every other file read also depend on. Measured on
+   * the real repository, a thumbnail that takes 9ms alone took up to 30s while
+   * that watcher ran. One scan at a time, a few stats in flight, leaves the
+   * pool free for the interface.
    */
   async startWatch() {
     if (this.watchEnabled) {
@@ -526,79 +543,20 @@ class RepositoryMirror extends EventEmitter {
 
       this.logger.info('Starting repository folder watch...');
 
-      const isImageFile = (filePath) => {
-        const ext = path.extname(filePath).toLowerCase();
-        return ext === '.jpg' || ext === '.jpeg';
-      };
+      this.watchEnabled = true;
+      this.watchGeneration++;
 
-      // Create chokidar watcher
-      this.watcher = chokidar.watch(this.repositoryPath, {
-        persistent: true,
-        ignoreInitial: true, // Don't trigger events for existing files
-        usePolling: true, // Use polling for better compatibility with network drives and certain file systems
-        // binaryInterval must be set explicitly: it defaults to 300ms and is the
-        // one that applies to images, so leaving it out polls every photo more
-        // than three times per second regardless of `interval`.
-        interval: this.WATCH_POLL_INTERVAL,
-        binaryInterval: this.WATCH_POLL_INTERVAL,
-        awaitWriteFinish: {
-          stabilityThreshold: this.AWAIT_WRITE_FINISH, // Wait for file to finish writing
-          pollInterval: 100
-        },
-        // Only watch jpg/jpeg files. Chokidar tests directories against this
-        // predicate too, and a directory has no extension, so entries without
-        // one must never be ignored: ignoring them would exclude the repository
-        // root itself and no event would ever be emitted.
-        ignored: (filePath, stats) => {
-          if (stats && stats.isDirectory()) return false;
-          if (!path.extname(filePath)) return false;
-          return !isImageFile(filePath);
-        }
-      });
+      // The first scan only takes the baseline: what is already there is not
+      // a change, the initial sync deals with it
+      this.watchSnapshot = await this.scanRepository();
 
-      // File added
-      this.watcher.on('add', (filePath) => {
-        if (!isImageFile(filePath)) return;
-        const filename = path.basename(filePath);
-        this.logger.info(`Repository file added: ${filename}`);
-        this.forceResyncFiles.add(filename.toLowerCase());
-        this.emit('repository-changed', { type: 'add', filename });
-        this.scheduleDebouncedSync();
-      });
+      if (!this.watchEnabled) {
+        // Stopped while the baseline was being taken
+        return false;
+      }
 
-      // File changed
-      this.watcher.on('change', (filePath) => {
-        if (!isImageFile(filePath)) return;
-        const filename = path.basename(filePath);
-        this.logger.info(`Repository file changed: ${filename}`);
-        this.forceResyncFiles.add(filename.toLowerCase());
-        this.emit('repository-changed', { type: 'change', filename });
-        this.scheduleDebouncedSync();
-      });
-
-      // File removed
-      this.watcher.on('unlink', (filePath) => {
-        if (!isImageFile(filePath)) return;
-        const filename = path.basename(filePath);
-        this.logger.info(`Repository file removed: ${filename}`);
-        this.forceResyncFiles.add(filename.toLowerCase());
-        this.emit('repository-changed', { type: 'unlink', filename });
-        this.scheduleDebouncedSync();
-      });
-
-      // Error handling
-      this.watcher.on('error', (error) => {
-        this.logger.error('Repository watcher error:', error);
-      });
-
-      // Wait for watcher to be ready
-      await new Promise((resolve) => {
-        this.watcher.on('ready', () => {
-          this.watchEnabled = true;
-          this.logger.success('Repository folder watch started');
-          resolve();
-        });
-      });
+      this.logger.success('Repository folder watch started');
+      this.scheduleNextWatchScan();
 
       // Also start periodic polling as a fallback for detecting changes
       this.startPeriodicPolling();
@@ -606,8 +564,132 @@ class RepositoryMirror extends EventEmitter {
       return true;
     } catch (error) {
       this.logger.error('Error starting repository watch:', error);
+      this.watchEnabled = false;
       return false;
     }
+  }
+
+  /**
+   * Arrange the next scan once the current one is over
+   *
+   * Chained with a timeout instead of an interval, so a slow scan over a
+   * network drive is never overlapped by the next one.
+   * @private
+   */
+  scheduleNextWatchScan() {
+    const generation = this.watchGeneration;
+
+    this.watchTimer = setTimeout(async () => {
+      this.watchTimer = null;
+
+      if (!this.watchEnabled || generation !== this.watchGeneration) {
+        return;
+      }
+
+      // The sync stats and copies the same files; scanning underneath it would
+      // double the load and report the very files it is bringing over
+      if (!this.isSyncing) {
+        try {
+          await this.watchScan();
+        } catch (error) {
+          this.logger.error('Error scanning repository for changes:', error);
+        }
+      }
+
+      if (this.watchEnabled && generation === this.watchGeneration) {
+        this.scheduleNextWatchScan();
+      }
+    }, this.WATCH_POLL_INTERVAL);
+  }
+
+  /**
+   * List the repository's images with their size and modification time
+   *
+   * @returns {Promise<Map<string, {name: string, size: number, mtime: number}>>}
+   *   Keyed by lower-cased filename
+   * @private
+   */
+  async scanRepository() {
+    const entries = await fs.promises.readdir(this.repositoryPath);
+    const images = entries.filter((entry) => {
+      const ext = path.extname(entry).toLowerCase();
+      return ext === '.jpg' || ext === '.jpeg';
+    });
+
+    const stats = await this.mapWithConcurrency(images, this.STAT_CONCURRENCY, async (name) => {
+      try {
+        const fileStats = await fs.promises.stat(path.join(this.repositoryPath, name));
+        return { name, size: fileStats.size, mtime: fileStats.mtimeMs };
+      } catch (error) {
+        // Removed between readdir and stat: as good as never listed
+        return null;
+      }
+    });
+
+    const snapshot = new Map();
+    for (const entry of stats) {
+      if (entry) {
+        snapshot.set(entry.name.toLowerCase(), entry);
+      }
+    }
+
+    return snapshot;
+  }
+
+  /**
+   * Compare the repository against the previous scan and report what differs
+   * @private
+   */
+  async watchScan() {
+    const previous = this.watchSnapshot;
+    const current = await this.scanRepository();
+
+    if (!this.watchEnabled || !previous) {
+      return;
+    }
+
+    const now = Date.now();
+
+    for (const [key, entry] of current) {
+      const before = previous.get(key);
+
+      if (before && before.size === entry.size && before.mtime === entry.mtime) {
+        continue;
+      }
+
+      // Still being written: a copy in progress changes size from one scan to
+      // the next, and reporting it now would sync a truncated photo. Kept as
+      // it was in the snapshot so the next scan looks at it again.
+      if (now - entry.mtime < this.AWAIT_WRITE_FINISH) {
+        if (before) {
+          current.set(key, before);
+        } else {
+          current.delete(key);
+        }
+        continue;
+      }
+
+      this.reportRepositoryChange(before ? 'change' : 'add', entry.name);
+    }
+
+    for (const [key, entry] of previous) {
+      if (!current.has(key)) {
+        this.reportRepositoryChange('unlink', entry.name);
+      }
+    }
+
+    this.watchSnapshot = current;
+  }
+
+  /**
+   * @private
+   */
+  reportRepositoryChange(type, filename) {
+    const described = { add: 'added', change: 'changed', unlink: 'removed' }[type];
+    this.logger.info(`Repository file ${described}: ${filename}`);
+    this.forceResyncFiles.add(filename.toLowerCase());
+    this.emit('repository-changed', { type, filename });
+    this.scheduleDebouncedSync();
   }
 
   /**
@@ -735,8 +817,8 @@ class RepositoryMirror extends EventEmitter {
         return false;
       }
 
-      // The watcher already compares size and mtime on every file continuously,
-      // so re-checking all of them here would be redundant. This only samples a
+      // The watch scan already compares size and mtime on every file, so
+      // re-checking all of them here would be redundant. This only samples a
       // slice, advancing the cursor each poll so every file is eventually
       // covered, and compares content to catch replacements that kept their
       // metadata (the copy-over case the watcher cannot detect).
@@ -799,30 +881,27 @@ class RepositoryMirror extends EventEmitter {
   /**
    * Stop watching the repository folder
    *
-   * Awaiting the returned promise matters when another watcher is about to be
-   * created for the same path: chokidar polling is backed by fs.watchFile, which
-   * Node keys globally per path, so a half-closed watcher swallows the events of
-   * its replacement.
+   * Takes effect immediately: a scan already in flight finishes but reports
+   * nothing, and no further scan is scheduled.
    *
    * @returns {Promise<void>}
    */
   async stopWatch() {
-    if (this.watcher) {
+    if (this.watchEnabled || this.watchTimer) {
       this.logger.info('Stopping repository folder watch...');
-      const watcher = this.watcher;
-      this.watcher = null;
       this.watchEnabled = false;
+      this.watchGeneration++;
+      this.watchSnapshot = null;
+
+      if (this.watchTimer) {
+        clearTimeout(this.watchTimer);
+        this.watchTimer = null;
+      }
 
       // Clear any pending debounced sync
       if (this.syncDebounceTimer) {
         clearTimeout(this.syncDebounceTimer);
         this.syncDebounceTimer = null;
-      }
-
-      try {
-        await watcher.close();
-      } catch (error) {
-        this.logger.warning('Error closing repository watcher:', error);
       }
 
       this.logger.success('Repository folder watch stopped');

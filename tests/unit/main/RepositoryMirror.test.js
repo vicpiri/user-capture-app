@@ -29,9 +29,9 @@ const mockLogger = {
 // pollingInterval is kept high so the periodic content check never fires on its
 // own during a test: the watching tests must be driven by the watcher, not by a
 // background poll that happens to trigger a sync at the right moment.
-// Not as low as they could be: at 100ms the polling watcher intermittently
-// missed additions entirely when the suite ran in parallel and the workers
-// competed for CPU. These stay fast while leaving room for scheduling noise.
+// Not as low as they could be: at 100ms the watcher intermittently missed
+// additions entirely when the suite ran in parallel and the workers competed
+// for CPU. These stay fast while leaving room for scheduling noise.
 const TEST_TIMINGS = {
   watchPollInterval: 250,
   awaitWriteFinish: 250,
@@ -39,10 +39,10 @@ const TEST_TIMINGS = {
   pollingInterval: 60000
 };
 
-// The watching tests drive a real polling watcher over the filesystem. Running
-// alongside the rest of the suite they compete for CPU with the other Jest
-// workers, and a starved poll can take far longer than it does in isolation, so
-// they get a generous ceiling instead of failing on scheduling noise.
+// The watching tests drive real scans over the filesystem. Running alongside
+// the rest of the suite they compete for CPU with the other Jest workers, and a
+// starved scan can take far longer than it does in isolation, so they get a
+// generous ceiling instead of failing on scheduling noise.
 const WATCH_TEST_TIMEOUT = 25000;
 
 describe('RepositoryMirror', () => {
@@ -73,9 +73,8 @@ describe('RepositoryMirror', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // A fresh directory per test. Polling watchers are backed by fs.watchFile,
-    // which Node registers globally per path, so reusing one path across tests
-    // lets a closing watcher interfere with the next one.
+    // A fresh directory per test, so leftovers from one never show up as
+    // changes in the next
     testId++;
     repositoryPath = path.join(fixturesPath, `repository-${testId}`);
     mirrorPath = path.join(fixturesPath, `mirror-${testId}`);
@@ -85,8 +84,8 @@ describe('RepositoryMirror', () => {
   });
 
   afterEach(async () => {
-    // Cleanup. The close must complete before the next test watches the same
-    // path, or the replacement watcher receives no events.
+    // Cleanup. Stopped first, so a scan still in flight cannot report the
+    // files this cleanup deletes.
     if (repositoryMirror) {
       await repositoryMirror.stopWatch();
       repositoryMirror = null;
@@ -260,10 +259,9 @@ describe('RepositoryMirror', () => {
   });
 
   describe('File Watching', () => {
-    // 'ready' only means the initial scan finished. A polling watcher still has
-    // to take its first stat snapshot of the folder, and anything written
-    // before that can be folded into the baseline and never reported. Giving it
-    // a couple of poll intervals is what makes these tests deterministic.
+    // startWatch resolves once the baseline snapshot is taken, so anything
+    // written afterwards is reported. A short pause keeps the write clearly
+    // apart from the baseline's timestamps all the same.
     const settleWatcher = () =>
       new Promise(resolve => setTimeout(resolve, TEST_TIMINGS.watchPollInterval * 2));
 
@@ -376,6 +374,81 @@ describe('RepositoryMirror', () => {
 
       repositoryMirror.stopWatch();
       expect(repositoryMirror.isWatching()).toBe(false);
+    });
+
+    test('should report nothing after stopWatch', async () => {
+      await repositoryMirror.startWatch();
+      await settleWatcher();
+
+      const changes = [];
+      repositoryMirror.on('repository-changed', (change) => changes.push(change));
+
+      await repositoryMirror.stopWatch();
+      fs.writeFileSync(path.join(repositoryPath, 'late.jpg'), 'content');
+
+      await new Promise(resolve => setTimeout(resolve, TEST_TIMINGS.watchPollInterval * 3));
+
+      expect(changes).toEqual([]);
+    });
+
+    test('should report a change once, not on every scan after it', async () => {
+      fs.writeFileSync(path.join(repositoryPath, 'image1.jpg'), 'original');
+      await repositoryMirror.startWatch();
+
+      const firstChange = new Promise(resolve => {
+        repositoryMirror.once('repository-changed', resolve);
+      });
+
+      // A different length on purpose. Windows stamps file times from a clock
+      // that ticks every few milliseconds, and this write can land in the same
+      // tick as the original: same mtime and same size would be invisible to
+      // any metadata comparison, which is the content check's job, not this one.
+      fs.writeFileSync(path.join(repositoryPath, 'image1.jpg'), 'modified, and longer');
+
+      expect(await firstChange).toEqual({ type: 'change', filename: 'image1.jpg' });
+
+      // Several more scans: the snapshot now holds the new size and mtime, so
+      // none of them may report the same change again
+      const repeated = [];
+      repositoryMirror.on('repository-changed', (change) => repeated.push(change));
+
+      await new Promise(resolve => setTimeout(resolve, TEST_TIMINGS.watchPollInterval * 4));
+
+      expect(repeated).toEqual([]);
+    }, WATCH_TEST_TIMEOUT);
+
+    test('should keep only a few stats in flight while scanning', async () => {
+      // The scan shares the libuv thread pool with the thumbnails the
+      // interface is waiting for. Flooding it is what made photos take twenty
+      // seconds to appear after a scroll over a Google Drive repository.
+      for (let i = 0; i < 30; i++) {
+        fs.writeFileSync(path.join(repositoryPath, `image${i}.jpg`), `content${i}`);
+      }
+
+      const realStat = fs.promises.stat;
+      let inFlight = 0;
+      let peak = 0;
+      const statSpy = jest.spyOn(fs.promises, 'stat').mockImplementation(async (...args) => {
+        inFlight++;
+        peak = Math.max(peak, inFlight);
+        try {
+          await new Promise(resolve => setTimeout(resolve, 5));
+          return await realStat(...args);
+        } finally {
+          inFlight--;
+        }
+      });
+
+      let snapshot;
+      try {
+        snapshot = await repositoryMirror.scanRepository();
+      } finally {
+        statSpy.mockRestore();
+      }
+
+      expect(snapshot.size).toBe(30);
+      expect(peak).toBe(repositoryMirror.STAT_CONCURRENCY);
+      expect(peak).toBeLessThan(8);
     });
   });
 
