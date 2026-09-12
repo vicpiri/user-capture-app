@@ -68,6 +68,19 @@ class PrintedCardsWindowManager {
   }
 
   /**
+   * Close the printed cards window
+   *
+   * Guards against an already destroyed window: the 'closed' handler clears the
+   * reference, but a caller can still reach this with a stale one.
+   */
+  close() {
+    if (this.window && !this.window.isDestroyed()) {
+      this.window.close();
+    }
+    this.window = null;
+  }
+
+  /**
    * Get the window instance
    * @returns {BrowserWindow|null}
    */

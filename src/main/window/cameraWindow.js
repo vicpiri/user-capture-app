@@ -73,12 +73,15 @@ class CameraWindowManager {
 
   /**
    * Close the camera window
+   *
+   * Guards against an already destroyed window: the 'closed' handler clears the
+   * reference, but a caller can still reach this with a stale one.
    */
   close() {
-    if (this.window) {
+    if (this.window && !this.window.isDestroyed()) {
       this.window.close();
-      this.window = null;
     }
+    this.window = null;
   }
 
   /**

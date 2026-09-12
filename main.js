@@ -405,9 +405,22 @@ function createWindow() {
     }
   });
 
+  // The secondary windows have no life of their own: closing the main window
+  // has to take them with it. Leaving any of them open also keeps the process
+  // alive, because 'window-all-closed' never fires.
   mainWindow.on('closed', () => {
-    cameraWindowManager.close();
+    closeSecondaryWindows();
   });
+}
+
+/**
+ * Close every window other than the main one
+ */
+function closeSecondaryWindows() {
+  cameraWindowManager.close();
+  imageGridWindowManager.close();
+  repositoryGridWindowManager.close();
+  printedCardsWindowManager.close();
 }
 
 function openCameraWindow() {
