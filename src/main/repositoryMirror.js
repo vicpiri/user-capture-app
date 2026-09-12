@@ -486,6 +486,19 @@ class RepositoryMirror extends EventEmitter {
   }
 
   /**
+   * What the index knows about a mirrored file
+   *
+   * Callers use it to decide whether the local copy still matches the
+   * repository before reading from it instead of from Google Drive.
+   *
+   * @param {string} filename
+   * @returns {{size: number, mtime: number, synced: boolean}|null}
+   */
+  getIndexEntry(filename) {
+    return this.mirrorIndex.get(filename.toLowerCase()) || null;
+  }
+
+  /**
    * Check if a file exists in the mirror
    */
   hasFile(filename) {

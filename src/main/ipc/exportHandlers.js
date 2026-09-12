@@ -86,9 +86,24 @@ async function renameWithRetry(fromPath, toPath, options = {}) {
  *
  * @param {string} destPath
  * @param {Buffer} buffer
+ * @param {Object} [options]
+ * @param {Object} [options.archive] - Keeps whatever is about to be replaced,
+ *   see createReplacedArchive(). Moves it aside once the new bytes are already
+ *   on disk, so the window without a photo lasts two renames.
  * @returns {Promise<void>}
  */
-async function writeFileAtomically(destPath, buffer) {
+async function writeFileAtomically(destPath, buffer, options = {}) {
+  let restore = null;
+
+  // Archiving happens before the temporary exists, on purpose. Done the other
+  // way round, the move of the old photo and the upload of the temporary hit
+  // the same folder at the same time, and Drive File Stream occasionally
+  // applied the move to the wrong one: the archived copy came out carrying the
+  // temporary's name. On a plain disk the order makes no difference.
+  if (options.archive) {
+    restore = await options.archive.keep(destPath, buffer);
+  }
+
   const tempPath = buildTempExportPath(destPath);
 
   try {
@@ -97,8 +112,171 @@ async function writeFileAtomically(destPath, buffer) {
   } catch (error) {
     // Nothing indexes a .tmp, so a leftover would sit there unnoticed
     await fs.promises.rm(tempPath, { force: true }).catch(() => {});
+
+    // The photo was moved aside for a replacement that never happened
+    if (restore) {
+      await restore();
+    }
+
     throw error;
   }
+}
+
+// Replaced photos are kept in a subfolder of the repository. The mirror reads
+// the root only, so this never reaches the other instances' local copies.
+const REPLACED_FOLDER = 'Reemplazadas';
+
+/**
+ * @param {Date} date
+ * @returns {string} YYYYMMDDHHMMSS, the same shape captures are named with
+ */
+function formatRunStamp(date) {
+  const pad = (value) => String(value).padStart(2, '0');
+
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds())
+  ].join('');
+}
+
+/**
+ * Keeps the photos an export replaces, instead of letting them be overwritten
+ *
+ * Moves rather than copies. A copy would have to come from somewhere, and the
+ * only local source is the mirror, which can be a minute behind what another
+ * instance just wrote: archiving that stale version while the fresh one is lost
+ * is worse than archiving nothing. Moving takes exactly what is there, needs no
+ * second upload, and is a metadata change within the same Drive.
+ *
+ * The run folder is created on the first actual replacement, so an export that
+ * replaces nothing leaves nothing behind.
+ *
+ * @param {string} repositoryPath
+ * @param {Object|null} mirror - RepositoryMirror, used only as a read shortcut
+ * @param {Object} logger
+ * @param {Date} [now]
+ * @returns {Object} archive
+ */
+function createReplacedArchive(repositoryPath, mirror, logger, now = new Date()) {
+  const host = os.hostname().replace(/[^A-Za-z0-9_-]/g, '') || 'host';
+  const baseName = `${formatRunStamp(now)}_${host}`;
+  let folderPath = null;
+  let kept = 0;
+
+  /**
+   * Read what is currently at destPath, from the mirror when it is provably
+   * the same bytes and from the repository otherwise
+   */
+  async function readExisting(destPath, stats) {
+    const filename = path.basename(destPath);
+    const entry = mirror && typeof mirror.getIndexEntry === 'function'
+      ? mirror.getIndexEntry(filename)
+      : null;
+
+    if (entry && entry.size === stats.size && entry.mtime === stats.mtimeMs) {
+      const mirrorFile = mirror.getMirrorPath(filename);
+
+      if (mirrorFile) {
+        try {
+          return await fs.promises.readFile(mirrorFile);
+        } catch (error) {
+          // Gone from the mirror since it was indexed; fall through
+        }
+      }
+    }
+
+    return fs.promises.readFile(destPath);
+  }
+
+  async function ensureFolder() {
+    if (folderPath) {
+      return folderPath;
+    }
+
+    let candidate = path.join(repositoryPath, REPLACED_FOLDER, baseName);
+    let suffix = 2;
+
+    // A second run in the same second on the same machine should not land in
+    // the folder of the first
+    while (fs.existsSync(candidate)) {
+      candidate = path.join(repositoryPath, REPLACED_FOLDER, `${baseName}-${suffix}`);
+      suffix++;
+    }
+
+    await fs.promises.mkdir(candidate, { recursive: true });
+    folderPath = candidate;
+    logger.info(`Replaced photos will be kept in ${folderPath}`);
+
+    return folderPath;
+  }
+
+  return {
+    /**
+     * Move aside whatever destPath holds, if the export really replaces it
+     *
+     * @param {string} destPath
+     * @param {Buffer} buffer - Bytes about to be written
+     * @returns {Promise<Function|null>} Undo, or null when nothing was moved
+     */
+    async keep(destPath, buffer) {
+      let stats;
+
+      try {
+        stats = await fs.promises.stat(destPath);
+      } catch (error) {
+        // Nothing there: a new photo, nothing to keep
+        return null;
+      }
+
+      if (stats.size === buffer.length) {
+        try {
+          const existing = await readExisting(destPath, stats);
+
+          if (existing.equals(buffer)) {
+            // Re-exporting the same photo is not a replacement
+            return null;
+          }
+        } catch (error) {
+          logger.warning(`Could not compare ${path.basename(destPath)}, keeping it anyway: ${error.message}`);
+        }
+      }
+
+      const archivedPath = path.join(await ensureFolder(), path.basename(destPath));
+      await renameWithRetry(destPath, archivedPath);
+      kept++;
+
+      // Drive has been seen landing the move under a different name. The photo
+      // is not lost when that happens, but the folder stops being trustworthy,
+      // so say so loudly rather than report a clean run.
+      if (!fs.existsSync(archivedPath)) {
+        logger.error(`Kept ${path.basename(destPath)} but it is not at ${archivedPath}`);
+      }
+
+      return async () => {
+        try {
+          await renameWithRetry(archivedPath, destPath);
+        } catch (error) {
+          // Worst case the photo is not where it was, but it is not lost, and
+          // the log says where to find it
+          logger.error(
+            `Could not put ${path.basename(destPath)} back after a failed export. It is at ${archivedPath}`,
+            error
+          );
+        }
+      };
+    },
+
+    /**
+     * @returns {{kept: number, folderPath: string|null}}
+     */
+    summary() {
+      return { kept, folderPath };
+    }
+  };
 }
 
 /**
@@ -223,14 +401,16 @@ async function mapWithConcurrency(items, limit, worker) {
  * @param {string} destPath
  * @param {Object} exportOptions
  * @param {Object} logger
+ * @param {Object} [writeOptions] - Forwarded to writeFileAtomically; the
+ *   repository export passes an archive here, the folder exports do not
  * @returns {Promise<void>}
  */
-async function writeExportedImage(sourcePath, destPath, exportOptions, logger) {
+async function writeExportedImage(sourcePath, destPath, exportOptions, logger, writeOptions = {}) {
   const sourceBuffer = await fs.promises.readFile(sourcePath);
 
   // Copy the original, correcting the orientation only where it is wrong
   if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
-    await writeFileAtomically(destPath, await buildOriginalCopy(sourceBuffer));
+    await writeFileAtomically(destPath, await buildOriginalCopy(sourceBuffer), writeOptions);
     return;
   }
 
@@ -270,7 +450,7 @@ async function writeExportedImage(sourcePath, destPath, exportOptions, logger) {
     quality -= 10;
   } while (quality > 0);
 
-  await writeFileAtomically(destPath, outputBuffer);
+  await writeFileAtomically(destPath, outputBuffer, writeOptions);
   logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length / 1024)}KB`);
 }
 
@@ -761,6 +941,9 @@ function registerExportHandlers(context) {
       // mirror, so they would accumulate in the shared folder unnoticed
       await removeOrphanTempExports(repositoryPath, logger);
 
+      // Whatever this export replaces is kept rather than overwritten
+      const archive = createReplacedArchive(repositoryPath, repositoryMirror(), logger);
+
       const importsPath = path.join(state.projectPath, 'imports');
 
       // Use provided users or get all users if not provided
@@ -821,7 +1004,7 @@ function registerExportHandlers(context) {
           const destFileName = `${userId}.jpg`;
           const destPath = path.join(repositoryPath, destFileName);
 
-          await writeExportedImage(sourceImagePath, destPath, exportOptions, logger);
+          await writeExportedImage(sourceImagePath, destPath, exportOptions, logger, { archive });
 
           results.exported++;
           results.exportedUserIds.push(user.id);
@@ -841,6 +1024,14 @@ function registerExportHandlers(context) {
 
       logger.section('EXPORT TO REPOSITORY COMPLETED');
       logger.success(`Exported: ${results.exported}/${results.total} images to repository`);
+
+      const archived = archive.summary();
+      results.replaced = archived.kept;
+      results.replacedFolder = archived.folderPath;
+      if (archived.kept > 0) {
+        logger.info(`Kept ${archived.kept} replaced photos in ${archived.folderPath}`);
+      }
+
       if (results.errors.length > 0) {
         logger.error(`Errors: ${results.errors.length} images`);
       }
@@ -1875,5 +2066,6 @@ module.exports = {
   buildOriginalCopy,
   writeFileAtomically,
   renameWithRetry,
-  removeOrphanTempExports
+  removeOrphanTempExports,
+  createReplacedArchive
 };

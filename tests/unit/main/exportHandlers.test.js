@@ -22,7 +22,8 @@ const {
   buildOriginalCopy,
   writeFileAtomically,
   renameWithRetry,
-  removeOrphanTempExports
+  removeOrphanTempExports,
+  createReplacedArchive
 } = require('../../../src/main/ipc/exportHandlers');
 
 const logger = {
@@ -417,6 +418,229 @@ describe('export helpers', () => {
 
       expect(fs.promises.rename).toHaveBeenCalledTimes(1);
       fs.promises.rename.mockRestore();
+    });
+  });
+
+  /**
+   * Replaced photos are moved aside rather than copied: a copy would have to
+   * come from the mirror, which can be a minute behind what another instance
+   * just wrote, and archiving that stale version while losing the fresh one is
+   * worse than archiving nothing.
+   */
+  describe('createReplacedArchive()', () => {
+    const stamp = new Date(2026, 8, 12, 21, 42, 19);
+    const runFolder = (name = 'Reemplazadas') => path.join(workPath, name);
+
+    const archiveFor = (mirror = null) =>
+      createReplacedArchive(workPath, mirror, logger, stamp);
+
+    test('should keep nothing when the destination is new', async () => {
+      const archive = archiveFor();
+
+      const restore = await archive.keep(path.join(workPath, '1234.jpg'), Buffer.from('nueva'));
+
+      expect(restore).toBeNull();
+      expect(archive.summary().kept).toBe(0);
+      expect(fs.existsSync(runFolder())).toBe(false);
+    });
+
+    test('should keep nothing when the bytes are the same', async () => {
+      const destPath = path.join(workPath, '1234.jpg');
+      fs.writeFileSync(destPath, 'la misma foto');
+      const archive = archiveFor();
+
+      const restore = await archive.keep(destPath, Buffer.from('la misma foto'));
+
+      expect(restore).toBeNull();
+      expect(archive.summary().kept).toBe(0);
+      expect(fs.readFileSync(destPath, 'utf8')).toBe('la misma foto');
+      expect(fs.existsSync(runFolder())).toBe(false);
+    });
+
+    test('should move the previous photo aside when it really changes', async () => {
+      const destPath = path.join(workPath, '1234.jpg');
+      fs.writeFileSync(destPath, 'la anterior');
+      const archive = archiveFor();
+
+      await archive.keep(destPath, Buffer.from('otra distinta'));
+
+      const kept = path.join(runFolder(), '20260912214219_' + os.hostname().replace(/[^A-Za-z0-9_-]/g, ''), '1234.jpg');
+      expect(fs.readFileSync(kept, 'utf8')).toBe('la anterior');
+      // Moved, not copied
+      expect(fs.existsSync(destPath)).toBe(false);
+      expect(archive.summary().kept).toBe(1);
+    });
+
+    test('should detect a change of size without reading the file', async () => {
+      const destPath = path.join(workPath, '1234.jpg');
+      fs.writeFileSync(destPath, 'corta');
+      const archive = archiveFor();
+
+      await archive.keep(destPath, Buffer.from('mucho mas larga que la anterior'));
+
+      expect(archive.summary().kept).toBe(1);
+    });
+
+    test('should put everything in one folder per run', async () => {
+      const archive = archiveFor();
+
+      for (const id of ['1111.jpg', '2222.jpg', '3333.jpg']) {
+        const destPath = path.join(workPath, id);
+        fs.writeFileSync(destPath, `anterior ${id}`);
+        await archive.keep(destPath, Buffer.from(`nueva ${id}`));
+      }
+
+      const folders = fs.readdirSync(runFolder());
+      expect(folders).toHaveLength(1);
+      expect(fs.readdirSync(path.join(runFolder(), folders[0])).sort())
+        .toEqual(['1111.jpg', '2222.jpg', '3333.jpg']);
+    });
+
+    test('should not land in the folder of a run from the same second', async () => {
+      const first = archiveFor();
+      fs.writeFileSync(path.join(workPath, '1234.jpg'), 'primera');
+      await first.keep(path.join(workPath, '1234.jpg'), Buffer.from('segunda'));
+
+      const second = archiveFor();
+      fs.writeFileSync(path.join(workPath, '1234.jpg'), 'segunda');
+      await second.keep(path.join(workPath, '1234.jpg'), Buffer.from('tercera'));
+
+      const folders = fs.readdirSync(runFolder()).sort();
+      expect(folders).toHaveLength(2);
+      expect(folders[1].endsWith('-2')).toBe(true);
+    });
+
+    test('should name the run folder after the machine that did it', async () => {
+      const archive = archiveFor();
+      fs.writeFileSync(path.join(workPath, '1234.jpg'), 'anterior');
+
+      await archive.keep(path.join(workPath, '1234.jpg'), Buffer.from('nueva'));
+
+      const [folder] = fs.readdirSync(runFolder());
+      expect(folder).toContain(os.hostname().replace(/[^A-Za-z0-9_-]/g, ''));
+      expect(folder.startsWith('20260912214219_')).toBe(true);
+    });
+
+    describe('reading the existing photo', () => {
+      test('should use the mirror when it provably matches', async () => {
+        const destPath = path.join(workPath, '1234.jpg');
+        fs.writeFileSync(destPath, 'contenido');
+        const stats = fs.statSync(destPath);
+        const mirrorFile = path.join(workPath, 'espejo-1234.jpg');
+        // Deliberately different bytes: proves the mirror was the one read
+        fs.writeFileSync(mirrorFile, 'contenido');
+
+        const mirror = {
+          getIndexEntry: jest.fn(() => ({ size: stats.size, mtime: stats.mtimeMs })),
+          getMirrorPath: jest.fn(() => mirrorFile)
+        };
+        const archive = archiveFor(mirror);
+
+        const restore = await archive.keep(destPath, Buffer.from('contenido'));
+
+        expect(mirror.getMirrorPath).toHaveBeenCalled();
+        expect(restore).toBeNull();
+      });
+
+      test('should ignore a mirror whose mtime does not match', async () => {
+        const destPath = path.join(workPath, '1234.jpg');
+        fs.writeFileSync(destPath, 'contenido');
+        const stats = fs.statSync(destPath);
+
+        const mirror = {
+          getIndexEntry: jest.fn(() => ({ size: stats.size, mtime: stats.mtimeMs - 5000 })),
+          getMirrorPath: jest.fn()
+        };
+        const archive = archiveFor(mirror);
+
+        await archive.keep(destPath, Buffer.from('contenido'));
+
+        expect(mirror.getMirrorPath).not.toHaveBeenCalled();
+      });
+
+      test('should ignore a mirror whose size does not match', async () => {
+        const destPath = path.join(workPath, '1234.jpg');
+        fs.writeFileSync(destPath, 'contenido');
+        const stats = fs.statSync(destPath);
+
+        const mirror = {
+          getIndexEntry: jest.fn(() => ({ size: stats.size + 1, mtime: stats.mtimeMs })),
+          getMirrorPath: jest.fn()
+        };
+        const archive = archiveFor(mirror);
+
+        await archive.keep(destPath, Buffer.from('contenido'));
+
+        expect(mirror.getMirrorPath).not.toHaveBeenCalled();
+      });
+
+      test('should fall back to the repository when the mirror file is gone', async () => {
+        const destPath = path.join(workPath, '1234.jpg');
+        fs.writeFileSync(destPath, 'contenido');
+        const stats = fs.statSync(destPath);
+
+        const mirror = {
+          getIndexEntry: jest.fn(() => ({ size: stats.size, mtime: stats.mtimeMs })),
+          getMirrorPath: jest.fn(() => path.join(workPath, 'no-esta.jpg'))
+        };
+        const archive = archiveFor(mirror);
+
+        const restore = await archive.keep(destPath, Buffer.from('contenido'));
+
+        // Read the repository copy instead, so it still knows nothing changed
+        expect(restore).toBeNull();
+      });
+    });
+
+    test('should undo the move when asked', async () => {
+      const destPath = path.join(workPath, '1234.jpg');
+      fs.writeFileSync(destPath, 'la anterior');
+      const archive = archiveFor();
+
+      const restore = await archive.keep(destPath, Buffer.from('otra distinta'));
+      await restore();
+
+      expect(fs.readFileSync(destPath, 'utf8')).toBe('la anterior');
+    });
+  });
+
+  /**
+   * The whole point: if the export fails after the old photo has been moved
+   * aside, the repository must not be left without it.
+   */
+  describe('writeFileAtomically() with an archive', () => {
+    test('should replace the photo and keep the previous one', async () => {
+      const destPath = path.join(workPath, '1234.jpg');
+      fs.writeFileSync(destPath, 'anterior');
+      const archive = createReplacedArchive(workPath, null, logger, new Date(2026, 8, 12, 10, 0, 0));
+
+      await writeFileAtomically(destPath, Buffer.from('nueva version'), { archive });
+
+      expect(fs.readFileSync(destPath, 'utf8')).toBe('nueva version');
+      const [folder] = fs.readdirSync(path.join(workPath, 'Reemplazadas'));
+      expect(fs.readFileSync(path.join(workPath, 'Reemplazadas', folder, '1234.jpg'), 'utf8')).toBe('anterior');
+    });
+
+    test('should put the photo back when the final rename fails', async () => {
+      const destPath = path.join(workPath, '1234.jpg');
+      fs.writeFileSync(destPath, 'anterior');
+      const archive = createReplacedArchive(workPath, null, logger, new Date(2026, 8, 12, 10, 0, 0));
+
+      const realRename = fs.promises.rename;
+      jest.spyOn(fs.promises, 'rename').mockImplementation(async (from, to) => {
+        if (String(from).endsWith('.tmp')) {
+          throw Object.assign(new Error('boom'), { code: 'EIO' });
+        }
+        return realRename(from, to);
+      });
+
+      await expect(
+        writeFileAtomically(destPath, Buffer.from('nueva version'), { archive })
+      ).rejects.toThrow('boom');
+
+      fs.promises.rename.mockRestore();
+      expect(fs.readFileSync(destPath, 'utf8')).toBe('anterior');
+      expect(fs.readdirSync(workPath).filter((f) => f.endsWith('.tmp'))).toEqual([]);
     });
   });
 

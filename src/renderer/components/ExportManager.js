@@ -493,6 +493,12 @@
         message += `Total de usuarios con imágenes: ${results.total}\n`;
         message += `Imágenes exportadas correctamente: ${results.exported}\n`;
 
+        // Otherwise nobody would know the replaced photos were kept
+        if (results.replaced > 0) {
+          message += `\nSe han sustituido ${results.replaced} fotos que ya estaban en el depósito.\n`;
+          message += `Las anteriores se conservan en la carpeta "Reemplazadas" del depósito.\n`;
+        }
+
         if (results.errors.length > 0) {
           message += `\nErrores (${results.errors.length}):\n`;
           message += results.errors.slice(0, 5).map(e => `${e.user}: ${e.error}`).join('\n');

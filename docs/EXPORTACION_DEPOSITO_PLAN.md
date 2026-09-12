@@ -1,7 +1,7 @@
 # Exportación al depósito: escritura segura y conservación de lo reemplazado
 
-**Estado**: ✅ Fase 1 implementada y probada en real (2026-09-12).
-Fases 2 y 3 sin implementar.
+**Estado**: ✅ Fases 1 y 2 implementadas y probadas en real (2026-09-12).
+Fase 3 sin implementar.
 **Depósito de pruebas**: `G:\Mi unidad\_Borrar`, utilizable libremente.
 **Redactado**: 2026-09-12. **Revisado**: 2026-09-12 (la fase 2 pasa de copiar
 a mover; la fase 1 absorbe el arreglo de la "copia original").
@@ -188,6 +188,15 @@ nada. Hay que decidir si se acepta o se añade esa librería.
 
 ## Fase 2 — Conservar lo reemplazado moviéndolo
 
+> **Implementada y probada en real** el 2026-09-12 en `exportHandlers.js`:
+> `createReplacedArchive()`, con `RepositoryMirror.getIndexEntry()` añadido para
+> no hurgar en el índice del mirror desde fuera. Cubierta en
+> `tests/unit/main/exportHandlers.test.js`.
+>
+> **El orden de los pasos hubo que invertirlo respecto a lo planificado**: el
+> archivado ocurre **antes** de escribir el temporal, no después. Ver "Lo que
+> obligó a cambiar el orden".
+
 ### Diseño
 
 Antes de sustituir la foto, **mover** la que había a:
@@ -235,6 +244,46 @@ misma convención `YYYYMMDDHHMMSS` que usan las capturas) y nombre del equipo:
 Encaja con las subcarpetas de convención que el depósito ya usa (`To-Print-ID`,
 `To-Publish`) y, al ser subcarpeta, no se descarga a los mirrors de los tres
 equipos.
+
+### Lo que obligó a cambiar el orden
+
+El plan ponía el archivado **entre** la escritura del temporal y el renombrado
+final, para que la ventana sin foto en la raíz durase solo dos renombrados. Con
+ese orden, la primera prueba real dejó en `Reemplazadas` un archivo llamado
+`11094608.jpg.XPS-VICTOR-11196-1.tmp`: el contenido era el correcto —la versión
+anterior— pero con el nombre del temporal. La segunda ejecución lo repitió, esta
+vez en el segundo archivo del lote.
+
+No es un fallo de la lógica: 200 archivados seguidos en disco local no produjeron
+ni una anomalía. Lo que ocurre es que el movimiento de la foto antigua y la
+subida del temporal caen en la misma carpeta casi a la vez, y File Stream aplica
+alguna vez el movimiento al objeto equivocado.
+
+**Solución: archivar antes de crear el temporal.** Así, en el momento del
+movimiento no hay ninguna subida en vuelo en esa carpeta. Dos exportaciones de
+33 imágenes con el nuevo orden archivaron 33 y 33, todas con su nombre correcto.
+El precio es que la ventana sin la foto en la raíz ahora incluye la escritura del
+temporal; sigue siendo corta y el vigilante la tolera.
+
+Se añadió además una comprobación tras el movimiento: si el archivo no aparece
+donde debía, se registra como error en vez de dar la ejecución por limpia.
+
+### Resultado de la prueba en real
+
+Cinco exportaciones del grupo 1BACB (33 imágenes) contra `_Borrar`:
+
+| Ejecución | Orden | Archivados | Anomalías |
+|---|---|---|---|
+| 1 (copia original) | temporal → archivar | 33 | 1 con nombre de temporal |
+| 2 (redimensionada) | temporal → archivar | 32 | 1 con nombre de temporal |
+| 3 (copia original) | archivar → temporal | 33 | ninguna |
+| 4 (redimensionada) | archivar → temporal | 33 | ninguna |
+| 5 (idéntica a lo que había) | archivar → temporal | 0 | no se creó carpeta |
+
+La quinta confirma lo que más importaba comprobar en real: **reexportar lo mismo
+no archiva nada ni deja carpeta vacía**. El contenido archivado se corresponde
+con lo que había en la raíz antes de cada ejecución (1,91 MB las redimensionadas,
+20,11 MB las originales), y en ningún caso quedaron temporales sueltos.
 
 ### Lo que este diseño no puede garantizar
 
