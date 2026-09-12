@@ -1296,16 +1296,20 @@ function navigateUsers(direction) {
   const user = displayedUsers[targetIndex];
   if (!user) return;
 
-  // Bring the target into view first: with virtual scrolling its row may not
-  // exist yet, and scrollToIndex is what causes it to be rendered
-  if (virtualScrollManager) {
+  let row = userTableBody.querySelector(`tr[data-user-id="${user.id}"]`);
+
+  // Only when the row is not rendered. scrollToIndex puts the target at the top
+  // of the viewport, which on every keypress would rebuild the whole visible
+  // range and restart every image; moving to the next row must not do that.
+  if (!row && virtualScrollManager) {
     virtualScrollManager.scrollToIndex(targetIndex);
     virtualScrollManager.render();
+    row = userTableBody.querySelector(`tr[data-user-id="${user.id}"]`);
   }
 
-  const row = userTableBody.querySelector(`tr[data-user-id="${user.id}"]`);
   if (row) {
     selectUserRow(row, user);
+    // Scrolls only if the row is not already fully visible
     row.scrollIntoView({ block: 'nearest' });
   } else {
     // Rendered range did not reach it; keep the selection state in step anyway

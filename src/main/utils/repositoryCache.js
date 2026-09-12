@@ -46,6 +46,14 @@ class RepositoryCacheManager {
    */
   async loadRepositoryFileList(repositoryMirror, logger) {
     try {
+      if (repositoryMirror) {
+        // The index is read from disk when the mirror starts, and the first
+        // question usually arrives mid-read. Answering then reports almost
+        // nobody as having a repository photo, and nothing asks again until a
+        // sync completes, which on a large repository is minutes away.
+        await repositoryMirror.whenIndexLoaded();
+      }
+
       // Use mirror if available
       if (repositoryMirror && repositoryMirror.mirrorIndex.size > 0) {
         logger.info(`Using repository mirror: ${repositoryMirror.mirrorIndex.size} files`);

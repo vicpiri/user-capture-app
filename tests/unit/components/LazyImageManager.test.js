@@ -131,6 +131,28 @@ describe('LazyImageManager', () => {
       expect(mockImg.classList.add).toHaveBeenCalledWith('lazy-loaded');
     });
 
+    test('should reveal the image as soon as it arrives', () => {
+      // No artificial delay: a floor on the spinner held back every photo that
+      // loaded faster than it, on every row and every re-render
+      manager.loadImage(mockImg, mockObserver);
+
+      mockImg.onload();
+
+      expect(mockImg.classList.add).toHaveBeenCalledWith('lazy-loaded');
+    });
+
+    test('should stop the spinner when the image fails', () => {
+      const wrapper = { classList: { contains: jest.fn(() => true), remove: jest.fn() } };
+      mockImg.parentElement = wrapper;
+
+      manager.loadImage(mockImg, mockObserver);
+      mockImg.onerror();
+
+      // The wrapper carries the spinner, and it used to keep turning forever
+      expect(wrapper.classList.remove).toHaveBeenCalledWith('loading');
+      expect(mockImg.classList.add).toHaveBeenCalledWith('lazy-error');
+    });
+
     test('should unobserve image after loading', async () => {
       manager.loadImage(mockImg, mockObserver);
 

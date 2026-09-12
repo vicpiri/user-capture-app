@@ -379,6 +379,50 @@ describe('RepositoryMirror', () => {
     });
   });
 
+  describe('Index readiness', () => {
+    test('should not report the index as ready before it is loaded', async () => {
+      fs.mkdirSync(mirrorPath, { recursive: true });
+      for (let i = 0; i < 40; i++) {
+        fs.writeFileSync(path.join(mirrorPath, `image${i}.jpg`), `content${i}`);
+      }
+
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, TEST_TIMINGS);
+
+      // Asking straight after construction, as the interface does: without the
+      // wait it would be told the repository holds nothing
+      const initializing = repositoryMirror.initialize();
+      await repositoryMirror.whenIndexLoaded();
+
+      expect(repositoryMirror.mirrorIndex.size).toBe(40);
+      await initializing;
+    });
+
+    test('should release the wait even when initialize fails', async () => {
+      // A mirror path that cannot be created
+      repositoryMirror = new RepositoryMirror(
+        repositoryPath,
+        path.join(repositoryPath, 'image.jpg', 'nested'),
+        mockLogger,
+        TEST_TIMINGS
+      );
+      fs.writeFileSync(path.join(repositoryPath, 'image.jpg'), 'not a folder');
+
+      await repositoryMirror.initialize();
+
+      await expect(repositoryMirror.whenIndexLoaded()).resolves.toBeUndefined();
+    });
+
+    test('should give up waiting rather than hang', async () => {
+      repositoryMirror = new RepositoryMirror(repositoryPath, mirrorPath, mockLogger, {
+        ...TEST_TIMINGS,
+        indexWaitTimeout: 50
+      });
+
+      // initialize is never called, so the index never loads
+      await expect(repositoryMirror.whenIndexLoaded()).resolves.toBeUndefined();
+    });
+  });
+
   describe('Periodic content check', () => {
     const syncAll = async () => {
       const syncPromise = new Promise(resolve => {
@@ -450,6 +494,23 @@ describe('RepositoryMirror', () => {
       fs.unlinkSync(path.join(mirrorPath, 'image1.jpg'));
 
       expect(await repositoryMirror.checkForChanges()).toBe(true);
+    });
+
+    test('should decide correctly over more files than run at once', async () => {
+      // determineFilesToSync overlaps its stats; the result must not depend on
+      // how the work happened to be spread
+      for (let i = 0; i < 60; i++) {
+        writePhoto(`image${i}.jpg`, `content${i}`);
+      }
+      await syncAll();
+
+      const extra = 'newcomer.jpg';
+      writePhoto(extra, 'brand new');
+
+      const files = await repositoryMirror.discoverRepositoryFiles();
+      const toSync = await repositoryMirror.determineFilesToSync(files);
+
+      expect(toSync).toEqual([extra]);
     });
 
     test('should advance the sample cursor so every file is eventually checked', async () => {

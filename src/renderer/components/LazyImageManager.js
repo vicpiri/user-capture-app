@@ -62,32 +62,25 @@
       // Load the image
       if (img.dataset.src) {
         const imageSrc = img.dataset.src;
-        const loadStartTime = Date.now();
 
-        // Set up onload handler to remove spinner when image actually loads
-        img.onload = () => {
-          const loadDuration = Date.now() - loadStartTime;
-
-          // Ensure spinner is visible for at least 200ms so user can see it
-          const minSpinnerDuration = 200;
-          const remainingTime = Math.max(0, minSpinnerDuration - loadDuration);
-
-          setTimeout(() => {
-            img.classList.remove('lazy-image');
-            img.classList.add('lazy-loaded');
-
-            // Also remove 'loading' class from parent wrapper if it exists
-            if (img.parentElement && img.parentElement.classList.contains('loading')) {
-              img.parentElement.classList.remove('loading');
-            }
-          }, remainingTime);
-        };
-
-        // Set up onerror handler
-        img.onerror = () => {
+        // Shown as soon as the image arrives. There used to be a 200ms floor so
+        // the spinner would be seen, which held back every photo that loaded
+        // faster than that, on every row, on every re-render.
+        const settle = (loadedClass) => {
           img.classList.remove('lazy-image');
-          img.classList.add('lazy-error');
+          img.classList.add(loadedClass);
+
+          // Also remove 'loading' class from parent wrapper if it exists
+          if (img.parentElement && img.parentElement.classList.contains('loading')) {
+            img.parentElement.classList.remove('loading');
+          }
         };
+
+        img.onload = () => settle('lazy-loaded');
+
+        // Also clears the wrapper: a spinner left spinning on a broken image
+        // never stops
+        img.onerror = () => settle('lazy-error');
 
         // Start loading the image (spinner will stay visible until onload fires)
         img.src = imageSrc;

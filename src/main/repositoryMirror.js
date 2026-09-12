@@ -57,6 +57,50 @@ class RepositoryMirror extends EventEmitter {
     // Batch configuration
     this.BATCH_SIZE = 50;  // Process 50 files at a time
     this.YIELD_INTERVAL = 100;  // Yield to event loop every 100ms
+
+    // How many filesystem operations to have in flight. The repository is
+    // normally a network or virtual drive, where each call is dominated by
+    // waiting, so overlapping them is what makes a large repository tractable.
+    this.STAT_CONCURRENCY = options.statConcurrency ?? 16;
+    this.COPY_CONCURRENCY = options.copyConcurrency ?? 6;
+
+    // Resolves once the index of already mirrored files is loaded. Asking which
+    // photos exist before that returns almost nothing, and the answer is what
+    // the interface uses to decide whether a user has a repository photo.
+    // Created here rather than in initialize(): the instance is reachable as
+    // soon as it is constructed, and the first question tends to arrive while
+    // the index is still being read.
+    this.indexLoaded = new Promise((resolve) => {
+      this.markIndexLoaded = resolve;
+    });
+
+    this.INDEX_WAIT_TIMEOUT = options.indexWaitTimeout ?? 10000;
+  }
+
+  /**
+   * Wait until the mirror knows what it already holds
+   *
+   * Gives up after a while rather than leaving a caller hanging: an incomplete
+   * answer is better than a request that never returns.
+   *
+   * @returns {Promise<void>}
+   */
+  async whenIndexLoaded() {
+    let timer;
+
+    try {
+      await Promise.race([
+        this.indexLoaded,
+        new Promise((resolve) => {
+          timer = setTimeout(() => {
+            this.logger.warning('Timed out waiting for the mirror index');
+            resolve();
+          }, this.INDEX_WAIT_TIMEOUT);
+        })
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**
@@ -78,6 +122,10 @@ class RepositoryMirror extends EventEmitter {
     } catch (error) {
       this.logger.error('Error initializing repository mirror:', error);
       return false;
+    } finally {
+      // Released even on failure, so nothing waits for an index that will
+      // never arrive
+      this.markIndexLoaded();
     }
   }
 
@@ -236,54 +284,83 @@ class RepositoryMirror extends EventEmitter {
 
   /**
    * Determine which files need to be synced
+   *
+   * Most files are already mirrored and unchanged, and deciding that needs a
+   * stat each. Done one after another over a repository on Google Drive, a few
+   * thousand photos take minutes, during which nothing else about the mirror
+   * makes progress and the interface has no repository photos to show.
    */
   async determineFilesToSync(repositoryFiles) {
     const filesToSync = [];
+    const needsStat = [];
 
-    for (let i = 0; i < repositoryFiles.length; i += this.BATCH_SIZE) {
-      if (this.syncAborted) break;
+    // Decide what can be settled without touching the disk first
+    for (const file of repositoryFiles) {
+      const filenameLower = file.toLowerCase();
+      const mirrorEntry = this.mirrorIndex.get(filenameLower);
 
-      const batch = repositoryFiles.slice(i, i + this.BATCH_SIZE);
-
-      for (const file of batch) {
-        const filenameLower = file.toLowerCase();
-        const mirrorEntry = this.mirrorIndex.get(filenameLower);
-
-        // Check if this file is marked for force re-sync (detected by watcher)
-        if (this.forceResyncFiles.has(filenameLower)) {
-          this.logger.info(`Force re-syncing file detected by watcher: ${file}`);
-          filesToSync.push(file);
-          continue;
-        }
-
-        if (!mirrorEntry || !mirrorEntry.synced) {
-          // File not in mirror or not synced
-          filesToSync.push(file);
-          continue;
-        }
-
-        // Check if file has changed (size or mtime)
-        try {
-          const sourcePath = path.join(this.repositoryPath, file);
-          const stats = await fs.promises.stat(sourcePath);
-
-          if (stats.size !== mirrorEntry.size || stats.mtimeMs !== mirrorEntry.mtime) {
-            // File has changed
-            filesToSync.push(file);
-          }
-        } catch (error) {
-          // File might not exist anymore, skip it
-          this.logger.warning(`Could not stat repository file: ${file}`);
-        }
+      // Check if this file is marked for force re-sync (detected by watcher)
+      if (this.forceResyncFiles.has(filenameLower)) {
+        this.logger.info(`Force re-syncing file detected by watcher: ${file}`);
+        filesToSync.push(file);
+        continue;
       }
 
-      // Yield to event loop between batches
-      if (i + this.BATCH_SIZE < repositoryFiles.length) {
-        await new Promise(resolve => setImmediate(resolve));
+      if (!mirrorEntry || !mirrorEntry.synced) {
+        // File not in mirror or not synced
+        filesToSync.push(file);
+        continue;
       }
+
+      needsStat.push({ file, mirrorEntry });
     }
 
+    // The rest only need a size and mtime comparison, several at a time
+    const changed = await this.mapWithConcurrency(needsStat, this.STAT_CONCURRENCY, async ({ file, mirrorEntry }) => {
+      if (this.syncAborted) {
+        return null;
+      }
+
+      try {
+        const stats = await fs.promises.stat(path.join(this.repositoryPath, file));
+
+        if (stats.size !== mirrorEntry.size || stats.mtimeMs !== mirrorEntry.mtime) {
+          return file;
+        }
+      } catch (error) {
+        // File might not exist anymore, skip it
+        this.logger.warning(`Could not stat repository file: ${file}`);
+      }
+
+      return null;
+    });
+
+    filesToSync.push(...changed.filter(Boolean));
     return filesToSync;
+  }
+
+  /**
+   * Run an async worker over items, a few at a time
+   *
+   * @param {Array} items
+   * @param {number} limit
+   * @param {Function} worker - async (item) => result
+   * @returns {Promise<Array>} Results, in the order of the input
+   * @private
+   */
+  async mapWithConcurrency(items, limit, worker) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+
+    const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex++;
+        results[index] = await worker(items[index]);
+      }
+    });
+
+    await Promise.all(runners);
+    return results;
   }
 
   /**
@@ -291,13 +368,17 @@ class RepositoryMirror extends EventEmitter {
    */
   async syncFiles(filesToSync) {
     let synced = 0;
-    let skipped = 0;
+    const skipped = 0;
     let errors = 0;
+    let processed = 0;
 
-    for (let i = 0; i < filesToSync.length; i++) {
-      if (this.syncAborted) break;
+    // Copies overlap for the same reason the stats do: over a network drive
+    // each one is mostly waiting
+    await this.mapWithConcurrency(filesToSync, this.COPY_CONCURRENCY, async (file) => {
+      if (this.syncAborted) {
+        return;
+      }
 
-      const file = filesToSync[i];
       const filenameLower = file.toLowerCase();
       const sourcePath = path.join(this.repositoryPath, file);
       const destPath = path.join(this.mirrorPath, file);
@@ -326,20 +407,20 @@ class RepositoryMirror extends EventEmitter {
         errors++;
       }
 
-      // Yield to event loop periodically
-      if (i % 10 === 0) {
-        await new Promise(resolve => setImmediate(resolve));
-      }
+      processed++;
 
-      // Emit progress
-      this.emit('sync-progress', {
-        phase: 'syncing',
-        current: i + 1,
-        total: filesToSync.length,
-        synced,
-        errors
-      });
-    }
+      // Emit progress. Reported in batches: one message per file meant an IPC
+      // round trip for every photo in the repository.
+      if (processed % 25 === 0 || processed === filesToSync.length) {
+        this.emit('sync-progress', {
+          phase: 'syncing',
+          current: processed,
+          total: filesToSync.length,
+          synced,
+          errors
+        });
+      }
+    });
 
     return { synced, skipped, errors };
   }
