@@ -22,6 +22,7 @@ class MenuBuilder {
     this.showRepositoryPhotos = context.showRepositoryPhotos;
     this.showRepositoryIndicators = context.showRepositoryIndicators;
     this.showAdditionalActions = context.showAdditionalActions;
+    this.showCaptureHistory = context.showCaptureHistory;
     this.recentProjects = context.recentProjects;
 
     // Functions/callbacks
@@ -404,6 +405,14 @@ class MenuBuilder {
           checked: this.showAdditionalActions,
           click: (menuItem) => {
             this.callbacks.toggleAdditionalActions(menuItem.checked);
+          }
+        },
+        {
+          label: 'Historial de capturas',
+          type: 'checkbox',
+          checked: this.showCaptureHistory,
+          click: (menuItem) => {
+            this.callbacks.toggleCaptureHistory(menuItem.checked);
           }
         },
         { type: 'separator' },

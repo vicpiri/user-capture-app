@@ -185,9 +185,107 @@
 .right-panel {
   flex: 0 0 40%;
   display: flex;
-  flex-direction: column;
   padding: 20px;
   background-color: #1a1f2e;
+  min-height: 0;
+}
+
+/* Viewer column: everything except the capture history strip */
+.capture-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Capture History strip
+   Sits to the right of the viewer and lists every capture of the project,
+   newest first. Hidden unless enabled from the Ver menu. */
+.capture-history {
+  display: none;
+  flex: 0 0 120px;
+  flex-direction: column;
+  margin-left: 16px;
+  min-height: 0;
+}
+
+.capture-history.visible {
+  display: flex;
+}
+
+.capture-history-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a8f9a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 8px;
+  flex: 0 0 auto;
+}
+
+.capture-history-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+  min-height: 0;
+}
+
+.capture-history-empty {
+  display: none;
+  color: #707580;
+  font-size: 12px;
+  text-align: center;
+  padding-top: 12px;
+}
+
+.capture-history-empty.visible {
+  display: block;
+}
+
+/* Thumbnail */
+.capture-history-item {
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #2a2f3e;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.capture-history-item:hover {
+  border-color: #4a7cc7;
+}
+
+.capture-history-item:focus-visible {
+  outline: 2px solid #4a7cc7;
+  outline-offset: 2px;
+}
+
+/* The image currently shown in the large viewer */
+.capture-history-item.current {
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+.capture-history-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.capture-history-item img.loaded {
+  opacity: 1;
 }
 
 /* Image Container */

@@ -1,9 +1,10 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, ExportManager, OrlaExportManager, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, CaptureHistoryManager, ExportManager, OrlaExportManager, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
 
 // Component instances
 let userRowRenderer = null;
 let imageGridManager = null;
+let captureHistoryManager = null;
 let exportManager = null;
 let orlaExportManager = null;
 let imageTagsManager = null;
@@ -29,6 +30,7 @@ let showCapturedPhotos = true;
 let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
 let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
 let showAdditionalActions = true;  // Show/hide additional actions section and related indicators
+let showCaptureHistory = false;  // Show/hide the capture history strip beside the viewer
 let isLoadingRepositoryPhotos = false;  // Track if repository photos are being loaded
 let isLoadingRepositoryIndicators = false;  // Track if repository indicators are being loaded
 let repositorySyncCompleted = false;  // Track if initial repository sync has completed
@@ -72,6 +74,9 @@ const prevImageBtn = document.getElementById('prev-image');
 const nextImageBtn = document.getElementById('next-image');
 const loadingSpinner = document.getElementById('loading-spinner');
 const noProjectPlaceholder = document.getElementById('no-project-placeholder');
+const captureHistoryPanel = document.getElementById('capture-history');
+const captureHistoryList = document.getElementById('capture-history-list');
+const captureHistoryEmpty = document.getElementById('capture-history-empty');
 
 // Modal DOM elements (legacy - will be replaced by modal instances)
 const progressModal = document.getElementById('progress-modal');
@@ -101,6 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize image grid manager
   initializeImageGridManager();
+
+  // Initialize capture history strip
+  initializeCaptureHistoryManager();
 
   // Initialize export manager
   initializeExportManager();
@@ -230,9 +238,38 @@ function initializeImageGridManager() {
       await loadImageTags();
       // Update link button state
       updateLinkButtonState();
+      // Keep the history strip pointing at whatever the viewer shows
+      if (captureHistoryManager) {
+        captureHistoryManager.setCurrentIndex(imageGridManager.getCurrentIndex());
+      }
+    },
+    onImagesLoaded: (images, currentIndex) => {
+      if (captureHistoryManager) {
+        captureHistoryManager.render(images, currentIndex);
+      }
     }
   });
 
+}
+
+// Initialize capture history strip
+function initializeCaptureHistoryManager() {
+  captureHistoryManager = new CaptureHistoryManager({
+    panel: captureHistoryPanel,
+    list: captureHistoryList,
+    empty: captureHistoryEmpty,
+    thumbnailSize: window.imageUrl.INDICATOR_SIZE,
+    onSelect: (index) => {
+      // Moving the viewer's cursor is all this does; the selection then behaves
+      // exactly as if the arrows had been used
+      if (imageGridManager) {
+        imageGridManager.showImageAtIndex(index);
+      }
+    }
+  });
+
+  captureHistoryManager.init();
+  captureHistoryManager.setVisible(showCaptureHistory);
 }
 
 // Initialize export manager
@@ -421,6 +458,7 @@ function initializeMenuEventManager() {
     setShowRepositoryPhotos: (value) => { showRepositoryPhotos = value; },
     setShowRepositoryIndicators: (value) => { showRepositoryIndicators = value; },
     setShowAdditionalActions: (value) => { showAdditionalActions = value; },
+    setShowCaptureHistory: (value) => { showCaptureHistory = value; },
     setIsLoadingRepositoryPhotos: (value) => { isLoadingRepositoryPhotos = value; },
     setIsLoadingRepositoryIndicators: (value) => { isLoadingRepositoryIndicators = value; },
     setRepositorySyncCompleted: (value) => { repositorySyncCompleted = value; },
@@ -457,6 +495,11 @@ function initializeMenuEventManager() {
     onUpdateUserRowRenderer: updateUserRowRendererConfig,
     onLoadUsers: loadUsers,
     onLoadRepositoryData: loadRepositoryDataInBackground,
+    onToggleCaptureHistory: (enabled) => {
+      if (captureHistoryManager) {
+        captureHistoryManager.setVisible(enabled);
+      }
+    },
 
     // DOM elements
     additionalActionsSection: document.querySelector('.additional-actions'),

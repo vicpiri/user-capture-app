@@ -36,7 +36,8 @@ describe('MenuEventManager', () => {
       onMenuUpdateXML: jest.fn(),
       onMenuAddImageTag: jest.fn(),
       onMenuShowTaggedImages: jest.fn(),
-      onMenuToggleAdditionalActions: jest.fn()
+      onMenuToggleAdditionalActions: jest.fn(),
+      onMenuToggleCaptureHistory: jest.fn()
     };
 
     // Mock config
@@ -522,6 +523,35 @@ describe('MenuEventManager', () => {
       const handler = mockElectronAPI.onMenuToggleAdditionalActions.mock.calls[0][0];
 
       expect(() => handler(true)).not.toThrow();
+    });
+
+    test('should toggle the capture history strip', () => {
+      mockConfig.setShowCaptureHistory = jest.fn();
+      mockConfig.onToggleCaptureHistory = jest.fn();
+      manager = new MenuEventManager(mockConfig);
+      manager.init();
+
+      const handler = mockElectronAPI.onMenuToggleCaptureHistory.mock.calls[0][0];
+
+      handler(true);
+      expect(mockConfig.setShowCaptureHistory).toHaveBeenCalledWith(true);
+      expect(mockConfig.onToggleCaptureHistory).toHaveBeenCalledWith(true);
+
+      handler(false);
+      expect(mockConfig.onToggleCaptureHistory).toHaveBeenLastCalledWith(false);
+    });
+
+    test('should apply the saved capture history preference on startup', () => {
+      mockConfig.setShowCaptureHistory = jest.fn();
+      mockConfig.onToggleCaptureHistory = jest.fn();
+      manager = new MenuEventManager(mockConfig);
+      manager.init();
+
+      const handler = mockElectronAPI.onInitialDisplayPreferences.mock.calls[0][0];
+      handler({ showCaptureHistory: true });
+
+      expect(mockConfig.setShowCaptureHistory).toHaveBeenCalledWith(true);
+      expect(mockConfig.onToggleCaptureHistory).toHaveBeenCalledWith(true);
     });
   });
 

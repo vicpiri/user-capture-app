@@ -376,6 +376,81 @@ describe('ImageGridManager', () => {
     });
   });
 
+  describe('onImagesLoaded()', () => {
+    let mockOnImagesLoaded;
+
+    beforeEach(() => {
+      mockOnImagesLoaded = jest.fn();
+      manager = new ImageGridManager({
+        imagePreviewContainer: mockContainer,
+        currentImage: mockImage,
+        getImages: mockGetImages,
+        onImageChange: mockOnImageChange,
+        onImagesLoaded: mockOnImagesLoaded
+      });
+    });
+
+    test('should report the list and the cursor after loading', async () => {
+      mockGetImages.mockResolvedValue({
+        success: true,
+        images: ['/path/image1.jpg', '/path/image2.jpg']
+      });
+
+      await manager.loadImages();
+
+      expect(mockOnImagesLoaded).toHaveBeenCalledWith(
+        ['/path/image1.jpg', '/path/image2.jpg'],
+        0
+      );
+    });
+
+    test('should report the cursor jumping to a newly captured image', async () => {
+      mockGetImages.mockResolvedValue({ success: true, images: ['/path/image1.jpg'] });
+      await manager.loadImages();
+      manager.currentIndex = 0;
+
+      mockGetImages.mockResolvedValue({
+        success: true,
+        images: ['/path/image2.jpg', '/path/image1.jpg']
+      });
+      await manager.loadImages(true);
+
+      expect(mockOnImagesLoaded).toHaveBeenLastCalledWith(
+        ['/path/image2.jpg', '/path/image1.jpg'],
+        0
+      );
+    });
+
+    test('should report an empty list, which onImageChange cannot', async () => {
+      mockGetImages.mockResolvedValue({ success: true, images: [] });
+
+      await manager.loadImages();
+
+      expect(mockOnImagesLoaded).toHaveBeenCalledWith([], 0);
+      expect(mockOnImageChange).not.toHaveBeenCalled();
+    });
+
+    test('should report the list emptying on clear()', async () => {
+      mockGetImages.mockResolvedValue({ success: true, images: ['/path/image1.jpg'] });
+      await manager.loadImages();
+
+      manager.clear();
+
+      expect(mockOnImagesLoaded).toHaveBeenLastCalledWith([], 0);
+    });
+
+    test('should default to a no-op when not configured', async () => {
+      const withoutCallback = new ImageGridManager({
+        imagePreviewContainer: mockContainer,
+        currentImage: mockImage,
+        getImages: mockGetImages
+      });
+      mockGetImages.mockResolvedValue({ success: true, images: ['/path/image1.jpg'] });
+
+      await expect(withoutCallback.loadImages()).resolves.toBe(true);
+    });
+  });
+
   describe('Edge Cases', () => {
     test('should handle manager without DOM elements', () => {
       const managerNoDom = new ImageGridManager({

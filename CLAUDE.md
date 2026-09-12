@@ -52,6 +52,7 @@ user-capture-app/
 │   │   │   │   ├── NewProjectModal.js       # Modal de creación de proyectos
 │   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
 │   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
+│   │   │   ├── CaptureHistoryManager.js # Tira de miniaturas del historial de capturas
 │   │   │   ├── DragDropManager.js       # Gestión de drag & drop de imágenes
 │   │   │   ├── ExportManager.js         # Coordinador de exportaciones (CSV/imágenes)
 │   │   │   ├── ImageGridManager.js      # Gestión de grid de imágenes capturadas
@@ -359,6 +360,23 @@ Todos los modales extienden `BaseModal` para comportamiento consistente.
 - Carga inmediata de todas las imágenes (fallback)
 
 **Optimización**: Reduce carga inicial de página con muchas imágenes de usuario
+
+#### CaptureHistoryManager.js
+**Propósito**: Tira vertical de miniaturas a la derecha del visor grande, con el
+historial de capturas del proyecto
+
+**Funcionalidades**:
+- Lista todas las capturas de la carpeta `imports`, las más recientes primero
+- Al pulsar una miniatura, el visor grande se desplaza hasta esa foto
+- Marca la miniatura que el visor está mostrando y la trae a la vista si queda fuera
+- Carga diferida de las miniaturas con IntersectionObserver
+- Se activa y desactiva desde Ver > Historial de capturas (preferencia persistente)
+
+**Nota**: no tiene fuente de datos propia. Es un índice visual del mismo array
+que ya navega `ImageGridManager`, así que pulsar una miniatura sólo mueve el
+cursor del visor; la foto queda seleccionada para enlazarla igual que si se
+hubiera llegado a ella con las flechas. `ImageGridManager` avisa de los cambios
+de lista con `onImagesLoaded` y de los de cursor con `onImageChange`.
 
 #### ImageGridManager.js
 **Propósito**: Gestión del grid de imágenes capturadas del usuario seleccionado

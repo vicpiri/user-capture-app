@@ -32,6 +32,9 @@
       // Required callbacks
       this.getImages = config.getImages; // Function to fetch images from backend
       this.onImageChange = config.onImageChange || (() => {}); // Called when image changes (for tag loading)
+      // Called when the list itself changes, which onImageChange cannot report:
+      // it only fires for the cursor, and not at all when the list empties
+      this.onImagesLoaded = config.onImagesLoaded || (() => {});
 
       // State
       this.images = [];
@@ -62,9 +65,12 @@
             if (showLatest && this.images.length > previousLength) {
               this.currentIndex = 0; // Newest image is first
             }
+            this.onImagesLoaded(this.images, this.currentIndex);
             this.showPreview();
             return true;
           }
+
+          this.onImagesLoaded(this.images, this.currentIndex);
         }
 
         return false;
@@ -233,6 +239,7 @@
       this.images = [];
       this.currentIndex = 0;
       this.hide();
+      this.onImagesLoaded(this.images, this.currentIndex);
     }
   }
 

@@ -106,6 +106,7 @@
 
     <!-- Right Panel: Image Capture -->
     <div class="right-panel">
+      <div class="capture-workspace">
       <!-- Image Preview -->
       <div class="image-container">
         <div id="image-preview-container" class="image-preview-container">
@@ -173,6 +174,18 @@
           </button>
         </div>
       </div>
+      </div>
+
+      <!-- Recent captures history (toggled from the Ver menu) -->
+      <aside id="capture-history" class="capture-history">
+        <div class="capture-history-header">Historial</div>
+        <div id="capture-history-list" class="capture-history-list">
+          <!-- Thumbnails are populated by CaptureHistoryManager -->
+        </div>
+        <div id="capture-history-empty" class="capture-history-empty">
+          <p>Sin capturas</p>
+        </div>
+      </aside>
     </div>
   </div>
 
@@ -657,6 +670,7 @@
   <script src="components/UserRowRenderer.js"></script>
   <script src="components/VirtualScrollManager.js"></script>
   <script src="components/ImageGridManager.js"></script>
+  <script src="components/CaptureHistoryManager.js"></script>
   <script src="components/ExportManager.js"></script>
   <script src="components/OrlaExportManager.js"></script>
   <script src="components/ImageTagsManager.js"></script>

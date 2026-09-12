@@ -95,6 +95,7 @@ let showCapturedPhotos = true;
 let showRepositoryPhotos = false;
 let showRepositoryIndicators = false;
 let showAdditionalActions = true;
+let showCaptureHistory = false;
 let availableCameras = [];
 let selectedCameraId = null;
 let repositoryMirror = null; // Repository mirror manager
@@ -135,6 +136,26 @@ function getImageRoots() {
   return roots;
 }
 
+/**
+ * Persist every display preference
+ *
+ * Each toggle saves the whole set, so this reads the current state instead of
+ * taking a snapshot per call site: a preference missing from one of them would
+ * be silently reset the next time that other toggle was used.
+ */
+function persistDisplayPreferences() {
+  saveDisplayPreferences({
+    showDuplicatesOnly,
+    showCardPrintRequestsOnly,
+    showPublicationRequestsOnly,
+    showCapturedPhotos,
+    showRepositoryPhotos,
+    showRepositoryIndicators,
+    showAdditionalActions,
+    showCaptureHistory
+  });
+}
+
 function createMenu() {
   menuBuilder = new MenuBuilder({
     // Windows
@@ -153,6 +174,7 @@ function createMenu() {
     showRepositoryPhotos,
     showRepositoryIndicators,
     showAdditionalActions,
+    showCaptureHistory,
     recentProjects,
 
     // Logger
@@ -200,15 +222,7 @@ function createMenu() {
           showCardPrintRequestsOnly = false;
           showPublicationRequestsOnly = false;
         }
-        saveDisplayPreferences({
-          showDuplicatesOnly,
-          showCardPrintRequestsOnly,
-          showPublicationRequestsOnly,
-          showCapturedPhotos,
-          showRepositoryPhotos,
-          showRepositoryIndicators,
-          showAdditionalActions
-        });
+        persistDisplayPreferences();
         // Update menuBuilder properties and rebuild menu to update all checkboxes
         menuBuilder.showDuplicatesOnly = showDuplicatesOnly;
         menuBuilder.showCardPrintRequestsOnly = showCardPrintRequestsOnly;
@@ -226,15 +240,7 @@ function createMenu() {
           showDuplicatesOnly = false;
           showPublicationRequestsOnly = false;
         }
-        saveDisplayPreferences({
-          showDuplicatesOnly,
-          showCardPrintRequestsOnly,
-          showPublicationRequestsOnly,
-          showCapturedPhotos,
-          showRepositoryPhotos,
-          showRepositoryIndicators,
-          showAdditionalActions
-        });
+        persistDisplayPreferences();
         // Update menuBuilder properties and rebuild menu to update all checkboxes
         menuBuilder.showDuplicatesOnly = showDuplicatesOnly;
         menuBuilder.showCardPrintRequestsOnly = showCardPrintRequestsOnly;
@@ -252,15 +258,7 @@ function createMenu() {
           showDuplicatesOnly = false;
           showCardPrintRequestsOnly = false;
         }
-        saveDisplayPreferences({
-          showDuplicatesOnly,
-          showCardPrintRequestsOnly,
-          showPublicationRequestsOnly,
-          showCapturedPhotos,
-          showRepositoryPhotos,
-          showRepositoryIndicators,
-          showAdditionalActions
-        });
+        persistDisplayPreferences();
         // Update menuBuilder properties and rebuild menu to update all checkboxes
         menuBuilder.showDuplicatesOnly = showDuplicatesOnly;
         menuBuilder.showCardPrintRequestsOnly = showCardPrintRequestsOnly;
@@ -273,15 +271,7 @@ function createMenu() {
       },
       toggleCapturedPhotos: (checked) => {
         showCapturedPhotos = checked;
-        saveDisplayPreferences({
-          showDuplicatesOnly,
-          showCardPrintRequestsOnly,
-          showPublicationRequestsOnly,
-          showCapturedPhotos,
-          showRepositoryPhotos,
-          showRepositoryIndicators,
-          showAdditionalActions
-        });
+        persistDisplayPreferences();
         const mainWindow = mainWindowManager.getWindow();
         if (mainWindow) {
           mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
@@ -289,15 +279,7 @@ function createMenu() {
       },
       toggleRepositoryPhotos: async (checked) => {
         showRepositoryPhotos = checked;
-        saveDisplayPreferences({
-          showDuplicatesOnly,
-          showCardPrintRequestsOnly,
-          showPublicationRequestsOnly,
-          showCapturedPhotos,
-          showRepositoryPhotos,
-          showRepositoryIndicators,
-          showAdditionalActions
-        });
+        persistDisplayPreferences();
         if (showRepositoryPhotos) {
           logger.info('[MENU] Mostrar imágenes del depósito activated');
           await ensureRepositoryMirrorStarted();
@@ -309,15 +291,7 @@ function createMenu() {
       },
       toggleRepositoryIndicators: async (checked) => {
         showRepositoryIndicators = checked;
-        saveDisplayPreferences({
-          showDuplicatesOnly,
-          showCardPrintRequestsOnly,
-          showPublicationRequestsOnly,
-          showCapturedPhotos,
-          showRepositoryPhotos,
-          showRepositoryIndicators,
-          showAdditionalActions
-        });
+        persistDisplayPreferences();
         if (showRepositoryIndicators) {
           await ensureRepositoryMirrorStarted();
         }
@@ -328,18 +302,18 @@ function createMenu() {
       },
       toggleAdditionalActions: (checked) => {
         showAdditionalActions = checked;
-        saveDisplayPreferences({
-          showDuplicatesOnly,
-          showCardPrintRequestsOnly,
-          showPublicationRequestsOnly,
-          showCapturedPhotos,
-          showRepositoryPhotos,
-          showRepositoryIndicators,
-          showAdditionalActions
-        });
+        persistDisplayPreferences();
         const mainWindow = mainWindowManager.getWindow();
         if (mainWindow) {
           mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
+        }
+      },
+      toggleCaptureHistory: (checked) => {
+        showCaptureHistory = checked;
+        persistDisplayPreferences();
+        const mainWindow = mainWindowManager.getWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('menu-toggle-capture-history', showCaptureHistory);
         }
       },
       refreshRepositoryImages: async () => {
@@ -397,7 +371,8 @@ function createWindow() {
       showCapturedPhotos,
       showRepositoryPhotos,
       showRepositoryIndicators,
-      showAdditionalActions
+      showAdditionalActions,
+      showCaptureHistory
     });
 
     // Auto-open most recent project if available
@@ -904,6 +879,7 @@ app.whenReady().then(() => {
   showRepositoryPhotos = config.showRepositoryPhotos ?? false;
   showRepositoryIndicators = config.showRepositoryIndicators ?? false;
   showAdditionalActions = config.showAdditionalActions ?? true;
+  showCaptureHistory = config.showCaptureHistory ?? false;
 
   // Serve user photos before any window can ask for one
   thumbnailService = new ThumbnailService(

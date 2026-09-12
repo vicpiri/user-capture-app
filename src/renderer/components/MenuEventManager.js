@@ -26,6 +26,7 @@
       this.setShowRepositoryPhotos = config.setShowRepositoryPhotos || ((value) => {});
       this.setShowRepositoryIndicators = config.setShowRepositoryIndicators || ((value) => {});
       this.setShowAdditionalActions = config.setShowAdditionalActions || ((value) => {});
+      this.setShowCaptureHistory = config.setShowCaptureHistory || ((value) => {});
       this.setIsLoadingRepositoryPhotos = config.setIsLoadingRepositoryPhotos || ((value) => {});
       this.setIsLoadingRepositoryIndicators = config.setIsLoadingRepositoryIndicators || ((value) => {});
       this.setRepositorySyncCompleted = config.setRepositorySyncCompleted || ((value) => {});
@@ -61,6 +62,7 @@
       this.onUpdateUserRowRenderer = config.onUpdateUserRowRenderer || (() => {});
       this.onLoadUsers = config.onLoadUsers || (() => {});
       this.onLoadRepositoryData = config.onLoadRepositoryData || (() => {});
+      this.onToggleCaptureHistory = config.onToggleCaptureHistory || (() => {});
       this.getCurrentFilters = config.getCurrentFilters || (() => ({}));
 
       // DOM elements
@@ -125,6 +127,10 @@
         if (this.additionalActionsSection) {
           this.additionalActionsSection.style.display = prefs.showAdditionalActions ? 'block' : 'none';
         }
+
+        // Set initial visibility of the capture history strip
+        this.setShowCaptureHistory(prefs.showCaptureHistory);
+        this.onToggleCaptureHistory(prefs.showCaptureHistory);
 
         // If repository preferences are enabled and users are already loaded,
         // trigger repository data loading (this handles the race condition on startup)
@@ -379,6 +385,11 @@
         // Update UserRowRenderer config and re-render table
         this.onUpdateUserRowRenderer();
         this.onLoadUsers(this.getCurrentFilters());
+      });
+
+      this.electronAPI.onMenuToggleCaptureHistory((enabled) => {
+        this.setShowCaptureHistory(enabled);
+        this.onToggleCaptureHistory(enabled);
       });
     }
 

@@ -221,6 +221,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-toggle-additional-actions', (event, enabled) => callback(enabled));
   },
 
+  onMenuToggleCaptureHistory: (callback) => {
+    ipcRenderer.on('menu-toggle-capture-history', (event, enabled) => callback(enabled));
+  },
+
   onRepositoryPathChanged: (callback) => {
     ipcRenderer.on('repository-path-changed', callback);
   },
