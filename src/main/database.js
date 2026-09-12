@@ -1,4 +1,8 @@
-const sqlite3 = require('sqlite3').verbose();
+// verbose() captures a stack trace for every statement to improve error
+// messages. Worth it while developing, pure overhead in a release build.
+const sqlite3 = process.argv.includes('--dev')
+  ? require('sqlite3').verbose()
+  : require('sqlite3');
 const path = require('path');
 
 class DatabaseManager {
@@ -14,6 +18,10 @@ class DatabaseManager {
           reject(err);
         } else {
           this.db.run('PRAGMA journal_mode = WAL');
+          // With WAL, NORMAL drops the fsync on every commit while still being
+          // crash safe: only a power loss can lose the most recent commits, and
+          // the database itself cannot be corrupted.
+          this.db.run('PRAGMA synchronous = NORMAL');
           try {
             await this.createTables();
             resolve();
@@ -90,8 +98,16 @@ class DatabaseManager {
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_type ON users(type)');
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_nia ON users(nia)');
 
-        // Composite index for search operations (optimizes LIKE queries on multiple fields)
-        this.db.run('CREATE INDEX IF NOT EXISTS idx_users_search ON users(first_name, last_name1, last_name2, nia)');
+        // Staff are looked up by document as often as students are by NIA
+        this.db.run('CREATE INDEX IF NOT EXISTS idx_users_document ON users(document)');
+
+        // Matches the ORDER BY every user listing uses, so the rows come back
+        // already sorted instead of being sorted on each load
+        this.db.run('CREATE INDEX IF NOT EXISTS idx_users_name ON users(last_name1, last_name2, first_name)');
+
+        // Replaced: it was meant for search, but searches use LIKE '%term%',
+        // which no index can serve, so it only cost time on every insert
+        this.db.run('DROP INDEX IF EXISTS idx_users_search');
 
         // Index for image path lookups (optimizes linking and unlinking operations)
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_image ON users(image_path)');
@@ -427,6 +443,49 @@ class DatabaseManager {
     });
   }
 
+  /**
+   * Look up users by NIA or document in as few queries as possible
+   *
+   * Card print and publication requests are files named after an identifier.
+   * Resolving them one at a time cost two queries per file.
+   *
+   * @param {Array<string>} identifiers - NIAs and/or documents
+   * @returns {Promise<Array>} Matching users, each with group_name
+   */
+  async getUsersByIdentifiers(identifiers) {
+    if (!identifiers || identifiers.length === 0) {
+      return [];
+    }
+
+    // Each identifier is bound twice, and SQLite caps how many parameters a
+    // statement may have, so long lists go in chunks
+    const CHUNK_SIZE = 400;
+    const results = [];
+
+    for (let i = 0; i < identifiers.length; i += CHUNK_SIZE) {
+      const chunk = identifiers.slice(i, i + CHUNK_SIZE);
+      const placeholders = chunk.map(() => '?').join(',');
+
+      const rows = await new Promise((resolve, reject) => {
+        this.db.all(
+          `SELECT u.*, g.name as group_name
+           FROM users u
+           LEFT JOIN groups g ON u.group_code = g.code
+           WHERE u.nia IN (${placeholders}) OR u.document IN (${placeholders})`,
+          [...chunk, ...chunk],
+          (err, found) => {
+            if (err) reject(err);
+            else resolve(found || []);
+          }
+        );
+      });
+
+      results.push(...rows);
+    }
+
+    return results;
+  }
+
   async getGroups() {
     return new Promise((resolve, reject) => {
       this.db.all('SELECT * FROM groups ORDER BY code', [], (err, rows) => {
@@ -663,7 +722,10 @@ class DatabaseManager {
               return;
             }
 
-            // Insert all relationships into backup table
+            // One transaction for the batch. Without it each row commits on its
+            // own, which means a disk flush per relationship.
+            this.db.run('BEGIN TRANSACTION');
+
             const stmt = this.db.prepare(
               'INSERT INTO image_relationships_backup (backup_date, user_id, image_path) VALUES (?, ?, ?)'
             );
@@ -677,15 +739,21 @@ class DatabaseManager {
                   console.error('[Database] Error inserting backup:', err);
                   hasError = true;
                   stmt.finalize();
-                  reject(err);
+                  this.db.run('ROLLBACK', () => reject(err));
                   return;
                 }
 
                 completed++;
                 if (completed === users.length && !hasError) {
                   stmt.finalize();
-                  console.log('[Database] Successfully backed up', users.length, 'relationships');
-                  resolve({ backupDate, count: users.length });
+                  this.db.run('COMMIT', (commitErr) => {
+                    if (commitErr) {
+                      reject(commitErr);
+                      return;
+                    }
+                    console.log('[Database] Successfully backed up', users.length, 'relationships');
+                    resolve({ backupDate, count: users.length });
+                  });
                 }
               });
             });
@@ -744,7 +812,9 @@ class DatabaseManager {
 
               console.log('[Database] Cleared existing image paths');
 
-              // Restore backed up relationships
+              // One transaction for the batch, as with the backup above
+              this.db.run('BEGIN TRANSACTION');
+
               const stmt = this.db.prepare('UPDATE users SET image_path = ? WHERE id = ?');
               let completed = 0;
               let hasError = false;
@@ -755,15 +825,21 @@ class DatabaseManager {
                     console.error('[Database] Error restoring backup:', err);
                     hasError = true;
                     stmt.finalize();
-                    reject(err);
+                    this.db.run('ROLLBACK', () => reject(err));
                     return;
                   }
 
                   completed++;
                   if (completed === backups.length && !hasError) {
                     stmt.finalize();
-                    console.log('[Database] Successfully restored', backups.length, 'relationships');
-                    resolve({ restored: backups.length });
+                    this.db.run('COMMIT', (commitErr) => {
+                      if (commitErr) {
+                        reject(commitErr);
+                        return;
+                      }
+                      console.log('[Database] Successfully restored', backups.length, 'relationships');
+                      resolve({ restored: backups.length });
+                    });
                   }
                 });
               });

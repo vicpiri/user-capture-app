@@ -622,6 +622,9 @@ function registerProjectHandlers(context) {
       let added = 0;
       let skipped = 0;
 
+      // Gathered while walking the XML and imported together afterwards
+      const usersToAdd = [];
+
       logger.info(`Processing ${usersToProcess.size} users from XML`);
       logger.info(`Current users in database (from snapshot): ${currentUsers.length}`);
 
@@ -683,35 +686,25 @@ function registerProjectHandlers(context) {
             skipped++;
           }
         } else {
-          // This is a completely new user - add them
+          // This is a completely new user - collect them, see below
           logger.info(`Adding new user: ${newUser.first_name} ${newUser.last_name1} (type: ${newUser.type})`);
-
-          // Add new user - convert to format expected by importUsers
-          if (newUser.type === 'student') {
-            await state.dbManager.importUsers({
-              groups: [],
-              students: [newUser],
-              teachers: [],
-              nonTeachingStaff: []
-            });
-          } else if (newUser.type === 'teacher') {
-            await state.dbManager.importUsers({
-              groups: [],
-              students: [],
-              teachers: [newUser],
-              nonTeachingStaff: []
-            });
-          } else if (newUser.type === 'non_teaching_staff') {
-            await state.dbManager.importUsers({
-              groups: [],
-              students: [],
-              teachers: [],
-              nonTeachingStaff: [newUser]
-            });
-          }
-          added++;
-          logger.info(`Added new user ${newUser.first_name} ${newUser.last_name1}`);
+          usersToAdd.push(newUser);
         }
+      }
+
+      // Imported in one go rather than one call per user. Each importUsers call
+      // opens its own transaction and re-inserts every group, so adding a
+      // hundred users used to mean a hundred commits.
+      if (usersToAdd.length > 0) {
+        await state.dbManager.importUsers({
+          groups: [],
+          students: usersToAdd.filter(user => user.type === 'student'),
+          teachers: usersToAdd.filter(user => user.type === 'teacher'),
+          nonTeachingStaff: usersToAdd.filter(user => user.type === 'non_teaching_staff')
+        });
+
+        added = usersToAdd.length;
+        logger.success(`Added ${added} new users`);
       }
 
       logger.success(`Users processed: ${updated} updated, ${added} added, ${skipped} skipped (no changes)`);

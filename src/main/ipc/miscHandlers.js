@@ -736,41 +736,40 @@ function registerMiscHandlers(context) {
         return { success: true, users: [] };
       }
 
-      // Get user information for each file
-      const users = [];
-      for (const fileId of files) {
-        // File name is the user ID (NIA or document)
-        // Try to find user by NIA first, then by document
-        let user = null;
+      // Resolve every file name in one lookup instead of two queries each
+      const matchedUsers = await state.dbManager.getUsersByIdentifiers(files);
 
-        // Try NIA (students)
-        const studentResult = await state.dbManager.getUserByNIA(fileId);
-        if (studentResult) {
-          user = studentResult;
-        } else {
-          // Try document (teachers/staff)
-          const staffResult = await state.dbManager.getUserByDocument(fileId);
-          if (staffResult) {
-            user = staffResult;
-          }
-        }
+      const usersByIdentifier = new Map();
+      matchedUsers.forEach(user => {
+        if (user.nia) usersByIdentifier.set(user.nia, user);
+        if (user.document) usersByIdentifier.set(user.document, user);
+      });
 
-        if (user) {
-          // Get file modification time (when it was moved to Printed-ID)
+      // File modification time is when the card was moved to Printed-ID
+      const printedDates = await Promise.all(
+        files.map(async (fileId) => {
           try {
-            const filePath = path.join(printedIdFolder, fileId);
-            const stats = await fs.stat(filePath);
-            user.printed_date = stats.mtime.toISOString();
+            const stats = await fs.stat(path.join(printedIdFolder, fileId));
+            return stats.mtime.toISOString();
           } catch (error) {
             logger.warning(`[Card Print] Could not get file stats for ${fileId}: ${error.message}`);
-            user.printed_date = null;
+            return null;
           }
+        })
+      );
 
-          users.push(user);
-        } else {
+      const users = [];
+      files.forEach((fileId, index) => {
+        const user = usersByIdentifier.get(fileId);
+
+        if (!user) {
           logger.warning(`[Card Print] User not found for printed card ID: ${fileId}`);
+          return;
         }
-      }
+
+        user.printed_date = printedDates[index];
+        users.push(user);
+      });
 
       // Sort by printed date (newest first)
       users.sort((a, b) => {
