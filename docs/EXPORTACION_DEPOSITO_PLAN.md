@@ -1,7 +1,8 @@
 # Exportación al depósito: escritura segura y conservación de lo reemplazado
 
-**Estado**: 🔧 Fase 1 implementada (2026-09-12), pendiente de la prueba en real.
+**Estado**: ✅ Fase 1 implementada y probada en real (2026-09-12).
 Fases 2 y 3 sin implementar.
+**Depósito de pruebas**: `G:\Mi unidad\_Borrar`, utilizable libremente.
 **Redactado**: 2026-09-12. **Revisado**: 2026-09-12 (la fase 2 pasa de copiar
 a mover; la fase 1 absorbe el arreglo de la "copia original").
 **Alcance**: `Archivo > Exportar > Imágenes capturadas al depósito`.
@@ -45,13 +46,53 @@ Dos hechos del mirror que sostienen el diseño, comprobados en el código:
 
 Independiente de las demás y la más urgente.
 
-> **Implementada** el 2026-09-12 en `exportHandlers.js`: `writeFileAtomically()`,
-> `renameWithRetry()`, `removeOrphanTempExports()` y `buildOriginalCopy()`, todas
-> cubiertas en `tests/unit/main/exportHandlers.test.js`. Queda **pendiente la
-> prueba en real** contra Google Drive File Stream, que no puede hacerse sin
-> exportar de verdad: ver Riesgos. Y sigue abierta la decisión sobre el EXIF,
-> que ahora ya no es hipotética: con la copia exacta, los metadatos de las fotos
-> de cámara o móvil llegan al depósito.
+> **Implementada y probada en real** el 2026-09-12 en `exportHandlers.js`:
+> `writeFileAtomically()`, `renameWithRetry()`, `removeOrphanTempExports()` y
+> `buildOriginalCopy()`, cubiertas en `tests/unit/main/exportHandlers.test.js`.
+> Ver "Resultado de la prueba en real" más abajo.
+
+### Resultado de la prueba en real
+
+Dos exportaciones del grupo 1BACB (33 imágenes) contra el depósito de pruebas
+`G:\Mi unidad\_Borrar`: la primera en modo copia original, la segunda
+redimensionando, para forzar bytes distintos sobre los mismos nombres.
+
+**`fs.rename` sobre File Stream funciona, y sustituye en el sitio.** Tras
+sobrescribir, la fecha de **creación** de cada archivo se mantuvo (23:28:20) y
+solo cambió la de modificación (23:32:30). Es decir, Windows y File Stream lo
+tratan como reemplazar el contenido del archivo existente, no como borrarlo y
+crear otro. Es la señal que se buscaba: apunta a que Drive lo verá como una
+revisión nueva del mismo archivo y conservará el historial. **No confirmado a
+nivel de Drive**: la API no permitió identificar con seguridad la misma carpeta
+(el `_Borrar` que devuelve la búsqueda está en una unidad compartida, no en
+"Mi unidad"). Queda comprobarlo en la web con "Gestionar versiones"; los 33
+archivos de la prueba tienen exactamente dos versiones cada uno y sirven de
+muestra.
+
+**Sin residuos.** Ningún `.tmp` en la carpeta tras ninguna de las dos
+exportaciones, y ninguna línea de limpieza de huérfanos en el log, que es lo
+esperado cuando nada se interrumpe.
+
+**La copia exacta afecta a muchas menos fotos de las previstas.** De 120
+archivos de `imports` muestreados, **115 traen `orientation=8`**: están
+guardados en 2400×1600 y deben verse en 1600×2400. La rotación no era un adorno,
+es necesaria, y esas fotos se recodifican por fuerza. En el grupo exportado solo
+2 de 33 salieron byte a byte idénticas. El arreglo sigue mereciendo la pena
+—quien se recodifica lo hace ahora a calidad 95 en vez de 80— pero la "copia
+exacta" es minoritaria con las cámaras que se están usando. Verificado además
+que las 33 salieron en vertical y sin etiqueta de giro residual.
+
+**La decisión del EXIF queda casi resuelta sola.** Como el 96% de las fotos pasa
+por la rotación, y `sharp` no conserva metadatos al recodificar, solo llegan al
+depósito los EXIF de las que ya venían derechas: 2 de 33 en la primera
+exportación, 0 tras la segunda. La exposición es pequeña; salvo que se quiera
+garantía total, no compensa añadir una librería.
+
+**Nota para la fase 2.** La comprobación de "contenido idéntico" sigue siendo
+válida pese a la recodificación: `sharp` es determinista con la misma entrada y
+las mismas opciones, así que reexportar la misma foto produce los mismos bytes.
+Depende de la versión de sharp/libvips, así que tras actualizarla la primera
+exportación archivará todo una vez.
 
 ### Problema
 
@@ -291,11 +332,11 @@ solo tiene sentido si reexportar lo mismo produce lo mismo.
 
 ## Riesgos y cosas a verificar en real
 
-**`fs.rename` sobre Google Drive File Stream.** No es POSIX. Hay que comprobar en
-la instalación real que el renombrado sobre un destino existente funciona y que
-los otros equipos no ven un estado intermedio. Si no se comportara bien, la
-alternativa es escribir el `.tmp` y hacer `copyFile` + `unlink`, que ya no es
-atómico pero al menos no deja el destino a medias durante la generación de la
+**`fs.rename` sobre Google Drive File Stream.** ✅ Comprobado: funciona sobre un
+destino existente y sustituye el contenido en el sitio. Queda sin comprobar que
+los otros equipos no vean un estado intermedio, lo que exige dos puestos a la
+vez. Si algún día se torciera, la alternativa es `copyFile` + `unlink`, que ya no
+es atómico pero al menos no deja el destino a medias durante la generación de la
 imagen.
 
 **Qué hace Drive con el archivo pisado por un `rename`.** Drive guarda revisiones
