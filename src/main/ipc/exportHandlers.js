@@ -362,7 +362,7 @@ function registerExportHandlers(context) {
       // Use the filtered list for export
       users = usersWithRepositoryImages;
 
-      // Create CSV content with exact field order from claude.md
+      // Create CSV content with exact field order from CLAUDE.md
       const csvHeader = 'id;password;userlevel;nombre;apellido1;apellido2;apellidos;centro;foto;grupo;direccion;telefono;departamento;DNI;edad;fechaNacimiento;nombreApellidos\n';
       const csvRows = users.map(user => {
         const isStudent = user.type === 'student';
