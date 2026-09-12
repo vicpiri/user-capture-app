@@ -69,11 +69,9 @@ user-capture-app/
 │   │   ├── core/                        # Módulos core del renderer
 │   │   │   ├── BaseModal.js             # Clase base para modales
 │   │   │   └── store.js                 # Estado global de la aplicación
-│   │   ├── services/                    # Servicios de acceso a datos
-│   │   │   ├── groupService.js          # Servicio de grupos
-│   │   │   ├── imageService.js          # Servicio de imágenes
-│   │   │   ├── projectService.js        # Servicio de proyectos
-│   │   │   └── userService.js           # Servicio de usuarios
+│   │   ├── utils/                       # Utilidades del renderer
+│   │   │   ├── formatters.js            # Formateo de fechas, nombres y tamaños
+│   │   │   └── imageUrl.js              # URLs app-img:// de las fotos
 │   │   ├── index.html           # HTML de la ventana principal
 │   │   ├── renderer.js          # Lógica principal de la UI (coordinador)
 │   │   ├── styles.css           # Estilos globales
@@ -453,27 +451,17 @@ Todos los modales extienden `BaseModal` para comportamiento consistente.
 - `selectionMode`: Estado del modo multi-selección
 - `selectedUsers`: Set de usuarios seleccionados
 
-### Servicios (services/)
+### Acceso a datos
 
-Capa de servicios para acceso a datos mediante IPC:
+Los componentes llaman directamente a `window.electronAPI`, expuesto por el
+preload. No hay una capa de servicios intermedia: existió como andamiaje de la
+fase 1 del refactor del renderer, nunca se adoptó, y se eliminó cuando la mitad
+de los métodos IPC a los que llamaba ya no existían en el preload.
 
-- **projectService.js**: Servicios relacionados con proyectos
-  - Obtener información del proyecto
-  - Gestión de estado del proyecto
+### Utilidades (utils/)
 
-- **userService.js**: Servicios de usuarios
-  - Obtener usuarios con filtros
-  - Gestión de relaciones usuario-imagen
-
-- **groupService.js**: Servicios de grupos
-  - Obtener listado de grupos
-  - Filtrado por grupo
-
-- **imageService.js**: Servicios de imágenes
-  - Cargar imágenes del repositorio
-  - Gestión de estado de sincronización
-
-**Patrón**: Abstrae llamadas IPC en funciones reutilizables
+- **formatters.js**: Formateo de fechas, nombres, tamaños y edades
+- **imageUrl.js**: Construcción de las URLs `app-img://` de las fotos
 
 ### Coordinador Principal (renderer.js)
 
