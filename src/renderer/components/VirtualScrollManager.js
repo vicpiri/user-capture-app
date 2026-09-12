@@ -35,6 +35,13 @@ class VirtualScrollManager {
     // configured value is only a starting point until a row can be measured
     this.needsMeasure = true;
 
+    // Loading images is deferred until scrolling stops. Rows that a fast scroll
+    // passes through are rendered and thrown away within a frame or two, and
+    // asking for their photos means hundreds of requests for pictures nobody
+    // ever sees, which then delay the ones that are finally on screen.
+    this.scrollSettleDelay = config.scrollSettleDelay ?? 120;
+    this.scrollSettleTimer = null;
+
     // DOM elements
     this.topSpacer = null;
     this.bottomSpacer = null;
@@ -203,8 +210,11 @@ class VirtualScrollManager {
   /**
    * Render only visible items (for large lists)
    * @param {boolean} force - Force re-render even if range hasn't changed
+   * @param {Object} [options]
+   * @param {boolean} [options.deferImages] - Leave loading images to the caller,
+   *   used while scrolling so only the rows finally on screen are requested
    */
-  renderVirtualized(force = false) {
+  renderVirtualized(force = false, options = {}) {
     const containerHeight = this.container.clientHeight;
     const scrollTop = this.container.scrollTop;
 
@@ -246,12 +256,12 @@ class VirtualScrollManager {
       // A corrected height changes both the visible range and the spacers, so
       // the range has to be recomputed with it
       if (this.needsMeasure && this.measureItemHeight()) {
-        this.renderVirtualized(true);
+        this.renderVirtualized(true, options);
         return;
       }
 
       // Observe lazy images
-      if (this.observeImagesCallback) {
+      if (this.observeImagesCallback && !options.deferImages) {
         this.observeImagesCallback();
       }
       return;
@@ -304,7 +314,7 @@ class VirtualScrollManager {
     });
 
     // Observe only NEW lazy images (ones without src attribute set)
-    if (this.observeImagesCallback) {
+    if (this.observeImagesCallback && !options.deferImages) {
       this.observeImagesCallback();
     }
   }
@@ -327,8 +337,26 @@ class VirtualScrollManager {
 
     this.scrollFrame = requestAnimationFrame(() => {
       this.scrollFrame = null;
-      this.renderVirtualized();
+      this.renderVirtualized(false, { deferImages: true });
     });
+
+    this.scheduleImageLoad();
+  }
+
+  /**
+   * Load the images of whatever is on screen once scrolling has stopped
+   * @private
+   */
+  scheduleImageLoad() {
+    if (!this.observeImagesCallback) {
+      return;
+    }
+
+    clearTimeout(this.scrollSettleTimer);
+    this.scrollSettleTimer = setTimeout(() => {
+      this.scrollSettleTimer = null;
+      this.observeImagesCallback();
+    }, this.scrollSettleDelay);
   }
 
   /**
@@ -379,6 +407,9 @@ class VirtualScrollManager {
       cancelAnimationFrame(this.scrollFrame);
       this.scrollFrame = null;
     }
+
+    clearTimeout(this.scrollSettleTimer);
+    this.scrollSettleTimer = null;
 
     console.log('[VirtualScrollManager] Destroyed');
   }

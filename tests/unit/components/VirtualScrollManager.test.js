@@ -488,6 +488,56 @@ describe('VirtualScrollManager', () => {
     });
   });
 
+  describe('Image loading while scrolling', () => {
+    beforeEach(() => {
+      manager.init();
+      jest.useFakeTimers();
+      Object.defineProperty(mockContainer, 'clientHeight', { configurable: true, value: 400 });
+      Object.defineProperty(mockContainer, 'scrollTop', {
+        configurable: true,
+        writable: true,
+        value: 0
+      });
+      manager.setItems(
+        Array.from({ length: 500 }, (_, i) => ({ id: i + 1, name: `User ${i + 1}` }))
+      );
+      observeImagesCallback.mockClear();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    test('should not ask for images on every frame of a scroll', () => {
+      // Rows a fast scroll passes through are rendered and discarded within a
+      // frame; asking for their photos floods the queue with pictures nobody
+      // will see
+      for (let i = 1; i <= 20; i++) {
+        mockContainer.scrollTop = i * 200;
+        manager.handleScroll();
+        jest.advanceTimersByTime(20);
+      }
+
+      expect(observeImagesCallback).not.toHaveBeenCalled();
+    });
+
+    test('should ask once when the scrolling stops', () => {
+      mockContainer.scrollTop = 400;
+      manager.handleScroll();
+      jest.advanceTimersByTime(20);
+
+      jest.advanceTimersByTime(200);
+
+      expect(observeImagesCallback).toHaveBeenCalledTimes(1);
+    });
+
+    test('should still load images on a render that is not a scroll', () => {
+      manager.setItems([{ id: 1 }, { id: 2 }]);
+
+      expect(observeImagesCallback).toHaveBeenCalled();
+    });
+  });
+
   describe('Row height measurement', () => {
     const ROW_HEIGHT = 57;
 

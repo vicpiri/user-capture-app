@@ -1,3 +1,12 @@
+// Must be set before anything touches the thread pool, so it goes above every
+// require. Node defaults to four threads, and every file read and every
+// thumbnail sharp encodes queues on them: scrolling a long list asks for dozens
+// of photos at once and they end up waiting behind each other.
+if (!process.env.UV_THREADPOOL_SIZE) {
+  const cores = require('os').cpus().length;
+  process.env.UV_THREADPOOL_SIZE = String(Math.min(Math.max(cores, 8), 32));
+}
+
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
