@@ -387,6 +387,14 @@ historial de capturas del proyecto
 - Carga diferida de las miniaturas con IntersectionObserver
 - Se activa y desactiva desde Ver > Historial de capturas (preferencia persistente)
 
+**Cuidado con la clase `visible`**: `utilities.css` declara una utilidad global
+`.visible { display: block !important }`. Cualquier componente que use ese
+nombre para marcar su estado acaba renderizado como bloque, pase lo que pase en
+su propia hoja. Aquí eso rompía el flex del panel y la lista crecía hasta caber
+entera (144 000 px) en lugar de desplazarse, dejando la tira sin barra de
+scroll. Por eso las clases de estado son `is-open` e `is-shown`.
+`.no-project-placeholder` sortea lo mismo con un `display: flex !important`.
+
 **Fecha y hora**: se leen del nombre del archivo, que es el único registro que
 existe de cuándo se capturó (`folderWatcher` renombra a `YYYYMMDDHHMMSS`, con
 `_1`, `_2`... si coinciden en el mismo segundo). Las imágenes traídas por la

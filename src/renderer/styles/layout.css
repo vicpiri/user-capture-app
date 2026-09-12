@@ -209,7 +209,10 @@
   min-height: 0;
 }
 
-.capture-history.visible {
+/* Not named "visible": utilities.css has a global .visible that forces
+   display: block !important, which would stop this being a flex container and
+   leave the list growing to fit every capture instead of scrolling */
+.capture-history.is-open {
   display: flex;
 }
 
@@ -242,7 +245,7 @@
   padding-top: 12px;
 }
 
-.capture-history-empty.visible {
+.capture-history-empty.is-shown {
   display: block;
 }
 

@@ -64,7 +64,7 @@ describe('CaptureHistoryManager', () => {
   describe('visibility', () => {
     test('should start hidden', () => {
       expect(manager.isVisible()).toBe(false);
-      expect(panel.classList.contains('visible')).toBe(false);
+      expect(panel.classList.contains('is-open')).toBe(false);
     });
 
     test('should render nothing while hidden', () => {
@@ -84,7 +84,7 @@ describe('CaptureHistoryManager', () => {
     test('should show the panel when made visible', () => {
       manager.setVisible(true);
 
-      expect(panel.classList.contains('visible')).toBe(true);
+      expect(panel.classList.contains('is-open')).toBe(true);
       expect(manager.isVisible()).toBe(true);
     });
 
@@ -92,7 +92,26 @@ describe('CaptureHistoryManager', () => {
       manager.setVisible(true);
       manager.setVisible(false);
 
+      expect(panel.classList.contains('is-open')).toBe(false);
+    });
+
+    /**
+     * utilities.css declares a global `.visible { display: block !important }`.
+     * Marking the strip with that class turned it into a block, which stopped
+     * the list being a flex item: it grew to fit all 800+ captures instead of
+     * scrolling, so the strip had no scrollbar and the wheel did nothing.
+     */
+    test('should not mark the strip with the global visible utility', () => {
+      manager.setVisible(true);
+
       expect(panel.classList.contains('visible')).toBe(false);
+    });
+
+    test('should not mark the empty message with the global visible utility', () => {
+      manager.setVisible(true);
+      manager.render([], -1);
+
+      expect(empty.classList.contains('visible')).toBe(false);
     });
   });
 
@@ -136,7 +155,7 @@ describe('CaptureHistoryManager', () => {
     test('should show the empty message when there are no captures', () => {
       manager.render([], -1);
 
-      expect(empty.classList.contains('visible')).toBe(true);
+      expect(empty.classList.contains('is-shown')).toBe(true);
       expect(items()).toHaveLength(0);
     });
 
@@ -144,7 +163,7 @@ describe('CaptureHistoryManager', () => {
       manager.render([], -1);
       manager.render(IMAGES, 0);
 
-      expect(empty.classList.contains('visible')).toBe(false);
+      expect(empty.classList.contains('is-shown')).toBe(false);
     });
 
     test('should reuse the thumbnail of a capture that is still there', () => {
@@ -341,7 +360,7 @@ describe('CaptureHistoryManager', () => {
 
       manager.clear();
 
-      expect(empty.classList.contains('visible')).toBe(true);
+      expect(empty.classList.contains('is-shown')).toBe(true);
     });
   });
 

@@ -119,7 +119,10 @@
       this.visible = !!visible;
 
       if (this.panel) {
-        this.panel.classList.toggle('visible', this.visible);
+        // Deliberately not "visible": that class is a global utility forcing
+        // display: block !important, which would break the flex layout the
+        // scrolling list depends on
+        this.panel.classList.toggle('is-open', this.visible);
       }
 
       // Nothing was rendered while hidden, so catch up on becoming visible
@@ -145,7 +148,7 @@
       this.currentIndex = currentIndex;
 
       if (this.empty) {
-        this.empty.classList.toggle('visible', this.images.length === 0);
+        this.empty.classList.toggle('is-shown', this.images.length === 0);
       }
 
       // Building thumbnails nobody can see would generate them for nothing
@@ -333,7 +336,7 @@
       }
 
       if (this.empty) {
-        this.empty.classList.toggle('visible', this.visible);
+        this.empty.classList.toggle('is-shown', this.visible);
       }
     }
 
