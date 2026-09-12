@@ -491,34 +491,26 @@ function legacyFunction() {
 
 ### Testing
 
-Todos los componentes tienen tests unitarios completos usando Jest y JSDOM:
+**Comandos**: `npm test` y `npm run test:coverage`
 
-- **Total de tests**: 488 tests pasando
-- **Cobertura**: Cada componente tiene 20-37 tests
-- **Mocking**: DOM elements, IPC (electronAPI), IntersectionObserver
+Los tests del renderer corren en JSDOM. Los del proceso principal declaran
+`@jest-environment node` y restauran timers reales, porque el setup compartido
+activa timers falsos y estos trabajan contra el sistema de archivos real.
 
-**Estructura de tests**:
-```
-tests/unit/components/
-├── modals/
-│   ├── AddTagModal.test.js (14 tests)
-│   ├── ConfirmModal.test.js (19 tests)
-│   ├── ExportOptionsModal.test.js (29 tests)
-│   ├── InfoModal.test.js (16 tests)
-│   ├── NewProjectModal.test.js (32 tests)
-│   └── UserImageModal.test.js (24 tests)
-├── DragDropManager.test.js (24 tests)
-├── ExportManager.test.js (27 tests)
-├── ImageGridManager.test.js (36 tests)
-├── ImageTagsManager.test.js (22 tests)
-├── LazyImageManager.test.js (36 tests)
-├── ProgressManager.test.js (37 tests)
-├── SelectionModeManager.test.js (29 tests)
-├── UserRowRenderer.test.js (33 tests)
-└── VirtualScrollManager.test.js (37 tests)
-```
+**Organización**:
 
-**Comando**: `npm test`
+- `tests/unit/components/` — componentes y modales del renderer
+- `tests/unit/core/`, `tests/unit/utils/` — clase base de modales, store, utilidades
+- `tests/unit/main/` — proceso principal. Los handlers IPC se prueban capturando
+  el handler desde un `ipcMain` mockeado y ejecutándolo contra una base de datos
+  y archivos reales en un directorio temporal
+
+**Cobertura**: los umbrales de `jest.config.cjs` son un trinquete contra
+regresiones, no un objetivo; se fijaron algo por debajo de lo medido. Hay un
+suelo propio para `src/main/`, que antes no se medía en absoluto.
+
+Áreas prioritarias sin cubrir: `menuBuilder.js`, los gestores de ventana,
+`imageManager.js`, y en el renderer `OrlaExportManager` y varios modales.
 
 ### Beneficios de la Refactorización
 
@@ -528,7 +520,7 @@ tests/unit/components/
 4. **Escalabilidad**: Fácil agregar nuevas funcionalidades sin inflar renderer.js
 5. **Legibilidad**: Separación clara de responsabilidades
 6. **Performance**: Virtual scrolling y lazy loading optimizan rendimiento
-7. **Calidad**: 488 tests garantizan estabilidad
+7. **Calidad**: la suite de tests protege los caminos donde un fallo no es visible
 
 ## Novedades de la Versión 1.3.x
 
@@ -708,7 +700,7 @@ Aplicación completamente funcional con todas las características principales i
   - Lazy loading de imágenes
   - Sincronización en background
 - ✅ **Arquitectura modular**: main process y renderer process completamente refactorizados
-- ✅ **Testing**: 488 tests unitarios con Jest
+- ✅ **Testing**: suite unitaria con Jest sobre renderer y proceso principal
 - ✅ **Navegación por teclado**: accesibilidad mejorada
 - ✅ **Gestión de estado**: store centralizado con sincronización
 - ✅ **Menú completo**: shortcuts y organización por categorías
@@ -721,7 +713,7 @@ Aplicación completamente funcional con todas las características principales i
 - **Caché optimizado**: Sistema de caché con TTL para reducir operaciones de filesystem
 - **Sincronización**: Mirror local del repositorio Google Drive con actualización automática
 - **Privacidad**: Apropiado para entornos educativos
-- **Testing**: Suite completa de tests unitarios con Jest (488 tests)
+- **Testing**: Suite completa de tests unitarios con Jest (ver sección Testing)
 - **Patrones**: IIFE, UMD exports, callback-based communication, delegation pattern
 
 ## Funcionalidades principales
