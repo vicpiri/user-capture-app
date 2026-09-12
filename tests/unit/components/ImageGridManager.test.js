@@ -4,6 +4,10 @@
 
 const { ImageGridManager } = require('../../../src/renderer/components/ImageGridManager');
 
+// Images are served over the app-img scheme with the path as an encoded query
+// parameter, so assertions compare the file the preview points at
+const srcPath = (src) => new URL(src).searchParams.get('path');
+
 describe('ImageGridManager', () => {
   let manager;
   let mockContainer;
@@ -132,7 +136,7 @@ describe('ImageGridManager', () => {
 
     test('should show image preview', () => {
       expect(mockContainer.classList.add).toHaveBeenCalledWith('active');
-      expect(mockImage.src).toBe('file:///path/image1.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/image1.jpg');
       expect(manager.isActive).toBe(true);
     });
 
@@ -164,7 +168,7 @@ describe('ImageGridManager', () => {
       manager.navigate(1);
 
       expect(manager.currentIndex).toBe(1);
-      expect(mockImage.src).toBe('file:///path/image2.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/image2.jpg');
       expect(mockOnImageChange).toHaveBeenCalledWith('/path/image2.jpg');
     });
 
@@ -174,7 +178,7 @@ describe('ImageGridManager', () => {
       manager.navigate(-1);
 
       expect(manager.currentIndex).toBe(0);
-      expect(mockImage.src).toBe('file:///path/image1.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/image1.jpg');
     });
 
     test('should wrap around to last image when going before first', () => {
@@ -183,7 +187,7 @@ describe('ImageGridManager', () => {
       manager.navigate(-1);
 
       expect(manager.currentIndex).toBe(2);
-      expect(mockImage.src).toBe('file:///path/image3.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/image3.jpg');
     });
 
     test('should wrap around to first image when going after last', () => {
@@ -192,7 +196,7 @@ describe('ImageGridManager', () => {
       manager.navigate(1);
 
       expect(manager.currentIndex).toBe(0);
-      expect(mockImage.src).toBe('file:///path/image1.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/image1.jpg');
     });
 
     test('should do nothing when no images', () => {
@@ -258,7 +262,7 @@ describe('ImageGridManager', () => {
 
       expect(result).toBe(true);
       expect(manager.currentIndex).toBe(1);
-      expect(mockImage.src).toBe('file:///path/image2.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/image2.jpg');
     });
 
     test('should return false for invalid index (negative)', () => {
@@ -287,7 +291,7 @@ describe('ImageGridManager', () => {
 
       expect(result).toBe(true);
       expect(manager.currentIndex).toBe(1);
-      expect(mockImage.src).toBe('file:///path/image2.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/image2.jpg');
     });
 
     test('should return false for non-existent path', () => {

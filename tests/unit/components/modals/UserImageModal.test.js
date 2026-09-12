@@ -4,6 +4,10 @@
 
 const { UserImageModal } = require('../../../../src/renderer/components/modals/UserImageModal');
 
+// Images are served over the app-img scheme with the path as an encoded query
+// parameter, so assertions compare the file the modal points at
+const srcPath = (src) => new URL(src).searchParams.get('path');
+
 describe('UserImageModal', () => {
   let modal;
   let mockModal;
@@ -87,7 +91,7 @@ describe('UserImageModal', () => {
       modal.show(mockUser);
 
       expect(mockTitle.textContent).toBe('John Doe Smith');
-      expect(mockImage.src).toBe('file:///path/to/captured.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/to/captured.jpg');
       expect(mockModal.classList.add).toHaveBeenCalledWith('show');
     });
 
@@ -95,7 +99,7 @@ describe('UserImageModal', () => {
       modal.show(mockUser, 'repository');
 
       expect(mockTitle.textContent).toBe('John Doe Smith - Depósito');
-      expect(mockImage.src).toBe('file:///path/to/repository.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/to/repository.jpg');
     });
 
     test('should handle user without last_name2', () => {
@@ -184,7 +188,7 @@ describe('UserImageModal', () => {
 
       modal.setImage(user, 'captured');
 
-      expect(mockImage.src).toBe('file:///path/to/image.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/to/image.jpg');
     });
 
     test('should set repository image path', () => {
@@ -195,7 +199,7 @@ describe('UserImageModal', () => {
 
       modal.setImage(user, 'repository');
 
-      expect(mockImage.src).toBe('file:///path/to/repo.jpg');
+      expect(srcPath(mockImage.src)).toBe('/path/to/repo.jpg');
     });
 
     test('should handle missing image path', () => {
@@ -273,11 +277,11 @@ describe('UserImageModal', () => {
 
       modal.show(user1);
       expect(mockTitle.textContent).toBe('User One');
-      expect(mockImage.src).toBe('file:///user1.jpg');
+      expect(srcPath(mockImage.src)).toBe('/user1.jpg');
 
       modal.show(user2);
       expect(mockTitle.textContent).toBe('User Two Junior');
-      expect(mockImage.src).toBe('file:///user2.jpg');
+      expect(srcPath(mockImage.src)).toBe('/user2.jpg');
     });
 
     test('should handle switching between captured and repository images', () => {
@@ -290,11 +294,11 @@ describe('UserImageModal', () => {
       };
 
       modal.show(user, 'captured');
-      expect(mockImage.src).toBe('file:///captured.jpg');
+      expect(srcPath(mockImage.src)).toBe('/captured.jpg');
       expect(mockTitle.textContent).toBe('Test User');
 
       modal.show(user, 'repository');
-      expect(mockImage.src).toBe('file:///repository.jpg');
+      expect(srcPath(mockImage.src)).toBe('/repository.jpg');
       expect(mockTitle.textContent).toBe('Test User - Depósito');
     });
   });

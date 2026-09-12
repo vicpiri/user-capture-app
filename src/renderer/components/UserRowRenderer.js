@@ -15,6 +15,14 @@
 (function(global) {
   'use strict';
 
+// Dependencies: imageUrl (loaded from utils in browser, or via require in Node.js)
+let imageUrl;
+if (typeof window !== 'undefined' && window.imageUrl) {
+  imageUrl = window.imageUrl;
+} else if (typeof require !== 'undefined') {
+  ({ imageUrl } = require('../utils/imageUrl'));
+}
+
 // Placeholder shown until the lazy loader swaps in the real image
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
@@ -102,11 +110,12 @@ class UserRowRenderer {
     }
 
     if (user.image_path) {
-      // No cache buster: captured files always get a unique name, so the path
-      // itself identifies the content and the browser cache stays valid.
+      // No version: captured files always get a unique name, so the path itself
+      // identifies the content and the browser cache stays valid.
+      const src = imageUrl.thumbnail(user.image_path, imageUrl.INDICATOR_SIZE);
       // Wrap img in div to support ::after spinner (img elements don't support pseudo-elements)
       // Add 'loading' class to wrapper for CSS spinner
-      return `<div class="photo-indicator-wrapper loading ${duplicateClass}"><img src="${TRANSPARENT_PIXEL}" data-src="file://${user.image_path}" class="photo-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
+      return `<div class="photo-indicator-wrapper loading ${duplicateClass}"><img src="${TRANSPARENT_PIXEL}" data-src="${src}" class="photo-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
     }
 
     return `<div class="photo-placeholder">
@@ -130,10 +139,14 @@ class UserRowRenderer {
       // The mirror overwrites repository files in place, so the path alone is not
       // enough to identify the content. repositoryVersion is bumped only when the
       // repository actually changes, keeping URLs stable across scroll/re-render.
-      const cacheBuster = `?v=${this.config.repositoryVersion}`;
+      const src = imageUrl.thumbnail(
+        user.repository_image_path,
+        imageUrl.INDICATOR_SIZE,
+        this.config.repositoryVersion
+      );
       // Wrap img in div to support ::after spinner (img elements don't support pseudo-elements)
       // Add 'loading' class to wrapper for CSS spinner
-      return `<div class="repository-indicator-wrapper loading"><img src="${TRANSPARENT_PIXEL}" data-src="file://${user.repository_image_path}${cacheBuster}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
+      return `<div class="repository-indicator-wrapper loading"><img src="${TRANSPARENT_PIXEL}" data-src="${src}" class="repository-indicator lazy-image" alt="" onerror="this.style.display='none'"></div>`;
     }
 
     if (this.config.isLoadingRepositoryPhotos) {

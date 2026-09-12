@@ -22,6 +22,14 @@
     ({ BaseModal } = require('../../core/BaseModal'));
   }
 
+  // Dependencies: imageUrl (loaded from utils in browser, or via require in Node.js)
+  let imageUrl;
+  if (typeof window !== 'undefined' && window.imageUrl) {
+    imageUrl = window.imageUrl;
+  } else if (typeof require !== 'undefined') {
+    ({ imageUrl } = require('../../utils/imageUrl'));
+  }
+
   class UserImageModal extends BaseModal {
     constructor(modalId = 'user-image-modal') {
       super(modalId, {
@@ -98,7 +106,7 @@
         : user.image_path;
 
       if (imagePath) {
-        this.imageElement.src = `file://${imagePath}`;
+        this.imageElement.src = imageUrl.original(imagePath);
       } else {
         console.warn('[UserImageModal] No image path found');
         this.imageElement.src = '';

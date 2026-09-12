@@ -4,6 +4,11 @@
 
 const { UserRowRenderer } = require('../../../src/renderer/components/UserRowRenderer');
 
+// Photos are served over the app-img scheme, which carries the path and the
+// requested size as encoded query parameters
+const srcParam = (img, name) =>
+  new URL(img.getAttribute('data-src')).searchParams.get(name);
+
 describe('UserRowRenderer', () => {
   let renderer;
   let mockUser;
@@ -106,7 +111,7 @@ describe('UserRowRenderer', () => {
 
       const photoIndicator = row.querySelector('.photo-indicator');
       expect(photoIndicator).toBeTruthy();
-      expect(photoIndicator.getAttribute('data-src')).toContain('image.jpg');
+      expect(srcParam(photoIndicator, 'path')).toContain('image.jpg');
     });
 
     test('should hide captured photo indicator when disabled', () => {
@@ -123,7 +128,16 @@ describe('UserRowRenderer', () => {
 
       const repoIndicator = row.querySelector('.repository-indicator');
       expect(repoIndicator).toBeTruthy();
-      expect(repoIndicator.getAttribute('data-src')).toContain('repo/image.jpg');
+      expect(srcParam(repoIndicator, 'path')).toContain('repo/image.jpg');
+    });
+
+    test('should request a thumbnail rather than the full size photo', () => {
+      renderer.updateConfig({ showCapturedPhotos: true, showRepositoryPhotos: true });
+      const row = renderer.createRow(mockUser);
+
+      // A 32px indicator has no business decoding a full resolution photo
+      expect(Number(srcParam(row.querySelector('.photo-indicator'), 'size'))).toBeGreaterThan(0);
+      expect(Number(srcParam(row.querySelector('.repository-indicator'), 'size'))).toBeGreaterThan(0);
     });
 
     test('should keep captured photo URL stable across renders', () => {
@@ -133,7 +147,8 @@ describe('UserRowRenderer', () => {
       const second = renderer.createRow(mockUser).querySelector('.photo-indicator');
 
       expect(first.getAttribute('data-src')).toBe(second.getAttribute('data-src'));
-      expect(first.getAttribute('data-src')).not.toContain('?');
+      // No version: captured filenames are unique, so the URL never needs busting
+      expect(srcParam(first, 'v')).toBeNull();
     });
 
     test('should keep repository photo URL stable until repositoryVersion changes', () => {
@@ -147,7 +162,7 @@ describe('UserRowRenderer', () => {
       const afterChange = renderer.createRow(mockUser).querySelector('.repository-indicator');
 
       expect(afterChange.getAttribute('data-src')).not.toBe(first.getAttribute('data-src'));
-      expect(afterChange.getAttribute('data-src')).toContain('?v=1');
+      expect(srcParam(afterChange, 'v')).toBe('1');
     });
 
     test('should show photo placeholder when user has no image', () => {

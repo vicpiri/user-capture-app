@@ -15,6 +15,14 @@
 (function(global) {
   'use strict';
 
+  // Dependencies: imageUrl (loaded from utils in browser, or via require in Node.js)
+  let imageUrl;
+  if (typeof window !== 'undefined' && window.imageUrl) {
+    imageUrl = window.imageUrl;
+  } else if (typeof require !== 'undefined') {
+    ({ imageUrl } = require('../utils/imageUrl'));
+  }
+
   class ImageGridManager {
     constructor(config = {}) {
       // Required DOM elements
@@ -79,7 +87,7 @@
 
       // Show container and update image
       this.imagePreviewContainer.classList.add('active');
-      this.currentImage.src = `file://${this.images[this.currentIndex]}`;
+      this.currentImage.src = imageUrl.original(this.images[this.currentIndex]);
       this.isActive = true;
 
       // Notify about image change (for tag loading, etc.)
@@ -104,7 +112,7 @@
 
       // Update image
       if (this.currentImage) {
-        this.currentImage.src = `file://${this.images[this.currentIndex]}`;
+        this.currentImage.src = imageUrl.original(this.images[this.currentIndex]);
       }
 
       // Notify about image change

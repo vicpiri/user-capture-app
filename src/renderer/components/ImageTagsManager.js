@@ -17,6 +17,14 @@
 (function(global) {
   'use strict';
 
+  // Dependencies: imageUrl (loaded from utils in browser, or via require in Node.js)
+  let imageUrl;
+  if (typeof window !== 'undefined' && window.imageUrl) {
+    imageUrl = window.imageUrl;
+  } else if (typeof require !== 'undefined') {
+    ({ imageUrl } = require('../utils/imageUrl'));
+  }
+
   class ImageTagsManager {
     constructor(config = {}) {
       // Required dependencies
@@ -264,7 +272,7 @@
       // Image preview
       const imagePreview = document.createElement('img');
       imagePreview.className = 'tagged-image-preview';
-      imagePreview.src = `file://${imageData.path}`;
+      imagePreview.src = imageUrl.original(imageData.path);
       imagePreview.alt = 'Imagen con etiquetas';
 
       // Tags container

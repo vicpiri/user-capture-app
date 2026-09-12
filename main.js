@@ -24,6 +24,14 @@ const {
   addRecentProject: addRecentProjectUtil
 } = require('./src/main/utils/recentProjects');
 const { RepositoryCacheManager } = require('./src/main/utils/repositoryCache');
+const ThumbnailService = require('./src/main/thumbnailService');
+const {
+  registerImageProtocolScheme,
+  registerImageProtocol
+} = require('./src/main/protocol/imageProtocol');
+
+// Has to run before the app is ready, so it cannot wait for whenReady below
+registerImageProtocolScheme();
 
 // IPC handler modules
 const { registerProjectHandlers } = require('./src/main/ipc/projectHandlers');
@@ -74,6 +82,38 @@ let menuBuilder = null; // Menu builder instance
 
 // Repository cache manager
 const repositoryCacheManager = new RepositoryCacheManager();
+
+// Thumbnail cache, created lazily so app.getPath is only used once ready
+let thumbnailService = null;
+
+// Repository folder of the open project, cached for the image protocol
+let currentRepositoryPath = null;
+
+/**
+ * Folders the image protocol is allowed to read from
+ *
+ * Everything the interface shows lives in the project's imports folder, the
+ * local mirror, or the configured repository. Anything else is refused.
+ */
+function getImageRoots() {
+  const roots = [];
+
+  if (projectPath) {
+    roots.push(path.join(projectPath, 'imports'));
+    roots.push(path.join(projectPath, 'ingest'));
+  }
+
+  if (repositoryMirror) {
+    roots.push(repositoryMirror.mirrorPath);
+    roots.push(repositoryMirror.repositoryPath);
+  }
+
+  if (currentRepositoryPath) {
+    roots.push(currentRepositoryPath);
+  }
+
+  return roots;
+}
 
 function createMenu() {
   menuBuilder = new MenuBuilder({
@@ -490,6 +530,7 @@ async function closeCurrentProject() {
 
   imageManager = null;
   projectPath = null;
+  currentRepositoryPath = null;
 }
 
 // Repository mirror management
@@ -536,6 +577,10 @@ async function ensureRepositoryMirrorStarted() {
   if (!repositoryPath) {
     return;
   }
+
+  // Remembered so the image protocol can serve repository photos even before
+  // the mirror finishes starting, when paths still point at the repository
+  currentRepositoryPath = repositoryPath;
 
   logger.info('Initializing repository mirror (lazy initialization)...');
 
@@ -829,6 +874,17 @@ app.whenReady().then(() => {
   showRepositoryPhotos = config.showRepositoryPhotos ?? false;
   showRepositoryIndicators = config.showRepositoryIndicators ?? false;
   showAdditionalActions = config.showAdditionalActions ?? true;
+
+  // Serve user photos before any window can ask for one
+  thumbnailService = new ThumbnailService(
+    path.join(app.getPath('userData'), 'thumbnail-cache'),
+    logger
+  );
+  registerImageProtocol({
+    thumbnailService,
+    getAllowedRoots: getImageRoots,
+    logger
+  });
 
   loadRecentProjects();
   createMenu();

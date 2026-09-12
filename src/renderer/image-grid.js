@@ -135,7 +135,7 @@ function createGridItem(user) {
     const img = document.createElement('img');
     img.className = 'grid-item-image lazy-image';
     // Store the actual path in data attribute
-    img.dataset.src = `file://${user.image_path}`;
+    img.dataset.src = imageUrl.thumbnail(user.image_path, imageUrl.GRID_SIZE);
     img.alt = `${user.first_name} ${user.last_name1}`;
 
     // Show placeholder initially
