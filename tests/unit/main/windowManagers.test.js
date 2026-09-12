@@ -42,6 +42,9 @@ jest.mock('electron', () => ({
   })
 }));
 
+const fs = require('fs');
+const path = require('path');
+
 const CameraWindowManager = require('../../../src/main/window/cameraWindow');
 const ImageGridWindowManager = require('../../../src/main/window/imageGridWindow');
 const RepositoryGridWindowManager = require('../../../src/main/window/repositoryGridWindow');
@@ -58,6 +61,44 @@ describe('window managers', () => {
   beforeEach(() => {
     mockWindows.length = 0;
     jest.clearAllMocks();
+  });
+
+  /**
+   * Contract check for anyone adding a window later on.
+   *
+   * A secondary window that cannot be closed is not merely untidy: it survives
+   * the main window and keeps 'window-all-closed' from firing, so the whole
+   * application stops quitting. This walks the folder instead of a hardcoded
+   * list precisely so a new manager cannot slip through unnoticed.
+   */
+  describe('close() contract', () => {
+    const windowDir = path.join(__dirname, '../../../src/main/window');
+    const secondaryModules = fs
+      .readdirSync(windowDir)
+      .filter((file) => file.endsWith('.js') && file !== 'mainWindow.js');
+
+    test('should find the secondary window managers on disk', () => {
+      expect(secondaryModules.length).toBeGreaterThanOrEqual(MANAGERS.length);
+    });
+
+    test.each(secondaryModules)('%s should expose close()', (file) => {
+      const Manager = require(path.join(windowDir, file));
+
+      expect(typeof Manager.prototype.close).toBe('function');
+    });
+
+    test('should be registered in the closeSecondaryWindows() list in main.js', () => {
+      const mainSource = fs.readFileSync(path.join(__dirname, '../../../main.js'), 'utf8');
+      const registry = mainSource.match(/const secondaryWindowManagers = \[([^\]]*)\]/);
+
+      expect(registry).not.toBeNull();
+
+      secondaryModules.forEach((file) => {
+        // cameraWindow.js -> cameraWindowManager
+        const instanceName = `${path.basename(file, '.js')}Manager`;
+        expect(registry[1]).toContain(instanceName);
+      });
+    });
   });
 
   describe.each(MANAGERS)('%s', (_name, Manager) => {

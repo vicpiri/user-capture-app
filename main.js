@@ -68,6 +68,17 @@ const imageGridWindowManager = new ImageGridWindowManager();
 const repositoryGridWindowManager = new RepositoryGridWindowManager();
 const printedCardsWindowManager = new PrintedCardsWindowManager();
 
+// Every window other than the main one. Register new secondary windows here:
+// closing the main window closes everything in this list, and any window left
+// out of it keeps 'window-all-closed' from firing, so the application would
+// never quit.
+const secondaryWindowManagers = [
+  cameraWindowManager,
+  imageGridWindowManager,
+  repositoryGridWindowManager,
+  printedCardsWindowManager
+];
+
 let dbManager;
 let folderWatcher;
 let imageManager;
@@ -417,10 +428,7 @@ function createWindow() {
  * Close every window other than the main one
  */
 function closeSecondaryWindows() {
-  cameraWindowManager.close();
-  imageGridWindowManager.close();
-  repositoryGridWindowManager.close();
-  printedCardsWindowManager.close();
+  secondaryWindowManagers.forEach((manager) => manager.close());
 }
 
 function openCameraWindow() {

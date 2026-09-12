@@ -172,6 +172,27 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
 - **cameraWindow.js**: Ventana de captura desde webcam
 - **imageGridWindow.js**: Visualización en grid de imágenes capturadas
 - **repositoryGridWindow.js**: Visualización en grid de imágenes del repositorio
+- **printedCardsWindow.js**: Últimos carnets impresos
+
+#### Cómo añadir una ventana nueva
+
+Toda ventana que no sea la principal es **secundaria** y debe cerrarse con ella.
+No es solo cuestión de orden: si queda una ventana abierta, `window-all-closed`
+no se dispara, `app.quit()` nunca se ejecuta y la aplicación deja de terminar.
+
+Un gestor nuevo tiene que cumplir dos cosas:
+
+1. **Exponer `close()`**, siguiendo el patrón de los existentes: cerrar la
+   ventana solo si sigue viva (`isDestroyed()`) y dejar la referencia a `null`
+   en cualquier caso. El handler `'closed'` ya limpia la referencia por su
+   cuenta, pero un llamante puede llegar con una obsoleta.
+2. **Registrarse en `secondaryWindowManagers`**, el array de `main.js` situado
+   junto a la creación de los gestores. `closeSecondaryWindows()` lo recorre
+   desde el handler `'closed'` de la ventana principal.
+
+Ambos requisitos están cubiertos por `tests/unit/main/windowManagers.test.js`,
+que recorre la carpeta `src/main/window/` en lugar de una lista fija: un gestor
+sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 
 ### Utilidades (utils/)
 - **config.js**: Persistencia de configuración y preferencias de usuario
