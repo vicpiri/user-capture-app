@@ -9,17 +9,142 @@ const archiver = require('archiver');
 const { getImageRepositoryPath, loadGlobalConfig } = require('../utils/config');
 const { capitalizeWords } = require('../utils/formatting');
 
+// How many images to process at once. sharp releases the event loop while it
+// works, but libuv's thread pool is four threads by default, so going much
+// wider mostly queues work up rather than finishing it sooner.
+const IMAGE_EXPORT_CONCURRENCY = 4;
+
 /**
- * Helper function to check if a file exists in the repository
- * @param {string} filePath - Full path to the file
- * @returns {boolean} True if file exists
+ * List the repository once instead of probing it per user
+ *
+ * Asking whether each user has a photo used to cost two existsSync calls per
+ * user against a folder that is normally on Google Drive. Reading the folder
+ * once answers all of them, and still reads the repository itself rather than
+ * the local mirror, which may be incomplete.
+ *
+ * @param {string} repositoryPath
+ * @param {Object} logger
+ * @returns {Promise<Set<string>>} Lowercase filenames
  */
-function checkRepositoryFile(filePath) {
-  try {
-    return fs.existsSync(filePath);
-  } catch (error) {
-    return false;
+async function readRepositoryFilenames(repositoryPath, logger) {
+  if (!repositoryPath) {
+    return new Set();
   }
+
+  try {
+    const entries = await fs.promises.readdir(repositoryPath);
+    return new Set(entries.map(name => name.toLowerCase()));
+  } catch (error) {
+    logger.warning(`Could not list the repository at ${repositoryPath}: ${error.message}`);
+    return new Set();
+  }
+}
+
+/**
+ * @param {Object} user
+ * @param {Set<string>} repositoryFiles - From readRepositoryFilenames
+ * @returns {string|null} The matching filename, or null
+ */
+function findUserRepositoryImage(user, repositoryFiles) {
+  const identifier = user.type === 'student' ? user.nia : user.document;
+  if (!identifier) {
+    return null;
+  }
+
+  for (const extension of ['.jpg', '.jpeg']) {
+    if (repositoryFiles.has(`${identifier}${extension}`.toLowerCase())) {
+      return `${identifier}${extension}`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Run an async worker over items, a few at a time
+ *
+ * Results keep the order of the input, whatever order they finish in.
+ *
+ * @param {Array} items
+ * @param {number} limit - Maximum running at once
+ * @param {Function} worker - async (item, index) => result
+ * @returns {Promise<Array>}
+ */
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await worker(items[index], index);
+    }
+  });
+
+  await Promise.all(runners);
+  return results;
+}
+
+/**
+ * Write an export copy of an image, resizing it if asked
+ *
+ * The source is read once into memory. The quality search below may need
+ * several encoding passes, and re-reading the original for each of them meant
+ * going back to disk up to four times per image.
+ *
+ * @param {string} sourcePath
+ * @param {string} destPath
+ * @param {Object} exportOptions
+ * @param {Object} logger
+ * @returns {Promise<void>}
+ */
+async function writeExportedImage(sourcePath, destPath, exportOptions, logger) {
+  const sourceBuffer = await fs.promises.readFile(sourcePath);
+
+  // Auto-rotate based on EXIF orientation
+  if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
+    await sharp(sourceBuffer).rotate().toFile(destPath);
+    return;
+  }
+
+  if (!exportOptions.resizeEnabled) {
+    return;
+  }
+
+  const metadata = await sharp(sourceBuffer).rotate().metadata();
+  const needsResize =
+    metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize;
+
+  const pipeline = () => {
+    const instance = sharp(sourceBuffer).rotate();
+
+    if (needsResize) {
+      return instance.resize(exportOptions.boxSize, exportOptions.boxSize, {
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+    }
+
+    return instance;
+  };
+
+  const maxSizeBytes = exportOptions.maxSizeKB * 1024;
+  let quality = 90;
+  let outputBuffer;
+
+  // Step the quality down until the file fits, as before
+  do {
+    outputBuffer = await pipeline().jpeg({ quality }).toBuffer();
+
+    if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
+      break;
+    }
+
+    quality -= 10;
+  } while (quality > 0);
+
+  await fs.promises.writeFile(destPath, outputBuffer);
+  logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length / 1024)}KB`);
 }
 
 /**
@@ -85,6 +210,57 @@ function sendProgressUpdate(getMainWindow, processedCount, total, message) {
   });
 }
 
+// The logo is the same on every page of every PDF, but preparing it means
+// reading the config, checking the file and two sharp passes. Keyed by path and
+// modification time so replacing the logo still takes effect.
+let cachedLogo = null;
+
+/**
+ * Prepare the institution logo for embedding
+ * @param {Object} logger
+ * @returns {Promise<{buffer: Buffer, aspectRatio: number}|null>}
+ */
+async function loadInstitutionLogo(logger) {
+  const globalConfig = loadGlobalConfig();
+
+  if (!globalConfig || !globalConfig.logoPath) {
+    return null;
+  }
+
+  const logoPath = globalConfig.logoPath;
+
+  let stats;
+  try {
+    stats = await fs.promises.stat(logoPath);
+  } catch (error) {
+    logger.warning(`[addLogoToPDFPage] Logo file not found: ${logoPath}`);
+    return null;
+  }
+
+  if (cachedLogo && cachedLogo.path === logoPath && cachedLogo.mtimeMs === stats.mtimeMs) {
+    return cachedLogo;
+  }
+
+  // Resize to max height of 60pt while maintaining aspect ratio,
+  // and convert to PNG for transparency support
+  const buffer = await sharp(logoPath)
+    .resize({ height: 180, withoutEnlargement: true }) // 3x for better quality
+    .png()
+    .toBuffer();
+
+  const metadata = await sharp(buffer).metadata();
+
+  cachedLogo = {
+    path: logoPath,
+    mtimeMs: stats.mtimeMs,
+    buffer,
+    aspectRatio: metadata.width / metadata.height
+  };
+
+  logger.info(`[addLogoToPDFPage] Logo prepared from ${logoPath}`);
+  return cachedLogo;
+}
+
 /**
  * Helper function to add logo to PDF page
  * @param {PDFDocument} doc - PDFKit document instance
@@ -96,39 +272,15 @@ function sendProgressUpdate(getMainWindow, processedCount, total, message) {
  */
 async function addLogoToPDFPage(doc, logger, options = {}) {
   try {
-    // Load global config to get logo path
-    const globalConfig = loadGlobalConfig();
+    const logo = await loadInstitutionLogo(logger);
 
-    if (!globalConfig || !globalConfig.logoPath) {
-      logger.info('[addLogoToPDFPage] No institution logo configured - skipping logo addition');
+    if (!logo) {
       return;
     }
 
-    const logoPath = globalConfig.logoPath;
-    logger.info(`[addLogoToPDFPage] Logo path: ${logoPath}`);
-
-    // Check if logo file exists
-    if (!fs.existsSync(logoPath)) {
-      logger.warning(`[addLogoToPDFPage] Logo file not found: ${logoPath}`);
-      return;
-    }
-
-    logger.info('[addLogoToPDFPage] Logo file exists, processing...');
-
-    // Process logo image with sharp to ensure it loads correctly
-    // Resize to max height of 60pt while maintaining aspect ratio
-    const logoBuffer = await sharp(logoPath)
-      .resize({ height: 180, withoutEnlargement: true }) // 3x for better quality
-      .png() // Convert to PNG for transparency support
-      .toBuffer();
-
-    // Get image dimensions to calculate width
-    const logoMetadata = await sharp(logoBuffer).metadata();
-    const aspectRatio = logoMetadata.width / logoMetadata.height;
+    const { buffer: logoBuffer, aspectRatio } = logo;
     const logoHeight = 60; // Display height in points (increased from 40pt)
     const logoWidth = logoHeight * aspectRatio;
-
-    logger.info(`[addLogoToPDFPage] Logo dimensions: ${logoWidth}x${logoHeight}pt`);
 
     // Calculate position
     let x, y;
@@ -184,20 +336,10 @@ function registerExportHandlers(context) {
       const repositoryPath = await getImageRepositoryPath(state.dbManager);
 
       // Filter users to only include those with images in the repository
-      const usersWithRepositoryImages = users.filter(user => {
-        if (!repositoryPath) return false;
-
-        // Determine the identifier (NIA for students, document for others)
-        const identifier = user.type === 'student' ? user.nia : user.document;
-
-        if (!identifier) return false;
-
-        // Check for .jpg and .jpeg extensions using cache
-        const jpgPath = path.join(repositoryPath, `${identifier}.jpg`);
-        const jpegPath = path.join(repositoryPath, `${identifier}.jpeg`);
-
-        return checkRepositoryFile(jpgPath) || checkRepositoryFile(jpegPath);
-      });
+      const repositoryFiles = await readRepositoryFilenames(repositoryPath, logger);
+      const usersWithRepositoryImages = users.filter(
+        user => findUserRepositoryImage(user, repositoryFiles) !== null
+      );
 
       // Log the filtering
       logger.info(`CSV Export: Total users: ${users.length}, Users with repository images: ${usersWithRepositoryImages.length}`);
@@ -349,8 +491,8 @@ function registerExportHandlers(context) {
             logger.info(`Created folder for group: ${groupCode}`);
           }
 
-          // Export each user's image in this group
-          for (const user of groupUsers) {
+          // Export each user's image in this group, a few at a time
+          await mapWithConcurrency(groupUsers, IMAGE_EXPORT_CONCURRENCY, async (user) => {
             try {
               // Determine the ID to use for filename: NIA for students, document for others
               const isStudent = user.type === 'student';
@@ -362,7 +504,7 @@ function registerExportHandlers(context) {
                   error: 'Usuario sin identificador (NIA/DNI)'
                 });
                 processedCount++;
-                continue;
+                return;
               }
 
               // Get source image path (relative path in DB)
@@ -377,7 +519,7 @@ function registerExportHandlers(context) {
                   error: 'Imagen no encontrada'
                 });
                 processedCount++;
-                continue;
+                return;
               }
 
               // Create destination filename with user ID in group folder
@@ -385,61 +527,7 @@ function registerExportHandlers(context) {
               const destFileName = `${userId}${ext}`;
               const destPath = path.join(groupFolderPath, destFileName);
 
-              // Process image based on options
-              if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
-                // Copy original but correct orientation using sharp
-                await sharp(sourceImagePath)
-                  .rotate() // Auto-rotate based on EXIF orientation
-                  .toFile(destPath);
-              } else if (exportOptions.resizeEnabled) {
-                // Use sharp to process the image
-                let sharpInstance = sharp(sourceImagePath)
-                  .rotate(); // Auto-rotate based on EXIF orientation
-
-                // Get image metadata (after rotation)
-                const metadata = await sharpInstance.metadata();
-
-                // Resize if image is larger than boxSize
-                if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
-                  sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
-                    fit: 'inside',
-                    withoutEnlargement: true
-                  });
-                }
-
-                // Convert to JPEG and apply quality compression
-                // Start with quality 90 and reduce if needed
-                let quality = 90;
-                let outputBuffer;
-                const maxSizeBytes = exportOptions.maxSizeKB * 1024;
-
-                // Try to compress to target size
-                do {
-                  outputBuffer = await sharpInstance
-                    .jpeg({ quality })
-                    .toBuffer();
-
-                  if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
-                    break;
-                  }
-
-                  // Reduce quality and retry
-                  quality -= 10;
-                  sharpInstance = sharp(sourceImagePath)
-                    .rotate(); // Auto-rotate based on EXIF orientation
-                  if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
-                    sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
-                      fit: 'inside',
-                      withoutEnlargement: true
-                    });
-                  }
-                } while (quality > 0);
-
-                // Write the processed image
-                fs.writeFileSync(destPath, outputBuffer);
-
-                logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length/1024)}KB`);
-              }
+              await writeExportedImage(sourceImagePath, destPath, exportOptions, logger);
 
               results.exported++;
               logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
@@ -454,7 +542,7 @@ function registerExportHandlers(context) {
               processedCount++;
               sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
             }
-          }
+          });
         } catch (error) {
           logger.error(`Error creating folder for group ${groupCode}`, error);
           // Add all users in this group to errors
@@ -569,61 +657,7 @@ function registerExportHandlers(context) {
           const destFileName = `${userId}.jpg`;
           const destPath = path.join(repositoryPath, destFileName);
 
-          // Process image based on options
-          if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
-            // Copy original but correct orientation using sharp
-            await sharp(sourceImagePath)
-              .rotate() // Auto-rotate based on EXIF orientation
-              .toFile(destPath);
-          } else if (exportOptions.resizeEnabled) {
-            // Use sharp to process the image
-            let sharpInstance = sharp(sourceImagePath)
-              .rotate(); // Auto-rotate based on EXIF orientation
-
-            // Get image metadata (after rotation)
-            const metadata = await sharpInstance.metadata();
-
-            // Resize if image is larger than boxSize
-            if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
-              sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
-                fit: 'inside',
-                withoutEnlargement: true
-              });
-            }
-
-            // Convert to JPEG and apply quality compression
-            // Start with quality 90 and reduce if needed
-            let quality = 90;
-            let outputBuffer;
-            const maxSizeBytes = exportOptions.maxSizeKB * 1024;
-
-            // Try to compress to target size
-            do {
-              outputBuffer = await sharpInstance
-                .jpeg({ quality })
-                .toBuffer();
-
-              if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
-                break;
-              }
-
-              // Reduce quality and retry
-              quality -= 10;
-              sharpInstance = sharp(sourceImagePath)
-                .rotate(); // Auto-rotate based on EXIF orientation
-              if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
-                sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
-                  fit: 'inside',
-                  withoutEnlargement: true
-                });
-              }
-            } while (quality > 0);
-
-            // Write the processed image
-            fs.writeFileSync(destPath, outputBuffer);
-
-            logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length/1024)}KB`);
-          }
+          await writeExportedImage(sourceImagePath, destPath, exportOptions, logger);
 
           results.exported++;
           logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${destFileName}`);
@@ -719,6 +753,9 @@ function registerExportHandlers(context) {
       logger.info(`Export options:`, exportOptions);
       logger.info(`Users to check: ${users.length}`);
 
+      // One listing answers every user, rather than probing the repository twice each
+      const repositoryFiles = await readRepositoryFilenames(repositoryPath, logger);
+
       const results = {
         total: users.length,
         exported: 0,
@@ -754,89 +791,30 @@ function registerExportHandlers(context) {
             continue;
           }
 
-          // Check if image exists in repository
-          const sourceImagePath = path.join(repositoryPath, `${userId}.jpg`);
-          const sourceImagePathJpeg = path.join(repositoryPath, `${userId}.jpeg`);
+          // Check if image exists in repository, using the single listing
+          const repositoryFilename = findUserRepositoryImage(user, repositoryFiles);
 
-          let actualSourcePath = null;
-          if (fs.existsSync(sourceImagePath)) {
-            actualSourcePath = sourceImagePath;
-          } else if (fs.existsSync(sourceImagePathJpeg)) {
-            actualSourcePath = sourceImagePathJpeg;
-          }
-
-          if (!actualSourcePath) {
+          if (!repositoryFilename) {
             results.skipped++;
             processedCount++;
             continue;
           }
 
+          const actualSourcePath = path.join(repositoryPath, repositoryFilename);
+
           // Create destination filename
           const destFileName = `${userId}.jpg`;
           const destPath = path.join(exportFolder, destFileName);
 
-          // Process image based on options
-          if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
-            // Copy original but correct orientation using sharp
-            await sharp(actualSourcePath)
-              .rotate() // Auto-rotate based on EXIF orientation
-              .toFile(destPath);
-          } else if (exportOptions.resizeEnabled) {
-            // Use sharp to process the image
-            let sharpInstance = sharp(actualSourcePath)
-              .rotate(); // Auto-rotate based on EXIF orientation
-
-            // Get image metadata (after rotation)
-            const metadata = await sharpInstance.metadata();
-
-            // Resize if image is larger than boxSize
-            if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
-              sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
-                fit: 'inside',
-                withoutEnlargement: true
-              });
-            }
-
-            // Convert to JPEG and apply quality compression
-            // Start with quality 90 and reduce if needed
-            let quality = 90;
-            let outputBuffer;
-            const maxSizeBytes = exportOptions.maxSizeKB * 1024;
-
-            // Try to compress to target size
-            do {
-              outputBuffer = await sharpInstance
-                .jpeg({ quality })
-                .toBuffer();
-
-              if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
-                break;
-              }
-
-              // Reduce quality and retry
-              quality -= 10;
-              sharpInstance = sharp(actualSourcePath)
-                .rotate(); // Auto-rotate based on EXIF orientation
-              if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
-                sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
-                  fit: 'inside',
-                  withoutEnlargement: true
-                });
-              }
-            } while (quality > 0);
-
-            // Write the processed image
-            fs.writeFileSync(destPath, outputBuffer);
-
-            logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length/1024)}KB`);
-          }
+          await writeExportedImage(actualSourcePath, destPath, exportOptions, logger);
 
           // Store path for ZIP if enabled
           if (exportOptions.zipEnabled) {
+            const { size } = await fs.promises.stat(destPath);
             processedImages.push({
               path: destPath,
               name: destFileName,
-              size: fs.statSync(destPath).size
+              size
             });
           }
 
@@ -1162,8 +1140,8 @@ function registerExportHandlers(context) {
             logger.info(`Created folder for group: ${groupCode}`);
           }
 
-          // Export each user's image in this group
-          for (const user of groupUsers) {
+          // Export each user's image in this group, a few at a time
+          await mapWithConcurrency(groupUsers, IMAGE_EXPORT_CONCURRENCY, async (user) => {
             try {
               // Format name as "Apellido1 Apellido2, Nombre"
               const apellido1 = capitalizeWords(user.last_name1 || '');
@@ -1183,7 +1161,7 @@ function registerExportHandlers(context) {
                   error: 'Usuario sin nombre completo'
                 });
                 processedCount++;
-                continue;
+                return;
               }
 
               // Get source image path (relative path in DB)
@@ -1198,7 +1176,7 @@ function registerExportHandlers(context) {
                   error: 'Imagen no encontrada'
                 });
                 processedCount++;
-                continue;
+                return;
               }
 
               // Create destination filename with full name in group folder
@@ -1206,61 +1184,7 @@ function registerExportHandlers(context) {
               const destFileName = `${fullName}${ext}`;
               const destPath = path.join(groupFolderPath, destFileName);
 
-              // Process image based on options
-              if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
-                // Copy original but correct orientation using sharp
-                await sharp(sourceImagePath)
-                  .rotate() // Auto-rotate based on EXIF orientation
-                  .toFile(destPath);
-              } else if (exportOptions.resizeEnabled) {
-                // Use sharp to process the image
-                let sharpInstance = sharp(sourceImagePath)
-                  .rotate(); // Auto-rotate based on EXIF orientation
-
-                // Get image metadata (after rotation)
-                const metadata = await sharpInstance.metadata();
-
-                // Resize if image is larger than boxSize
-                if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
-                  sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
-                    fit: 'inside',
-                    withoutEnlargement: true
-                  });
-                }
-
-                // Convert to JPEG and apply quality compression
-                // Start with quality 90 and reduce if needed
-                let quality = 90;
-                let outputBuffer;
-                const maxSizeBytes = exportOptions.maxSizeKB * 1024;
-
-                // Try to compress to target size
-                do {
-                  outputBuffer = await sharpInstance
-                    .jpeg({ quality })
-                    .toBuffer();
-
-                  if (outputBuffer.length <= maxSizeBytes || quality <= 60) {
-                    break;
-                  }
-
-                  // Reduce quality and retry
-                  quality -= 10;
-                  sharpInstance = sharp(sourceImagePath)
-                    .rotate(); // Auto-rotate based on EXIF orientation
-                  if (metadata.width > exportOptions.boxSize || metadata.height > exportOptions.boxSize) {
-                    sharpInstance = sharpInstance.resize(exportOptions.boxSize, exportOptions.boxSize, {
-                      fit: 'inside',
-                      withoutEnlargement: true
-                    });
-                  }
-                } while (quality > 0);
-
-                // Write the processed image
-                fs.writeFileSync(destPath, outputBuffer);
-
-                logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length/1024)}KB`);
-              }
+              await writeExportedImage(sourceImagePath, destPath, exportOptions, logger);
 
               results.exported++;
               logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
@@ -1275,7 +1199,7 @@ function registerExportHandlers(context) {
               processedCount++;
               sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
             }
-          }
+          });
         } catch (error) {
           logger.error(`Error creating folder for group ${groupCode}`, error);
           // Add all users in this group to errors
@@ -1317,6 +1241,18 @@ function registerExportHandlers(context) {
       const generatedFiles = [];
       const totalGroups = Object.keys(usersByGroup).length;
       let processedGroups = 0;
+
+      // Resolved once: this is a project setting, and it used to be read from
+      // the database again for every user without a photo path
+      const orlaRepositoryPath = photoSource === 'repository'
+        ? await getImageRepositoryPath(state.dbManager)
+        : null;
+
+      const totalUsers = Object.values(usersByGroup).reduce(
+        (sum, groupUsers) => sum + groupUsers.length,
+        0
+      );
+      let processedUsers = 0;
 
       // Generate one PDF per group
       for (const [groupCode, users] of Object.entries(usersByGroup)) {
@@ -1439,17 +1375,14 @@ function registerExportHandlers(context) {
             : user.repository_image_path;
 
           // If using repository photos and path is not set, try to construct it
-          if (photoSource === 'repository' && !imagePath) {
-            const repositoryPath = await getImageRepositoryPath(state.dbManager);
-            if (repositoryPath) {
-              const isStudent = user.type === 'student';
-              const userId = isStudent ? user.nia : user.document;
-              if (userId) {
-                const filename = `${userId}.jpg`;
-                const mirror = repositoryMirror();
-                const mirrorPath = mirror ? mirror.getMirrorPath(filename) : null;
-                imagePath = mirrorPath || path.join(repositoryPath, filename);
-              }
+          if (photoSource === 'repository' && !imagePath && orlaRepositoryPath) {
+            const isStudent = user.type === 'student';
+            const userId = isStudent ? user.nia : user.document;
+            if (userId) {
+              const filename = `${userId}.jpg`;
+              const mirror = repositoryMirror();
+              const mirrorPath = mirror ? mirror.getMirrorPath(filename) : null;
+              imagePath = mirrorPath || path.join(orlaRepositoryPath, filename);
             }
           }
 
@@ -1521,6 +1454,20 @@ function registerExportHandlers(context) {
           } else {
             // Move to next column
             currentX += imageWidth + imageSpacing;
+          }
+
+          // pdfkit draws synchronously, so without giving the event loop a turn
+          // between photos the whole app, menus included, stays frozen for the
+          // length of the export
+          processedUsers++;
+          if (processedUsers % 10 === 0) {
+            sendProgressUpdate(
+              getMainWindow,
+              processedUsers,
+              totalUsers,
+              `Generando orla de ${groupCode}`
+            );
+            await new Promise(resolve => setImmediate(resolve));
           }
         }
 
@@ -1752,4 +1699,11 @@ function registerExportHandlers(context) {
   });
 }
 
-module.exports = { registerExportHandlers };
+module.exports = {
+  registerExportHandlers,
+  // Exported for tests: these carry the image processing shared by every export
+  readRepositoryFilenames,
+  findUserRepositoryImage,
+  mapWithConcurrency,
+  writeExportedImage
+};
