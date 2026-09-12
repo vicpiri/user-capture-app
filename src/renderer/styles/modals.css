@@ -752,6 +752,18 @@
   font-weight: 400;
 }
 
+/* Export Options Modal: summary of what is about to be exported */
+.export-summary {
+  display: none;
+  margin-bottom: 20px;
+}
+
+.export-summary-value {
+  text-align: right;
+  margin-left: 24px;
+  font-weight: 600;
+}
+
 /* Project Information Modal Styles */
 .project-info-modal-content {
   min-width: 640px;

@@ -294,6 +294,13 @@ function initializeExportManager() {
     getShowDuplicatesOnly: () => showDuplicatesOnly,
     getAllUsers: () => allUsers,
     getCurrentFilters: getCurrentFilters,
+    // The label as it reads in the filter, so the dialog names the group the
+    // same way the screen does
+    getGroupFilterLabel: () => {
+      const option = groupFilter.options[groupFilter.selectedIndex];
+      return option ? option.text : '';
+    },
+    getSearchTerm: () => searchInput.value.trim(),
     onExportComplete: async () => {
       // Reload users to refresh the repository check indicators
       await loadUsers(getCurrentFilters());

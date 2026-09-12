@@ -37,6 +37,8 @@
       this.getShowDuplicatesOnly = config.getShowDuplicatesOnly; // Function returning showDuplicatesOnly boolean
       this.getAllUsers = config.getAllUsers; // Function returning all users array
       this.getCurrentFilters = config.getCurrentFilters; // Function returning current filters object
+      this.getGroupFilterLabel = config.getGroupFilterLabel || (() => ''); // Function returning the selected group's label
+      this.getSearchTerm = config.getSearchTerm || (() => ''); // Function returning the active search term
 
       // Required callbacks
       this.onExportComplete = config.onExportComplete || (() => {}); // Called after successful export
@@ -413,6 +415,43 @@
     }
 
     /**
+     * Describe what an export is about to cover
+     *
+     * getUsersToExport() silently follows the selection, the duplicates filter,
+     * the search box or the group filter, in that order. Which one applied is
+     * not obvious from the screen, so it is spelled out before confirming.
+     *
+     * @param {Array} usersToExport
+     * @param {string} destination - Where the images are going, for the wording
+     * @returns {Array<{label: string, value: string}>}
+     */
+    describeExportScope(usersToExport, destination) {
+      const selectionMode = this.getSelectionMode();
+      const selectedUsers = this.getSelectedUsers();
+      const searchTerm = this.getSearchTerm();
+
+      let scope;
+      if (selectionMode && selectedUsers && selectedUsers.size > 0) {
+        scope = `${selectedUsers.size} usuarios seleccionados`;
+      } else if (this.getShowDuplicatesOnly()) {
+        scope = 'Usuarios con asignaciones duplicadas';
+      } else if (searchTerm) {
+        // A search ignores the group filter, so naming the group here would lie
+        scope = `Búsqueda "${searchTerm}", en todos los grupos`;
+      } else {
+        scope = this.getGroupFilterLabel() || 'Todos los grupos';
+      }
+
+      const withImage = usersToExport.filter(user => user.image_path).length;
+
+      return [
+        { label: 'Se exportará', value: scope },
+        { label: `Imágenes a enviar ${destination}`, value: String(withImage) },
+        { label: 'Usuarios sin foto capturada', value: String(usersToExport.length - withImage) }
+      ];
+    }
+
+    /**
      * Export images to repository (Google Drive)
      */
     async exportToRepository() {
@@ -422,7 +461,9 @@
       const usersToExport = this.getUsersToExport();
 
       // Show export options modal and wait for user choice
-      const options = await this.exportOptionsModal.show();
+      const options = await this.exportOptionsModal.show(
+        this.describeExportScope(usersToExport, 'al depósito')
+      );
 
       if (!options) {
         // User cancelled

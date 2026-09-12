@@ -33,6 +33,7 @@
     this.maxSizeInput = null;
     this.confirmBtn = null;
     this.cancelBtn = null;
+    this.summaryEl = null;
 
     // State
     this.resolvePromise = null;
@@ -55,6 +56,7 @@
     this.maxSizeInput = this.modal.querySelector('#export-max-size');
     this.confirmBtn = this.modal.querySelector('#export-confirm-btn');
     this.cancelBtn = this.modal.querySelector('#export-cancel-btn');
+    this.summaryEl = this.modal.querySelector('#export-options-modal-summary');
 
     // Setup event listeners
     this.addEventListener(this.copyOriginalRadio, 'change', () => this.handleModeChange());
@@ -70,19 +72,59 @@
 
   /**
    * Show export options dialog
+   *
+   * @param {Array<{label: string, value: string}>} [summary] - What is about to
+   *   be exported. Shown above the options so the scope is visible before
+   *   confirming; omit it and the section stays hidden.
    * @returns {Promise<object|null>} Promise that resolves with export options or null if cancelled
    */
-  show() {
+  show(summary) {
     return new Promise((resolve, reject) => {
       this.resolvePromise = resolve;
       this.rejectPromise = reject;
 
       // Reset to defaults
       this.resetForm();
+      this.renderSummary(summary);
 
       // Open modal
       this.open();
     });
+  }
+
+  /**
+   * Paint the summary rows, or hide the section when there is nothing to say
+   * @param {Array<{label: string, value: string}>} [summary]
+   */
+  renderSummary(summary) {
+    if (!this.summaryEl) return;
+
+    const rows = Array.isArray(summary) ? summary : [];
+
+    this.summaryEl.replaceChildren();
+    this.summaryEl.style.display = rows.length > 0 ? 'block' : 'none';
+
+    const fragment = document.createDocumentFragment();
+
+    rows.forEach(({ label, value }) => {
+      const row = document.createElement('div');
+      row.className = 'about-info-row';
+
+      const labelEl = document.createElement('span');
+      labelEl.className = 'about-label';
+      labelEl.textContent = label;
+
+      const valueEl = document.createElement('span');
+      valueEl.className = 'about-value export-summary-value';
+      valueEl.textContent = String(value);
+      valueEl.title = String(value);
+
+      row.appendChild(labelEl);
+      row.appendChild(valueEl);
+      fragment.appendChild(row);
+    });
+
+    this.summaryEl.appendChild(fragment);
   }
 
   /**

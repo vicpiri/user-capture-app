@@ -681,6 +681,87 @@ describe('ExportManager', () => {
     });
   });
 
+  describe('describeExportScope()', () => {
+    const withPhoto = (id) => ({ id, image_path: `photo${id}.jpg` });
+    const withoutPhoto = (id) => ({ id, image_path: null });
+
+    const valueFor = (rows, label) => {
+      const row = rows.find(r => r.label === label);
+      return row ? row.value : undefined;
+    };
+
+    test('should count only the users that have a captured photo', () => {
+      const rows = manager.describeExportScope(
+        [withPhoto(1), withPhoto(2), withoutPhoto(3)],
+        'al depósito'
+      );
+
+      expect(valueFor(rows, 'Imágenes a enviar al depósito')).toBe('2');
+      expect(valueFor(rows, 'Usuarios sin foto capturada')).toBe('1');
+    });
+
+    test('should name the selected group', () => {
+      manager.getGroupFilterLabel = () => '1CFMA - 1ACC CARROCERIA';
+
+      const rows = manager.describeExportScope([withPhoto(1)], 'al depósito');
+
+      expect(valueFor(rows, 'Se exportará')).toBe('1CFMA - 1ACC CARROCERIA');
+    });
+
+    test('should fall back to all groups when none is selected', () => {
+      manager.getGroupFilterLabel = () => '';
+
+      const rows = manager.describeExportScope([withPhoto(1)], 'al depósito');
+
+      expect(valueFor(rows, 'Se exportará')).toBe('Todos los grupos');
+    });
+
+    test('should report the selection when it is what drives the export', () => {
+      manager.getSelectionMode = () => true;
+      manager.getSelectedUsers = () => new Set([1, 2, 3]);
+      manager.getGroupFilterLabel = () => '1CFMA - 1ACC CARROCERIA';
+
+      const rows = manager.describeExportScope([withPhoto(1)], 'al depósito');
+
+      expect(valueFor(rows, 'Se exportará')).toBe('3 usuarios seleccionados');
+    });
+
+    /**
+     * getCurrentFilters drops the group as soon as there is a search term, so
+     * naming the group here would describe an export that is not happening.
+     */
+    test('should say the search ignores the group filter', () => {
+      manager.getSearchTerm = () => 'garcia';
+      manager.getGroupFilterLabel = () => '1CFMA - 1ACC CARROCERIA';
+
+      const rows = manager.describeExportScope([withPhoto(1)], 'al depósito');
+
+      expect(valueFor(rows, 'Se exportará')).toBe('Búsqueda "garcia", en todos los grupos');
+    });
+
+    test('should report the duplicates filter', () => {
+      manager.getShowDuplicatesOnly = () => true;
+
+      const rows = manager.describeExportScope([withPhoto(1)], 'al depósito');
+
+      expect(valueFor(rows, 'Se exportará')).toBe('Usuarios con asignaciones duplicadas');
+    });
+
+    test('should hand the summary to the options dialog before exporting', async () => {
+      manager.getCurrentUsers = () => [withPhoto(1), withPhoto(2), withoutPhoto(3)];
+      manager.getGroupFilterLabel = () => '1CFMA - 1ACC CARROCERIA';
+      mockExportOptionsModal.show.mockResolvedValue(null);
+
+      await manager.exportToRepository();
+
+      expect(mockExportOptionsModal.show).toHaveBeenCalledWith([
+        { label: 'Se exportará', value: '1CFMA - 1ACC CARROCERIA' },
+        { label: 'Imágenes a enviar al depósito', value: '2' },
+        { label: 'Usuarios sin foto capturada', value: '1' }
+      ]);
+    });
+  });
+
   describe('convertOptionsToAPI()', () => {
     test('should convert copy mode', () => {
       const options = {

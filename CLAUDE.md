@@ -900,7 +900,13 @@ Aplicación completamente funcional con todas las características principales i
   los que hay en pantalla con el filtro de grupo y la búsqueda aplicados
 - **Formato**: `{NIA}.jpg` para alumnado y `{documento}.jpg` para el resto,
   siempre `.jpg` y en la raíz del depósito, **sobrescribiendo** lo que hubiera
-- **Opciones**: copia original o redimensionado (tamaño y peso máximo)
+- **Opciones**: copia original o redimensionado (tamaño y peso máximo). El
+  diálogo muestra antes un resumen de qué se va a exportar (grupo, selección,
+  búsqueda o filtro de duplicados), cuántas imágenes se enviarán y cuántos
+  usuarios del ámbito no tienen foto capturada
+  - Lo construye `ExportManager.describeExportScope()` y lo pinta
+    `ExportOptionsModal.show(summary)`; el modal es compartido, así que el
+    resumen es opcional y se oculta si no se le pasa
 - **Se descartan**: usuarios sin NIA/DNI y aquellos cuyo archivo de origen falta
 - **Desvinculación posterior**: si se exportó al menos una imagen, se ofrece
   quitar la foto capturada de la ficha de **los usuarios exportados, y solo
