@@ -3,6 +3,7 @@
  */
 const { ipcMain } = require('electron');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { getImageRepositoryPath, loadGlobalConfig } = require('../utils/config');
 const { capitalizeWords } = require('../utils/formatting');
@@ -24,6 +25,121 @@ function sharp(...args) {
 // works, but libuv's thread pool is four threads by default, so going much
 // wider mostly queues work up rather than finishing it sooner.
 const IMAGE_EXPORT_CONCURRENCY = 4;
+
+// Exported images are written to a temporary file and renamed into place. The
+// extension matters: the repository mirror only indexes .jpg and .jpeg, so no
+// instance ever sees a half written export.
+//
+// The temporary lives next to its destination, and for the repository that
+// folder is shared between machines, so the name carries the host as well as
+// the pid: two PCs can hold the same pid and export the same user at once.
+const TEMP_EXPORT_PATTERN = /\.[A-Za-z0-9_-]+-\d+-\d+\.tmp$/;
+let tempExportCounter = 0;
+
+/**
+ * @param {string} destPath
+ * @returns {string} Path of the temporary file to write before renaming
+ */
+function buildTempExportPath(destPath) {
+  tempExportCounter += 1;
+  const host = os.hostname().replace(/[^A-Za-z0-9_-]/g, '') || 'host';
+
+  return `${destPath}.${host}-${process.pid}-${tempExportCounter}.tmp`;
+}
+
+// Windows fails the rename with EPERM or EBUSY while File Stream or an
+// antivirus still holds the destination open. It clears in a moment.
+const RENAME_ATTEMPTS = 3;
+const RENAME_RETRY_DELAY = 150;
+const RENAME_RETRYABLE = new Set(['EPERM', 'EBUSY', 'EACCES']);
+
+/**
+ * Rename, retrying while the destination is briefly locked
+ *
+ * @param {string} fromPath
+ * @param {string} toPath
+ * @param {Object} [options]
+ * @param {number} [options.attempts]
+ * @param {number} [options.delay]
+ * @returns {Promise<void>}
+ */
+async function renameWithRetry(fromPath, toPath, options = {}) {
+  const attempts = options.attempts ?? RENAME_ATTEMPTS;
+  const delay = options.delay ?? RENAME_RETRY_DELAY;
+
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await fs.promises.rename(fromPath, toPath);
+      return;
+    } catch (error) {
+      if (attempt >= attempts || !RENAME_RETRYABLE.has(error.code)) {
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
+/**
+ * Write a buffer to its destination without ever leaving it half written
+ *
+ * @param {string} destPath
+ * @param {Buffer} buffer
+ * @returns {Promise<void>}
+ */
+async function writeFileAtomically(destPath, buffer) {
+  const tempPath = buildTempExportPath(destPath);
+
+  try {
+    await fs.promises.writeFile(tempPath, buffer);
+    await renameWithRetry(tempPath, destPath);
+  } catch (error) {
+    // Nothing indexes a .tmp, so a leftover would sit there unnoticed
+    await fs.promises.rm(tempPath, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
+/**
+ * Drop temporary files left behind by an export that died mid-write
+ *
+ * Invisible to every mirror, so they would pile up in the shared repository
+ * with nobody noticing. Only files matching this application's pattern are
+ * touched.
+ *
+ * @param {string} folderPath
+ * @param {Object} logger
+ * @returns {Promise<number>} How many were removed
+ */
+async function removeOrphanTempExports(folderPath, logger) {
+  let removed = 0;
+
+  try {
+    const entries = await fs.promises.readdir(folderPath);
+
+    for (const entry of entries) {
+      if (!TEMP_EXPORT_PATTERN.test(entry)) {
+        continue;
+      }
+
+      try {
+        await fs.promises.rm(path.join(folderPath, entry), { force: true });
+        removed++;
+      } catch (error) {
+        logger.warning(`Could not remove leftover temporary file ${entry}: ${error.message}`);
+      }
+    }
+
+    if (removed > 0) {
+      logger.info(`Removed ${removed} leftover temporary export files`);
+    }
+  } catch (error) {
+    logger.warning(`Could not look for leftover temporary files: ${error.message}`);
+  }
+
+  return removed;
+}
 
 /**
  * List the repository once instead of probing it per user
@@ -112,9 +228,9 @@ async function mapWithConcurrency(items, limit, worker) {
 async function writeExportedImage(sourcePath, destPath, exportOptions, logger) {
   const sourceBuffer = await fs.promises.readFile(sourcePath);
 
-  // Auto-rotate based on EXIF orientation
+  // Copy the original, correcting the orientation only where it is wrong
   if (exportOptions.copyOriginal && !exportOptions.resizeEnabled) {
-    await sharp(sourceBuffer).rotate().toFile(destPath);
+    await writeFileAtomically(destPath, await buildOriginalCopy(sourceBuffer));
     return;
   }
 
@@ -154,8 +270,35 @@ async function writeExportedImage(sourcePath, destPath, exportOptions, logger) {
     quality -= 10;
   } while (quality > 0);
 
-  await fs.promises.writeFile(destPath, outputBuffer);
+  await writeFileAtomically(destPath, outputBuffer);
   logger.info(`Processed image: quality=${quality}, size=${Math.round(outputBuffer.length / 1024)}KB`);
+}
+
+/**
+ * Bytes to write for a "copy the original" export
+ *
+ * sharp's toFile() re-encodes whatever it is given: a JPEG copied that way came
+ * out at quality 80 with 4:2:0 subsampling and no metadata, which is not a
+ * copy. The rotate() it was there for only matters when the EXIF orientation
+ * says so, and most captures come from a canvas with no EXIF at all.
+ *
+ * @param {Buffer} sourceBuffer
+ * @returns {Promise<Buffer>}
+ */
+async function buildOriginalCopy(sourceBuffer) {
+  // Reads the header only, and throws on a truncated file, which is worth
+  // knowing before it reaches the repository
+  const metadata = await sharp(sourceBuffer).metadata();
+
+  const isUpright = !metadata.orientation || metadata.orientation === 1;
+
+  if (metadata.format === 'jpeg' && isUpright) {
+    // The very bytes that were read: an exact copy
+    return sourceBuffer;
+  }
+
+  // Rotating cannot avoid re-encoding with sharp, so keep the loss residual
+  return sharp(sourceBuffer).rotate().jpeg({ quality: 95 }).toBuffer();
 }
 
 /**
@@ -613,6 +756,10 @@ function registerExportHandlers(context) {
       logger.section('EXPORTING IMAGES TO REPOSITORY');
       logger.info(`Repository path: ${repositoryPath}`);
       logger.info(`Export options:`, exportOptions);
+
+      // Temporaries from an export that died mid-write are invisible to every
+      // mirror, so they would accumulate in the shared folder unnoticed
+      await removeOrphanTempExports(repositoryPath, logger);
 
       const importsPath = path.join(state.projectPath, 'imports');
 
@@ -1724,5 +1871,9 @@ module.exports = {
   readRepositoryFilenames,
   findUserRepositoryImage,
   mapWithConcurrency,
-  writeExportedImage
+  writeExportedImage,
+  buildOriginalCopy,
+  writeFileAtomically,
+  renameWithRetry,
+  removeOrphanTempExports
 };
