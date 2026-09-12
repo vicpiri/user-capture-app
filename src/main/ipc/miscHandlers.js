@@ -6,10 +6,29 @@ const path = require('path');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
 
-// Card print requests cache
+// Card print requests cache, remembered per repository: opening another project
+// points at a different folder, and its requests must not be reported against
+// this project's users
 let cardPrintRequestsCache = null;
 let cardPrintRequestsCacheTime = null;
+let cardPrintRequestsCacheKey = null;
 const CARD_PRINT_CACHE_TTL = 30000; // 30 seconds
+
+/**
+ * Whether a cached folder listing can still be used
+ * @param {Array|null} cache
+ * @param {number|null} cachedAt
+ * @param {string|null} cachedKey - Repository the listing was taken from
+ * @param {string|null} repositoryPath - Repository being asked about now
+ * @param {number} ttl
+ * @returns {boolean}
+ */
+function isListingCacheValid(cache, cachedAt, cachedKey, repositoryPath, ttl) {
+  return Boolean(cache) &&
+    cachedKey === repositoryPath &&
+    Boolean(cachedAt) &&
+    (Date.now() - cachedAt) < ttl;
+}
 
 /**
  * Register miscellaneous IPC handlers
@@ -326,15 +345,18 @@ function registerMiscHandlers(context) {
         return { success: false, error: 'No hay proyecto abierto' };
       }
 
-      // Check cache validity
+      const fs = require('fs').promises;
+      const repositoryPath = await getImageRepositoryPath(dbManager);
       const now = Date.now();
-      if (cardPrintRequestsCache && cardPrintRequestsCacheTime && (now - cardPrintRequestsCacheTime < CARD_PRINT_CACHE_TTL)) {
+
+      // Check cache validity
+      if (isListingCacheValid(cardPrintRequestsCache, cardPrintRequestsCacheTime, cardPrintRequestsCacheKey, repositoryPath, CARD_PRINT_CACHE_TTL)) {
         logger.info('[CardPrint] Using cached card print requests');
         return { success: true, userIds: cardPrintRequestsCache };
       }
 
-      const fs = require('fs').promises;
-      const repositoryPath = await getImageRepositoryPath(dbManager);
+      cardPrintRequestsCacheKey = repositoryPath;
+
       if (!repositoryPath) {
         cardPrintRequestsCache = [];
         cardPrintRequestsCacheTime = now;
@@ -460,9 +482,11 @@ function registerMiscHandlers(context) {
   // Publication Request Handlers
   // ============================================================================
 
-  // Publication requests cache
+  // Publication requests cache, remembered per repository for the same reason
+  // as the card print one above
   let publicationRequestsCache = null;
   let publicationRequestsCacheTime = null;
+  let publicationRequestsCacheKey = null;
   const PUBLICATION_CACHE_TTL = 30000; // 30 seconds
 
   // Get pending publication requests
@@ -474,15 +498,18 @@ function registerMiscHandlers(context) {
         return { success: false, error: 'No hay proyecto abierto' };
       }
 
-      // Check cache validity
+      const fs = require('fs').promises;
+      const repositoryPath = await getImageRepositoryPath(dbManager);
       const now = Date.now();
-      if (publicationRequestsCache && publicationRequestsCacheTime && (now - publicationRequestsCacheTime < PUBLICATION_CACHE_TTL)) {
+
+      // Check cache validity
+      if (isListingCacheValid(publicationRequestsCache, publicationRequestsCacheTime, publicationRequestsCacheKey, repositoryPath, PUBLICATION_CACHE_TTL)) {
         logger.info('[Publication] Using cached publication requests');
         return { success: true, userIds: publicationRequestsCache };
       }
 
-      const fs = require('fs').promises;
-      const repositoryPath = await getImageRepositoryPath(dbManager);
+      publicationRequestsCacheKey = repositoryPath;
+
       if (!repositoryPath) {
         publicationRequestsCache = [];
         publicationRequestsCacheTime = now;

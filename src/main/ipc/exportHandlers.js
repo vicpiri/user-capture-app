@@ -346,6 +346,10 @@ function registerExportHandlers(context) {
       // Get repository path
       const repositoryPath = await getImageRepositoryPath(state.dbManager);
 
+      // Counted before filtering: users is reassigned below, and this is what
+      // tells the user how many were left out for having no repository photo
+      const candidateCount = users.length;
+
       // Filter users to only include those with images in the repository
       const repositoryFiles = await readRepositoryFilenames(repositoryPath, logger);
       const usersWithRepositoryImages = users.filter(
@@ -415,8 +419,7 @@ function registerExportHandlers(context) {
       fs.writeFileSync(filePath, csvContent, 'utf8');
 
       // Calculate statistics for user feedback
-      const totalUsers = usersWithRepositoryImages.length + (users.length - usersWithRepositoryImages.length);
-      const ignoredUsers = totalUsers - usersWithRepositoryImages.length;
+      const ignoredUsers = candidateCount - usersWithRepositoryImages.length;
 
       // Get exported user IDs for card print request checking
       const exportedUserIds = usersWithRepositoryImages.map(user => {
