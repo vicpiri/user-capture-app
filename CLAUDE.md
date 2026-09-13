@@ -75,7 +75,6 @@ user-capture-app/
 │   │   │   ├── BaseModal.js             # Clase base para modales
 │   │   │   └── store.js                 # Estado global de la aplicación
 │   │   ├── utils/                       # Utilidades del renderer
-│   │   │   ├── formatters.js            # Formateo de fechas, nombres y tamaños
 │   │   │   └── imageUrl.js              # URLs app-img:// de las fotos
 │   │   ├── index.html           # HTML de la ventana principal
 │   │   ├── renderer.js          # Lógica principal de la UI (coordinador)
@@ -547,8 +546,15 @@ de los métodos IPC a los que llamaba ya no existían en el preload.
 
 ### Utilidades (utils/)
 
-- **formatters.js**: Formateo de fechas, nombres, tamaños y edades
 - **imageUrl.js**: Construcción de las URLs `app-img://` de las fotos
+
+Hubo aquí un `formatters.js` con formateo de fechas, nombres y edades. Se
+eliminó junto con sus 39 tests: no lo importaba nadie, y sus funciones esperaban
+usuarios con campos en castellano (`nombre`, `apellido1`, `documento`,
+`grupo_codigo`, `fecha_nac`) que el modelo de datos no usa, así que ni siquiera
+habrían funcionado. Las versiones vivas de eso están en el proceso principal,
+donde se hacen las exportaciones: `calculateAge` en `ipc/exportHandlers.js` y
+`capitalizeWords` en `utils/formatting.js`.
 
 ### Coordinador Principal (renderer.js)
 
