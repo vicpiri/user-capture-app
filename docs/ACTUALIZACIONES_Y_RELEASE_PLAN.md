@@ -202,9 +202,11 @@ versión limpia.
 
 - **`standard-version` → `commit-and-tag-version`** (13.x). Es el fork que
   los propios autores recomiendan: misma línea de comandos, mismo formato de
-  changelog, mismos `--release-as` y `--dry-run`. No hace falta `.versionrc`:
-  los valores por defecto ya muestran `feat`, `fix` y `perf` y ocultan
-  `docs`, `chore`, `test`, `build` y `refactor`, que es lo que hay hoy.
+  changelog, mismos `--release-as` y `--dry-run`. Lleva un `.versionrc.json`
+  porque los valores por defecto de la herramienta **ocultan `perf`** (por eso
+  el changelog de 1.6.0 no tiene sección de rendimiento): ahora se muestran
+  `feat`, `fix`, `perf` y `revert`, y siguen ocultos `docs`, `chore`, `test`,
+  `build`, `refactor`, `style` y `ci`.
 - **`electron-updater`** como dependencia de producción (sección 5).
 - **`build.publish`** explícito en `package.json`:
   ```json
