@@ -1,6 +1,6 @@
 # Comprobación de actualizaciones y nuevo flujo de release
 
-**Estado**: 🚧 Pasos 1 a 4 de la transición hechos (tags subidos, `commit-and-tag-version`, `build.publish`, actualizador fase 1). Pendiente la primera release con el flujo nuevo (paso 5) y la verificación con una segunda (paso 6).
+**Estado**: 🚧 Pasos 1 a 5 hechos: la **1.7.0 es la primera Release de GitHub** (2026-09-13), publicada con este flujo y con el actualizador en fase 1. Pendiente el paso 6 (verificar el aviso con una 1.7.1) y la fase 2.
 **Redactado**: 2026-09-13, tras la migración a Electron 44.
 **Alcance**: (1) un flujo de publicación reproducible que deje cada versión
 como Release de GitHub, y (2) que la aplicación instalada avise de que existe
@@ -143,6 +143,16 @@ del changelog y ejecuta `gh release edit vX.Y.Z --notes-file`).
   GitHub. Arregla la causa y lanza solo la parte de empaquetado:
   `npx electron-builder --win nsis --x64 --publish always`. Vuelve a subir
   los adjuntos a la misma release.
+- **La release existe pero le falta el instalador** (pasó en la 1.7.0: el
+  log decía `uploading file=...exe` y el adjunto nunca apareció, sin error).
+  Súbelo a mano con el nombre **con guiones**, que es el que `latest.yml`
+  declara; `gh` usa el nombre del archivo como nombre del adjunto:
+  ```
+  copy "distEdu User Capture-X.Y.Z-win-x64.exe" "%TEMP%Edu-User-Capture-X.Y.Z-win-x64.exe"
+  gh release upload vX.Y.Z "%TEMP%Edu-User-Capture-X.Y.Z-win-x64.exe"
+  ```
+  No hace falta regenerar nada: el sha512 de `latest.yml` es el del archivo
+  de `dist/`.
 
 ### 1.8 Errores conocidos y su causa
 
@@ -155,6 +165,8 @@ del changelog y ejecuta `gh release edit vX.Y.Z --notes-file`).
 | `npx electron` falla con `ERR_REQUIRE_ESM` | Node anterior a 22.12 | Subir Node |
 | El instalador se llama con espacios y en GitHub con guiones | Normal: electron-builder sustituye los espacios al subir. `latest.yml` ya usa los guiones | Nada. Si subes un archivo a mano, ponle el nombre con guiones |
 | La versión en la aplicación acaba en `-DEV` | Hay commits después del último tag; solo pasa en un checkout de git | Nada; la instalada nunca lo muestra |
+| `gh release view` muestra solo `.blockmap` y `latest.yml` | La subida del `.exe` (130 MB) se perdió sin que electron-builder avisara | Subirlo a mano, sección 1.7 |
+| El changelog no tiene sección de rendimiento | Falta `.versionrc.json` (la herramienta oculta `perf` por defecto) | Está en el repositorio; no borrarlo |
 
 ---
 
@@ -429,10 +441,11 @@ En orden, con un commit por paso. Los pasos 1 a 3 no tocan la aplicación.
    versión bajada a mano debe mostrar el modal de "disponible" en cuanto
    exista la primera release; hasta entonces, debe mostrar "sin novedades" en
    manual y nada en automático.
-5. **Primera release con el flujo nuevo: 1.7.0.** Sección 1 completa. Es la
-   primera Release de GitHub del proyecto y la primera versión con
-   actualizador. Antes, pasar las puertas de la migración de Electron que
-   quedaron pendientes si ya se puede (impresión térmica).
+5. **Primera release con el flujo nuevo: 1.7.0.** ✅ Hecha el 2026-09-13.
+   Sección 1 completa. Es la primera Release de GitHub del proyecto y la
+   primera versión con actualizador. La subida del instalador falló en
+   silencio y hubo que hacerla a mano (sección 1.7); la impresión térmica
+   sigue sin probar desde la migración de Electron.
 6. **Verificar el actualizador de extremo a extremo**: con la 1.7.0
    instalada, publicar una 1.7.1 (basta un `fix:` real o
    `docs:` + `--release-as patch`) y comprobar que la 1.7.0 avisa.
