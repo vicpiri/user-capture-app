@@ -1,19 +1,23 @@
 # Migración de Electron 28 a la línea con soporte
 
 **Estado**: 📋 Planificado, sin implementar.
-**Redactado**: 2026-09-13.
-**Alcance**: dependencias, empaquetado y verificación. Sin cambios de
-funcionalidad.
+**Redactado**: 2026-09-13. **Revisado**: 2026-09-13, contrastando cada
+afirmación con el código, `node_modules`, el registro de npm y la lista oficial
+de cambios rompedores de Electron 29 a 44.
+**Alcance**: dependencias, empaquetado y verificación, más **dos cambios de
+código obligatorios** (ver "Cambios de código obligatorios"). No hay cambios de
+funcionalidad visibles más allá de mantener lo que hoy funciona.
 
 ## Punto de partida, comprobado
 
 | | |
 |---|---|
 | Electron instalado | **28.3.3** (`^28.0.0` en `package.json`) |
-| Última estable | **44.3.0** |
+| Última estable | **44.3.0** (Chromium 152, Node 24.20; publicada el 8 de septiembre de 2026) |
 | Líneas con soporte | 42, 43, 44 (Electron mantiene las tres últimas) |
 | electron-builder instalado | **24.13.3** |
 | Última de electron-builder | **26.15.3** |
+| Tests | 1080 en 42 suites, todos en verde |
 
 Electron 28 quedó fuera de soporte a mediados de 2024. Van dieciséis versiones
 mayores de Chromium y varias de Node sin actualizar, sin parches de seguridad.
@@ -29,72 +33,132 @@ estable a nivel de ABI entre versiones de Node y de Electron:
   "napi_versions": [3, 6] }`. Su binario precompilado sirve para cualquier
   runtime que soporte N-API 6.
 - `sharp@0.34.4` no compila nada: instala el paquete de plataforma
-  `@img/sharp-win32-x64`, que trae `sharp-win32-x64.node` ya construido.
+  `@img/sharp-win32-x64`, que trae `sharp-win32-x64.node` ya construido. Su
+  `engines` (`^18.17 || ^20.3 || >=21`) lo satisface el Node 24 de Electron 44.
 
-**No se usa ninguna API retirada.** Comprobado en `main.js` y `src/`:
+**Las APIs más habituales ya están migradas.** Comprobado en `main.js` y `src/`:
 
 | Riesgo habitual | En este proyecto |
 |---|---|
 | `protocol.registerFileProtocol` / `interceptFileProtocol` (retiradas en 35) | No se usan; ya se migró a `protocol.handle` |
 | `@electron/remote`, `enableRemoteModule` | No aparecen |
 | `desktopCapturer` en el renderer | No se usa |
-| `webContents.getPrinters()` (obsoleta) | Ya se usa `getPrintersAsync()` |
+| `webContents.getPrinters()` (retirada en 31) | Ya se usa `getPrintersAsync()` |
+| `clipboard` en el renderer (retirado en 44) | No se usa |
+| `renderer-process-crashed`, `gpu-process-crashed` (retirados en 29) | No se usan |
+| `session.setPreloads` (obsoleto en 35) | No se usa |
 | `nodeIntegration`, `contextIsolation` | Ya en la configuración segura |
 | Sandbox por defecto (desde Electron 20) | Ya vigente en 28, sin cambio |
+| Windows 32 bits (dejado de publicar en 44) | Solo se genera x64 |
 
-Es decir, el código de aplicación está en buena forma. El trabajo está en las
-dependencias, el empaquetado y la verificación.
+Pero **no es cierto que no se use ninguna API retirada**: la primera redacción
+de este plan solo revisó el proceso principal, y en el renderer hay dos usos.
+Son los que motivan la sección siguiente.
+
+---
+
+## Cambios de código obligatorios
+
+### A. `File.path` en el drag & drop (retirado en Electron 32)
+
+`src/renderer/components/DragDropManager.js:153` lee `file.path` de los
+archivos soltados sobre la ventana para moverlos a `ingest`. Esa propiedad no
+estándar desapareció en la 32: con la 44, `file.path` es `undefined` y el
+drag & drop deja de funcionar **sin error visible**.
+
+La sustitución oficial es `webUtils.getPathForFile(file)`, que solo existe en
+el preload:
+
+```javascript
+// src/preload/preload.js
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
+contextBridge.exposeInMainWorld('electronAPI', {
+  // ...
+  getPathForFile: (file) => webUtils.getPathForFile(file),
+});
+```
+
+y en `DragDropManager` pedir la ruta a través de esa función antes de llamar a
+`moveImageToIngest`. Los tests de
+`tests/unit/components/DragDropManager.test.js:199-216` simulan archivos como
+objetos con `path`; hay que adaptarlos al nuevo camino.
+
+### B. `PrinterInfo` sin `isDefault` ni `status` (retirados en Electron 36)
+
+Chromium eliminó ambos campos. `src/renderer/components/modals/PreferencesModal.js:376,380`
+los muestra en la ficha de la impresora, así que con la 44 **todas** las
+impresoras aparecerían como "No disponible" y "Predeterminada: No". Es
+cosmético, pero confunde justo durante la puerta de impresión. Hay que quitar
+esas dos filas (o mostrarlas solo si el campo existe) y limpiar el log de
+`src/main/ipc/miscHandlers.js:906-907`, que también los registra.
 
 ---
 
 ## Los riesgos reales
 
-### 1. `scripts/rebuild-native.mjs` es hoy el mayor punto de fallo
+### 1. `scripts/rebuild-native.mjs` — ya averiguado lo que hace
 
 El script fuerza `npm rebuild --build-from-source` de `sqlite3` **y** de `sharp`
-contra las cabeceras de Electron (`npm_config_target`, `runtime=electron`,
-`disturl`). Con dos módulos N-API eso no hace falta, y en el caso de sharp 0.34
-compilar desde fuente exige un libvips del sistema que no está declarado en
-ninguna parte.
+contra las cabeceras de Electron y después ejecuta `electron-builder
+install-app-deps`. Inspeccionando `node_modules`:
 
-Es más probable que rompa la migración el propio script que Electron.
+- **sqlite3 se compila de verdad** con MSVC: en `node_modules/sqlite3/build/Release`
+  quedan `node_sqlite3.iobj`, `.ipdb` y `.pdb` del 5 de noviembre de 2025.
+- **El paso de sharp es un no-op.** `sharp/install/check.js` ve
+  `npm_config_build_from_source`, busca `node-gyp` entre sus dependencias, no
+  lo encuentra, escribe "Please add node-gyp to your dependencies" y sale con
+  código 0. Nunca ha compilado nada; el temor al libvips del sistema no llega a
+  materializarse.
+- `install-app-deps` lo ejecuta electron-builder por su cuenta antes de
+  empaquetar, así que el script lo duplica.
 
-**Antes de tocar Electron** conviene averiguar qué hace hoy realmente: si compila
-de verdad, si falla en silencio y cae a los binarios precompilados, o si
-`electron-builder install-app-deps` acaba deshaciendo su trabajo. Con eso claro,
-lo previsible es reducirlo a `install-app-deps` o eliminarlo, y quitar
-`rebuild:native` de los scripts `dist:*`.
+Conclusión: **eliminar el script y quitar `rebuild:native` de los `dist:*`** es
+seguro. Y conviene hacerlo, porque desde Electron 33 los módulos nativos exigen
+C++20 y el lock arrastra `node-gyp` 8.4.1: la compilación de sqlite3 es el
+punto con más papeletas para romper, y no aporta nada frente al binario N-API.
+
+Si al empaquetar con electron-builder 26 su `install-app-deps` intentara
+compilar algo, `"npmRebuild": false` en `build` lo desactiva del todo. Con dos
+módulos N-API no se pierde nada.
 
 ### 2. electron-builder 24 se queda corto
 
 La 24.13.3 es de la época de Electron 28. Para una Electron moderna y las
-herramientas de Windows actuales hay que subir a la 26.x. Va en el mismo paso
-que Electron, no después: si algo falla en el empaquetado hay que poder atribuir
-el fallo a uno de los dos, y por eso conviene verificar el arranque en
-desarrollo **antes** de tocar el empaquetado (ver puertas).
+herramientas de Windows actuales hay que subir a la 26.x. Sus cambios
+rompedores (firma de Windows en `win.signtoolOptions`, notarización de mac,
+`.desktop` de Linux como objeto) no afectan a esta configuración. Sí reescribió
+la recolección de `node_modules`, y que `@img/sharp-win32-x64` acabe dentro del
+paquete solo se confirma en la aplicación instalada.
+
+Va en el mismo paso que Electron, no después: si algo falla en el empaquetado
+hay que poder atribuir el fallo a uno de los dos, y por eso conviene verificar el
+arranque en desarrollo **antes** de tocar el empaquetado (ver puertas).
 
 ### 3. `getUserMedia` desde `file://`
 
 Las ventanas se cargan con `loadFile`, así que el origen es `file://`. La captura
-desde webcam depende de `navigator.mediaDevices.getUserMedia`, en
-`src/renderer/camera.js:65` y `src/renderer/renderer.js:2074`. Chromium ha ido
-apretando las reglas de contexto seguro a lo largo de dieciséis versiones.
+depende de `navigator.mediaDevices.getUserMedia`, en `src/renderer/camera.js:65`
+y `src/renderer/renderer.js:2074`.
 
-Es la funcionalidad central de la aplicación, así que **hay que probarla en un
-equipo con cámara real**, no dar por hecho que sigue funcionando.
+Revisada la lista de cambios rompedores de la 29 a la 44, **ninguno toca el
+contexto seguro de `file://` ni los permisos de medios de una ventana
+principal**. El único relacionado (Permission Policy en la 30) afecta a iframes
+de otro origen. No hay `setPermissionRequestHandler`, así que sigue el permiso
+por defecto. El riesgo es menor de lo que parecía, pero es la funcionalidad
+central, así que **hay que probarla en un equipo con cámara real**.
 
 Si se rompiera, la salida conocida es servir el renderer por un esquema propio
-registrado como `standard` y `secure` en lugar de `file://`. El proyecto ya tiene
-montada esa maquinaria para `app-img` (`src/main/protocol/imageProtocol.js`), así
-que el patrón es conocido, pero es trabajo aparte y no trivial.
+registrado como `standard` y `secure`. El proyecto ya tiene esa maquinaria para
+`app-img` (`src/main/protocol/imageProtocol.js`), pero es trabajo aparte.
 
 ### 4. Impresión silenciosa de recibos
 
 `miscHandlers.js:1090` imprime con `webContents.print({ silent: true,
-deviceName, printBackground: true })` a una impresora térmica de 80 mm. La pila
-de impresión de Chromium ha cambiado varias veces. Hay que probarlo con la
-impresora de verdad; un recibo que sale en blanco o con otro tamaño no se detecta
-de ninguna otra forma.
+deviceName, printBackground: true })` a una impresora térmica de 80 mm. Nada en
+la lista de cambios afecta a `print` con `silent` y `pageSize`, pero la pila de
+impresión de Chromium ha cambiado varias veces por debajo. Hay que probarlo con
+la impresora de verdad; un recibo en blanco o con otro tamaño no se detecta de
+otra forma. (El cambio de `PrinterInfo` es aparte: ver cambio B.)
 
 ### 5. `asarUnpack` y las DLL de sharp
 
@@ -113,36 +177,40 @@ Y `asarUnpack` en `package.json` dice:
 ```
 
 El `.node` lo recoge el patrón `**/*.node`, pero **las dos DLL no encajan en
-ninguna de las tres entradas**: no son `.node`, y no están bajo
-`node_modules/sharp/` sino bajo `node_modules/@img/`. Si acaban dentro del asar,
-sharp no puede cargar libvips y en la aplicación instalada fallan las miniaturas
-y todas las exportaciones.
-
-Que hoy funcione sugiere que electron-builder las desempaqueta por su cuenta al
-detectar dependencias nativas. Es un comportamiento del que no conviene depender
-al cambiar de versión mayor de la herramienta: añadir `node_modules/@img/**/*` a
-`asarUnpack` es gratis y elimina la duda.
+ninguna de las tres entradas**. Que hoy funcione está explicado:
+electron-builder 24 desempaqueta por su cuenta cualquier módulo que contenga
+`.dll` o `.node` (`app-builder-lib/out/asar/unpackDetector.js:23,75`). Es un
+comportamiento interno del que no conviene depender al cambiar de versión
+mayor: añadir `node_modules/@img/**/*` a `asarUnpack` es gratis, elimina la
+duda y es lo que recomienda la propia documentación de sharp.
 
 **Esto solo se ve en la aplicación instalada.** En `npm run dev` no hay asar.
 
 ### 6. `electron-reloader` (solo desarrollo)
 
-`electron-reloader@1.2.3` lleva años sin tocarse y puede no llevarse bien con una
+`electron-reloader@1.2.3` no se toca desde 2022 y puede no llevarse bien con una
 Electron moderna. Si falla, se pierde la recarga automática en `npm run dev`,
 nada más. Se puede quitar sin consecuencias para producción.
 
-Recordatorio de esta misma sesión: vigila la carpeta del proyecto, así que
-cualquier archivo que se escriba dentro durante el desarrollo recarga el renderer
-y le vacía el estado.
+Recordatorio: vigila la carpeta del proyecto, así que cualquier archivo que se
+escriba dentro durante el desarrollo recarga el renderer y le vacía el estado.
+
+### 7. Electron ya no se descarga en `postinstall` (desde la 42)
+
+`npm install` deja el paquete sin binario; se descarga en la primera ejecución
+de `electron .`. El primer `npm run dev` tras instalar necesita red y tarda más.
+No bloquea nada, pero conviene saberlo antes de extrañarse. electron-builder
+descarga su propia copia para empaquetar, como hasta ahora.
 
 ---
 
 ## Estrategia: salto directo
 
-Dado que no se usa ninguna API retirada y que los módulos nativos no necesitan
-recompilarse, **saltar directamente a la 44.x** es defendible y evita repetir
-seis veces la misma verificación. La alternativa —escalar por 31, 37 y 44— solo
-compensa si el salto directo falla de forma que no se pueda atribuir.
+Dado que los módulos nativos no necesitan recompilarse y que los únicos usos de
+APIs retiradas son los dos cambios de código ya localizados, **saltar
+directamente a la 44.x** es defendible y evita repetir seis veces la misma
+verificación. La alternativa (escalar por 31, 37 y 44) solo compensa si el
+salto directo falla de forma que no se pueda atribuir.
 
 Elegir 44 y no 42 da el mayor margen antes del próximo fin de soporte.
 
@@ -151,44 +219,57 @@ etapas, sin haber ensuciado `main`.
 
 ## Pasos
 
-1. Rama nueva desde `main`.
-2. **Averiguar qué hace hoy `rebuild-native.mjs`** (riesgo 1) y anotar el
-   resultado. Es la única tarea que conviene hacer *antes* de tocar versiones,
-   porque después no se podrá distinguir su comportamiento del de la migración.
-3. Subir `electron` a `^44.0.0` y `electron-builder` a `^26.0.0`.
-   `npm run install:clean` para una instalación limpia; una parcial deja
-   binarios de la versión anterior.
-4. Añadir `node_modules/@img/**/*` a `asarUnpack`.
-5. Simplificar o eliminar `rebuild-native.mjs` según lo averiguado en el paso 2.
-6. Pasar las puertas de verificación en orden.
-7. Un commit por cambio con sentido propio: dependencias, empaquetado, script de
-   nativos. Así el `git bisect` sirve de algo si algo aparece semanas después.
+1. **Copiar fuera de `dist/` el instalador de 1.6.0** (y los anteriores si se
+   quieren conservar). `dist/` está en `.gitignore` y `npm run clean` la borra
+   entera; sin esta copia la vuelta atrás se queda sin instalador.
+2. Rama nueva desde `main`.
+3. Subir versiones **regenerando el lock**:
+   ```
+   npm install -D electron@^44 electron-builder@^26
+   ```
+   No sirve editar `package.json` y lanzar `npm ci`: `npm ci` aborta si el lock
+   no coincide. Una vez actualizado el lock, `npm run install:clean` deja una
+   instalación limpia; una parcial deja binarios de la versión anterior.
+4. Aplicar los **cambios de código obligatorios** A y B, con sus tests.
+5. Añadir `node_modules/@img/**/*` a `asarUnpack`.
+6. Eliminar `scripts/rebuild-native.mjs`, los scripts `rebuild:native*` y su
+   prefijo en los `dist:*` (riesgo 1).
+7. Pasar las puertas de verificación en orden.
+8. Un commit por cambio con sentido propio: dependencias, código, empaquetado,
+   script de nativos. Así el `git bisect` sirve de algo si algo aparece semanas
+   después.
 
 ## Puertas de verificación, en orden
 
 El orden importa: cada puerta descarta una capa, y saltarse una hace que el
 fallo de la siguiente sea imposible de atribuir.
 
-1. **`npm test`** — 1080 tests. No cargan Electron, lo mockean, así que deben
-   pasar sin cambios. Si fallan, el problema es de Node, no de Electron.
+1. **`npm test`** — 1080 tests hoy. No cargan Electron, lo mockean, así que
+   deben pasar sin más cambios que los de `DragDropManager.test.js` (cambio A).
+   Si fallan otros, el problema es de Node, no de Electron.
 2. **`npm run dev` arranca** y abre el proyecto reciente: lista de usuarios,
-   miniaturas por `app-img://`, barra de estado.
+   miniaturas por `app-img://`, barra de estado. **Arrastrar una foto** a la
+   ventana y comprobar que llega a `ingest` (cambio A).
 3. **Cámara**: abrir la ventana de captura en un equipo con webcam y capturar.
    Es el riesgo 3.
 4. **Depósito**: sincronización del mirror, y una exportación completa contra
    `G:\Mi unidad\_Borrar` comprobando que se crea `Reemplazadas` y que no quedan
    `.tmp`. Ejercita sharp, el protocolo de imágenes y los renombrados sobre Drive.
-5. **Impresión** de un recibo de prueba en la térmica. Es el riesgo 4.
+5. **Impresión**: abrir Herramientas > Configurar impresora, comprobar que la
+   lista de impresoras se ve bien (cambio B) e imprimir un recibo de prueba en
+   la térmica. Es el riesgo 4.
 6. **`npm run dist:win`** genera el instalador.
 7. **Instalar el instalador y usar la aplicación instalada.** Innegociable: el
-   asar, `asarUnpack` y los binarios nativos solo fallan aquí. Repetir en ella
+   asar, `asarUnpack` y los binarios nativos solo fallan aquí. Comprobar que
+   `resources/app.asar.unpacked/node_modules/@img/` contiene las DLL, y repetir
    los puntos 2 a 5.
 
 ## Vuelta atrás
 
 `package-lock.json` en git y la rama sin fusionar bastan. Si el instalador
-resulta defectuoso ya distribuido, se reinstala la versión anterior desde
-`dist/`; conviene conservar el instalador de 1.6.0 antes de empezar.
+resulta defectuoso ya distribuido, se reinstala la versión anterior desde la
+copia hecha en el paso 1; **no desde `dist/`**, porque `npm run clean` la habrá
+borrado.
 
 No hay migración de datos: ni el esquema de SQLite ni el formato del proyecto
 cambian, así que un proyecto abierto con la versión nueva sigue abriéndose con la
@@ -200,6 +281,9 @@ vieja.
   riesgo 3 se materializa.
 - **Sustituir `electron-reloader`** por otra cosa. Si estorba, se quita.
 - **Firma de código del instalador**. No se hace hoy y la migración no lo cambia.
+- **Subir `sqlite3` (6.0.1) y `sharp` (0.35.4)**. Existen versiones nuevas, pero
+  las actuales funcionan con Electron 44 y mezclar cambios impediría atribuir
+  fallos.
 
 ## Después de migrar
 
@@ -208,7 +292,9 @@ que avise. Electron mantiene solo las tres últimas mayores y publica una nueva
 cada ocho semanas, así que **el soporte de una versión dura unos seis meses**.
 Conviene subir una o dos veces al año, por ejemplo junto a la preparación de cada
 curso, cuando ya se hacen pruebas completas. Desde una versión con soporte el
-salto siempre es pequeño; el caro es este.
+salto siempre es pequeño; el caro es este. Y en cada salto, revisar la lista de
+cambios rompedores **también para el renderer**: `File.path` se escapó porque
+solo se miró el proceso principal.
 
 ## Referencias de código
 
@@ -218,6 +304,12 @@ salto siempre es pequeño; el caro es este.
 | Recompilado de nativos | `scripts/rebuild-native.mjs` |
 | Recarga en desarrollo | `main.js:52-61` |
 | Protocolo propio ya registrado | `src/main/protocol/imageProtocol.js` |
+| `File.path` a sustituir (cambio A) | `src/renderer/components/DragDropManager.js:153`, `src/preload/preload.js` |
+| Tests del drag & drop | `tests/unit/components/DragDropManager.test.js:199-216` |
+| `PrinterInfo.isDefault` / `status` (cambio B) | `src/renderer/components/modals/PreferencesModal.js:376,380`, `src/main/ipc/miscHandlers.js:906-907` |
 | Captura desde webcam | `src/renderer/camera.js:65`, `src/renderer/renderer.js:2074` |
 | Impresión silenciosa | `src/main/ipc/miscHandlers.js:1070-1090` |
 | Listado de impresoras | `src/main/ipc/miscHandlers.js:897` |
+| Desempaquetado automático de DLL en electron-builder 24 | `node_modules/app-builder-lib/out/asar/unpackDetector.js:23,75` |
+| No-op de sharp al compilar desde fuente | `node_modules/sharp/install/check.js` |
+| Cambios rompedores de Electron | https://www.electronjs.org/docs/latest/breaking-changes |
