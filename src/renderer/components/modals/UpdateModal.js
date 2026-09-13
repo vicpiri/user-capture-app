@@ -213,18 +213,54 @@
     }
 
     /**
-     * Release notes come from the GitHub release body, which the release flow
-     * fills with the CHANGELOG section: markdown with a commit link after each
-     * entry. Keep the text, drop the links and the markdown markers.
+     * Turn the release notes into plain text
+     *
+     * The release body is written as the markdown section of CHANGELOG.md, but
+     * that is not what arrives: electron-updater's GitHub provider reads the
+     * releases atom feed, whose <content> is the body **already rendered to
+     * HTML**. Cleaning only the markdown left the tags in place and the notes
+     * were shown as `<h3>Bug Fixes</h3><ul><li>...`.
+     *
+     * The tags are turned into text rather than injected as HTML: these notes
+     * come off the network, and nothing here needs formatting badly enough to
+     * put remote markup into the window. Markdown is still handled, in case a
+     * provider ever hands the body over unrendered.
      * @private
      */
     _cleanNotes(notes) {
       if (!notes) return '';
-      return String(notes)
+
+      let text = String(notes);
+
+      if (/<[a-z][^>]*>/i.test(text)) {
+        text = text
+          // The feed pretty-prints one tag per line. Those newlines are
+          // formatting, and leaving them in doubled the gap between bullets.
+          .replace(/>\s*\n\s*</g, '><')
+          .replace(/<li[^>]*>/gi, '• ')
+          .replace(/<\/li>/gi, '\n')
+          // A heading or a paragraph earns a blank line, a list item does not
+          .replace(/<\/(p|h[1-6]|blockquote)>/gi, '\n\n')
+          .replace(/<\/(ul|ol|div|tr)>/gi, '\n')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<[^>]*>/g, '');
+      }
+
+      return text
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#0?39;|&apos;/gi, "'")
+        // Last, so an escaped entity does not end up decoded twice
+        .replace(/&amp;/gi, '&')
         .replace(/\s*\(\[[0-9a-f]{7,40}\]\([^)]*\)\)/g, '')
         .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
         .replace(/^#{1,6}\s*/gm, '')
         .replace(/^\*\s+/gm, '• ')
+        // What the commit link leaves behind once it is plain text
+        .replace(/\s*\(\s*[0-9a-f]{7,40}\s*\)/g, '')
+        .replace(/[ \t]+$/gm, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
     }

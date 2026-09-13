@@ -140,4 +140,67 @@ describe('UpdateModal', () => {
       expect(callbacks.openReleasePage).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * The release body is written as markdown in CHANGELOG.md, but that is not
+   * what arrives: electron-updater's GitHub provider reads the releases atom
+   * feed, whose <content> is the body already rendered to HTML. Cleaning only
+   * the markdown showed the tags to the user.
+   */
+  describe('release notes', () => {
+    // The available view waits on getAppVersion() before painting
+    const notesFor = async (releaseNotes) => {
+      modal.handleStatus({ status: 'available', manual: true, version: '1.8.0', releaseNotes });
+      await Promise.resolve();
+      return document.getElementById('update-modal-notes-text').textContent;
+    };
+
+    // Copied from https://github.com/vicpiri/user-capture-app/releases.atom
+    const REAL_FEED_CONTENT = [
+      '<h3>Bug Fixes</h3>',
+      '<ul>',
+      '<li>give up on an update check that never answers ' +
+        '(<a href="https://github.com/vicpiri/user-capture-app/commit/d68e6879d1">d68e687</a>)</li>',
+      '</ul>'
+    ].join('\n');
+
+    test('renders what GitHub really sends as readable text', async () => {
+      expect(await notesFor(REAL_FEED_CONTENT))
+        .toBe('Bug Fixes\n\n• give up on an update check that never answers');
+    });
+
+    test('leaves no tag behind', async () => {
+      expect(await notesFor(REAL_FEED_CONTENT)).not.toMatch(/[<>]/);
+    });
+
+    test('turns every list item into its own bullet', async () => {
+      const html = '<ul>\n<li>uno</li>\n<li>dos</li>\n<li>tres</li>\n</ul>';
+
+      expect(await notesFor(html)).toBe('• uno\n• dos\n• tres');
+    });
+
+    test('keeps the text of a link and drops its address', async () => {
+      const html = '<p>Instala la <a href="https://example.com/x">1.7.1</a>, que lo corrige.</p>';
+
+      expect(await notesFor(html)).toBe('Instala la 1.7.1, que lo corrige.');
+    });
+
+    test('decodes the entities the feed escapes', async () => {
+      const html = '<p>Copias &quot;antiguas&quot; &amp; nuevas &lt;sin tocar&gt;</p>';
+
+      expect(await notesFor(html)).toBe('Copias "antiguas" & nuevas <sin tocar>');
+    });
+
+    test('still handles a body that arrives as markdown', async () => {
+      const markdown = '### Features\n\n* add x ([abc1234](https://example.com/c/abc1234))\n* add y';
+
+      expect(await notesFor(markdown)).toBe('Features\n\n• add x\n• add y');
+    });
+
+    test('does not mistake ordinary parentheses for a commit hash', async () => {
+      const html = '<ul><li>arregla la exportación (la de verdad)</li></ul>';
+
+      expect(await notesFor(html)).toBe('• arregla la exportación (la de verdad)');
+    });
+  });
 });

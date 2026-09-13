@@ -382,6 +382,16 @@ estado recibido:
   `autoInstallOnAppQuit` para esa sesión).
 - **Sin novedades** y **Error**: texto y "Cerrar". Solo en manual.
 
+**Las notas llegan en HTML, no en markdown.** El cuerpo de la Release se
+escribe como markdown desde `CHANGELOG.md`, pero el proveedor de GitHub de
+`electron-updater` lee el feed `releases.atom`, cuyo `<content type="html">`
+trae el cuerpo **ya renderizado**. La 1.7.2 mostraba `<h3>Bug Fixes</h3><ul>…`
+tal cual porque el limpiador solo entendía markdown. `_cleanNotes()` convierte
+ahora las etiquetas a texto —viñetas para los `<li>`, línea en blanco tras
+títulos y párrafos, se conserva el texto de los enlaces y se descarta la
+dirección— en lugar de inyectarlas con `innerHTML`: son contenido que viene de
+la red, y ningún formato compensa meter marcado remoto en la ventana.
+
 Ayuda > Acerca de muestra además "Última comprobación: fecha" y un enlace
 "Buscar ahora" que dispara la comprobación manual.
 
