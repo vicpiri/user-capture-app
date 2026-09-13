@@ -119,6 +119,31 @@ function saveDisplayPreferences(preferences) {
   return saveGlobalConfig(config);
 }
 
+/**
+ * Update checker preferences, with defaults
+ * @returns {{autoCheck: boolean, lastCheck: string|null, skippedVersion: string|null}}
+ */
+function getUpdatePreferences() {
+  const config = loadGlobalConfig();
+  return {
+    autoCheck: true,
+    lastCheck: null,
+    skippedVersion: null,
+    ...(config.updates || {})
+  };
+}
+
+/**
+ * Merge a partial set of update preferences into config
+ * @param {Object} partial - keys of getUpdatePreferences() to change
+ * @returns {boolean} Success status
+ */
+function saveUpdatePreferences(partial) {
+  const config = loadGlobalConfig();
+  config.updates = { ...(config.updates || {}), ...partial };
+  return saveGlobalConfig(config);
+}
+
 module.exports = {
   getConfigPath,
   loadGlobalConfig,
@@ -127,5 +152,7 @@ module.exports = {
   setImageRepositoryPath,
   getSelectedGroupFilter,
   setSelectedGroupFilter,
-  saveDisplayPreferences
+  saveDisplayPreferences,
+  getUpdatePreferences,
+  saveUpdatePreferences
 };

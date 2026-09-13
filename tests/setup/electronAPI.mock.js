@@ -327,6 +327,13 @@ class ElectronAPIMock extends EventEmitter {
     return this._registerEvent('group-filter-changed', callback);
   }
 
+  // === UPDATES ===
+  checkForUpdates = jest.fn(async () => ({ status: 'not-available', manual: true }));
+  skipUpdateVersion = jest.fn(async () => ({ success: true }));
+  openReleasePage = jest.fn(async () => ({ success: true }));
+  onUpdateStatus = jest.fn((callback) => { this.on('update-status', callback); });
+  onMenuCheckUpdates = jest.fn((callback) => { this.on('menu-check-updates', callback); });
+
   // Legacy para compatibilidad
   onEvent(event, listener) {
     this.on(event, listener);

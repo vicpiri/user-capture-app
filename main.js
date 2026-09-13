@@ -7,7 +7,8 @@ if (!process.env.UV_THREADPOOL_SIZE) {
   process.env.UV_THREADPOOL_SIZE = String(Math.min(Math.max(cores, 8), 32));
 }
 
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const DatabaseManager = require('./src/main/database');
@@ -25,8 +26,11 @@ const {
   loadGlobalConfig,
   getImageRepositoryPath,
   setImageRepositoryPath,
-  saveDisplayPreferences
+  saveDisplayPreferences,
+  getUpdatePreferences,
+  saveUpdatePreferences
 } = require('./src/main/utils/config');
+const UpdateManager = require('./src/main/updateManager');
 const {
   loadRecentProjects: loadRecentProjectsUtil,
   saveRecentProjects: saveRecentProjectsUtil,
@@ -47,6 +51,7 @@ const { registerProjectHandlers } = require('./src/main/ipc/projectHandlers');
 const { registerUserGroupImageHandlers } = require('./src/main/ipc/userGroupImageHandlers');
 const { registerExportHandlers } = require('./src/main/ipc/exportHandlers');
 const { registerMiscHandlers } = require('./src/main/ipc/miscHandlers');
+const { registerUpdateHandlers } = require('./src/main/ipc/updateHandlers');
 
 // Enable hot reload in development
 if (process.argv.includes('--dev')) {
@@ -100,6 +105,7 @@ let availableCameras = [];
 let selectedCameraId = null;
 let repositoryMirror = null; // Repository mirror manager
 let menuBuilder = null; // Menu builder instance
+let updateManager = null; // Checks GitHub Releases for newer versions
 
 // Repository cache manager
 const repositoryCacheManager = new RepositoryCacheManager();
@@ -396,6 +402,35 @@ function createWindow() {
   // alive, because 'window-all-closed' never fires.
   mainWindow.on('closed', () => {
     closeSecondaryWindows();
+  });
+
+  // The automatic update check waits until the window is on screen, and then
+  // some more, so it never competes with opening the project
+  mainWindow.once('ready-to-show', () => {
+    if (updateManager) {
+      updateManager.scheduleStartupCheck();
+    }
+  });
+}
+
+/**
+ * Update checker against the GitHub Releases declared in package.json
+ */
+function createUpdateManager() {
+  const { owner, repo } = require('./package.json').build.publish;
+  return new UpdateManager({
+    autoUpdater,
+    isPackaged: app.isPackaged,
+    platform: process.platform,
+    logger,
+    loadPreferences: getUpdatePreferences,
+    savePreferences: saveUpdatePreferences,
+    getMainWindow: () => mainWindowManager.getWindow(),
+    openExternal: (url) => shell.openExternal(url),
+    releasesUrl: `https://github.com/${owner}/${repo}/releases`,
+    // Lets `npm run dev -- --dev-updates` test against the real releases with
+    // a local dev-app-update.yml (see docs/ACTUALIZACIONES_Y_RELEASE_PLAN.md)
+    forceDevConfig: process.argv.includes('--dev-updates')
   });
 }
 
@@ -837,7 +872,8 @@ function registerIPCHandlers() {
     ensureDeletedGroup,
     ensureRepositoryMirrorStarted,
     reinitializeRepositoryMirror,
-    closeCurrentProject
+    closeCurrentProject,
+    updateManager: () => updateManager
   };
 
   // Register all handler modules
@@ -845,6 +881,7 @@ function registerIPCHandlers() {
   registerUserGroupImageHandlers(context);
   registerExportHandlers(context);
   registerMiscHandlers(context);
+  registerUpdateHandlers(context);
 
   // Filter toggle handlers from renderer (badge clicks)
   ipcMain.on('menu-toggle-duplicates-from-renderer', (event, enabled) => {
@@ -894,6 +931,7 @@ app.whenReady().then(() => {
 
   loadRecentProjects();
   createMenu();
+  updateManager = createUpdateManager();
   createWindow();
 
   // Register all IPC handlers
@@ -911,6 +949,10 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  if (updateManager) {
+    updateManager.dispose();
+  }
+
   // Cleanup repository mirror watcher
   if (repositoryMirror) {
     repositoryMirror.stopWatch();

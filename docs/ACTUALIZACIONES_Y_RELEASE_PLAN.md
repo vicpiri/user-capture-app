@@ -1,6 +1,6 @@
 # Comprobación de actualizaciones y nuevo flujo de release
 
-**Estado**: 📋 Planificado, sin implementar.
+**Estado**: 🚧 Pasos 1 a 4 de la transición hechos (tags subidos, `commit-and-tag-version`, `build.publish`, actualizador fase 1). Pendiente la primera release con el flujo nuevo (paso 5) y la verificación con una segunda (paso 6).
 **Redactado**: 2026-09-13, tras la migración a Electron 44.
 **Alcance**: (1) un flujo de publicación reproducible que deje cada versión
 como Release de GitHub, y (2) que la aplicación instalada avise de que existe

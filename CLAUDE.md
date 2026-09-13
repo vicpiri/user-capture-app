@@ -20,6 +20,7 @@ user-capture-app/
 │   │   │   ├── exportHandlers.js       # Exportación de CSV e imágenes (7 endpoints)
 │   │   │   ├── miscHandlers.js         # Manejadores misceláneos (tags, diálogos, etc.)
 │   │   │   ├── projectHandlers.js      # Gestión de proyectos, XML y cierre
+│   │   │   ├── updateHandlers.js       # Comprobación de actualizaciones (GitHub Releases)
 │   │   │   └── userGroupImageHandlers.js # Usuarios, grupos e imágenes
 │   │   ├── menu/                # Sistema de menús
 │   │   │   └── menuBuilder.js          # Constructor de menús de la aplicación
@@ -40,6 +41,7 @@ user-capture-app/
 │   │   ├── imageManager.js      # Procesamiento y gestión de imágenes
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
+│   │   ├── updateManager.js     # Envoltorio de electron-updater (aviso de versión nueva)
 │   │   └── xmlParser.js         # Parseo de archivos XML de usuarios
 │   ├── preload/       # Scripts preload (comunicación segura entre procesos)
 │   ├── renderer/      # Proceso de renderizado (interfaz de usuario)
@@ -52,6 +54,7 @@ user-capture-app/
 │   │   │   │   ├── NewProjectModal.js       # Modal de creación de proyectos
 │   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
 │   │   │   │   ├── ProjectInfoModal.js      # Modal de información del proyecto
+│   │   │   │   ├── UpdateModal.js           # Modal de actualizaciones disponibles
 │   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
 │   │   │   ├── CaptureHistoryManager.js # Tira de miniaturas del historial de capturas
 │   │   │   ├── DragDropManager.js       # Gestión de drag & drop de imágenes
@@ -218,6 +221,16 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 - **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado
+- **updateManager.js**: Comprobación de versiones nuevas contra las Releases de
+  GitHub mediante `electron-updater`. Solo comprueba y avisa (fase 1): nunca
+  descarga ni instala por su cuenta. La comprobación automática arranca 15 s
+  después de mostrar la ventana, como mucho una vez cada 24 h, y si falla solo
+  lo anota en el log; la manual (Ayuda > Buscar actualizaciones, o desde Acerca
+  de) muestra siempre el resultado. Solo funciona en la aplicación empaquetada;
+  en desarrollo, `npm run dev -- --dev-updates` con un `dev-app-update.yml`
+  local. Preferencias en `config.json` bajo `updates` (`autoCheck`,
+  `lastCheck`, `skippedVersion`). El flujo de publicación del que depende está
+  en `docs/ACTUALIZACIONES_Y_RELEASE_PLAN.md`.
 
 ## Arquitectura del Proceso de Renderizado
 

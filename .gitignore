@@ -157,3 +157,6 @@ nul
 
 # Example files
 ejemplos/
+
+# Local config to test the updater against real releases in development
+dev-app-update.yml

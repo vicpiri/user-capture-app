@@ -237,6 +237,24 @@
     </div>
   </div>
 
+  <!-- Modal for application updates -->
+  <div id="update-modal" class="modal">
+    <div class="modal-content update-modal-content">
+      <h2 id="update-modal-title">Actualizaciones</h2>
+      <div id="update-modal-spinner" class="update-modal-spinner" hidden><div class="spinner"></div></div>
+      <p id="update-modal-message"></p>
+      <div id="update-modal-notes" class="update-modal-notes" hidden>
+        <div class="update-modal-notes-label">Novedades</div>
+        <pre id="update-modal-notes-text"></pre>
+      </div>
+      <div class="modal-buttons">
+        <button id="update-modal-skip-btn" class="btn btn-secondary" hidden>Omitir esta versión</button>
+        <button id="update-modal-later-btn" class="btn btn-secondary" hidden>Más tarde</button>
+        <button id="update-modal-primary-btn" class="btn btn-primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Project Information Modal -->
   <div id="project-info-modal" class="modal">
     <div class="modal-content project-info-modal-content">
@@ -520,6 +538,7 @@
       </div>
 
       <div class="modal-buttons">
+        <button id="about-check-updates-btn" class="btn btn-secondary">Buscar actualizaciones</button>
         <button id="about-close-btn" class="btn btn-primary">Cerrar</button>
       </div>
     </div>
@@ -664,6 +683,7 @@
   <script src="components/modals/NewProjectModal.js"></script>
   <script src="components/modals/ConfirmModal.js"></script>
   <script src="components/modals/InfoModal.js"></script>
+  <script src="components/modals/UpdateModal.js"></script>
   <script src="components/modals/ExportOptionsModal.js"></script>
   <script src="components/modals/InventoryExportOptionsModal.js"></script>
   <script src="components/modals/AddTagModal.js"></script>

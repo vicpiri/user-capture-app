@@ -130,6 +130,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-show-about', callback);
   },
 
+  onMenuCheckUpdates: (callback) => {
+    ipcRenderer.on('menu-check-updates', callback);
+  },
+
   onMenuImportImagesId: (callback) => {
     ipcRenderer.on('menu-import-images-id', callback);
   },
@@ -251,6 +255,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Version
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
+  // Updates (GitHub Releases)
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  skipUpdateVersion: (version) => ipcRenderer.invoke('skip-update-version', version),
+  openReleasePage: (version) => ipcRenderer.invoke('open-release-page', version),
+  onUpdateStatus: (callback) => {
+    ipcRenderer.on('update-status', (event, payload) => callback(payload));
+  },
 
   // Printer configuration
   getPrinters: () => ipcRenderer.invoke('get-printers'),

@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, CaptureHistoryManager, ExportManager, OrlaExportManager, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UpdateModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, CaptureHistoryManager, ExportManager, OrlaExportManager, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
 
 // Component instances
 let userRowRenderer = null;
@@ -85,6 +85,7 @@ const progressModal = document.getElementById('progress-modal');
 let newProjectModalInstance = null;
 let confirmModalInstance = null;
 let infoModalInstance = null;
+let updateModalInstance = null;
 let exportOptionsModalInstance = null;
 let inventoryExportOptionsModalInstance = null;
 let addTagModalInstance = null;
@@ -164,6 +165,14 @@ function initializeModals() {
 
   infoModalInstance = new InfoModal();
   infoModalInstance.init();
+
+  updateModalInstance = new UpdateModal({
+    checkForUpdates: () => window.electronAPI.checkForUpdates(),
+    skipUpdateVersion: (version) => window.electronAPI.skipUpdateVersion(version),
+    openReleasePage: (version) => window.electronAPI.openReleasePage(version),
+    getAppVersion: () => window.electronAPI.getAppVersion()
+  });
+  updateModalInstance.init();
 
   exportOptionsModalInstance = new ExportOptionsModal();
   exportOptionsModalInstance.init();
@@ -834,6 +843,22 @@ function initializeEventListeners() {
     // Show modal
     aboutModal.classList.add('show');
   });
+
+  // Updates: the Help menu asks for a manual check, and the main process
+  // reports every outcome (including automatic checks) through update-status
+  window.electronAPI.onMenuCheckUpdates(() => {
+    updateModalInstance.checkNow();
+  });
+  window.electronAPI.onUpdateStatus((payload) => {
+    updateModalInstance.handleStatus(payload);
+  });
+  const aboutCheckUpdatesBtn = document.getElementById('about-check-updates-btn');
+  if (aboutCheckUpdatesBtn) {
+    aboutCheckUpdatesBtn.addEventListener('click', () => {
+      aboutModal.classList.remove('show');
+      updateModalInstance.checkNow();
+    });
+  }
 
   // Close about modal
   if (aboutCloseBtn) {

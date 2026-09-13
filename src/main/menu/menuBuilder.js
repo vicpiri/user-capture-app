@@ -468,6 +468,12 @@ class MenuBuilder {
             this.mainWindow.webContents.send('menu-show-about');
           }
         },
+        {
+          label: 'Buscar actualizaciones...',
+          click: () => {
+            this.mainWindow.webContents.send('menu-check-updates');
+          }
+        },
         { type: 'separator' },
         {
           label: 'Documentación',

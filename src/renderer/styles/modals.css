@@ -1291,3 +1291,48 @@
 .preferences-content::-webkit-scrollbar-thumb:hover {
   background: #4a5566;
 }
+
+/* Update modal */
+.update-modal-content {
+  max-width: 560px;
+}
+
+/* The views toggle elements with the hidden attribute; the display rules of
+   .btn and the spinner would otherwise win over the browser default */
+.update-modal-content [hidden] {
+  display: none !important;
+}
+
+.update-modal-spinner {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+.update-modal-notes {
+  margin-top: 16px;
+  border: 1px solid #3a3f4e;
+  border-radius: 8px;
+  background-color: #1a1f2e;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.update-modal-notes-label {
+  padding: 8px 12px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8a8f9e;
+}
+
+.update-modal-notes pre {
+  margin: 0;
+  padding: 8px 12px 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  color: #e0e0e0;
+}
