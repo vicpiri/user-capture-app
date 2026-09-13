@@ -1,7 +1,44 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.7.0](https://github.com/vicpiri/user-capture-app/compare/v1.6.0...v1.7.0) (2026-09-13)
+
+### Features
+
+* add a capture history strip beside the main viewer ([09f1d0d](https://github.com/vicpiri/user-capture-app/commit/09f1d0d3e11442e603d45a8ad9c8cf1dc973b3b2))
+* add a project information modal ([c1766d3](https://github.com/vicpiri/user-capture-app/commit/c1766d38f618164dab1a850cdf0ddd95ec6bc17c))
+* keep the photos a repository export replaces ([5165497](https://github.com/vicpiri/user-capture-app/commit/5165497fc9eff499f2e9d85709314fe8b664e8b9))
+* show the capture date and time in the history strip ([baaa93e](https://github.com/vicpiri/user-capture-app/commit/baaa93ef1fc28065973a526ef0b6ac1c6d242f1e))
+* show what is about to be exported in the export options dialog ([f56bccb](https://github.com/vicpiri/user-capture-app/commit/f56bccb0eac8a1c903c58ae280848cc21e54dd3c))
+* summarise the scope in the remaining image export dialogs ([f60016b](https://github.com/vicpiri/user-capture-app/commit/f60016bac41d7b33cfa4eed80e0fa2afb85ce957))
+* tell the export dialog how many photos it will replace ([4221bd2](https://github.com/vicpiri/user-capture-app/commit/4221bd288f57ba66b518dfc411187df3fcbe5ae8))
+* tell the user when a newer version is published on GitHub ([e7db7d2](https://github.com/vicpiri/user-capture-app/commit/e7db7d240b6655fb4a4a2dc19bcb5601bf90c3c4))
+* write exported images atomically and make the original copy a real copy ([9e2aff1](https://github.com/vicpiri/user-capture-app/commit/9e2aff1b591febf6f44a8685b13972d40b92b76b))
+
+### Bug Fixes
+
+* close secondary windows when the main window closes ([77e6858](https://github.com/vicpiri/user-capture-app/commit/77e68580f59e3a0ff1512681c70dcf73280d6987))
+* keep repository photos when changing group in repository grid ([9d14e88](https://github.com/vicpiri/user-capture-app/commit/9d14e88521bdfc5837ee32308748f20d264deb4c))
+* make the capture history strip scrollable ([c98cdaf](https://github.com/vicpiri/user-capture-app/commit/c98cdafd2b88f46367367fd0cad1c6daff494c98))
+* release project resources before opening another project ([09ac239](https://github.com/vicpiri/user-capture-app/commit/09ac23901cc824fdc78264031011e54daba60a44))
+* replace the renderer APIs removed by Electron 32 and 36 ([1c74717](https://github.com/vicpiri/user-capture-app/commit/1c74717f482e88443e106771b6db56742c14264c))
+* repository photos never appearing, and arrow keys restarting every image ([b8a64fa](https://github.com/vicpiri/user-capture-app/commit/b8a64fa7aab416edd5e01a6c995cd25aa35a4e7c))
+* restore repository watcher change detection ([7808e77](https://github.com/vicpiri/user-capture-app/commit/7808e77a484d2c350dca11ae209dacee688c33b7))
+* unlink only the exported users after exporting to the repository ([5d260ad](https://github.com/vicpiri/user-capture-app/commit/5d260add95e6602280f475b41cd830ebb5e46aa8))
+
+### Performance Improvements
+
+* batch database writes and index the columns actually queried ([701ca44](https://github.com/vicpiri/user-capture-app/commit/701ca4425307fbb3a628e61aa85aea17d85c76d6))
+* cut repository mirror polling cost ([22ef229](https://github.com/vicpiri/user-capture-app/commit/22ef229048faaa9dc1d843f8089f35444009028e))
+* cut the cost of interacting with the user list ([d318d2a](https://github.com/vicpiri/user-capture-app/commit/d318d2aaa84e18d7b2dc24ba6198b1a5f0ce57b7))
+* make virtual scrolling measure and render per frame ([5ee345a](https://github.com/vicpiri/user-capture-app/commit/5ee345a92c73795f64bc51b3ab54ef6a74da069c))
+* only request photos for rows that stay on screen ([2c1db4d](https://github.com/vicpiri/user-capture-app/commit/2c1db4dac865d4e46bb2d6b80cdb4a0750554105))
+* reduce redundant user reloads and image decoding in user list ([97694c2](https://github.com/vicpiri/user-capture-app/commit/97694c2661ddc6135d3d28e094d41a1bf40a07ec))
+* serve user photos as cached thumbnails over a custom protocol ([49e6a02](https://github.com/vicpiri/user-capture-app/commit/49e6a029cc8037282cf1d95cfc3b59b66f7157b0))
+* stop blocking the main process on logging and startup work ([2c5cf52](https://github.com/vicpiri/user-capture-app/commit/2c5cf52e72d913529ca04c966b8751e5c774b00d))
+* stop exports blocking the main process ([e86f371](https://github.com/vicpiri/user-capture-app/commit/e86f3715ed91da77bc02b8fba2986a7c5049f2e1))
+* stop the repository watcher from starving the thumbnail pipeline ([ddcf3b1](https://github.com/vicpiri/user-capture-app/commit/ddcf3b1c8c0a306687a852abd95e01d1be42a647))
 ## [1.6.0](https://github.com/vicpiri/user-capture-app/compare/v1.5.0...v1.6.0) (2025-11-05)
 
 
