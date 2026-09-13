@@ -71,7 +71,8 @@
     "asarUnpack": [
       "**/*.node",
       "node_modules/sqlite3/**/*",
-      "node_modules/sharp/**/*"
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*"
     ],
     "win": {
       "target": "nsis",
