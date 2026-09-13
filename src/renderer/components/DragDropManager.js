@@ -25,6 +25,9 @@
       // Required callbacks
       this.showInfoModal = config.showInfoModal; // Function to show info/error messages
       this.moveImageToIngest = config.moveImageToIngest; // Function to move image file
+      // Resolves a dropped File to its filesystem path. File.path no longer
+      // exists in the renderer, so this has to go through the preload.
+      this.getPathForFile = config.getPathForFile;
 
       // State
       this.isEnabled = false;
@@ -150,7 +153,7 @@
 
       for (const file of imageFiles) {
         try {
-          const result = await this.moveImageToIngest(file.path);
+          const result = await this.moveImageToIngest(this.getPathForFile(file));
           if (result.success) {
             successCount++;
           } else {

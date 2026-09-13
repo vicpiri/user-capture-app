@@ -900,11 +900,10 @@ function registerMiscHandlers(context) {
       if (printers.length === 0) {
         logger.warn('[Printer] No printers found via webContents.getPrintersAsync()');
       } else {
+        // Chromium dropped status and isDefault from PrinterInfo (Electron 36)
         logger.info(`[Printer] Available printers:`, printers.map(p => ({
           name: p.name,
-          displayName: p.displayName,
-          status: p.status,
-          isDefault: p.isDefault
+          displayName: p.displayName
         })));
       }
 

@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
@@ -180,6 +180,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   unlinkImageFromUser: (userId) => ipcRenderer.invoke('unlink-image-user', userId),
 
   moveImageToIngest: (imagePath) => ipcRenderer.invoke('move-image-to-ingest', imagePath),
+  // Path of a File dropped on the window. The nonstandard File.path was
+  // removed in Electron 32; the only way left is this preload-side helper.
+  getPathForFile: (file) => webUtils.getPathForFile(file),
 
   // Camera
   updateAvailableCameras: (cameras) => ipcRenderer.invoke('update-available-cameras', cameras),

@@ -255,9 +255,7 @@
         try {
           const printerConfig = {
             name: this.selectedPrinter.name,
-            displayName: this.selectedPrinter.displayName || this.selectedPrinter.name,
-            isDefault: this.selectedPrinter.isDefault,
-            status: this.selectedPrinter.status
+            displayName: this.selectedPrinter.displayName || this.selectedPrinter.name
           };
           await window.electronAPI.savePrinterConfig(printerConfig);
           console.log('[PreferencesModal] Printer configuration saved:', printerConfig);
@@ -371,14 +369,6 @@
           <span class="printer-info-label">Nombre:</span>
           <span class="printer-info-value">${this.selectedPrinter.displayName || this.selectedPrinter.name}</span>
         </div>
-        <div class="printer-info-row">
-          <span class="printer-info-label">Estado:</span>
-          <span class="printer-info-value">${this.selectedPrinter.status === 0 ? 'Lista' : 'No disponible'}</span>
-        </div>
-        <div class="printer-info-row">
-          <span class="printer-info-label">Predeterminada:</span>
-          <span class="printer-info-value">${this.selectedPrinter.isDefault ? 'Sí' : 'No'}</span>
-        </div>
         ${this.selectedPrinter.description ? `
         <div class="printer-info-row">
           <span class="printer-info-label">Descripción:</span>
@@ -434,9 +424,7 @@
           if (this.selectedPrinter) {
             const config = {
               name: this.selectedPrinter.name,
-              displayName: this.selectedPrinter.displayName || this.selectedPrinter.name,
-              isDefault: this.selectedPrinter.isDefault,
-              status: this.selectedPrinter.status
+              displayName: this.selectedPrinter.displayName || this.selectedPrinter.name
             };
             await window.electronAPI.savePrinterConfig(config);
           }

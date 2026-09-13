@@ -398,7 +398,8 @@ function initializeDragDropManager() {
   dragDropManager = new DragDropManager({
     dropZone: document.querySelector('.image-container'),
     showInfoModal: showInfoModal,
-    moveImageToIngest: (path) => window.electronAPI.moveImageToIngest(path)
+    moveImageToIngest: (path) => window.electronAPI.moveImageToIngest(path),
+    getPathForFile: (file) => window.electronAPI.getPathForFile(file)
   });
 
   dragDropManager.enable();

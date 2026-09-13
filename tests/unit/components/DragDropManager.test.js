@@ -9,6 +9,7 @@ describe('DragDropManager', () => {
   let mockDropZone;
   let mockShowInfoModal;
   let mockMoveImageToIngest;
+  let mockGetPathForFile;
 
   beforeEach(() => {
     // Mock drop zone element
@@ -28,12 +29,16 @@ describe('DragDropManager', () => {
     // Mock callbacks
     mockShowInfoModal = jest.fn();
     mockMoveImageToIngest = jest.fn();
+    // Stands in for webUtils.getPathForFile; the fake File objects carry the
+    // path it would resolve
+    mockGetPathForFile = jest.fn((file) => file.path);
 
     // Create manager instance
     manager = new DragDropManager({
       dropZone: mockDropZone,
       showInfoModal: mockShowInfoModal,
-      moveImageToIngest: mockMoveImageToIngest
+      moveImageToIngest: mockMoveImageToIngest,
+      getPathForFile: mockGetPathForFile
     });
   });
 
@@ -46,6 +51,7 @@ describe('DragDropManager', () => {
       expect(manager.dropZone).toBe(mockDropZone);
       expect(manager.showInfoModal).toBe(mockShowInfoModal);
       expect(manager.moveImageToIngest).toBe(mockMoveImageToIngest);
+      expect(manager.getPathForFile).toBe(mockGetPathForFile);
     });
   });
 
@@ -207,6 +213,19 @@ describe('DragDropManager', () => {
       expect(mockMoveImageToIngest).toHaveBeenCalledTimes(2);
       expect(mockMoveImageToIngest).toHaveBeenCalledWith('/path/image1.jpg');
       expect(mockMoveImageToIngest).toHaveBeenCalledWith('/path/image2.jpg');
+    });
+
+    test('should resolve each path through getPathForFile, never File.path', async () => {
+      // Electron 32 removed File.path; the manager must not read it directly
+      const file = { name: 'image1.jpg' };
+      mockEvent.dataTransfer.files = [file];
+      mockGetPathForFile.mockReturnValue('C:\dropped\image1.jpg');
+      mockMoveImageToIngest.mockResolvedValue({ success: true });
+
+      await manager.handleDrop(mockEvent);
+
+      expect(mockGetPathForFile).toHaveBeenCalledWith(file);
+      expect(mockMoveImageToIngest).toHaveBeenCalledWith('C:\dropped\image1.jpg');
     });
 
     test('should filter non-image files before processing', async () => {
