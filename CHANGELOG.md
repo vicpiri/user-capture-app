@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.8.0](https://github.com/vicpiri/user-capture-app/compare/v1.7.3...v1.8.0) (2026-09-13)
+
+### Features
+
+* allow redirecting a project's ingest folder ([660c826](https://github.com/vicpiri/user-capture-app/commit/660c8269fb8be9cee33bd2b173707f93fbad1cff))
+
+### Performance Improvements
+
+* update only the affected rows when linking or unlinking a photo ([a60f302](https://github.com/vicpiri/user-capture-app/commit/a60f302a494d5394cb1cb80b63b3706ff33b62c0))
 ## [1.7.3](https://github.com/vicpiri/user-capture-app/compare/v1.7.2...v1.7.3) (2026-09-13)
 
 ### Bug Fixes
