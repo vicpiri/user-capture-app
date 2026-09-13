@@ -413,8 +413,17 @@ Ayuda > Acerca de muestra además "Última comprobación: fecha" y un enlace
 3. Bajar temporalmente la versión de `package.json` (sin commit) para que la
    última release cuente como nueva.
 
+**La build de `npm run dist:unpacked` no sirve para esto.** El destino `dir` de
+electron-builder no escribe `app-update.yml`; solo lo genera el destino `nsis`.
+Una comprobación desde ahí falla con `ENOENT ... app-update.yml`. Sirve para la
+puerta de "la aplicación empaquetada arranca", que es para lo que está en la
+sección 1.1, pero no para probar actualizaciones.
+
 La prueba definitiva es con dos releases reales: instalar la N, publicar la
-N+1 y ver que la N avisa (fase 1) o se actualiza sola (fase 2).
+N+1 y ver que la N avisa (fase 1) o se actualiza sola (fase 2). Ojo con el
+orden al verificar un arreglo del propio actualizador: para **ver** el arreglo
+hace falta una instalada que ya lo lleve y una release posterior a ella, así
+que lo que corrige la versión N solo se puede observar cuando salga la N+1.
 
 ### 5.7 Tests unitarios
 
