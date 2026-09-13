@@ -131,8 +131,9 @@ user-capture-app/
 - `npm run install:clean` - Limpia y reinstala dependencias con npm ci
 
 ### Módulos nativos
-- `npm run rebuild:native` - Reconstruye módulos nativos (sqlite3 y sharp)
-- `npm run rebuild:native:sqlite` - Reconstruye solo módulos nativos de sqlite3
+sqlite3 y sharp son N-API e instalan binarios precompilados: no se recompilan
+para Electron. electron-builder ejecuta `install-app-deps` por su cuenta antes
+de empaquetar, así que no hay ningún paso manual.
 
 ### Distribución
 - `npm run dist:win` - Build para Windows (NSIS instalador x64)
@@ -146,7 +147,7 @@ user-capture-app/
 
 Cada comando de release ejecuta automáticamente:
 1. `standard-version` - Actualiza versión, genera CHANGELOG y crea tag git
-2. `dist:win` - Reconstruye módulos nativos y genera instalador NSIS en carpeta `dist/`
+2. `dist:win` - Genera instalador NSIS en carpeta `dist/`
 
 ## Arquitectura del Proceso Principal
 

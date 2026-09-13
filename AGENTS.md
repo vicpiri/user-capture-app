@@ -5,13 +5,11 @@
 - Source: `src/main` (IPC, DB, filesystem), `src/renderer` (UI), `src/preload` (bridges)
 - Utilities: `src/main/utils`, menus/windows in `src/main/menu` and `src/main/window`
 - Assets: `assets/icons/*`
-- Scripts: `scripts/rebuild-native.mjs` (rebuild native deps)
 - Samples: `ejemplos/*` (example XML/CSV)
 
 ## Build, Test, and Development Commands
 - `npm start` — launch the app.
 - `npm run dev` — launch with hot reload (`electron-reloader`).
-- `npm run rebuild:native` — rebuild native modules (`sharp`, `sqlite3`). Run after `npm i` or Electron upgrades.
 - `npm run dist:win|dist:mac|dist:linux` — package installers via `electron-builder` (artifacts in `dist/`).
 - `npm run clean` / `npm run install:clean` — remove `node_modules`, `dist`, `build` and reinstall.
 - Releases: `npm run release[:minor|:major]` — uses `standard-version` to bump, tag, and build for Windows.
@@ -36,4 +34,4 @@
 
 ## Security & Configuration Tips
 - Do not commit secrets. If using Google Drive (`src/main/googleDriveManager.js`), store credentials securely and ignore local config files.
-- Native builds require platform toolchains (e.g., Windows SDK for `node-gyp`). Run `npm run rebuild:native` before packaging.
+- Native modules (`sqlite3`, `sharp`) are N-API and install prebuilt binaries; nothing is compiled for Electron. `electron-builder` still runs `install-app-deps` on its own before packaging.

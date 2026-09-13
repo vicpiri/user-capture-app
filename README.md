@@ -98,13 +98,9 @@ npm test
 
 ## Build
 
-### Reconstruir módulos nativos
+### Módulos nativos
 
-Antes de crear una distribución, es necesario reconstruir los módulos nativos (sqlite3 y sharp) para Electron:
-
-```bash
-npm run rebuild:native
-```
+sqlite3 y sharp son N-API e instalan binarios precompilados, así que no hay que reconstruir nada para Electron antes de distribuir.
 
 ### Generar ejecutable
 
@@ -244,8 +240,6 @@ user-capture-app/
 │       │   ├── modals/          # Tests de modales
 │       │   └── ...              # Tests de managers
 │       └── ...
-├── scripts/
-│   └── rebuild-native.mjs # Script de rebuild multiplataforma
 ├── assets/
 │   └── icons/             # Iconos de la aplicación
 ├── main.js                # Punto de entrada principal
@@ -415,10 +409,6 @@ El proceso de renderizado sigue una arquitectura modular basada en componentes:
 - `npm run dist:win:zip` - Crear archivo ZIP con aplicación desempaquetada para Windows (x64)
 - `npm run dist:mac` - Crear distribución DMG para macOS (x64)
 - `npm run dist:linux` - Crear AppImage para Linux (x64)
-
-### Módulos nativos
-- `npm run rebuild:native` - Reconstruir módulos nativos (SQLite3 y Sharp) para Electron
-- `npm run rebuild:native:sqlite` - Reconstruir solo SQLite3 para Electron
 
 ### Limpieza
 - `npm run clean` - Eliminar node_modules, dist y build completamente
