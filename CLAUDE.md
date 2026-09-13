@@ -140,14 +140,17 @@ de empaquetar, así que no hay ningún paso manual.
 - `npm run dist:mac` - Build para macOS (DMG x64)
 - `npm run dist:linux` - Build para Linux (AppImage x64)
 
-### Versionado
-- `npm run release` - Crea nueva versión (patch) y genera instalador Windows
-- `npm run release:minor` - Crea nueva versión minor y genera instalador Windows
-- `npm run release:major` - Crea nueva versión major y genera instalador Windows
+### Versionado y publicación
+El flujo completo, con verificación y vuelta atrás, está en
+`docs/ACTUALIZACIONES_Y_RELEASE_PLAN.md` (sección 1). Resumen:
+- `npx commit-and-tag-version --dry-run` - Muestra la versión que saldría y el changelog, sin tocar nada
+- `npm run release` - Versión calculada de los commits (`feat` sube minor, `fix`/`perf` patch), CHANGELOG, commit y tag. Solo local
+- `npm run release:minor` / `npm run release:major` - Igual, forzando el salto
+- `npm run release:publish` - Push con tags, instalador NSIS y Release de GitHub con `latest.yml`. Necesita `GH_TOKEN` (`gh auth token`)
+- `npm run release:notes` - Copia la sección del CHANGELOG a la Release de GitHub
 
-Cada comando de release ejecuta automáticamente:
-1. `standard-version` - Actualiza versión, genera CHANGELOG y crea tag git
-2. `dist:win` - Genera instalador NSIS en carpeta `dist/`
+Las Releases de GitHub son el servidor de actualizaciones de la aplicación:
+una release en borrador o sin `latest.yml` no llega a nadie.
 
 ## Arquitectura del Proceso Principal
 

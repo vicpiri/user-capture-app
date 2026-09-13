@@ -415,14 +415,17 @@ El proceso de renderizado sigue una arquitectura modular basada en componentes:
 - `npm run clean:dist` - Eliminar solo carpetas dist y build
 - `npm run install:clean` - Limpieza completa y reinstalación limpia de dependencias (con npm ci)
 
-### Versionado
-- `npm run release` - Crear nueva versión patch y generar instalador Windows
-- `npm run release:minor` - Crear nueva versión minor y generar instalador Windows
-- `npm run release:major` - Crear nueva versión major y generar instalador Windows
+### Versionado y publicación
+El flujo completo, con verificación y vuelta atrás, está en
+`docs/ACTUALIZACIONES_Y_RELEASE_PLAN.md` (sección 1). Resumen:
+- `npx commit-and-tag-version --dry-run` - Muestra la versión que saldría y el changelog, sin tocar nada
+- `npm run release` - Versión calculada de los commits (`feat` sube minor, `fix`/`perf` patch), CHANGELOG, commit y tag. Solo local
+- `npm run release:minor` / `npm run release:major` - Igual, forzando el salto
+- `npm run release:publish` - Push con tags, instalador NSIS y Release de GitHub con `latest.yml`. Necesita `GH_TOKEN` (`gh auth token`)
+- `npm run release:notes` - Copia la sección del CHANGELOG a la Release de GitHub
 
-Los comandos de release ejecutan automáticamente:
-1. `standard-version` - Actualiza versión, genera CHANGELOG y crea tag git
-2. `dist:win` - Reconstruye módulos nativos y genera instalador NSIS
+Las Releases de GitHub son el servidor de actualizaciones de la aplicación:
+una release en borrador o sin `latest.yml` no llega a nadie.
 
 ## Formato de Imágenes
 

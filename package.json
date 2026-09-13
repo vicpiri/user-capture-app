@@ -4,6 +4,7 @@
   "productName": "Edu User Capture",
   "version": "1.6.0",
   "description": "Edu User Capture - Aplicación de captura de imágenes de usuarios",
+  "private": true,
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -17,9 +18,11 @@
     "dist:mac": "electron-builder --mac dmg --x64",
     "dist:linux": "electron-builder --linux AppImage --x64",
     "postinstall": "echo skip electron-rebuild",
-    "release": "standard-version && npm run dist:win",
-    "release:minor": "standard-version --release-as minor && npm run dist:win",
-    "release:major": "standard-version --release-as major && npm run dist:win",
+    "release": "commit-and-tag-version",
+    "release:minor": "commit-and-tag-version --release-as minor",
+    "release:major": "commit-and-tag-version --release-as major",
+    "release:publish": "git push --follow-tags origin main && electron-builder --win nsis --x64 --publish always",
+    "release:notes": "node scripts/release-notes.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -39,13 +42,13 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "commit-and-tag-version": "^13.2.0",
     "cross-env": "^10.1.0",
     "electron": "^44.3.0",
     "electron-builder": "^26.15.3",
     "electron-reloader": "^1.2.3",
     "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
-    "standard-version": "^9.5.0"
+    "jest-environment-jsdom": "^29.7.0"
   },
   "build": {
     "appId": "com.eduusercaptureapp.app",
@@ -65,6 +68,12 @@
       "!**/test{,s}/**/*",
       "!**/__tests__/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "vicpiri",
+      "repo": "user-capture-app",
+      "releaseType": "release"
+    },
     "asar": true,
     "asarUnpack": [
       "**/*.node",
