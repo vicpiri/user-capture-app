@@ -453,6 +453,14 @@ de lista con `onImagesLoaded` y de los de cursor con `onImageChange`.
 - Indicadores visuales (foto, repositorio, duplicados)
 - Checkbox de selección en modo multi-selección
 - Lazy loading de miniaturas
+- `replaceRow()`: reconstruye la fila de un solo usuario en su sitio. Es lo que
+  usa `applyCapturedImageChange()` en `renderer.js` al enlazar o desvincular
+  una foto: parchea el usuario en los arrays en memoria, recalcula el mapa de
+  fotos compartidas y sustituye solo las filas afectadas (el usuario, quienes
+  comparten la foto nueva y quienes compartían la anterior), en lugar de
+  volver a consultar y repintar la tabla entera por cada uno de los cientos de
+  enlaces de una sesión de fotos. Con el filtro de duplicados activo sí recarga,
+  porque la pertenencia a esa vista depende justo de lo que ha cambiado
 
 #### ProjectManager.js
 **Propósito**: Gestión centralizada del ciclo de vida de proyectos

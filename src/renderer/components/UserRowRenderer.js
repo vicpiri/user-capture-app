@@ -354,6 +354,31 @@ class UserRowRenderer {
   }
 
   /**
+   * Rebuild the row of one user in place
+   *
+   * For changes that touch a single user, such as linking a photo, rebuilding
+   * this one row keeps the rest of the table, and its scroll position, exactly
+   * as it was. A user whose row is not rendered (scrolled out of the virtual
+   * range) needs nothing: the row is built from the user object when it comes
+   * into view.
+   *
+   * @param {HTMLElement} tableBody - The table body containing user rows
+   * @param {Object} user - User data to build the row from
+   * @param {object} imageCount - Image duplication count map
+   * @returns {HTMLElement|null} The new row, or null if the user had no row
+   */
+  replaceRow(tableBody, user, imageCount = {}) {
+    if (!tableBody || !user) return null;
+
+    const existing = tableBody.querySelector(`tr[data-user-id="${user.id}"]`);
+    if (!existing) return null;
+
+    const row = this.createRow(user, imageCount);
+    existing.replaceWith(row);
+    return row;
+  }
+
+  /**
    * Update repository indicators for existing rows without recreating them
    * Preserves scroll position and DOM state
    * @param {HTMLElement} tableBody - The table body containing user rows

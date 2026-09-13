@@ -349,6 +349,64 @@ describe('UserRowRenderer', () => {
     });
   });
 
+  describe('replaceRow()', () => {
+    let tableBody;
+
+    beforeEach(() => {
+      tableBody = document.createElement('tbody');
+      const users = [
+        { ...mockUser, image_path: null },
+        { ...mockUser, id: 2, first_name: 'Jane', image_path: null },
+        { ...mockUser, id: 3, first_name: 'Bob', image_path: null }
+      ];
+      renderer.createRows(users).forEach(row => tableBody.appendChild(row));
+    });
+
+    test('should rebuild the row from the given user data in the same position', () => {
+      const updated = { ...mockUser, id: 2, first_name: 'Jane', image_path: '/path/to/new.jpg' };
+
+      const row = renderer.replaceRow(tableBody, updated);
+
+      const rows = Array.from(tableBody.querySelectorAll('tr'));
+      expect(rows.length).toBe(3);
+      expect(rows[1]).toBe(row);
+      expect(row.dataset.userId).toBe('2');
+      expect(row.querySelector('.photo-indicator-wrapper')).not.toBeNull();
+      expect(rows[0].querySelector('.photo-indicator-wrapper')).toBeNull();
+      expect(rows[2].querySelector('.photo-indicator-wrapper')).toBeNull();
+    });
+
+    test('should apply the duplicate mark from imageCount', () => {
+      const updated = { ...mockUser, id: 2, image_path: '/path/to/shared.jpg' };
+
+      const row = renderer.replaceRow(tableBody, updated, { '/path/to/shared.jpg': 2 });
+
+      expect(row.querySelector('.photo-indicator-wrapper').classList.contains('duplicate-image')).toBe(true);
+    });
+
+    test('should attach event listeners to the new row', () => {
+      const updated = { ...mockUser, id: 2 };
+
+      const row = renderer.replaceRow(tableBody, updated);
+      row.click();
+
+      expect(mockCallbacks.onUserSelect).toHaveBeenCalledWith(row, updated);
+    });
+
+    test('should return null and leave the table untouched for a user without a row', () => {
+      const before = tableBody.innerHTML;
+
+      const row = renderer.replaceRow(tableBody, { ...mockUser, id: 99 });
+
+      expect(row).toBeNull();
+      expect(tableBody.innerHTML).toBe(before);
+    });
+
+    test('should return null without a table body', () => {
+      expect(renderer.replaceRow(null, mockUser)).toBeNull();
+    });
+  });
+
   describe('Edge Cases', () => {
     test('should handle user with missing last_name2', () => {
       const userNoLastName2 = { ...mockUser, last_name2: null };

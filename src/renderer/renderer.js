@@ -951,17 +951,30 @@ function updateRepositoryDataInDisplay() {
   }
 }
 
+/**
+ * Count how many users share each captured photo
+ *
+ * A count above one is what marks a row as a duplicate.
+ *
+ * @param {Array} users
+ * @returns {Object<string, number>} Image path -> number of users linked to it
+ */
+function countImageUsage(users) {
+  const imageCount = {};
+  users.forEach(user => {
+    if (user.image_path) {
+      imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
+    }
+  });
+  return imageCount;
+}
+
 async function displayUsers(users, allUsers = null) {
   // If checking for duplicates, we need to count against all users in database
   const usersForCounting = allUsers || users;
 
   // Check for duplicate images
-  const imageCount = {};
-  usersForCounting.forEach(user => {
-    if (user.image_path) {
-      imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
-    }
-  });
+  const imageCount = countImageUsage(usersForCounting);
 
   // Note: Duplicates filter is now managed via badge, not checkbox
 
@@ -1400,6 +1413,75 @@ function navigateUsers(direction) {
   }
 }
 
+/**
+ * Reflect a link or unlink in the table without reloading it
+ *
+ * Reloading meant two queries over every user and a repaint of the table for
+ * each of the hundreds of links made in a photo session, with the spinner and
+ * indicators blinking every time. Everything the table is built from is
+ * already in memory, so the user is patched there and only the rows that
+ * changed are rebuilt. Rows outside the rendered range need nothing: the
+ * virtual scroll builds them from the same objects when they come into view.
+ *
+ * Besides the user's own row, the rows that can change are those of users
+ * sharing the new photo, which become duplicates, and those sharing the photo
+ * it replaced, which may stop being duplicates.
+ *
+ * @param {number} userId
+ * @param {string|null} imagePath - Absolute path of the photo, or null to unlink
+ */
+async function applyCapturedImageChange(userId, imagePath) {
+  // The duplicates view is defined by the very thing that changed, so its
+  // membership has to be computed again. Without the full user list there is
+  // nothing to patch either.
+  if (showDuplicatesOnly || !userRowRenderer || allUsers.length === 0) {
+    await loadUsers(getCurrentFilters());
+    return;
+  }
+
+  const userInAll = allUsers.find(u => u.id === userId);
+  const previousPath = userInAll ? userInAll.image_path : null;
+
+  if (userInAll) {
+    userInAll.image_path = imagePath;
+  }
+  // get-users leaves image_path empty when captured photos are hidden, so
+  // the displayed copy only carries the path if a reload would have too
+  const displayedPath = showCapturedPhotos ? imagePath : null;
+  const userInCurrent = currentUsers.find(u => u.id === userId);
+  if (userInCurrent) {
+    userInCurrent.image_path = displayedPath;
+  }
+  if (selectedUser && selectedUser.id === userId) {
+    selectedUser.image_path = displayedPath;
+  }
+
+  window._imageCountCache = countImageUsage(allUsers);
+
+  const affectedPaths = new Set([previousPath, imagePath].filter(Boolean));
+  const affectedIds = new Set([userId]);
+  allUsers.forEach(user => {
+    if (user.image_path && affectedPaths.has(user.image_path)) {
+      affectedIds.add(user.id);
+    }
+  });
+
+  // Rows are built from displayedUsers, which may be a filtered view of
+  // either list, so that is where the row data has to come from
+  syncUserRowRendererConfig();
+  const displayedById = new Map(displayedUsers.map(user => [user.id, user]));
+  affectedIds.forEach(id => {
+    const user = displayedById.get(id);
+    if (user) {
+      userRowRenderer.replaceRow(userTableBody, user, window._imageCountCache);
+    }
+  });
+
+  restoreSelectedRowHighlight();
+  observeLazyImages();
+  updateAlertBadges();
+}
+
 // Link image to user
 async function handleLinkImage() {
   if (!selectedUser) {
@@ -1420,7 +1502,7 @@ async function handleLinkImage() {
   });
 
   if (result.success) {
-    await loadUsers(getCurrentFilters());
+    await applyCapturedImageChange(selectedUser.id, imagePath);
   } else if (result.imageAlreadyAssigned) {
     // Image is already assigned to other user(s)
     const userList = result.assignedUsers.map(u => `${u.name} (${u.nia || 'Sin NIA'})`).join(', ');
@@ -1434,7 +1516,7 @@ async function handleLinkImage() {
       });
 
       if (confirmResult.success) {
-        await loadUsers(getCurrentFilters());
+        await applyCapturedImageChange(selectedUser.id, imagePath);
       } else {
         showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
       }
@@ -1451,7 +1533,7 @@ async function handleLinkImage() {
       });
 
       if (confirmResult.success) {
-        await loadUsers(getCurrentFilters());
+        await applyCapturedImageChange(selectedUser.id, imagePath);
       } else {
         showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
       }
@@ -1751,12 +1833,8 @@ async function handleDeletePhoto() {
     const result = await window.electronAPI.unlinkImageFromUser(selectedUser.id);
 
     if (result.success) {
-      await loadUsers(getCurrentFilters());
-      // Update selected user reference
-      const updatedUser = currentUsers.find(u => u.id === selectedUser.id);
-      if (updatedUser) {
-        selectedUser = updatedUser;
-      }
+      // Patches selectedUser in place, so no reference to refresh
+      await applyCapturedImageChange(selectedUser.id, null);
     } else {
       showInfoModal('Error', 'Error al eliminar la fotografía: ' + result.error);
     }
