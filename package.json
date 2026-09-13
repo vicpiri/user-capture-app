@@ -21,7 +21,7 @@
     "release": "commit-and-tag-version",
     "release:minor": "commit-and-tag-version --release-as minor",
     "release:major": "commit-and-tag-version --release-as major",
-    "release:publish": "git push --follow-tags origin main && electron-builder --win nsis --x64 --publish always",
+    "release:publish": "git push --follow-tags origin main && node scripts/release-notes.mjs && electron-builder --win nsis --x64 --publish always",
     "release:notes": "node scripts/release-notes.mjs",
     "test": "jest",
     "test:watch": "jest --watch",

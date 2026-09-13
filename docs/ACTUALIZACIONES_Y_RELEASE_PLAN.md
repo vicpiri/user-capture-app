@@ -77,9 +77,16 @@ npm run release:publish
 
 1. `git push --follow-tags origin main`: sube los commits **y el tag**. Sin
    el tag no hay Release y el actualizador no ve nada.
-2. `electron-builder --win nsis --x64 --publish always`: genera el
-   instalador en `dist/` y crea la Release `vX.Y.Z` en GitHub con tres
-   archivos adjuntos: el instalador `.exe`, su `.blockmap` y `latest.yml`.
+2. `node scripts/release-notes.mjs`: **crea la Release** `vX.Y.Z` en GitHub
+   con la sección de `CHANGELOG.md` como notas (o actualiza las notas si ya
+   existe). Se crea antes de empaquetar a propósito: electron-builder sube
+   el instalador y los metadatos desde dos publicadores en paralelo, y si
+   ninguno encuentra la Release los dos la crean, quedando **dos releases
+   con el mismo tag** y los adjuntos repartidos. Pasó en la 1.7.0.
+3. `electron-builder --win nsis --x64 --publish always`: genera el
+   instalador en `dist/` y sube a esa Release los tres adjuntos: el
+   instalador `.exe`, su `.blockmap` y `latest.yml`. Solo sube a una Release
+   publicada hace menos de dos horas; el paso 2 acaba de crearla.
 
 El token solo vive en esa variable de entorno de esa terminal. No se guarda en
 ningún archivo del repositorio.
@@ -111,18 +118,15 @@ o con 404, la release está en borrador o le falta `latest.yml`.
 Después, instalar `dist\Edu User Capture-X.Y.Z-win-x64.exe` en el equipo y
 comprobar que Ayuda > Acerca de muestra la versión sin `-DEV`.
 
-### 1.6 Notas de la versión en GitHub (opcional pero recomendable)
+### 1.6 Notas de la versión en GitHub
 
-electron-builder crea la Release sin descripción. Para que la ventana de
-actualización de la aplicación muestre qué hay de nuevo, copia la sección de
-`CHANGELOG.md` a la Release:
-
-```
-npm run release:notes
-```
-
-(script `scripts/release-notes.mjs`, ver sección 6; extrae la última sección
-del changelog y ejecuta `gh release edit vX.Y.Z --notes-file`).
+Las pone el paso 2 de `release:publish` desde `CHANGELOG.md`, y son las que
+muestra la ventana de actualización de la aplicación. Si hay que retocarlas
+(por ejemplo para mencionar un cambio de Electron, que al ser `chore` no sale
+en el changelog), edítalas en GitHub o vuelve a lanzar `npm run release:notes`
+después de corregir `CHANGELOG.md`; el script actualiza las notas si la
+Release ya existe. `npm run release:notes -- --dry-run` las muestra sin tocar
+nada.
 
 ### 1.7 Si algo sale mal después de publicar
 
@@ -143,13 +147,18 @@ del changelog y ejecuta `gh release edit vX.Y.Z --notes-file`).
   GitHub. Arregla la causa y lanza solo la parte de empaquetado:
   `npx electron-builder --win nsis --x64 --publish always`. Vuelve a subir
   los adjuntos a la misma release.
-- **La release existe pero le falta el instalador** (pasó en la 1.7.0: el
-  log decía `uploading file=...exe` y el adjunto nunca apareció, sin error).
-  Súbelo a mano con el nombre **con guiones**, que es el que `latest.yml`
-  declara; `gh` usa el nombre del archivo como nombre del adjunto:
+- **Hay dos releases con el mismo tag** (`gh release view` muestra solo
+  parte de los adjuntos, o `gh release edit` responde "tag_name already
+  exists"). Es la carrera descrita en 1.4 y no debería repetirse con el paso
+  2, pero si ocurre: lista las releases con
+  `gh api repos/vicpiri/user-capture-app/releases --jq '.[] | {id, tag_name, assets: [.assets[].name]}'`,
+  borra la que tenga menos adjuntos con
+  `gh api -X DELETE repos/vicpiri/user-capture-app/releases/<id>` y sube a
+  la que queda lo que le falte. El instalador se sube con el nombre **con
+  guiones** que declara `latest.yml`, y `gh` usa el nombre del archivo:
   ```
-  copy "distEdu User Capture-X.Y.Z-win-x64.exe" "%TEMP%Edu-User-Capture-X.Y.Z-win-x64.exe"
-  gh release upload vX.Y.Z "%TEMP%Edu-User-Capture-X.Y.Z-win-x64.exe"
+  copy "dist\Edu User Capture-X.Y.Z-win-x64.exe" "%TEMP%\Edu-User-Capture-X.Y.Z-win-x64.exe"
+  gh release upload vX.Y.Z "%TEMP%\Edu-User-Capture-X.Y.Z-win-x64.exe"
   ```
   No hace falta regenerar nada: el sha512 de `latest.yml` es el del archivo
   de `dist/`.
@@ -165,8 +174,9 @@ del changelog y ejecuta `gh release edit vX.Y.Z --notes-file`).
 | `npx electron` falla con `ERR_REQUIRE_ESM` | Node anterior a 22.12 | Subir Node |
 | El instalador se llama con espacios y en GitHub con guiones | Normal: electron-builder sustituye los espacios al subir. `latest.yml` ya usa los guiones | Nada. Si subes un archivo a mano, ponle el nombre con guiones |
 | La versión en la aplicación acaba en `-DEV` | Hay commits después del último tag; solo pasa en un checkout de git | Nada; la instalada nunca lo muestra |
-| `gh release view` muestra solo `.blockmap` y `latest.yml` | La subida del `.exe` (130 MB) se perdió sin que electron-builder avisara | Subirlo a mano, sección 1.7 |
+| `gh release view` muestra solo parte de los adjuntos, o `gh release edit` dice `tag_name already exists` | Dos releases para el mismo tag (carrera de electron-builder, sección 1.4) | Sección 1.7 |
 | El changelog no tiene sección de rendimiento | Falta `.versionrc.json` (la herramienta oculta `perf` por defecto) | Está en el repositorio; no borrarlo |
+| `releases/latest` apunta a una versión vieja | Se creó una Release para un tag antiguo: GitHub elige "latest" **por fecha de creación**, no por número | Borrarla con `gh api -X DELETE repos/vicpiri/user-capture-app/releases/<id>`. Nunca crear Releases de versiones ya pasadas; el script se niega |
 
 ---
 
@@ -240,7 +250,7 @@ versión limpia.
 "release": "commit-and-tag-version",
 "release:minor": "commit-and-tag-version --release-as minor",
 "release:major": "commit-and-tag-version --release-as major",
-"release:publish": "git push --follow-tags origin main && electron-builder --win nsis --x64 --publish always",
+"release:publish": "git push --follow-tags origin main && node scripts/release-notes.mjs && electron-builder --win nsis --x64 --publish always",
 "release:notes": "node scripts/release-notes.mjs"
 ```
 
@@ -443,9 +453,10 @@ En orden, con un commit por paso. Los pasos 1 a 3 no tocan la aplicación.
    manual y nada en automático.
 5. **Primera release con el flujo nuevo: 1.7.0.** ✅ Hecha el 2026-09-13.
    Sección 1 completa. Es la primera Release de GitHub del proyecto y la
-   primera versión con actualizador. La subida del instalador falló en
-   silencio y hubo que hacerla a mano (sección 1.7); la impresión térmica
-   sigue sin probar desde la migración de Electron.
+   primera versión con actualizador. electron-builder creó dos releases
+   para el tag y hubo que borrar una y subir el instalador a mano; desde
+   entonces `release:publish` crea la Release antes de empaquetar (1.4). La
+   impresión térmica sigue sin probar desde la migración de Electron.
 6. **Verificar el actualizador de extremo a extremo**: con la 1.7.0
    instalada, publicar una 1.7.1 (basta un `fix:` real o
    `docs:` + `--release-as patch`) y comprobar que la 1.7.0 avisa.
