@@ -1,6 +1,6 @@
 # Comprobación de actualizaciones y nuevo flujo de release
 
-**Estado**: 🚧 Pasos 1 a 5 hechos: la **1.7.0 es la primera Release de GitHub** (2026-09-13), publicada con este flujo y con el actualizador en fase 1. Pendiente el paso 6 (verificar el aviso con una 1.7.1) y la fase 2.
+**Estado**: 🚧 Pasos 1 a 5 hechos. La 1.7.0 (2026-09-13) fue la primera Release de GitHub pero **no arranca** (leía `build.publish` del `package.json` recortado); la **1.7.1** la corrige y es la primera publicada con el flujo completo de la sección 1 sin intervención manual. Pendiente el paso 6 (que una 1.7.1 instalada avise de la siguiente versión) y la fase 2.
 **Redactado**: 2026-09-13, tras la migración a Electron 44.
 **Alcance**: (1) un flujo de publicación reproducible que deje cada versión
 como Release de GitHub, y (2) que la aplicación instalada avise de que existe
@@ -460,9 +460,12 @@ En orden, con un commit por paso. Los pasos 1 a 3 no tocan la aplicación.
    para el tag y hubo que borrar una y subir el instalador a mano; desde
    entonces `release:publish` crea la Release antes de empaquetar (1.4). La
    impresión térmica sigue sin probar desde la migración de Electron.
-6. **Verificar el actualizador de extremo a extremo**: con la 1.7.0
-   instalada, publicar una 1.7.1 (basta un `fix:` real o
-   `docs:` + `--release-as patch`) y comprobar que la 1.7.0 avisa.
+6. **Verificar el actualizador de extremo a extremo**: con la 1.7.1
+   instalada, publicar la siguiente versión y comprobar que la 1.7.1 avisa.
+   (La 1.7.0 no sirve para esto: nunca llega a ejecutar el actualizador.)
+   En la aplicación empaquetada de la 1.7.1 ya se comprobó que tanto la
+   comprobación automática como la manual responden "Sin novedades" contra
+   la Release real.
 7. **Fase 2** (descarga e instalación), con sus tests, y verificación igual
    que en el paso 6 con la siguiente versión.
 
