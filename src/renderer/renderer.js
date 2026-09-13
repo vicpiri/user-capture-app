@@ -197,6 +197,13 @@ function initializeModals() {
 
   projectInfoModalInstance = new ProjectInfoModal();
   projectInfoModalInstance.init();
+
+  // Changed from the Proyecto menu while the modal is showing the old folder
+  window.electronAPI.onIngestFolderChanged(() => {
+    if (projectInfoModalInstance.isModalOpen()) {
+      projectInfoModalInstance.refresh();
+    }
+  });
 }
 
 // Initialize user row renderer

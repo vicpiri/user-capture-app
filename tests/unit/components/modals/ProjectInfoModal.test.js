@@ -18,6 +18,9 @@ describe('ProjectInfoModal', () => {
     projectPath: 'D:\\Proyectos\\Captura Carnets 2526',
     xmlFilePath: 'D:\\Proyectos\\usuarios.xml',
     ingestPath: 'D:\\Proyectos\\Captura Carnets 2526\\ingest',
+    configuredIngestPath: null,
+    ingestIsCustom: false,
+    ingestUnavailable: false,
     importsPath: 'D:\\Proyectos\\Captura Carnets 2526\\imports',
     databasePath: 'D:\\Proyectos\\Captura Carnets 2526\\data\\users.db',
     repositoryPath: 'G:\\Mi unidad\\Fotos Usuarios',
@@ -96,7 +99,7 @@ describe('ProjectInfoModal', () => {
 
     test('should list every folder of the project', async () => {
       expect(valueFor(paths, 'Carpeta del proyecto')).toBe(INFO.projectPath);
-      expect(valueFor(paths, 'Capturas pendientes (ingest)')).toBe(INFO.ingestPath);
+      expect(valueFor(paths, 'Carpeta de entrada (ingest)')).toBe(INFO.ingestPath);
       expect(valueFor(paths, 'Imágenes capturadas (imports)')).toBe(INFO.importsPath);
       expect(valueFor(paths, 'Base de datos')).toBe(INFO.databasePath);
     });
@@ -115,6 +118,64 @@ describe('ProjectInfoModal', () => {
         .find((el) => el.textContent === INFO.projectPath);
 
       expect(value.title).toBe(INFO.projectPath);
+    });
+  });
+
+  describe('ingest folder', () => {
+    const CUSTOM = 'E:\\Tethering\\Salida';
+    const ingestRow = () => Array.from(document.querySelectorAll('#project-info-modal-paths .about-info-row'))
+      .find((row) => row.querySelector('.about-label').textContent === 'Carpeta de entrada (ingest)');
+    const note = () => ingestRow().querySelector('.project-info-note');
+
+    test('should not add a note to the default folder', async () => {
+      await modal.show();
+
+      expect(note()).toBeNull();
+    });
+
+    test('should mark a custom folder', async () => {
+      getProjectDetails.mockResolvedValue({
+        success: true,
+        info: { ...INFO, ingestPath: CUSTOM, configuredIngestPath: CUSTOM, ingestIsCustom: true }
+      });
+
+      await modal.show();
+
+      expect(valueFor(paths, 'Carpeta de entrada (ingest)')).toBe(CUSTOM);
+      expect(note().textContent).toBe('Personalizada');
+    });
+
+    test('should show the chosen folder and what stands in for it when it is missing', async () => {
+      getProjectDetails.mockResolvedValue({
+        success: true,
+        info: { ...INFO, configuredIngestPath: CUSTOM, ingestIsCustom: true, ingestUnavailable: true }
+      });
+
+      await modal.show();
+
+      expect(valueFor(paths, 'Carpeta de entrada (ingest)')).toBe(CUSTOM);
+      expect(note().textContent).toContain('No disponible');
+      expect(note().title).toBe(INFO.ingestPath);
+      expect(note().classList.contains('project-info-note-warning')).toBe(true);
+    });
+
+    test('should be read-only, changed from the Proyecto menu instead', async () => {
+      await modal.show();
+
+      expect(ingestRow().querySelector('button')).toBeNull();
+    });
+
+    test('should repaint a folder changed from the menu while open', async () => {
+      await modal.show();
+      getProjectDetails.mockResolvedValue({
+        success: true,
+        info: { ...INFO, ingestPath: CUSTOM, configuredIngestPath: CUSTOM, ingestIsCustom: true }
+      });
+
+      await modal.refresh();
+
+      expect(valueFor(paths, 'Carpeta de entrada (ingest)')).toBe(CUSTOM);
+      expect(modal.isModalOpen()).toBe(true);
     });
   });
 

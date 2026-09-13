@@ -816,6 +816,31 @@
   font-style: italic;
 }
 
+/* A value with a note under it: the group takes the value's place on the
+   right of the row */
+.project-info-value-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-left: 24px;
+  min-width: 0;
+}
+
+.project-info-value-group .project-info-value {
+  margin-left: 0;
+}
+
+.project-info-note {
+  font-size: 12px;
+  color: #8a8f9a;
+  text-align: right;
+}
+
+.project-info-note-warning {
+  color: #f59e0b;
+}
+
 .project-info-error {
   color: #ef4444;
   font-size: 14px;

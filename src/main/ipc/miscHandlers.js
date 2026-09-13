@@ -3,6 +3,7 @@
  */
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
+const { getActiveIngestPath, getConfiguredIngestPath } = require('../ingestFolder');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
 
@@ -1350,13 +1351,21 @@ function registerMiscHandlers(context) {
 
       const mirror = getRepositoryMirror ? getRepositoryMirror() : null;
 
+      // The configured folder can differ from the watched one when it was
+      // missing at opening time and the default is standing in for it
+      const ingestPath = getActiveIngestPath(state);
+      const configuredIngestPath = await getConfiguredIngestPath(state.dbManager);
+
       return {
         success: true,
         info: {
           name: path.basename(projectPath),
           projectPath,
           xmlFilePath: xmlFilePath || null,
-          ingestPath: path.join(projectPath, 'ingest'),
+          ingestPath,
+          configuredIngestPath,
+          ingestIsCustom: Boolean(configuredIngestPath),
+          ingestUnavailable: Boolean(configuredIngestPath) && configuredIngestPath !== ingestPath,
           importsPath: path.join(projectPath, 'imports'),
           databasePath: path.join(projectPath, 'data', 'users.db'),
           repositoryPath: repositoryPath || null,

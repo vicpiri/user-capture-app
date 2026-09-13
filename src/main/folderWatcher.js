@@ -35,7 +35,7 @@ class FolderWatcher extends EventEmitter {
   start() {
     // Watch the ingest folder for new images
     this.watcher = chokidar.watch(this.ingestPath, {
-      ignored: IGNORE_RE,
+      ignored: (filePath) => this.isIgnored(filePath),
       persistent: true,
       ignoreInitial: true,
       depth: 1,
@@ -56,6 +56,25 @@ class FolderWatcher extends EventEmitter {
         resolve();
       });
     });
+  }
+
+  /**
+   * Whether a path under the ingest folder should be left alone
+   *
+   * The patterns are matched against the path relative to the ingest folder,
+   * not the full one: a project may watch any folder, and one sitting under a
+   * dot-prefixed folder would otherwise look hidden and have every file in it
+   * ignored.
+   *
+   * @param {string} filePath
+   * @returns {boolean}
+   */
+  isIgnored(filePath) {
+    const relative = path.relative(this.ingestPath, filePath);
+    if (relative === '') {
+      return false;
+    }
+    return IGNORE_RE.some((pattern) => pattern.test(relative));
   }
 
   async handleNewFile(filePath) {
@@ -105,8 +124,7 @@ class FolderWatcher extends EventEmitter {
         counter++;
       }
 
-      // Move the file
-      fs.renameSync(filePath, finalDestination);
+      this.moveFile(filePath, finalDestination);
 
       console.log('Image moved to imports:', path.basename(finalDestination));
 
@@ -117,6 +135,35 @@ class FolderWatcher extends EventEmitter {
     } catch (error) {
       console.error('Error processing file:', error);
       this.isProcessing.delete(filePath);
+    }
+  }
+
+  /**
+   * Move a file into imports, even from another drive
+   *
+   * A rename cannot cross volumes, and a project's ingest folder may be on a
+   * different disk or a network share. If the copy succeeds but the original
+   * cannot be deleted (a read-only share, a file the other program still
+   * holds) the photo is already in imports, so that is only logged.
+   *
+   * @param {string} source
+   * @param {string} destination
+   */
+  moveFile(source, destination) {
+    try {
+      fs.renameSync(source, destination);
+      return;
+    } catch (error) {
+      if (error.code !== 'EXDEV') {
+        throw error;
+      }
+    }
+
+    fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
+    try {
+      fs.unlinkSync(source);
+    } catch (error) {
+      console.error('Image copied to imports but the original could not be removed:', source, error);
     }
   }
 

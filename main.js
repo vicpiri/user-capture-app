@@ -12,7 +12,11 @@ const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const DatabaseManager = require('./src/main/database');
-const FolderWatcher = require('./src/main/folderWatcher');
+const {
+  startIngestWatcher,
+  configureIngestFolder,
+  getActiveIngestPath
+} = require('./src/main/ingestFolder');
 const ImageManager = require('./src/main/imageManager');
 const RepositoryMirror = require('./src/main/repositoryMirror');
 const MenuBuilder = require('./src/main/menu/menuBuilder');
@@ -110,6 +114,33 @@ let updateManager = null; // Checks GitHub Releases for newer versions
 // Repository cache manager
 const repositoryCacheManager = new RepositoryCacheManager();
 
+// Application state shared with the IPC handlers and the ingest folder module
+const sharedState = {
+  get dbManager() { return dbManager; },
+  set dbManager(value) { dbManager = value; },
+  get folderWatcher() { return folderWatcher; },
+  set folderWatcher(value) { folderWatcher = value; },
+  get imageManager() { return imageManager; },
+  set imageManager(value) { imageManager = value; },
+  get projectPath() { return projectPath; },
+  set projectPath(value) { projectPath = value; },
+  get availableCameras() { return availableCameras; },
+  set availableCameras(value) { availableCameras = value; },
+  get selectedCameraId() { return selectedCameraId; },
+  set selectedCameraId(value) { selectedCameraId = value; },
+  invalidateRepositoryCache: () => repositoryCacheManager.invalidateCache()
+};
+
+// What the ingest folder module needs to start the watcher and ask the user
+function getIngestContext() {
+  return {
+    state: sharedState,
+    logger,
+    getMainWindow: () => mainWindowManager.getWindow(),
+    mirrorPath: repositoryMirror ? repositoryMirror.mirrorPath : null
+  };
+}
+
 // Thumbnail cache, created lazily so app.getPath is only used once ready
 let thumbnailService = null;
 
@@ -127,7 +158,7 @@ function getImageRoots() {
 
   if (projectPath) {
     roots.push(path.join(projectPath, 'imports'));
-    roots.push(path.join(projectPath, 'ingest'));
+    roots.push(getActiveIngestPath(sharedState));
   }
 
   if (repositoryMirror) {
@@ -196,6 +227,18 @@ function createMenu() {
         return await setImageRepositoryPath(dbManager, path);
       },
       reinitializeRepositoryMirror,
+      configureIngestFolder: async () => {
+        try {
+          const result = await configureIngestFolder(getIngestContext());
+          const mainWindow = mainWindowManager.getWindow();
+          if (result.changed && mainWindow) {
+            mainWindow.webContents.send('ingest-folder-changed');
+          }
+        } catch (error) {
+          logger.error('Error configuring ingest folder', error);
+          dialog.showErrorBox('Error', 'No se pudo cambiar la carpeta de entrada: ' + error.message);
+        }
+      },
       toggleCamera: () => {
         cameraEnabled = !cameraEnabled;
         if (cameraEnabled) {
@@ -781,8 +824,6 @@ async function openRecentProject(folderPath) {
     await dbManager.initialize();
     logger.success('Database loaded successfully');
 
-    // Initialize paths
-    const ingestPath = path.join(folderPath, 'ingest');
     const importsPath = path.join(folderPath, 'imports');
 
     // Initialize image manager
@@ -790,26 +831,7 @@ async function openRecentProject(folderPath) {
     imageManager = new ImageManager(importsPath);
     logger.info('Image manager initialized');
 
-    // Start folder watcher
-    folderWatcher = new FolderWatcher(ingestPath, importsPath);
-    folderWatcher.on('image-detecting', (filename) => {
-      logger.info(`Image being processed: ${filename}`);
-      const mainWindow = mainWindowManager.getWindow();
-      if (mainWindow) {
-        mainWindow.webContents.send('image-detecting', filename);
-      }
-    });
-    folderWatcher.on('image-added', (filename) => {
-      logger.info(`New image detected: ${filename}`);
-      // Invalidate image cache when new image is added
-      imageManager.invalidateCache();
-      const mainWindow = mainWindowManager.getWindow();
-      if (mainWindow) {
-        mainWindow.webContents.send('new-image-detected', filename);
-      }
-    });
-    await folderWatcher.start();
-    logger.success('Folder watcher started', { watchPath: ingestPath });
+    await startIngestWatcher(getIngestContext());
 
     logger.section('PROJECT OPENED SUCCESSFULLY');
     logger.success('Project loaded', { projectPath: folderPath });
@@ -845,22 +867,7 @@ async function openRecentProject(folderPath) {
  * Register all IPC handlers
  */
 function registerIPCHandlers() {
-  // Create shared state object accessible by all handlers
-  const state = {
-    get dbManager() { return dbManager; },
-    set dbManager(value) { dbManager = value; },
-    get folderWatcher() { return folderWatcher; },
-    set folderWatcher(value) { folderWatcher = value; },
-    get imageManager() { return imageManager; },
-    set imageManager(value) { imageManager = value; },
-    get projectPath() { return projectPath; },
-    set projectPath(value) { projectPath = value; },
-    get availableCameras() { return availableCameras; },
-    set availableCameras(value) { availableCameras = value; },
-    get selectedCameraId() { return selectedCameraId; },
-    set selectedCameraId(value) { selectedCameraId = value; },
-    invalidateRepositoryCache: () => repositoryCacheManager.invalidateCache()
-  };
+  const state = sharedState;
 
   // Create shared context object for all handlers
   const context = {

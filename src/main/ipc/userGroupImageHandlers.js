@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { formatTimestamp } = require('../utils/formatting');
 const { getImageRepositoryPath } = require('../utils/config');
+const { getActiveIngestPath } = require('../ingestFolder');
 
 /**
  * Register user, group, and image-related IPC handlers
@@ -282,7 +283,7 @@ function registerUserGroupImageHandlers(context) {
         throw new Error('No hay ningún proyecto abierto');
       }
 
-      const ingestPath = path.join(state.projectPath, 'ingest');
+      const ingestPath = getActiveIngestPath(state);
       const fileName = path.basename(sourceImagePath);
       let destPath = path.join(ingestPath, fileName);
 
@@ -413,7 +414,7 @@ function registerUserGroupImageHandlers(context) {
         throw new Error('No hay ningún proyecto abierto');
       }
 
-      const ingestPath = path.join(state.projectPath, 'ingest');
+      const ingestPath = getActiveIngestPath(state);
       const timestamp = new Date();
       let filename = formatTimestamp(timestamp) + '.jpg';
       let filePath = path.join(ingestPath, filename);

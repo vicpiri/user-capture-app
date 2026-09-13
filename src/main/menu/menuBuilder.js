@@ -273,6 +273,12 @@ class MenuBuilder {
             }
           }
         },
+        {
+          label: 'Configurar carpeta de entrada (ingest)...',
+          click: () => {
+            this.callbacks.configureIngestFolder();
+          }
+        },
         { type: 'separator' },
         {
           label: 'Restaurar enlaces de imágenes...',

@@ -7,7 +7,7 @@ const path = require('path');
 const DatabaseManager = require('../database');
 const XMLParser = require('../xmlParser');
 const ImageManager = require('../imageManager');
-const FolderWatcher = require('../folderWatcher');
+const { startIngestWatcher } = require('../ingestFolder');
 
 /**
  * Register project-related IPC handlers
@@ -28,6 +28,8 @@ function registerProjectHandlers(context) {
     closeCurrentProject,
     ensureRepositoryMirrorStarted
   } = context;
+
+  const ingestContext = { state, logger, getMainWindow };
 
   // Create new project
   ipcMain.handle('create-project', async (event, data) => {
@@ -235,20 +237,7 @@ function registerProjectHandlers(context) {
       state.imageManager = new ImageManager(importsPath);
       logger.info('Image manager initialized');
 
-      // Start folder watcher
-      state.folderWatcher = new FolderWatcher(ingestPath, importsPath);
-      state.folderWatcher.on('image-detecting', (filename) => {
-        logger.info(`Image being processed: ${filename}`);
-        getMainWindow()?.webContents.send('image-detecting', filename);
-      });
-      state.folderWatcher.on('image-added', (filename) => {
-        logger.info(`New image detected: ${filename}`);
-        // Invalidate image cache when new image is added
-        state.imageManager.invalidateCache();
-        getMainWindow()?.webContents.send('new-image-detected', filename);
-      });
-      await state.folderWatcher.start();
-      logger.success('Folder watcher started', { watchPath: ingestPath });
+      await startIngestWatcher(ingestContext);
 
       // Progress: 100%
       getMainWindow()?.webContents.send('progress', {
@@ -354,8 +343,6 @@ function registerProjectHandlers(context) {
       await state.dbManager.initialize();
       logger.success('Database loaded successfully');
 
-      // Initialize paths
-      const ingestPath = path.join(folderPath, 'ingest');
       const importsPath = path.join(folderPath, 'imports');
 
       // Initialize image manager
@@ -363,20 +350,7 @@ function registerProjectHandlers(context) {
       state.imageManager = new ImageManager(importsPath);
       logger.info('Image manager initialized');
 
-      // Start folder watcher
-      state.folderWatcher = new FolderWatcher(ingestPath, importsPath);
-      state.folderWatcher.on('image-detecting', (filename) => {
-        logger.info(`Image being processed: ${filename}`);
-        getMainWindow()?.webContents.send('image-detecting', filename);
-      });
-      state.folderWatcher.on('image-added', (filename) => {
-        logger.info(`New image detected: ${filename}`);
-        // Invalidate image cache when new image is added
-        state.imageManager.invalidateCache();
-        getMainWindow()?.webContents.send('new-image-detected', filename);
-      });
-      await state.folderWatcher.start();
-      logger.success('Folder watcher started', { watchPath: ingestPath });
+      await startIngestWatcher(ingestContext);
 
       logger.section('PROJECT OPENED SUCCESSFULLY');
       logger.success('Project loaded', { projectPath: folderPath });

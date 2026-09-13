@@ -74,6 +74,16 @@
       this.render(null);
       this.open();
 
+      return this.refresh();
+    }
+
+    /**
+     * Read the details again and repaint them, leaving the modal as it is
+     * @returns {Promise<boolean>} Whether the details could be read
+     */
+    async refresh() {
+      if (!this.modal) return false;
+
       let result;
       try {
         result = await this.getProjectDetails();
@@ -117,7 +127,7 @@
       this.renderRows(this.pathsEl, [
         ['Carpeta del proyecto', info.projectPath],
         ['Archivo XML', info.xmlFilePath],
-        ['Capturas pendientes (ingest)', info.ingestPath],
+        this.ingestRow(info),
         ['Imágenes capturadas (imports)', info.importsPath],
         ['Base de datos', info.databasePath],
         ['Depósito de imágenes', info.repositoryPath],
@@ -144,7 +154,37 @@
     }
 
     /**
+     * Row of the ingest folder
+     *
+     * Shows the configured folder even when it is unavailable, since that is
+     * the one the user chose and will look for; the note says what is being
+     * watched meanwhile. It is changed from Proyecto > Configurar carpeta de
+     * entrada, like the repository.
+     *
+     * @param {Object} info
+     * @returns {Array}
+     * @private
+     */
+    ingestRow(info) {
+      let note = null;
+      if (info.ingestUnavailable) {
+        note = {
+          text: 'No disponible: mientras tanto se usa la carpeta por defecto',
+          title: info.ingestPath,
+          className: 'project-info-note-warning'
+        };
+      } else if (info.ingestIsCustom) {
+        note = { text: 'Personalizada' };
+      }
+
+      return ['Carpeta de entrada (ingest)', info.configuredIngestPath || info.ingestPath, note];
+    }
+
+    /**
      * Replace a section with one row per label/value pair
+     *
+     * A row may carry a third element with a note shown under the value.
+     *
      * @param {HTMLElement} container
      * @param {Array<Array>} rows
      * @private
@@ -154,7 +194,7 @@
 
       const fragment = document.createDocumentFragment();
 
-      rows.forEach(([label, value]) => {
+      rows.forEach(([label, value, note]) => {
         const row = document.createElement('div');
         row.className = 'about-info-row';
 
@@ -174,11 +214,33 @@
         }
 
         row.appendChild(labelEl);
-        row.appendChild(valueEl);
+        row.appendChild(note ? this.withNote(valueEl, note) : valueEl);
         fragment.appendChild(row);
       });
 
       container.replaceChildren(fragment);
+    }
+
+    /**
+     * Put a note under a value
+     * @param {HTMLElement} valueEl
+     * @param {{text: string, title?: string, className?: string}} note
+     * @returns {HTMLElement}
+     * @private
+     */
+    withNote(valueEl, note) {
+      const group = document.createElement('div');
+      group.className = 'project-info-value-group';
+      group.appendChild(valueEl);
+
+      const noteEl = document.createElement('span');
+      noteEl.className = 'project-info-note';
+      if (note.className) noteEl.classList.add(note.className);
+      noteEl.textContent = note.text;
+      if (note.title) noteEl.title = note.title;
+      group.appendChild(noteEl);
+
+      return group;
     }
 
     /**

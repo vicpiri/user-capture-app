@@ -39,6 +39,7 @@ user-capture-app/
 │   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
 │   │   ├── googleDriveManager.js # Integración con Google Drive API
 │   │   ├── imageManager.js      # Procesamiento y gestión de imágenes
+│   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
 │   │   ├── updateManager.js     # Envoltorio de electron-updater (aviso de versión nueva)
@@ -217,6 +218,29 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 - **folderWatcher.js**: Vigilancia de carpetas ingest/imports con chokidar
 - **googleDriveManager.js**: Integración con Google Drive API v3
 - **imageManager.js**: Procesamiento de imágenes con sharp (validación, redimensionamiento)
+- **ingestFolder.js**: Carpeta de entrada de cada proyecto. Por defecto es
+  `ingest` dentro del proyecto, pero se puede redirigir a cualquier otra
+  (Proyecto > Configurar carpeta de entrada, igual que el depósito) para que
+  otros programas le entreguen fotos. Se
+  guarda en `project_settings` bajo `ingestPath`; sin esa clave se usa la de
+  por defecto.
+  - Todo lo que escribe en la carpeta de entrada (webcam, arrastrar y soltar)
+    pide la ruta activa con `getActiveIngestPath(state)`; no reconstruirla con
+    `path.join(projectPath, 'ingest')`, o las fotos acaban donde nadie vigila
+  - `startIngestWatcher()` es el único sitio que crea el vigilante, en las
+    tres aperturas (crear, abrir y proyecto reciente); el cambio de carpeta lo
+    reinicia sin reabrir el proyecto
+  - Si la carpeta configurada no existe al abrir (unidad desconectada), se
+    vigila la de por defecto, se avisa y el ajuste se conserva
+  - Se rechazan la carpeta del proyecto o una que la contenga, `imports` y lo
+    que haya dentro, y el depósito y su copia local (dentro o conteniéndolos):
+    el vigilante mueve todo lo nuevo, un nivel de subcarpetas incluido
+  - Las imágenes que ya estaban en la carpeta al empezar a vigilarla no se
+    importan; solo las que llegan después
+  - `folderWatcher` mueve con copia y borrado cuando el `rename` falla con
+    `EXDEV` (otra unidad o recurso de red), y aplica los patrones de archivos
+    ocultos a la ruta relativa a la carpeta vigilada: sobre la ruta completa,
+    una carpeta bajo un directorio que empiece por punto ignoraba todo
 - **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado
@@ -318,6 +342,9 @@ Todos los modales extienden `BaseModal` para comportamiento consistente.
     la refresca la barra de estado a menudo y debe seguir siendo barata
   - La ruta del XML se registra al crear el proyecto y al actualizarlo; los
     proyectos anteriores a esto la muestran como "No configurado"
+  - Es de solo lectura: la carpeta de entrada se cambia desde el menú
+    Proyecto, como el depósito. Su fila lleva una nota si es personalizada o si
+    no está disponible, y se refresca sola si se cambia con la ventana abierta
 
 - **OrlaExportModal.js**: Modal de configuración de exportación de orlas PDF
   - Selección de fuente de fotos (capturadas vs repositorio)
@@ -847,6 +874,7 @@ Aplicación completamente funcional con todas las características principales i
 ## Flujo de trabajo
 - Al crear un proyecto, el usuario debe indicar la carpeta de trabajo y el archivo XML.
 - En dicha carpeta se creará una subcarpeta llamada 'ingest' y otra llamada 'imports'.
+- La carpeta de entrada ('ingest') se puede redirigir por proyecto a otra carpeta desde Proyecto > Configurar carpeta de entrada.
 - Al abrir el proyecto, se conecta con el servidor y descarga el listado de imágenes existentes de los usuarios actuales, y marcará en la lista su presencia con un símbolo. Mientras tanto descargará todas las imágenes en segundo plano.
 - Al detectar una imagen nueva en la carpeta 'ingest' se moverá automáticamente a la carpeta 'imports'.
 - Cuando se capture desde la webcam, la imagen se almacenará en la carpeta 'ingest'.

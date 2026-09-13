@@ -292,5 +292,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getProjectDetails: () => ipcRenderer.invoke('get-project-details'),
   onMenuProjectInfo: (callback) => {
     ipcRenderer.on('menu-project-info', callback);
+  },
+
+  // Ingest folder
+  onIngestFolderChanged: (callback) => {
+    ipcRenderer.on('ingest-folder-changed', callback);
   }
 });
