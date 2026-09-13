@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.7.1](https://github.com/vicpiri/user-capture-app/compare/v1.7.0...v1.7.1) (2026-09-13)
+
+### Bug Fixes
+
+* open the window even if the update checker cannot be set up ([24751c0](https://github.com/vicpiri/user-capture-app/commit/24751c022a79393979280380b25a047a2b2f5e81))
 ## [1.7.0](https://github.com/vicpiri/user-capture-app/compare/v1.6.0...v1.7.0) (2026-09-13)
 
 ### Features
