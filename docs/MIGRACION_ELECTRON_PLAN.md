@@ -199,8 +199,24 @@ escriba dentro durante el desarrollo recarga el renderer y le vacía el estado.
 
 `npm install` deja el paquete sin binario; se descarga en la primera ejecución
 de `electron .`. El primer `npm run dev` tras instalar necesita red y tarda más.
-No bloquea nada, pero conviene saberlo antes de extrañarse. electron-builder
-descarga su propia copia para empaquetar, como hasta ahora.
+electron-builder descarga su propia copia para empaquetar, como hasta ahora.
+
+### 8. El paquete `electron` 44 exige Node 22.12 o superior en el equipo
+
+**Encontrado al ejecutar el plan.** `electron@44.3.0` declara `engines.node
+>= 22.12.0`, y su descargador (`install.js`) hace `require('@electron/get')`
+sobre la versión 5, que es solo ESM. Con Node 20.9, el instalado en el equipo
+de desarrollo, falla con `ERR_REQUIRE_ESM` y `npx electron` no arranca:
+
+```
+Error: Electron failed to install correctly. Please delete `node_modules/electron`
+and run "npx install-electron --no" manually.
+```
+
+No afecta a la aplicación instalada (lleva su propio Node), solo al equipo que
+desarrolla y empaqueta. Hay que subir el Node del sistema a la LTS 22 o 24
+antes del paso 3; no hay gestor de versiones instalado (ni nvm, ni fnm, ni
+volta). Jest 29 y electron-builder 26 funcionan con ambas.
 
 ---
 
@@ -223,7 +239,8 @@ etapas, sin haber ensuciado `main`.
    quieren conservar). `dist/` está en `.gitignore` y `npm run clean` la borra
    entera; sin esta copia la vuelta atrás se queda sin instalador.
 2. Rama nueva desde `main`.
-3. Subir versiones **regenerando el lock**:
+3. Comprobar que el Node del equipo es 22.12 o superior (`node --version`);
+   si no, subirlo (riesgo 8). Después, subir versiones **regenerando el lock**:
    ```
    npm install -D electron@^44 electron-builder@^26
    ```
