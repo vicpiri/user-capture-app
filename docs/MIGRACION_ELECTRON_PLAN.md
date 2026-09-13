@@ -1,6 +1,6 @@
 # Migración de Electron 28 a la línea con soporte
 
-**Estado**: 🚧 En ejecución en la rama `migrate/electron-44`. Ver "Ejecución" al final.
+**Estado**: ✅ Migrado a Electron 44.3.0 y electron-builder 26.15.3, fusionado en `main`. Solo queda probar la impresión térmica (ver "Ejecución").
 **Redactado**: 2026-09-13. **Revisado**: 2026-09-13, contrastando cada
 afirmación con el código, `node_modules`, el registro de npm y la lista oficial
 de cambios rompedores de Electron 29 a 44.
@@ -289,12 +289,12 @@ por el riesgo 8. Resultado de las puertas:
 | Puerta | Resultado |
 |---|---|
 | 1. `npm test` | ✅ 1081 tests, 42 suites, con Node 20 y con Node 24 |
-| 2. `npm run dev` | ✅ Electron 44.3.0 / Chromium 152. Abre el proyecto reciente, 34 usuarios, 73 miniaturas por `app-img://` sin ninguna rota, barra de estado, mirror sincronizado, historial de capturas. `electron-reloader` sigue funcionando. **Pendiente**: arrastrar una foto real desde el Explorador |
-| 3. Cámara | ✅ a nivel de API: desde `file://` (`isSecureContext` true) `getUserMedia` entrega la webcam integrada a 1280x720 y 30 fps con imagen real. Pedida sin dispositivo concreto eligió una cámara virtual NDI sin fuente y caducó, que no es cosa de Electron. **Pendiente**: capturar desde la ventana de cámara |
-| 4. Depósito | ⏳ Pendiente: exportación completa contra `G:Mi unidad_Borrar` |
-| 5. Impresión | ⏳ Pendiente: recibo de prueba en la térmica |
+| 2. `npm run dev` | ✅ Electron 44.3.0 / Chromium 152. Abre el proyecto reciente, 34 usuarios, 73 miniaturas por `app-img://` sin ninguna rota, barra de estado, mirror sincronizado, historial de capturas. `electron-reloader` sigue funcionando. Arrastre de una foto real desde el Explorador comprobado en la aplicación instalada |
+| 3. Cámara | ✅ a nivel de API: desde `file://` (`isSecureContext` true) `getUserMedia` entrega la webcam integrada a 1280x720 y 30 fps con imagen real. Pedida sin dispositivo concreto eligió una cámara virtual NDI sin fuente y caducó, que no es cosa de Electron. Captura desde la ventana de cámara comprobada en la aplicación instalada |
+| 4. Depósito | ✅ Exportación completa contra `G:Mi unidad_Borrar` desde la aplicación instalada |
+| 5. Impresión | ⏳ **Pendiente**: recibo de prueba en la térmica. No estaba disponible al migrar; es lo único sin verificar y hay que hacerlo en cuanto se tenga a mano |
 | 6. `npm run dist:win` | ✅ electron-builder 26.15.3. `@electron/rebuild` solo tocó sqlite3 y no compiló nada. Instalador de 129 MB en `dist/`. En `app.asar.unpacked` están `sharp-win32-x64.node`, las dos DLL de libvips y `node_sqlite3.node` |
-| 7. Aplicación instalada | 🟡 Parcial: la aplicación empaquetada de `dist/win-unpacked` arranca desde el asar con los mismos resultados que la puerta 2. **Pendiente**: instalar el instalador y repetir 2 a 5 |
+| 7. Aplicación instalada | ✅ Instalada desde el instalador y repetidas las puertas 2 a 4 en ella (la 5 pendiente por la térmica) |
 
 Comprobaciones hechas con el puerto de depuración de Chromium
 (`--remote-debugging-port`) y un cliente CDP mínimo sin dependencias, que
