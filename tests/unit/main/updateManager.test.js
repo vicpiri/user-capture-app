@@ -250,4 +250,73 @@ describe('UpdateManager', () => {
       expect(webContents.send).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * electron-updater answers through events, and a check that never gets one
+   * used to leave `checking` set for the rest of the session: every later
+   * check, including the manual one from the menu, bailed out with
+   * 'already-checking' and the menu entry looked dead.
+   */
+  describe('a check that never answers', () => {
+    // Short enough to wait for it in a real-timer test
+    const withTimeout = (overrides = {}) => createManager({ checkTimeoutMs: 40, ...overrides });
+
+    test('gives up instead of waiting forever', async () => {
+      manager = withTimeout();
+
+      const outcome = await manager.checkForUpdates({ manual: true });
+
+      expect(outcome).toMatchObject({ status: 'error', manual: true, timedOut: true });
+    });
+
+    test('lets the next check run', async () => {
+      manager = withTimeout();
+      await manager.checkForUpdates({ manual: true });
+
+      const second = manager.checkForUpdates({ manual: true });
+      autoUpdater.emit('update-not-available', { version: '1.7.1' });
+
+      await expect(second).resolves.toMatchObject({ status: 'not-available' });
+      expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
+    });
+
+    test('tells the user when they asked for the check', async () => {
+      manager = withTimeout();
+
+      await manager.checkForUpdates({ manual: true });
+
+      expect(sentStatuses().filter(s => s.status === 'error')).toHaveLength(1);
+    });
+
+    test('stays quiet when the check was automatic', async () => {
+      manager = withTimeout();
+
+      await manager.checkForUpdates({ manual: false });
+
+      expect(sentStatuses().filter(s => s.status === 'error')).toHaveLength(0);
+      expect(logger.warning).toHaveBeenCalledWith(expect.stringContaining('gave no answer'));
+    });
+
+    test('does not fire after an answer arrived in time', async () => {
+      manager = withTimeout();
+      const check = manager.checkForUpdates({ manual: true });
+      autoUpdater.emit('update-not-available', { version: '1.7.1' });
+      await check;
+
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      expect(sentStatuses().filter(s => s.status === 'error')).toHaveLength(0);
+      expect(manager.timeoutTimer).toBeNull();
+    });
+
+    test('dispose cancels a check still in flight', async () => {
+      manager = withTimeout();
+      manager.checkForUpdates({ manual: true });
+
+      manager.dispose();
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      expect(sentStatuses().filter(s => s.status === 'error')).toHaveLength(0);
+    });
+  });
 });

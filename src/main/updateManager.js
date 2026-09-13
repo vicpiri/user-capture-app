@@ -11,6 +11,10 @@
 
 const DEFAULT_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_STARTUP_DELAY_MS = 15 * 1000;
+// A safety net, not the usual path: electron-updater has its own HTTP timeouts
+// and normally answers long before this. It exists because a check that never
+// answers would leave `checking` set and silently disable every later check.
+const DEFAULT_CHECK_TIMEOUT_MS = 60 * 1000;
 const MAX_ERROR_LENGTH = 300;
 
 /**
@@ -39,6 +43,8 @@ class UpdateManager {
    * @param {string} options.releasesUrl - base URL of the GitHub releases page
    * @param {boolean} [options.forceDevConfig] - use dev-app-update.yml in development
    * @param {number} [options.checkIntervalMs] - minimum time between automatic checks
+   * @param {number} [options.checkTimeoutMs] - how long to wait for an answer
+   *   before giving the check up for lost
    */
   constructor(options) {
     this.autoUpdater = options.autoUpdater;
@@ -52,11 +58,13 @@ class UpdateManager {
     this.releasesUrl = options.releasesUrl;
     this.forceDevConfig = options.forceDevConfig === true;
     this.checkIntervalMs = options.checkIntervalMs ?? DEFAULT_CHECK_INTERVAL_MS;
+    this.checkTimeoutMs = options.checkTimeoutMs ?? DEFAULT_CHECK_TIMEOUT_MS;
 
     this.checking = false;
     this.manual = false;
     this.pending = null;
     this.startupTimer = null;
+    this.timeoutTimer = null;
     this.initialized = false;
   }
 
@@ -165,6 +173,8 @@ class UpdateManager {
 
     return new Promise((resolve) => {
       this.pending = resolve;
+      this.timeoutTimer = setTimeout(() => this._giveUp(), this.checkTimeoutMs);
+
       Promise.resolve()
         .then(() => this.autoUpdater.checkForUpdates())
         .catch((error) => {
@@ -244,6 +254,31 @@ class UpdateManager {
       clearTimeout(this.startupTimer);
       this.startupTimer = null;
     }
+    if (this.timeoutTimer) {
+      clearTimeout(this.timeoutTimer);
+      this.timeoutTimer = null;
+    }
+  }
+
+  /**
+   * Abandon a check that never answered
+   *
+   * Without this the check would stay open for the rest of the session and
+   * every later one, including the manual one from the menu, would bail out
+   * with 'already-checking' and look like a menu entry that does nothing.
+   * @private
+   */
+  _giveUp() {
+    this.timeoutTimer = null;
+    const message = 'La comprobación de actualizaciones ha tardado demasiado.';
+    this.logger.warning(`[Updates] Check gave no answer in ${this.checkTimeoutMs} ms`);
+
+    // Same rule as any other failure: an automatic check stays quiet
+    if (this.manual) {
+      this._send({ status: 'error', manual: true, message });
+    }
+
+    this._resolve({ status: 'error', manual: this.manual, message, timedOut: true });
   }
 
   /**
@@ -262,6 +297,11 @@ class UpdateManager {
    * @private
    */
   _resolve(outcome) {
+    if (this.timeoutTimer) {
+      clearTimeout(this.timeoutTimer);
+      this.timeoutTimer = null;
+    }
+
     this.checking = false;
     const resolve = this.pending;
     this.pending = null;
@@ -272,4 +312,5 @@ class UpdateManager {
 module.exports = UpdateManager;
 module.exports.DEFAULT_CHECK_INTERVAL_MS = DEFAULT_CHECK_INTERVAL_MS;
 module.exports.DEFAULT_STARTUP_DELAY_MS = DEFAULT_STARTUP_DELAY_MS;
+module.exports.DEFAULT_CHECK_TIMEOUT_MS = DEFAULT_CHECK_TIMEOUT_MS;
 module.exports.shortMessage = shortMessage;

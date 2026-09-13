@@ -308,6 +308,14 @@ Envuelve `autoUpdater` de `electron-updater` y es el único sitio que lo toca.
 - Regla de silencio: una comprobación **automática** que falla (sin red,
   proxy del centro que bloquea GitHub, 404) solo se registra en el log. Una
   comprobación **manual** que falla se muestra, con el texto del error.
+- **Tiempo de espera** (`checkTimeoutMs`, 60 s por defecto): red de seguridad,
+  no el camino habitual. `electron-updater` contesta por eventos, y una
+  comprobación que no recibiera ninguno dejaba `checking` puesto para el resto
+  de la sesión: todas las siguientes, incluida la manual del menú, salían con
+  `already-checking` y la opción del menú parecía muerta. Al vencer se abandona
+  la comprobación con estado `error` y `timedOut: true`, siguiendo la misma
+  regla de silencio. Lo verosímil que lo provoque es una conexión colgada tras
+  el proxy de un centro.
 - `downloadUpdate()` y `installUpdate()` (fase 2). `installUpdate` llama a
   `autoUpdater.quitAndInstall(true, true)`: silencioso y relanza la
   aplicación. Con el NSIS actual (`oneClick: false`) el primer argumento es
