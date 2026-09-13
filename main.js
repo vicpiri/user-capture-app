@@ -413,11 +413,16 @@ function createWindow() {
   });
 }
 
+// Where the installers are published. Kept as a constant on purpose: the
+// package.json inside a packaged app has no "build" field (electron-builder
+// strips it), and reading build.publish from it made 1.7.0 fail before it
+// could open a window. Must match build.publish in package.json.
+const GITHUB_RELEASES_URL = 'https://github.com/vicpiri/user-capture-app/releases';
+
 /**
- * Update checker against the GitHub Releases declared in package.json
+ * Update checker against the GitHub Releases of the project
  */
 function createUpdateManager() {
-  const { owner, repo } = require('./package.json').build.publish;
   return new UpdateManager({
     autoUpdater,
     isPackaged: app.isPackaged,
@@ -427,7 +432,7 @@ function createUpdateManager() {
     savePreferences: saveUpdatePreferences,
     getMainWindow: () => mainWindowManager.getWindow(),
     openExternal: (url) => shell.openExternal(url),
-    releasesUrl: `https://github.com/${owner}/${repo}/releases`,
+    releasesUrl: GITHUB_RELEASES_URL,
     // Lets `npm run dev -- --dev-updates` test against the real releases with
     // a local dev-app-update.yml (see docs/ACTUALIZACIONES_Y_RELEASE_PLAN.md)
     forceDevConfig: process.argv.includes('--dev-updates')
@@ -931,7 +936,16 @@ app.whenReady().then(() => {
 
   loadRecentProjects();
   createMenu();
-  updateManager = createUpdateManager();
+
+  // Nothing about updates may keep the window from opening: a throw here
+  // would reject whenReady() and leave the app running with no window
+  try {
+    updateManager = createUpdateManager();
+  } catch (error) {
+    logger.error('[Updates] Update checker disabled:', error);
+    updateManager = null;
+  }
+
   createWindow();
 
   // Register all IPC handlers

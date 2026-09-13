@@ -26,6 +26,7 @@ el porqué, el diseño del actualizador y cómo se llega desde el estado actual.
 | En `main`, sin cambios pendientes, sincronizado con `origin` | `git status -sb` debe decir `## main...origin/main` sin `ahead`/`behind` |
 | Tests en verde | `npm test` |
 | La aplicación arranca y abre el proyecto reciente | `npm run dev` |
+| **La aplicación empaquetada arranca** | `npm run dist:unpacked` y abrir `distwin-unpackedEdu User Capture.exe`. Obligatorio: el `package.json` del asar no tiene `build`, `scripts` ni `devDependencies`, y la 1.7.0 se publicó sin arrancar por leer `build.publish` al iniciar. `npm run dev` no lo detecta |
 | Los commits desde el último tag usan tipos convencionales | `git log $(git describe --tags --abbrev=0)..HEAD --oneline` |
 
 Lo último importa más de lo que parece: el changelog y el número de versión
@@ -176,6 +177,8 @@ nada.
 | La versión en la aplicación acaba en `-DEV` | Hay commits después del último tag; solo pasa en un checkout de git | Nada; la instalada nunca lo muestra |
 | `gh release view` muestra solo parte de los adjuntos, o `gh release edit` dice `tag_name already exists` | Dos releases para el mismo tag (carrera de electron-builder, sección 1.4) | Sección 1.7 |
 | El changelog no tiene sección de rendimiento | Falta `.versionrc.json` (la herramienta oculta `perf` por defecto) | Está en el repositorio; no borrarlo |
+| La aplicación instalada aparece en el Administrador de tareas pero no muestra ventana | Excepción dentro de `app.whenReady()` antes de `createWindow()` (en 1.7.0, leer `build.publish` del `package.json` recortado) | Lanzarla desde una consola con `ELECTRON_ENABLE_LOGGING=1` para ver la excepción; publicar un patch |
+| En `distwin-unpacked` la comprobación de actualizaciones dice "no such file or directory, open ...app-update.yml" | El target `dir` no escribe `app-update.yml`; solo lo hace el NSIS | Es normal en esa comprobación. Para probar el actualizador ahí, copiar el `app-update.yml` de `resources/` de una instalación y reiniciar la aplicación |
 | `releases/latest` apunta a una versión vieja | Se creó una Release para un tag antiguo: GitHub elige "latest" **por fecha de creación**, no por número | Borrarla con `gh api -X DELETE repos/vicpiri/user-capture-app/releases/<id>`. Nunca crear Releases de versiones ya pasadas; el script se niega |
 
 ---
