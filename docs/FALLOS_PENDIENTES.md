@@ -15,19 +15,6 @@ ajustar el texto del manual, que describe el comportamiento actual.
 
 ## Prioridad alta
 
-### 2. Guardar las preferencias borra las opciones del menú Ver
-
-*Confirmado en el código.* La ventana de preferencias no envía
-`showCapturedPhotos`, `showRepositoryPhotos`, `showRepositoryIndicators` ni
-`showAdditionalActions`, y `save-preferences` (`src/main/ipc/miscHandlers.js`)
-los escribe igualmente, así que quedan `undefined`. En la sesión actual el
-renderer los trata como desactivados (`renderer.js`, tras guardar): desaparecen
-las miniaturas de fotos capturadas y la sección Acciones Adicionales hasta
-reiniciar, y al reiniciar vuelven los valores por defecto en lugar de los
-elegidos.
-
-Manual: `preferencias.md`.
-
 ### 3. Las exportaciones de imágenes no encuentran fotos con "Fotografías capturadas" desactivado
 
 Con **Ver > Fotografías capturadas** desmarcado, la lista se carga sin las
@@ -218,3 +205,11 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   sustituían una lista vacía por todos los usuarios; ahora la rechazan sin
   leer ni escribir nada, y `ExportManager.ensureUsersToExport()` avisa antes
   de abrir ningún diálogo. Lo cubre `tests/unit/main/exportEmptyList.test.js`.
+- **Guardar las preferencias borraba las opciones del menú Ver** (antes el
+  fallo 2, corregido el 2026-09-14). `save-preferences` escribía
+  `showCapturedPhotos`, `showRepositoryPhotos`, `showRepositoryIndicators` y
+  `showAdditionalActions` con los valores que la ventana ya no enviaba, y el
+  renderer los aplicaba desactivados. Ahora `get-preferences` y
+  `save-preferences` solo tocan el centro, el logotipo y el recibo; esas
+  opciones solo las guarda el menú Ver. Lo cubre
+  `tests/unit/main/preferencesHandlers.test.js`.

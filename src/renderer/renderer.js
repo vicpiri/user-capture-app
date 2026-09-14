@@ -2082,32 +2082,9 @@ async function handlePreferences() {
     const saveResult = await window.electronAPI.savePreferences(newPreferences);
 
     if (saveResult.success) {
-      await showInfoModal('Preferencias guardadas', 'Las preferencias se han guardado correctamente.\n\nAlgunos cambios requieren reiniciar la aplicación para aplicarse.');
-
-      // Apply immediate changes
-      showCapturedPhotos = newPreferences.showCapturedPhotos;
-      showRepositoryPhotos = newPreferences.showRepositoryPhotos;
-      showRepositoryIndicators = newPreferences.showRepositoryIndicators;
-      showAdditionalActions = newPreferences.showAdditionalActions;
-
-      // Update additional actions visibility
-      const additionalActionsSection = document.querySelector('.additional-actions');
-      if (additionalActionsSection) {
-        additionalActionsSection.style.display = newPreferences.showAdditionalActions ? 'flex' : 'none';
-      }
-
-      // Update UserRowRenderer config BEFORE reloading users
-      if (userRowRenderer) {
-        userRowRenderer.updateConfig({
-          showCapturedPhotos: showCapturedPhotos,
-          showRepositoryPhotos: showRepositoryPhotos,
-          showRepositoryIndicators: showRepositoryIndicators,
-          showAdditionalActions: showAdditionalActions
-        });
-      }
-
-      // Reload users to apply display changes
-      await loadUsers(getCurrentFilters());
+      // Nothing to apply here: receipts and PDFs read these settings each time
+      // they are produced, and the display options belong to the Ver menu
+      await showInfoModal('Preferencias guardadas', 'Las preferencias se han guardado correctamente.');
     } else {
       await showInfoModal('Error', 'Error al guardar preferencias: ' + saveResult.error);
     }

@@ -8,11 +8,9 @@ Aquí se explica cómo ajustar los datos del centro, la impresora de recibos y l
 2. Elige una categoría a la izquierda: **Datos de la Institución** o **Impresora de Recibos**.
 3. Haz los cambios y pulsa **Guardar**. **Cancelar**, o la **×** de la esquina, cierra la ventana sin guardar.
 
-Al guardar, la aplicación avisa de que algunos cambios requieren reiniciar la aplicación para aplicarse.
+Los cambios se aplican en cuanto guardas, sin reiniciar: los recibos y los PDF leen estos datos cada vez que se generan. Guardar no cambia las casillas del menú **Ver**, que se explican más abajo.
 
 Las preferencias se guardan en este equipo y valen para todos los proyectos que abras en él.
-
-<!-- REVISAR: al pulsar Guardar se pierden las casillas de visualización del menú Ver. La ventana de preferencias no devuelve showCapturedPhotos, showRepositoryPhotos, showRepositoryIndicators ni showAdditionalActions, así que se guardan como "undefined" (desaparecen de config.json) y en la sesión actual se tratan como desactivadas: se oculta la sección Acciones Adicionales y las miniaturas de fotos capturadas hasta reiniciar. Al reiniciar vuelven los valores por defecto (capturadas y acciones adicionales activadas, depósito desactivado). Si se corrige, no hay nada que avisar. -->
 
 ## Datos de la institución
 

@@ -1405,6 +1405,11 @@ function registerMiscHandlers(context) {
   // Preferences Handlers
   // ============================================================================
 
+  // The preferences window owns the institution and receipt data only. The
+  // display options live in the Ver menu and are saved from there
+  // (saveDisplayPreferences); this pair must not read or write them, or saving
+  // the window turns them off.
+
   // Get application preferences
   ipcMain.handle('get-preferences', async () => {
     try {
@@ -1416,10 +1421,6 @@ function registerMiscHandlers(context) {
       return {
         success: true,
         preferences: {
-          showCapturedPhotos: config.showCapturedPhotos !== false,
-          showRepositoryPhotos: config.showRepositoryPhotos === true,
-          showRepositoryIndicators: config.showRepositoryIndicators === true,
-          showAdditionalActions: config.showAdditionalActions !== false,
           centerName: config.centerName || '',
           logoPath: config.logoPath || '',
           receiptSubtitle: receiptConfig.subtitle || '',
@@ -1439,10 +1440,6 @@ function registerMiscHandlers(context) {
       const config = loadGlobalConfig();
 
       // Update preferences
-      config.showCapturedPhotos = preferences.showCapturedPhotos;
-      config.showRepositoryPhotos = preferences.showRepositoryPhotos;
-      config.showRepositoryIndicators = preferences.showRepositoryIndicators;
-      config.showAdditionalActions = preferences.showAdditionalActions;
       config.centerName = preferences.centerName || '';
       config.logoPath = preferences.logoPath || '';
 
