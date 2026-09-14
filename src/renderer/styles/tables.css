@@ -53,9 +53,11 @@
   color: #6ba4ff;
 }
 
-/* Hide photos column (5th column) when all display options are disabled */
-.user-table.hide-photos-column th:nth-child(5),
-.user-table.hide-photos-column td:nth-child(5) {
+/* Hide the photos column when all display options are disabled. It is the
+   last one: selection mode adds a checkbox column first, and counting from the
+   start (nth-child(5)) then hid GRUPO instead */
+.user-table.hide-photos-column th:last-child,
+.user-table.hide-photos-column td:last-child {
   display: none;
 }
 

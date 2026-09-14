@@ -32,12 +32,6 @@ Ninguno pendiente: todos están en «Corregidos».
 - **Una foto de más de 5 MB deja el visor parpadeando.** `folderWatcher` avisa
   de que está procesando antes de comprobar el tamaño; al descartarla, el aviso
   no se retira hasta que llega otra foto. (`captura.md`)
-- **La búsqueda de usuarios no incluye el DNI ni ignora tildes** (`LIKE` de
-  SQLite en `database.js`). Al personal no se le puede buscar por documento.
-  (`usuarios.md`)
-- **Con las tres opciones de fotos desactivadas y el modo selección activo se
-  oculta la columna GRUPO** en lugar de la de fotos: la regla de `tables.css`
-  usa `nth-child(5)`. (`usuarios.md`)
 - **Un precio de recibo de 0 € es imposible**: se guarda como 18
   (`save-preferences`). (`orlas.md`)
 - **Imprimir sin impresora seleccionada o detectada falla en silencio**, y el
@@ -199,3 +193,11 @@ Ninguno pendiente: todos están en «Corregidos».
 - **Tras cerrar un mensaje el foco volvía al buscador** (de la lista de
   prioridad baja, corregido el 2026-09-14), lo que bloqueaba las flechas.
   `showInfoModal` devuelve ahora el foco a donde estaba antes del mensaje.
+- **La búsqueda de usuarios no incluía el DNI ni ignoraba tildes** (de la
+  lista de prioridad baja, corregido el 2026-09-14). `getUsers` filtra ahora la
+  búsqueda en JavaScript: cada palabra debe aparecer en el nombre, los
+  apellidos, el NIA o el documento, sin distinguir mayúsculas ni tildes.
+- **Con las opciones de fotos desactivadas y el modo selección activo se
+  ocultaba la columna GRUPO** (de la lista de prioridad baja, corregido el
+  2026-09-14). La regla de `tables.css` oculta ahora la última columna en lugar
+  de la quinta. Lo cubre `tests/unit/styles/photosColumn.test.js`.

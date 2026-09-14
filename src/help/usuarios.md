@@ -20,11 +20,10 @@ Los usuarios aparecen ordenados por primer apellido, segundo apellido y nombre. 
 2. La lista se actualiza mientras escribes.
 3. Para volver a la lista completa, borra el texto o pulsa la **X** que aparece dentro del cuadro.
 
-La búsqueda encuentra el texto en el nombre, en cualquiera de los dos apellidos o en el NIA. Busca siempre en **todos los grupos**, aunque tengas uno elegido en el filtro de grupo.
+La búsqueda encuentra el texto en el nombre, en cualquiera de los dos apellidos, en el NIA o en el documento (DNI), así que también sirve para el personal. Busca siempre en **todos los grupos**, aunque tengas uno elegido en el filtro de grupo.
 
-> **Consejo:** escribe una sola palabra, el nombre o un apellido, pero no los dos juntos: «Ana García» no suele encontrar a nadie, mientras que «García» sí. Si no encuentras a alguien con tilde en el apellido, busca solo un trozo sin la letra acentuada, por ejemplo «mart» para «Martínez».
-
-<!-- REVISAR: la búsqueda no incluye el DNI (solo nombre, apellidos y NIA), así que al personal no se le puede buscar por su documento. ¿Es intencionado? Tampoco ignora las tildes ni las mayúsculas acentuadas (LIKE de SQLite). -->
+- No distingue mayúsculas ni tildes: «jose» encuentra «José» y «garcia» encuentra «García».
+- Si escribes varias palabras, deben aparecer todas, cada una en cualquiera de esos datos: «ana garcia» encuentra a Ana García.
 
 ## Filtrar por grupo
 
@@ -98,8 +97,6 @@ Estas opciones del menú **Ver** se activan y desactivan con un clic:
 Si desactivas las tres primeras, la columna FOTOS desaparece de la tabla. La aplicación recuerda estas opciones para la próxima vez.
 
 > **Consejo:** si solo necesitas saber quién tiene ya foto en el depósito, basta con **Indicadores de foto en el depósito**; la miniatura te sirve cuando quieres comparar la foto antigua con la nueva.
-
-<!-- REVISAR: con las tres opciones de foto desactivadas y el modo selección activo, la regla que oculta la columna usa la 5.ª columna (tables.css:58), que en ese momento es GRUPO por la casilla añadida delante. -->
 
 ## Ver la foto de un usuario en grande
 

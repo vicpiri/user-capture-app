@@ -5,6 +5,34 @@ const sqlite3 = process.argv.includes('--dev')
   : require('sqlite3');
 const path = require('path');
 
+/**
+ * Lowercase and without accents, so "José" and "jose" compare equal
+ * @param {*} value
+ * @returns {string}
+ */
+function foldText(value) {
+  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/**
+ * Filter for the user search box
+ *
+ * Done here rather than with SQL LIKE, which only ignores case for plain
+ * ASCII letters: every word typed has to appear in the name, a surname, the
+ * NIA or the document, ignoring case and accents. "ana garcia" finds Ana
+ * García, and staff can be found by their DNI.
+ *
+ * @param {string} search
+ * @returns {Function} Predicate for a user row
+ */
+function matchesSearch(search) {
+  const words = foldText(search).split(/\s+/).filter(Boolean);
+  return (user) => {
+    const text = foldText([user.first_name, user.last_name1, user.last_name2, user.nia, user.document].join(' '));
+    return words.every(word => text.includes(word));
+  };
+}
+
 class DatabaseManager {
   constructor(dbPath) {
     this.db = null;
@@ -367,12 +395,6 @@ class DatabaseManager {
         params.push(filters.groupCode);
       }
 
-      if (filters.search) {
-        query += ' AND (first_name LIKE ? OR last_name1 LIKE ? OR last_name2 LIKE ? OR nia LIKE ?)';
-        const searchTerm = `%${filters.search}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm);
-      }
-
       if (filters.type) {
         query += ' AND type = ?';
         params.push(filters.type);
@@ -382,7 +404,7 @@ class DatabaseManager {
 
       this.db.all(query, params, (err, rows) => {
         if (err) reject(err);
-        else resolve(rows);
+        else resolve(filters.search ? rows.filter(matchesSearch(filters.search)) : rows);
       });
     });
   }

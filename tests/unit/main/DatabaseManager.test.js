@@ -112,6 +112,61 @@ describe('DatabaseManager', () => {
     });
   });
 
+  describe('getUsers() search', () => {
+    const names = async (filters) => (await db.getUsers(filters)).map(u => u.first_name).sort();
+
+    beforeEach(async () => {
+      await db.importUsers({
+        groups: [{ code: '1ESOA', name: 'Primero ESO A' }, { code: '2ESOB', name: 'Segundo ESO B' }],
+        students: [
+          { first_name: 'José', last_name1: 'García', last_name2: 'Núñez', nia: '10001', document: '12345678Z', group_code: '1ESOA', birth_date: '2010-01-01' },
+          { first_name: 'ANA', last_name1: 'GARCIA', last_name2: 'LOPEZ', nia: '10002', document: '', group_code: '2ESOB', birth_date: '2010-02-02' },
+          { first_name: 'LUIS', last_name1: 'PEREZ', last_name2: '', nia: '10003', document: '', group_code: '1ESOA', birth_date: '2010-03-03' }
+        ],
+        teachers: [
+          { first_name: 'MARIA', last_name1: 'RUIZ', last_name2: '', document: '44556677K', birth_date: '1980-01-01' }
+        ],
+        nonTeachingStaff: []
+      });
+    });
+
+    test('should ignore accents both ways', async () => {
+      await expect(names({ search: 'jose' })).resolves.toEqual(['José']);
+      await expect(names({ search: 'garcía' })).resolves.toEqual(['ANA', 'José']);
+      await expect(names({ search: 'nunez' })).resolves.toEqual(['José']);
+    });
+
+    test('should ignore case, also on accented letters', async () => {
+      await expect(names({ search: 'JOSÉ' })).resolves.toEqual(['José']);
+    });
+
+    test('should find staff by their document', async () => {
+      await expect(names({ search: '44556677' })).resolves.toEqual(['MARIA']);
+    });
+
+    test('should find students by NIA or by document', async () => {
+      await expect(names({ search: '10003' })).resolves.toEqual(['LUIS']);
+      await expect(names({ search: '12345678z' })).resolves.toEqual(['José']);
+    });
+
+    test('should need every word, wherever each one appears', async () => {
+      await expect(names({ search: 'ana garcia' })).resolves.toEqual(['ANA']);
+      await expect(names({ search: 'garcia lopez' })).resolves.toEqual(['ANA']);
+      await expect(names({ search: 'ana perez' })).resolves.toEqual([]);
+    });
+
+    test('should combine with the other filters', async () => {
+      await expect(names({ search: 'garcia', groupCode: '1ESOA' })).resolves.toEqual(['José']);
+      await expect(names({ search: 'garcia', type: 'teacher' })).resolves.toEqual([]);
+    });
+
+    test('should keep the usual order', async () => {
+      const users = await db.getUsers({ search: 'a' });
+
+      expect(users.map(u => u.last_name1)).toEqual([...users.map(u => u.last_name1)].sort());
+    });
+  });
+
   describe('getUsersByIdentifiers()', () => {
     beforeEach(async () => {
       await importUsers(
