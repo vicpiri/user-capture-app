@@ -103,7 +103,10 @@
      */
     setupInitialPreferences() {
       this.electronAPI.onInitialDisplayPreferences((prefs) => {
+        // All three filters, as the Ver menu shows them checked on start
         this.setShowDuplicatesOnly(prefs.showDuplicatesOnly);
+        this.setShowCardPrintRequestsOnly(Boolean(prefs.showCardPrintRequestsOnly));
+        this.setShowPublicationRequestsOnly(Boolean(prefs.showPublicationRequestsOnly));
         this.setShowCapturedPhotos(prefs.showCapturedPhotos);
         this.setShowRepositoryPhotos(prefs.showRepositoryPhotos);
         this.setShowRepositoryIndicators(prefs.showRepositoryIndicators);

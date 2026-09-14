@@ -29,12 +29,6 @@ Ninguno pendiente: todos están en «Corregidos».
 - **Cerrar la ventana de la cámara con su X deja el menú desincronizado.** El
   menú no se reconstruye y **Mostrar ventana de cámara** apunta a una ventana
   cerrada. Sin probar. (`captura.md`)
-- **Los filtros de solicitudes no se recuerdan bien.** `saveDisplayPreferences`
-  (`utils/config.js`, *confirmado*) no guarda `showPublicationRequestsOnly`
-  aunque al arrancar se lee. **Carnets solicitados** sí se guarda y aparece
-  marcado en el menú, pero la lista arranca sin filtrar porque
-  `MenuEventManager` solo restaura el de duplicados. (`usuarios.md`,
-  `preferencias.md`)
 - **Últimos carnets impresos: fecha y tipo.** La fecha de impresión es la de
   modificación del archivo, que no cambia al moverlo a `Printed-ID`, así que
   seguramente muestra la de la solicitud. El personal no docente sale como
@@ -198,3 +192,8 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
 - **Código muerto** (de la lista de prioridad baja, eliminado el 2026-09-14):
   la sección de duplicados del informe que se reescribe al actualizar el XML,
   que buscaba duplicados en un mapa con un usuario por identificador.
+- **Los filtros de solicitudes no se recordaban bien** (de la lista de
+  prioridad baja, corregido el 2026-09-14). `saveDisplayPreferences` no
+  guardaba **Publicaciones solicitadas**, y al arrancar `MenuEventManager` solo
+  restauraba el filtro de duplicados: **Carnets solicitados** volvía marcado en
+  el menú pero con la lista sin filtrar. Ahora se guardan y restauran los tres.

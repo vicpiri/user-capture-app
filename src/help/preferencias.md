@@ -40,9 +40,7 @@ Estas casillas del menú **Ver** cambian lo que muestra la lista de usuarios:
 
 Los tres primeros son filtros y solo puede haber uno activo a la vez: al activar uno, los otros se desactivan.
 
-La aplicación recuerda estas casillas al cerrarla y las vuelve a aplicar la próxima vez, salvo **Publicaciones solicitadas**, que empieza siempre desactivada.
-
-<!-- REVISAR: "Publicaciones solicitadas" no se guarda porque saveDisplayPreferences (src/main/utils/config.js) no incluye showPublicationRequestsOnly, aunque al arrancar sí se lee. Parece un olvido; si se corrige, quitar la salvedad del párrafo anterior. -->
+La aplicación recuerda estas casillas al cerrarla y las vuelve a aplicar la próxima vez, filtros incluidos.
 
 ## Comprobación automática de actualizaciones
 

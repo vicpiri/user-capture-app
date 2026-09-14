@@ -111,6 +111,7 @@ function saveDisplayPreferences(preferences) {
   const config = loadGlobalConfig();
   config.showDuplicatesOnly = preferences.showDuplicatesOnly;
   config.showCardPrintRequestsOnly = preferences.showCardPrintRequestsOnly;
+  config.showPublicationRequestsOnly = preferences.showPublicationRequestsOnly;
   config.showCapturedPhotos = preferences.showCapturedPhotos;
   config.showRepositoryPhotos = preferences.showRepositoryPhotos;
   config.showRepositoryIndicators = preferences.showRepositoryIndicators;

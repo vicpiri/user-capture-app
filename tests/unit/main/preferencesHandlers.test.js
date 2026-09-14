@@ -57,6 +57,7 @@ describe('preferences handlers', () => {
   const DISPLAY = {
     showDuplicatesOnly: true,
     showCardPrintRequestsOnly: false,
+    showPublicationRequestsOnly: true,
     showCapturedPhotos: false,
     showRepositoryPhotos: true,
     showRepositoryIndicators: true,
@@ -90,6 +91,15 @@ describe('preferences handlers', () => {
     testId++;
     mockUserDataPath = path.join(fixturesPath, `userData-${testId}`);
     fs.mkdirSync(mockUserDataPath, { recursive: true });
+  });
+
+  describe('saveDisplayPreferences()', () => {
+    test('should save every Ver option, the publication requests filter included', () => {
+      saveDisplayPreferences(DISPLAY);
+
+      expect(loadGlobalConfig()).toEqual(expect.objectContaining(DISPLAY));
+      expect(loadGlobalConfig().showPublicationRequestsOnly).toBe(true);
+    });
   });
 
   describe('save-preferences', () => {

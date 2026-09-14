@@ -50,8 +50,7 @@ Las tres primeras opciones del menú **Ver** muestran solo un tipo de usuarios:
 - Solo puede haber uno activo: al activar uno, los otros dos se desactivan.
 - Muestran usuarios de todos los grupos, sin tener en cuenta el grupo elegido ni la búsqueda.
 - Para volver a la lista normal, pulsa otra vez la misma opción para desmarcarla.
-
-<!-- REVISAR: Carnets solicitados y Publicaciones solicitadas se guardan como preferencia y al reiniciar el menú los muestra marcados, pero la lista arranca sin filtrar (MenuEventManager.setupInitialPreferences solo aplica el de duplicadas). Por eso no se dice aquí que los filtros se recuerden. -->
+- El filtro que tengas activo se recuerda al cerrar la aplicación y se vuelve a aplicar al abrirla.
 
 ### Avisos encima de la lista
 

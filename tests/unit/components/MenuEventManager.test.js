@@ -45,6 +45,8 @@ describe('MenuEventManager', () => {
     // Mock config
     mockConfig = {
       setShowDuplicatesOnly: jest.fn(),
+      setShowCardPrintRequestsOnly: jest.fn(),
+      setShowPublicationRequestsOnly: jest.fn(),
       setShowCapturedPhotos: jest.fn(),
       setShowRepositoryPhotos: jest.fn(),
       setShowRepositoryIndicators: jest.fn(),
@@ -163,6 +165,30 @@ describe('MenuEventManager', () => {
       expect(mockConfig.setShowCapturedPhotos).toHaveBeenCalledWith(false);
       expect(mockConfig.setShowRepositoryPhotos).toHaveBeenCalledWith(true);
       expect(mockConfig.setShowRepositoryIndicators).toHaveBeenCalledWith(false);
+    });
+
+    test.each([
+      ['card print requests', { showCardPrintRequestsOnly: true }, 'setShowCardPrintRequestsOnly'],
+      ['publication requests', { showPublicationRequestsOnly: true }, 'setShowPublicationRequestsOnly']
+    ])('should restore the %s filter saved from the last session', (label, saved, setter) => {
+      // Only duplicates used to be restored: the other two came back checked
+      // in the menu while the list showed everyone
+      manager.init();
+
+      const handler = mockElectronAPI.onInitialDisplayPreferences.mock.calls[0][0];
+      handler({ showDuplicatesOnly: false, ...saved });
+
+      expect(mockConfig[setter]).toHaveBeenCalledWith(true);
+    });
+
+    test('should leave the request filters off when nothing was saved', () => {
+      manager.init();
+
+      const handler = mockElectronAPI.onInitialDisplayPreferences.mock.calls[0][0];
+      handler({ showDuplicatesOnly: false });
+
+      expect(mockConfig.setShowCardPrintRequestsOnly).toHaveBeenCalledWith(false);
+      expect(mockConfig.setShowPublicationRequestsOnly).toHaveBeenCalledWith(false);
     });
 
     test('should set loading state for repository photos if enabled', () => {
