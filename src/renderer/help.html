@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:;">
+  <title>Manual de uso</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/help.css">
+</head>
+<body class="help-body">
+  <div class="help-layout">
+    <aside class="help-sidebar">
+      <div class="help-brand">
+        <span class="help-brand-title">Manual de uso</span>
+        <span id="help-version" class="help-brand-version"></span>
+      </div>
+      <input id="help-search" class="help-search" type="search" placeholder="Buscar en el manual..." autocomplete="off">
+      <nav id="help-nav" class="help-nav" aria-label="Índice del manual"></nav>
+    </aside>
+
+    <main id="help-scroller" class="help-main">
+      <div class="help-toolbar">
+        <button id="help-back" class="btn btn-secondary btn-small" type="button" disabled>&larr; Atrás</button>
+      </div>
+      <section id="help-results" class="help-results" hidden></section>
+      <article id="help-content" class="help-content"></article>
+    </main>
+  </div>
+
+  <script src="components/HelpViewer.js"></script>
+  <script src="help.js"></script>
+</body>
+</html>

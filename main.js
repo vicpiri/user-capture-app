@@ -25,6 +25,7 @@ const CameraWindowManager = require('./src/main/window/cameraWindow');
 const ImageGridWindowManager = require('./src/main/window/imageGridWindow');
 const RepositoryGridWindowManager = require('./src/main/window/repositoryGridWindow');
 const PrintedCardsWindowManager = require('./src/main/window/printedCardsWindow');
+const HelpWindowManager = require('./src/main/window/helpWindow');
 const { getLogger } = require('./src/main/logger');
 const {
   loadGlobalConfig,
@@ -56,6 +57,7 @@ const { registerUserGroupImageHandlers } = require('./src/main/ipc/userGroupImag
 const { registerExportHandlers } = require('./src/main/ipc/exportHandlers');
 const { registerMiscHandlers } = require('./src/main/ipc/miscHandlers');
 const { registerUpdateHandlers } = require('./src/main/ipc/updateHandlers');
+const { registerHelpHandlers } = require('./src/main/ipc/helpHandlers');
 
 // Enable hot reload in development
 if (process.argv.includes('--dev')) {
@@ -76,6 +78,7 @@ const cameraWindowManager = new CameraWindowManager();
 const imageGridWindowManager = new ImageGridWindowManager();
 const repositoryGridWindowManager = new RepositoryGridWindowManager();
 const printedCardsWindowManager = new PrintedCardsWindowManager();
+const helpWindowManager = new HelpWindowManager();
 
 // Every window other than the main one. Register new secondary windows here:
 // closing the main window closes everything in this list, and any window left
@@ -85,7 +88,8 @@ const secondaryWindowManagers = [
   cameraWindowManager,
   imageGridWindowManager,
   repositoryGridWindowManager,
-  printedCardsWindowManager
+  printedCardsWindowManager,
+  helpWindowManager
 ];
 
 let dbManager;
@@ -390,6 +394,7 @@ function createMenu() {
       openImageGridWindow,
       openRepositoryGridWindow,
       openPrintedCardsWindow,
+      openHelpWindow,
       openPOC: () => {
         const { shell } = require('electron');
         const pocPath = path.join(__dirname, 'src', 'renderer', '_poc', 'poc-test.html');
@@ -496,6 +501,12 @@ function openCameraWindow() {
 
 function closeCameraWindow() {
   cameraWindowManager.close();
+}
+
+// The manual needs no open project: it is most useful before creating one
+function openHelpWindow(target = {}) {
+  const isDev = process.argv.includes('--dev');
+  helpWindowManager.open({ isDev, target });
 }
 
 function openPrintedCardsWindow() {
@@ -885,7 +896,8 @@ function registerIPCHandlers() {
     ensureRepositoryMirrorStarted,
     reinitializeRepositoryMirror,
     closeCurrentProject,
-    updateManager: () => updateManager
+    updateManager: () => updateManager,
+    openHelpWindow
   };
 
   // Register all handler modules
@@ -894,6 +906,7 @@ function registerIPCHandlers() {
   registerExportHandlers(context);
   registerMiscHandlers(context);
   registerUpdateHandlers(context);
+  registerHelpHandlers(context);
 
   // Filter toggle handlers from renderer (badge clicks)
   ipcMain.on('menu-toggle-duplicates-from-renderer', (event, enabled) => {

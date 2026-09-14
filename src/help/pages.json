@@ -1,0 +1,13 @@
+[
+  { "id": "inicio", "title": "Primeros pasos" },
+  { "id": "proyectos", "title": "Proyectos" },
+  { "id": "captura", "title": "Captura e importación de fotos" },
+  { "id": "usuarios", "title": "Lista de usuarios" },
+  { "id": "enlazar", "title": "Enlazar fotos" },
+  { "id": "deposito", "title": "Depósito de imágenes" },
+  { "id": "exportaciones", "title": "Exportaciones" },
+  { "id": "carnets", "title": "Carnets y publicación oficial" },
+  { "id": "orlas", "title": "Orlas, pagos y recibos" },
+  { "id": "preferencias", "title": "Preferencias y actualizaciones" },
+  { "id": "atajos", "title": "Atajos de teclado" }
+]

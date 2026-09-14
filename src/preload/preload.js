@@ -294,6 +294,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-project-info', callback);
   },
 
+  // User manual
+  openHelp: (target) => ipcRenderer.invoke('open-help', target),
+  helpGetPages: () => ipcRenderer.invoke('help-get-pages'),
+  helpGetPage: (pageId) => ipcRenderer.invoke('help-get-page', pageId),
+  helpSearch: (query) => ipcRenderer.invoke('help-search', query),
+  helpOpenExternal: (url) => ipcRenderer.invoke('help-open-external', url),
+  onHelpNavigate: (callback) => {
+    ipcRenderer.on('help-navigate', (event, target) => callback(target));
+  },
+
   // Ingest folder
   onIngestFolderChanged: (callback) => {
     ipcRenderer.on('ingest-folder-changed', callback);

@@ -482,15 +482,10 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'Documentación',
+          label: 'Manual de uso',
+          accelerator: 'F1',
           click: () => {
-            dialog.showMessageBox(this.mainWindow, {
-              type: 'info',
-              title: 'Documentación',
-              message: 'Disponible próximamente',
-              detail: 'La documentación completa estará disponible en una próxima versión.',
-              buttons: ['Aceptar']
-            });
+            this.callbacks.openHelpWindow();
           }
         }
       ]

@@ -18,6 +18,7 @@ user-capture-app/
 │   ├── main/                    # Proceso principal de Electron (Node.js)
 │   │   ├── ipc/                 # Manejadores IPC organizados por funcionalidad
 │   │   │   ├── exportHandlers.js       # Exportación de CSV e imágenes (7 endpoints)
+│   │   │   ├── helpHandlers.js         # Manual de uso: índice, páginas y búsqueda
 │   │   │   ├── miscHandlers.js         # Manejadores misceláneos (tags, diálogos, etc.)
 │   │   │   ├── projectHandlers.js      # Gestión de proyectos, XML y cierre
 │   │   │   ├── updateHandlers.js       # Comprobación de actualizaciones (GitHub Releases)
@@ -32,18 +33,21 @@ user-capture-app/
 │   │   │   └── version.js              # Gestión de versión y modo DEV
 │   │   ├── window/              # Gestión de ventanas
 │   │   │   ├── cameraWindow.js         # Ventana de captura de cámara
+│   │   │   ├── helpWindow.js           # Ventana del manual de uso
 │   │   │   ├── imageGridWindow.js      # Grid de imágenes capturadas
 │   │   │   ├── mainWindow.js           # Ventana principal
 │   │   │   └── repositoryGridWindow.js # Grid de imágenes del repositorio
 │   │   ├── database.js          # Gestión de base de datos SQLite
 │   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
 │   │   ├── googleDriveManager.js # Integración con Google Drive API
+│   │   ├── helpContent.js       # Lectura, conversión y búsqueda del manual (Markdown)
 │   │   ├── imageManager.js      # Procesamiento y gestión de imágenes
 │   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
 │   │   ├── updateManager.js     # Envoltorio de electron-updater (aviso de versión nueva)
 │   │   └── xmlParser.js         # Parseo de archivos XML de usuarios
+│   ├── help/          # Manual de uso en Markdown (pages.json + una página por área)
 │   ├── preload/       # Scripts preload (comunicación segura entre procesos)
 │   ├── renderer/      # Proceso de renderizado (interfaz de usuario)
 │   │   ├── components/                  # Componentes modulares de UI
@@ -60,6 +64,7 @@ user-capture-app/
 │   │   │   ├── CaptureHistoryManager.js # Tira de miniaturas del historial de capturas
 │   │   │   ├── DragDropManager.js       # Gestión de drag & drop de imágenes
 │   │   │   ├── ExportManager.js         # Coordinador de exportaciones (CSV/imágenes)
+│   │   │   ├── HelpViewer.js            # Índice, páginas, búsqueda y Atrás del manual
 │   │   │   ├── ImageGridManager.js      # Gestión de grid de imágenes capturadas
 │   │   │   ├── ImageTagsManager.js      # Gestión de etiquetas de imágenes
 │   │   │   ├── KeyboardNavigationManager.js # Navegación por teclado en tabla de usuarios
@@ -85,7 +90,9 @@ user-capture-app/
 │   │   ├── image-grid.html      # HTML del grid de imágenes capturadas
 │   │   ├── image-grid.js        # Lógica del grid de capturadas
 │   │   ├── repository-grid.html # HTML del grid del repositorio
-│   │   └── repository-grid.js   # Lógica del grid del repositorio
+│   │   ├── repository-grid.js   # Lógica del grid del repositorio
+│   │   ├── help.html            # HTML de la ventana del manual
+│   │   └── help.js              # Arranque de la ventana del manual
 │   └── shared/        # Código compartido (tipos, constantes, utilidades)
 ├── tests/             # Tests unitarios (Jest)
 │   └── unit/
@@ -182,6 +189,8 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
 - **imageGridWindow.js**: Visualización en grid de imágenes capturadas
 - **repositoryGridWindow.js**: Visualización en grid de imágenes del repositorio
 - **printedCardsWindow.js**: Últimos carnets impresos
+- **helpWindow.js**: Manual de uso. Si ya está abierta, `open({ target })` solo
+  la lleva a la página pedida
 
 #### Cómo añadir una ventana nueva
 
@@ -988,8 +997,39 @@ Aplicación completamente funcional con todas las características principales i
 - **Formato**: ZIP con límite de tamaño
 - **Contenido**: Imágenes del repositorio organizadas por grupo
 - **Opciones**: Compresión configurable
+## Manual de uso
+
+El manual que consulta el usuario (**Ayuda > Manual de uso**, `F1`) vive en
+`src/help/` y se empaqueta con la aplicación: cada versión instalada lleva el
+manual que le corresponde.
+
+- **Estructura**: `pages.json` fija las páginas y su orden (`id` y `title`); cada
+  página es `src/help/{id}.md` y empieza con un único `#` igual a su `title`.
+- **Conversión**: `helpContent.js` la hace en el proceso principal con
+  `markdown-it` y `html: false`, así que el HTML escrito en las páginas se
+  escapa en lugar de colarse. La ventana solo inserta el resultado.
+- **Enlaces**: entre páginas se escriben `[texto](exportaciones.md#seccion)`.
+  El ancla de un título es su texto sin tildes, en minúsculas, solo con letras,
+  números y guiones (`slugify()`): "¿Qué pasa si falta?" →
+  `que-pasa-si-falta`. Los enlaces web se abren en el navegador; ningún clic
+  saca la ventana del manual.
+- **Notas internas**: `<!-- REVISAR: ... -->` no se muestra ni se busca. Sirve
+  para dejar dudas pendientes de confirmar.
+- **Ayuda contextual**: cualquier ventana puede abrir el manual en una sección
+  con `window.electronAPI.openHelp({ page, anchor })`.
+- **Estilo**: tuteo, rutas de menú en negrita con los textos exactos del menú
+  (**Proyecto > Configurar depósito de imágenes**), atajos y nombres de archivo
+  en código, avisos como citas que empiezan por **Importante:** o **Consejo:**.
+  Nada de nombres de archivos del código ni detalles internos.
+- **Tests**: `tests/unit/main/helpContent.test.js` recorre el manual real y
+  falla si una página del índice no tiene archivo (o al revés), si el título no
+  coincide, si un título se repite en una página, si hay HTML o si algún enlace
+  apunta a una página o sección que no existe. Renombrar un título obliga a
+  corregir los enlaces que lo usan.
+
 ## Política de control de versiones
 - Cada vez que una funcionalidad se de por comprobada y finalizada, se hará un commit en git con la descripción de la funcionalidad en inglés.
+- Toda funcionalidad nueva o que cambie lo que ve el usuario actualiza el manual (`src/help/`) en el mismo commit.
 - Los commits NO deben incluir referencias a Claude, herramientas de IA, o co-autoría con Claude.
 - Formato de commits:
   - Usar conventional commits: `tipo: descripción breve`

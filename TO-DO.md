@@ -3,3 +3,4 @@
 - Hacer que todas las exportaciones pregunten si se exportan todos los usuarios, el grupo seleccionado o los usuarios filtrados.
 - Rotar el `app.log` del proyecto: crece indefinidamente (más de 8 MB en un proyecto en uso) porque cada apertura añade al mismo archivo y nunca se trunca ni se archiva.
 - Podar la caché de miniaturas (`%APPDATA%/Edu User Capture/thumbnail-cache`): al reemplazar una foto, su miniatura anterior queda huérfana y nunca se borra. Ver [docs/FILE_URL_ESCAPING.md](docs/FILE_URL_ESCAPING.md).
+- Corregir los fallos encontrados al redactar el manual de uso, empezando por la exportación que con una lista vacía exporta todo el proyecto. Detalle y prioridades en [docs/FALLOS_PENDIENTES.md](docs/FALLOS_PENDIENTES.md), que incluye también lo que hay que actualizar en CLAUDE.md.
