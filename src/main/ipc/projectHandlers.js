@@ -70,6 +70,11 @@ function registerProjectHandlers(context) {
       if (!fs.existsSync(xmlPath)) {
         throw new Error('El archivo XML no existe');
       }
+      // Creating here would import the XML on top of the existing database
+      // and duplicate every user in it
+      if (fs.existsSync(path.join(folderPath, 'data', 'users.db'))) {
+        throw new Error('La carpeta ya contiene un proyecto. Para trabajar con él, ábrelo con Archivo > Abrir Proyecto...');
+      }
       logger.success('Paths validated successfully');
 
       // Progress: 10%

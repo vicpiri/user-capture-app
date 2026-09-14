@@ -185,6 +185,53 @@ describe('create-project handler', () => {
     expect(fs.readdirSync(newPath)).toEqual([]);
   });
 
+  describe('a folder that already holds a project', () => {
+    let existingPath;
+    let usersBefore;
+
+    beforeEach(async () => {
+      // A project someone created earlier in this folder
+      existingPath = path.join(workPath, 'existente');
+      const db = new DatabaseManager(path.join(existingPath, 'data', 'users.db'));
+      fs.mkdirSync(path.join(existingPath, 'data'), { recursive: true });
+      await db.initialize();
+      await db.importUsers({
+        groups: [{ code: '1ESOA', name: 'Primero ESO A' }],
+        students: [{ first_name: 'ANA', last_name1: 'GARCIA', last_name2: '', nia: '1001', group_code: '1ESOA', document: '', birth_date: '2010-01-01' }],
+        teachers: [],
+        nonTeachingStaff: []
+      });
+      usersBefore = (await db.getUsers({})).length;
+      await db.close();
+    });
+
+    test('should refuse it and point to opening the project instead', async () => {
+      const result = await create(existingPath, writeXml(XML));
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/ya contiene un proyecto/);
+      expect(result.error).toMatch(/Archivo > Abrir Proyecto/);
+    });
+
+    test('should not import the XML on top of its users', async () => {
+      await create(existingPath, writeXml(XML));
+
+      const db = new DatabaseManager(path.join(existingPath, 'data', 'users.db'));
+      await db.initialize();
+      const usersAfter = (await db.getUsers({})).length;
+      await db.close();
+
+      expect(usersAfter).toBe(usersBefore);
+    });
+
+    test('should leave the open project alone', async () => {
+      await create(existingPath, writeXml(XML));
+
+      expect(closeCurrentProject).not.toHaveBeenCalled();
+      expect(state.dbManager).toBe(oldProject.db);
+    });
+  });
+
   test('should leave the open project alone when the folder does not exist', async () => {
     const result = await create(path.join(workPath, 'no-existe'), writeXml(XML));
 

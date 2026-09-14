@@ -19,14 +19,6 @@ Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
-### 6. Crear un proyecto en una carpeta que ya tiene uno duplica los usuarios
-
-Nada impide elegir una carpeta con un proyecto existente: se vuelve a importar
-el XML sobre la base de datos que ya hay, y la tabla de usuarios no tiene
-restricción de unicidad.
-
-Manual: `proyectos.md`.
-
 ### 7. Enlazar una foto ya asignada a otro usuario reemplaza la del actual sin preguntar
 
 Si la foto ya está enlazada a otra persona y el usuario seleccionado ya tiene
@@ -213,3 +205,8 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   anterior seguían vivos. Ahora lo cierra, y antes lee el XML: un archivo roto
   ya no cierra el proyecto abierto ni deja carpetas ni base de datos a medias
   en la carpeta elegida. Lo cubre `tests/unit/main/createProjectHandler.test.js`.
+- **Crear un proyecto en una carpeta que ya tenía uno duplicaba los usuarios**
+  (antes el fallo 6, corregido el 2026-09-14). `create-project` reutilizaba la
+  base de datos existente e importaba el XML encima. Ahora se niega si la
+  carpeta tiene `data/users.db` y remite a **Archivo > Abrir Proyecto...**, sin
+  cerrar el proyecto abierto. Lo cubre `createProjectHandler.test.js`.

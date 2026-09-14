@@ -11,9 +11,11 @@ Un proyecto reúne el listado de personas de un centro, sacado de un archivo XML
 
 La aplicación crea dentro de la carpeta las subcarpetas `ingest`, `imports` y `data`, importa el XML y deja el proyecto abierto. El nombre del proyecto aparece en la barra de título y en la barra de estado.
 
-> **Consejo:** Usa una carpeta nueva y vacía para cada proyecto.
+Si tenías otro proyecto abierto, se cierra antes de crear el nuevo. Si el XML no se puede leer, no se crea nada y el proyecto abierto sigue como estaba.
 
-<!-- REVISAR: la aplicación no impide crear un proyecto en una carpeta que ya contiene otro. En ese caso reutiliza la base de datos existente y vuelve a importar el XML encima, con lo que los usuarios quedarían duplicados. ¿Añadir una comprobación o un aviso más fuerte aquí? -->
+Si la carpeta ya contiene un proyecto, la aplicación no crea otro encima: te avisa para que lo abras con **Archivo > Abrir Proyecto...**
+
+> **Consejo:** Usa una carpeta nueva y vacía para cada proyecto.
 
 ## Qué debe contener el archivo XML
 
