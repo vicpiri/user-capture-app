@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.9.0](https://github.com/vicpiri/user-capture-app/compare/v1.8.0...v1.9.0) (2026-09-14)
+
+### Features
+
+* add an in-app user manual ([b3b00b9](https://github.com/vicpiri/user-capture-app/commit/b3b00b98822f3730f9e2b63c8b11f9d845575b36))
+
+### Bug Fixes
+
+* write the full group name in the ID card CSV ([1b6ba38](https://github.com/vicpiri/user-capture-app/commit/1b6ba38d9ad4c3a381447505504caa36b0c7fbe3))
 ## [1.8.0](https://github.com/vicpiri/user-capture-app/compare/v1.7.3...v1.8.0) (2026-09-13)
 
 ### Features
