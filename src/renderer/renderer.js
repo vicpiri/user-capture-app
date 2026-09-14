@@ -509,6 +509,7 @@ function initializeMenuEventManager() {
     onExportCSV: handleExportCSV,
     onExportInventoryCSV: handleExportInventoryCSV,
     onExportImages: handleExportImages,
+    onExportRepositoryImages: handleExportRepositoryImages,
     onExportImagesName: handleExportImagesName,
     onExportToRepository: handleExportToRepository,
     onExportOrlaPDF: handleExportOrlaPDF,
@@ -1965,6 +1966,12 @@ async function handleExportInventoryCSV() {
 async function handleExportImages() {
   if (exportManager) {
     await exportManager.exportImagesByID();
+  }
+}
+
+async function handleExportRepositoryImages() {
+  if (exportManager) {
+    await exportManager.exportRepositoryImagesByID();
   }
 }
 

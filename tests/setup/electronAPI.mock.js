@@ -300,6 +300,10 @@ class ElectronAPIMock extends EventEmitter {
     return this._registerEvent('menu-export-images', callback);
   }
 
+  onMenuExportRepositoryImages(callback) {
+    return this._registerEvent('menu-export-repository-images', callback);
+  }
+
   onMenuExportImagesName(callback) {
     return this._registerEvent('menu-export-images-name', callback);
   }

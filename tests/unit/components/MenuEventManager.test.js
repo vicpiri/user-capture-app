@@ -28,6 +28,7 @@ describe('MenuEventManager', () => {
       onMenuExportCSV: jest.fn(),
       onMenuExportInventoryCSV: jest.fn(),
       onMenuExportImages: jest.fn(),
+      onMenuExportRepositoryImages: jest.fn(),
       onMenuExportImagesName: jest.fn(),
       onMenuExportToRepository: jest.fn(),
       onMenuExportOrlaPDF: jest.fn(),
@@ -64,6 +65,7 @@ describe('MenuEventManager', () => {
       onExportInventoryCSV: jest.fn(),
       onExportImages: jest.fn(),
       onExportImagesName: jest.fn(),
+      onExportRepositoryImages: jest.fn(),
       onExportToRepository: jest.fn(),
       onExportOrlaPDF: jest.fn(),
       onExportPaidOrlaPDF: jest.fn(),
@@ -469,6 +471,15 @@ describe('MenuEventManager', () => {
       handler();
 
       expect(mockConfig.onExportImages).toHaveBeenCalled();
+    });
+
+    test('should handle export of repository images by ID', () => {
+      manager.init();
+
+      const handler = mockElectronAPI.onMenuExportRepositoryImages.mock.calls[0][0];
+      handler();
+
+      expect(mockConfig.onExportRepositoryImages).toHaveBeenCalled();
     });
 
     test('should handle export images by name', () => {

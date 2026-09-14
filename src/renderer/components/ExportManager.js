@@ -371,6 +371,108 @@
     }
 
     /**
+     * Export repository images named by ID
+     *
+     * Like exportImagesByID, but each user's photo comes from the repository.
+     * How many have one is asked to the main process, which reads the
+     * repository itself: what the list knows depends on the Ver options.
+     */
+    async exportRepositoryImagesByID() {
+      if (!this.checkProjectOpen()) return;
+
+      const usersToExport = this.getUsersToExport();
+
+      if (usersToExport.length === 0) {
+        await this.showInfoModal('Aviso', 'No hay usuarios que exportar con la selección y los filtros actuales.');
+        return;
+      }
+
+      const count = await this.electronAPI.countRepositoryImages(usersToExport);
+
+      if (!count || !count.success) {
+        await this.showInfoModal('Error', (count && count.error) || 'No se pudo consultar el depósito de imágenes.');
+        return;
+      }
+
+      if (count.withPhoto === 0) {
+        await this.showInfoModal(
+          'Aviso',
+          `Ninguno de los ${usersToExport.length} usuarios a exportar tiene foto en el depósito.`
+        );
+        return;
+      }
+
+      const result = await this.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Seleccionar carpeta para exportar las imágenes del depósito'
+      });
+
+      if (result.canceled || result.filePaths.length === 0) return;
+
+      const folderPath = result.filePaths[0];
+
+      const options = await this.exportOptionsModal.show([
+        { label: 'Se exportará', value: this.describeScopeLabel() },
+        { label: 'Imágenes del depósito a exportar', value: String(count.withPhoto) },
+        { label: 'Usuarios sin foto en el depósito', value: String(count.withoutPhoto) }
+      ]);
+
+      if (!options) return;
+
+      const apiOptions = this.convertOptionsToAPI(options);
+
+      this.showProgressModal('Exportando Imágenes del Depósito', 'Procesando archivos...');
+
+      const exportResult = await this.electronAPI.exportRepositoryImages(folderPath, usersToExport, apiOptions);
+
+      // Wait a moment to show 100% progress
+      await new Promise(resolve => setTimeout(resolve, 500));
+      this.closeProgressModal();
+
+      if (!exportResult.success) {
+        await this.showInfoModal('Error', 'Error al exportar imágenes del depósito: ' + exportResult.error);
+        return;
+      }
+
+      await this.showInfoModal('Exportación completada', this.summarizeImagesExport(exportResult.results));
+    }
+
+    /**
+     * What an image export did, for the message shown when it finishes
+     * @param {Object} results - exported, groupsFolders, withoutRepositoryImage, withoutGroup, errors
+     * @returns {string}
+     */
+    summarizeImagesExport(results) {
+      const lines = [
+        `Se han exportado ${results.exported} ${results.exported === 1 ? 'imagen' : 'imágenes'} `
+          + `en ${results.groupsFolders} ${results.groupsFolders === 1 ? 'carpeta' : 'carpetas'} de grupo.`
+      ];
+
+      if (results.withoutRepositoryImage > 0) {
+        lines.push(results.withoutRepositoryImage === 1
+          ? '1 usuario no tiene foto en el depósito.'
+          : `${results.withoutRepositoryImage} usuarios no tienen foto en el depósito.`);
+      }
+
+      if (results.withoutGroup > 0) {
+        lines.push(results.withoutGroup === 1
+          ? '1 usuario sin grupo no se ha exportado.'
+          : `${results.withoutGroup} usuarios sin grupo no se han exportado.`);
+      }
+
+      const errors = results.errors || [];
+      if (errors.length > 0) {
+        const shown = errors.slice(0, 5).map(error => `- ${error.user}: ${error.error}`);
+        lines.push('', `No se ${errors.length === 1 ? 'pudo exportar 1 imagen' : `pudieron exportar ${errors.length} imágenes`}:`, ...shown);
+        if (errors.length > shown.length) {
+          lines.push(`... y ${errors.length - shown.length} más (detalle en el registro del proyecto).`);
+        }
+      }
+
+      return lines.join('\n');
+    }
+
+    /**
      * Export images by name
      */
     async exportImagesByName() {
@@ -419,6 +521,29 @@
     }
 
     /**
+     * Which users an export will take, in words
+     *
+     * @returns {string}
+     */
+    describeScopeLabel() {
+      const selectionMode = this.getSelectionMode();
+      const selectedUsers = this.getSelectedUsers();
+      const searchTerm = this.getSearchTerm();
+
+      if (selectionMode && selectedUsers && selectedUsers.size > 0) {
+        return `${selectedUsers.size} usuarios seleccionados`;
+      }
+      if (this.getShowDuplicatesOnly()) {
+        return 'Usuarios con asignaciones duplicadas';
+      }
+      if (searchTerm) {
+        // A search ignores the group filter, so naming the group here would lie
+        return `Búsqueda "${searchTerm}", en todos los grupos`;
+      }
+      return this.getGroupFilterLabel() || 'Todos los grupos';
+    }
+
+    /**
      * Describe what an export is about to cover
      *
      * getUsersToExport() silently follows the selection, the duplicates filter,
@@ -434,21 +559,7 @@
      * @returns {{rows: Array<{label: string, value: string}>, note: string|null}}
      */
     describeExportScope(usersToExport, destination, options = {}) {
-      const selectionMode = this.getSelectionMode();
-      const selectedUsers = this.getSelectedUsers();
-      const searchTerm = this.getSearchTerm();
-
-      let scope;
-      if (selectionMode && selectedUsers && selectedUsers.size > 0) {
-        scope = `${selectedUsers.size} usuarios seleccionados`;
-      } else if (this.getShowDuplicatesOnly()) {
-        scope = 'Usuarios con asignaciones duplicadas';
-      } else if (searchTerm) {
-        // A search ignores the group filter, so naming the group here would lie
-        scope = `Búsqueda "${searchTerm}", en todos los grupos`;
-      } else {
-        scope = this.getGroupFilterLabel() || 'Todos los grupos';
-      }
+      const scope = this.describeScopeLabel();
 
       const withImage = usersToExport.filter(user => user.image_path);
 

@@ -57,9 +57,9 @@ Manual: `preferencias.md`.
 
 Con **Ver > Fotografías capturadas** desmarcado, la lista se carga sin las
 rutas de las fotos capturadas (`UserDataManager.js`, opciones de `get-users`
-en `userGroupImageHandlers.js`). **Imágenes como ID**, **Imágenes como nombre y
-apellidos** e **Imágenes capturadas al depósito** encuentran entonces 0
-imágenes, incluso en modo selección. Solo el filtro de duplicados carga las
+en `userGroupImageHandlers.js`). **Imágenes capturadas como ID**,
+**Imágenes capturadas como nombre y apellidos** e **Imágenes capturadas al
+depósito** encuentran entonces 0 imágenes, incluso en modo selección. Solo el filtro de duplicados carga las
 rutas siempre.
 
 Manual: `exportaciones.md`.
@@ -225,7 +225,7 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   siempre todos los grupos).
 - **Inventario de imágenes**: un `imagenes.zip` (o `imagenes_N.zip`) plano, sin
   carpetas por grupo.
-- **Imágenes como ID**: van en una subcarpeta por grupo.
+- **Imágenes capturadas como ID**: van en una subcarpeta por grupo.
 - **Navegación por teclado**: no hay selección con `Intro`; las flechas
   izquierda y derecha mueven el visor. `BaseModal` no gestiona `Esc`.
 - **Visor de imágenes**: no tiene contador.

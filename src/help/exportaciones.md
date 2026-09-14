@@ -8,8 +8,9 @@ Desde **Archivo > Exportar** sacas de la aplicación los datos y las fotos del p
 |---|---|
 | **Archivo CSV para Carnets del grupo seleccionado** (`Ctrl+E`) | El archivo `carnets.csv` para el programa de carnets |
 | **Archivos para Edu Inventory Manager** | `Alumnado.csv`, `Personal.csv` y `Grupos.csv`, y si quieres las fotos del depósito |
-| **Imágenes como ID** | Las fotos capturadas, con el NIA o el DNI como nombre de archivo |
-| **Imágenes como nombre y apellidos** | Las fotos capturadas, con los apellidos y el nombre como nombre de archivo |
+| **Imágenes capturadas como ID** | Las fotos capturadas, con el NIA o el DNI como nombre de archivo |
+| **Imágenes del depósito como ID** | Las fotos del depósito de imágenes, con el NIA o el DNI como nombre de archivo |
+| **Imágenes capturadas como nombre y apellidos** | Las fotos capturadas, con los apellidos y el nombre como nombre de archivo |
 | **Imágenes capturadas al depósito** | Las fotos capturadas, copiadas al depósito de imágenes |
 | **Orlas en PDF** | Un PDF de orla por grupo |
 | **Listado de alumnos pagados en PDF** | El archivo `Alumnos_Pagados.pdf` |
@@ -19,7 +20,7 @@ Si en la carpeta elegida ya hay un archivo con el mismo nombre, la exportación 
 
 ## Qué usuarios se exportan
 
-El CSV para carnets, **Imágenes como ID**, **Imágenes como nombre y apellidos** e **Imágenes capturadas al depósito** deciden a quién incluir con esta regla, en este orden:
+El CSV para carnets, **Imágenes capturadas como ID**, **Imágenes del depósito como ID**, **Imágenes capturadas como nombre y apellidos** e **Imágenes capturadas al depósito** deciden a quién incluir con esta regla, en este orden:
 
 1. Si estás en modo selección y hay usuarios marcados, solo esos.
 2. Si no, y está activado **Ver > Asignaciones duplicadas**, todos los usuarios del proyecto que comparten foto con otro.
@@ -29,12 +30,12 @@ El CSV para carnets, **Imágenes como ID**, **Imágenes como nombre y apellidos*
 
 Las demás exportaciones (inventario, orlas y listados de pagos) tienen su propio alcance, que se explica en cada apartado.
 
-<!-- REVISAR: si "Ver > Fotografías capturadas" está desactivado, la lista se carga sin la ruta de las fotos capturadas, y "Imágenes como ID", "Imágenes como nombre y apellidos" e "Imágenes capturadas al depósito" encuentran 0 imágenes (también en modo selección; solo se salva el filtro de duplicados, que usa la lista completa). ¿Es intencionado? Si se corrige, no hace falta avisar al usuario. -->
+<!-- REVISAR: si "Ver > Fotografías capturadas" está desactivado, la lista se carga sin la ruta de las fotos capturadas, y "Imágenes capturadas como ID", "Imágenes capturadas como nombre y apellidos" e "Imágenes capturadas al depósito" encuentran 0 imágenes (también en modo selección; solo se salva el filtro de duplicados, que usa la lista completa). ¿Es intencionado? Si se corrige, no hace falta avisar al usuario. -->
 <!-- REVISAR: si la lista de usuarios a exportar queda vacía (búsqueda sin resultados, grupo sin usuarios), el proceso principal exporta TODOS los usuarios del proyecto en lugar de ninguno. -->
 
 ## Copiar el original o redimensionar
 
-**Imágenes como ID**, **Imágenes como nombre y apellidos**, **Imágenes capturadas al depósito** y las fotos del inventario te dejan elegir cómo sale cada foto:
+**Imágenes capturadas como ID**, **Imágenes capturadas como nombre y apellidos**, **Imágenes capturadas al depósito** y las fotos del inventario te dejan elegir cómo sale cada foto:
 
 - **Copiar imagen original**: la foto sale tal cual. Solo se vuelve a guardar si la cámara la dejó marcada como girada, para ponerla derecha.
 - **Redimensionar imágenes**: reduce las fotos con dos valores:
@@ -105,12 +106,12 @@ Sobre las fotos:
 - Se llaman `NIA.jpg` o `DNI.jpg` y van todas juntas en la carpeta elegida, sin subcarpetas por grupo.
 - Con la compresión activada, las fotos van dentro de `imagenes.zip`. Si no caben en el tamaño máximo, se reparten en varios archivos: `imagenes_1.zip`, `imagenes_2.zip`, etc. En la carpeta no quedan fotos sueltas.
 
-## Exportar imágenes como ID
+## Exportar imágenes capturadas como ID
 
 Copia las fotos capturadas a una carpeta, nombradas con el identificador de cada persona.
 
 1. Elige a quién exportar (ver [Qué usuarios se exportan](#que-usuarios-se-exportan)).
-2. Pulsa **Archivo > Exportar > Imágenes como ID**.
+2. Pulsa **Archivo > Exportar > Imágenes capturadas como ID**.
 3. Elige la carpeta de destino.
 4. Revisa el resumen, elige **Copiar imagen original** o **Redimensionar imágenes** y pulsa **Exportar**.
 
@@ -118,20 +119,37 @@ Dentro de la carpeta elegida se crea una subcarpeta por grupo, con el código de
 
 Al terminar, la ventana de progreso se cierra sin mostrar un resumen; solo aparece un mensaje si la exportación falla. Abre la carpeta para comprobar el resultado.
 
-<!-- REVISAR: los usuarios sin grupo asignado se saltan sin avisar, y los errores individuales (foto no encontrada, sin NIA/DNI) no se muestran en ningún sitio: solo quedan en el registro. Vale también para "Imágenes como nombre y apellidos". -->
+<!-- REVISAR: los usuarios sin grupo asignado se saltan sin avisar, y los errores individuales (foto no encontrada, sin NIA/DNI) no se muestran en ningún sitio: solo quedan en el registro. Vale también para "Imágenes capturadas como nombre y apellidos". -->
 
-## Exportar imágenes como nombre y apellidos
+## Exportar imágenes del depósito como ID
+
+Hace lo mismo que **Imágenes capturadas como ID**, pero con las fotos del [depósito de imágenes](deposito.md) en lugar de las capturadas en el proyecto. Sirve, por ejemplo, para sacar las fotos oficiales de un grupo aunque este curso no se les haya hecho foto.
+
+1. Elige a quién exportar (ver [Qué usuarios se exportan](#que-usuarios-se-exportan)).
+2. Pulsa **Archivo > Exportar > Imágenes del depósito como ID**.
+3. Elige la carpeta de destino.
+4. Revisa el resumen: cuántas fotos del depósito se van a exportar y cuántos usuarios no tienen foto en él. Elige **Copiar imagen original** o **Redimensionar imágenes** y pulsa **Exportar**.
+5. Al terminar, un mensaje resume cuántas fotos se han exportado, cuántos usuarios no tenían foto en el depósito y los problemas que haya habido.
+
+El resultado tiene la misma forma que **Imágenes capturadas como ID**: una subcarpeta por grupo, con el código del grupo como nombre, y cada foto llamada `NIA.jpg` para el alumnado y `DNI.jpg` para el personal. Da igual que la persona tenga o no una foto capturada: solo cuenta la del depósito.
+
+- Necesita el depósito configurado en **Proyecto > Configurar depósito de imágenes**.
+- No depende de las opciones del depósito del menú **Ver**: la aplicación busca las fotos directamente en el depósito.
+- Si la copia local del depósito está al día, lee las fotos de ella, que es más rápido; si no, las lee del depósito.
+- Si la selección o los filtros no dejan ningún usuario, o ninguno tiene foto en el depósito, la aplicación te avisa y no exporta nada.
+
+## Exportar imágenes capturadas como nombre y apellidos
 
 Igual que la anterior, pero cada foto se llama con los apellidos y el nombre de la persona, con la primera letra de cada palabra en mayúscula: `Apellido1 Apellido2, Nombre.jpg`, por ejemplo `García López, Ana María.jpg`.
 
 1. Elige a quién exportar (ver [Qué usuarios se exportan](#que-usuarios-se-exportan)).
-2. Pulsa **Archivo > Exportar > Imágenes como nombre y apellidos**.
+2. Pulsa **Archivo > Exportar > Imágenes capturadas como nombre y apellidos**.
 3. Elige la carpeta de destino.
 4. Revisa el resumen, elige **Copiar imagen original** o **Redimensionar imágenes** y pulsa **Exportar**.
 
 Las fotos también se reparten en una subcarpeta por grupo, y al terminar tampoco se muestra un resumen.
 
-> **Importante:** si dos personas del mismo grupo se llaman exactamente igual, sus fotos tendrían el mismo nombre de archivo y la segunda sustituiría a la primera. En ese caso, usa **Imágenes como ID**.
+> **Importante:** si dos personas del mismo grupo se llaman exactamente igual, sus fotos tendrían el mismo nombre de archivo y la segunda sustituiría a la primera. En ese caso, usa **Imágenes capturadas como ID**.
 
 ## Exportar imágenes capturadas al depósito
 

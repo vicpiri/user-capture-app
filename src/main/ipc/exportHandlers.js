@@ -544,6 +544,179 @@ function sendProgressUpdate(getMainWindow, processedCount, total, message) {
   });
 }
 
+/**
+ * Export one image per user, named after their NIA or DNI, in a folder per group
+ *
+ * Shared by the exports that only differ in where each photo comes from: the
+ * captured one in imports, or the user's photo in the repository.
+ *
+ * @param {Object} params
+ * @param {Array<Object>} params.users - Users that have a photo to export
+ * @param {string} params.folderPath - Destination; group folders go inside
+ * @param {Object} params.exportOptions - As for writeExportedImage
+ * @param {Function} params.sourceFor - async (user) => {sourcePath, extension}|null
+ * @param {string} params.progressMessage
+ * @param {Object} params.logger
+ * @param {Function} params.getMainWindow
+ * @returns {Promise<{total: number, exported: number, withoutGroup: number, errors: Array, groupsFolders: number}>}
+ */
+async function exportImagesByIdToGroupFolders({
+  users, folderPath, exportOptions, sourceFor, progressMessage, logger, getMainWindow
+}) {
+  const usersByGroup = {};
+  let withoutGroup = 0;
+
+  for (const user of users) {
+    if (!user.group_code) {
+      logger.warning(`User ${user.first_name} ${user.last_name1} has no group_code`);
+      withoutGroup++;
+      continue;
+    }
+    if (!usersByGroup[user.group_code]) {
+      usersByGroup[user.group_code] = [];
+    }
+    usersByGroup[user.group_code].push(user);
+  }
+
+  const results = {
+    total: users.length - withoutGroup,
+    exported: 0,
+    withoutGroup,
+    errors: [],
+    groupsFolders: Object.keys(usersByGroup).length
+  };
+
+  logger.info(`Exporting images for ${results.groupsFolders} groups`);
+
+  let processedCount = 0;
+  const progress = () => {
+    processedCount++;
+    sendProgressUpdate(getMainWindow, processedCount, results.total, progressMessage);
+  };
+
+  for (const [groupCode, groupUsers] of Object.entries(usersByGroup)) {
+    const groupFolderPath = path.join(folderPath, groupCode);
+
+    try {
+      if (!fs.existsSync(groupFolderPath)) {
+        fs.mkdirSync(groupFolderPath, { recursive: true });
+        logger.info(`Created folder for group: ${groupCode}`);
+      }
+    } catch (error) {
+      logger.error(`Error creating folder for group ${groupCode}`, error);
+      groupUsers.forEach(user => {
+        results.errors.push({
+          user: `${user.first_name} ${user.last_name1}`,
+          error: `Error al crear carpeta del grupo: ${error.message}`
+        });
+        progress();
+      });
+      continue;
+    }
+
+    // A few at a time
+    await mapWithConcurrency(groupUsers, IMAGE_EXPORT_CONCURRENCY, async (user) => {
+      const name = `${user.first_name} ${user.last_name1}`;
+
+      try {
+        // NIA for students, document for everyone else
+        const userId = user.type === 'student' ? user.nia : user.document;
+
+        if (!userId) {
+          results.errors.push({ user: name, error: 'Usuario sin identificador (NIA/DNI)' });
+          return;
+        }
+
+        const source = await sourceFor(user);
+
+        if (!source || !fs.existsSync(source.sourcePath)) {
+          results.errors.push({ user: name, error: 'Imagen no encontrada' });
+          return;
+        }
+
+        const destFileName = `${userId}${source.extension}`;
+        await writeExportedImage(source.sourcePath, path.join(groupFolderPath, destFileName), exportOptions, logger);
+
+        results.exported++;
+        logger.info(`Exported image for user ${name} as ${groupCode}/${destFileName}`);
+      } catch (error) {
+        results.errors.push({ user: name, error: error.message });
+        logger.error(`Error exporting image for user ${name}`, error);
+      } finally {
+        progress();
+      }
+    });
+  }
+
+  logger.section('EXPORT COMPLETED');
+  logger.success(`Exported: ${results.exported}/${results.total} images in ${results.groupsFolders} group folders`);
+  if (results.withoutGroup > 0) {
+    logger.warning(`Skipped ${results.withoutGroup} users with no group`);
+  }
+  if (results.errors.length > 0) {
+    logger.error(`Errors: ${results.errors.length} images`);
+  }
+
+  return results;
+}
+
+/**
+ * Where to read a repository photo from
+ *
+ * The local mirror is read when it provably holds the same file (same size and
+ * modification time as the repository copy), so an export does not make Google
+ * Drive download hundreds of photos it already has on disk. Anything else is
+ * read from the repository itself.
+ *
+ * @param {string} repositoryPath
+ * @param {string} filename - As found in the repository
+ * @param {Object|null} mirror - RepositoryMirror
+ * @returns {Promise<string>}
+ */
+async function repositoryImageSource(repositoryPath, filename, mirror) {
+  const repositoryFile = path.join(repositoryPath, filename);
+  const entry = mirror && typeof mirror.getIndexEntry === 'function'
+    ? mirror.getIndexEntry(filename)
+    : null;
+
+  if (entry) {
+    try {
+      const stats = await fs.promises.stat(repositoryFile);
+      const mirrorFile = mirror.getMirrorPath(filename);
+
+      if (mirrorFile && entry.size === stats.size && entry.mtime === stats.mtimeMs && fs.existsSync(mirrorFile)) {
+        return mirrorFile;
+      }
+    } catch (error) {
+      // Not readable from here; let the export report it
+    }
+  }
+
+  return repositoryFile;
+}
+
+/**
+ * Split users by whether the repository has a photo for them
+ * @param {Array<Object>} users
+ * @param {Set<string>} repositoryFiles - From readRepositoryFilenames
+ * @returns {{withPhoto: Map<Object, string>, withoutPhoto: number}}
+ */
+function matchRepositoryImages(users, repositoryFiles) {
+  const withPhoto = new Map();
+  let withoutPhoto = 0;
+
+  for (const user of users) {
+    const filename = findUserRepositoryImage(user, repositoryFiles);
+    if (filename) {
+      withPhoto.set(user, filename);
+    } else {
+      withoutPhoto++;
+    }
+  }
+
+  return { withPhoto, withoutPhoto };
+}
+
 // The logo is the same on every page of every PDF, but preparing it means
 // reading the config, checking the file and two sharp passes. Keyed by path and
 // modification time so replacing the logo still takes effect.
@@ -801,116 +974,109 @@ function registerExportHandlers(context) {
 
       logger.info(`Found ${usersWithImages.length} users with images`);
 
-      // Group users by group_code
-      const usersByGroup = {};
-      for (const user of usersWithImages) {
-        if (!user.group_code) {
-          logger.warning(`User ${user.first_name} ${user.last_name1} has no group_code`);
-          continue;
-        }
-        if (!usersByGroup[user.group_code]) {
-          usersByGroup[user.group_code] = [];
-        }
-        usersByGroup[user.group_code].push(user);
-      }
-
-      const results = {
-        total: usersWithImages.length,
-        exported: 0,
-        errors: [],
-        groupsFolders: Object.keys(usersByGroup).length
-      };
-
-      logger.info(`Exporting images for ${results.groupsFolders} groups`);
-
-      // Track progress
-      let processedCount = 0;
-
-      // Export each group
-      for (const [groupCode, groupUsers] of Object.entries(usersByGroup)) {
-        try {
-          // Create group folder
-          const groupFolderPath = path.join(folderPath, groupCode);
-          if (!fs.existsSync(groupFolderPath)) {
-            fs.mkdirSync(groupFolderPath, { recursive: true });
-            logger.info(`Created folder for group: ${groupCode}`);
-          }
-
-          // Export each user's image in this group, a few at a time
-          await mapWithConcurrency(groupUsers, IMAGE_EXPORT_CONCURRENCY, async (user) => {
-            try {
-              // Determine the ID to use for filename: NIA for students, document for others
-              const isStudent = user.type === 'student';
-              const userId = isStudent ? user.nia : user.document;
-
-              if (!userId) {
-                results.errors.push({
-                  user: `${user.first_name} ${user.last_name1}`,
-                  error: 'Usuario sin identificador (NIA/DNI)'
-                });
-                processedCount++;
-                return;
-              }
-
-              // Get source image path (relative path in DB)
-              const sourceImagePath = path.isAbsolute(user.image_path)
-                ? user.image_path
-                : path.join(importsPath, user.image_path);
-
-              // Check if source image exists
-              if (!fs.existsSync(sourceImagePath)) {
-                results.errors.push({
-                  user: `${user.first_name} ${user.last_name1}`,
-                  error: 'Imagen no encontrada'
-                });
-                processedCount++;
-                return;
-              }
-
-              // Create destination filename with user ID in group folder
-              const ext = path.extname(sourceImagePath);
-              const destFileName = `${userId}${ext}`;
-              const destPath = path.join(groupFolderPath, destFileName);
-
-              await writeExportedImage(sourceImagePath, destPath, exportOptions, logger);
-
-              results.exported++;
-              logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
-            } catch (error) {
-              results.errors.push({
-                user: `${user.first_name} ${user.last_name1}`,
-                error: error.message
-              });
-              logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
-            } finally {
-              // Always update progress, regardless of success or failure
-              processedCount++;
-              sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
-            }
-          });
-        } catch (error) {
-          logger.error(`Error creating folder for group ${groupCode}`, error);
-          // Add all users in this group to errors
-          groupUsers.forEach(user => {
-            results.errors.push({
-              user: `${user.first_name} ${user.last_name1}`,
-              error: `Error al crear carpeta del grupo: ${error.message}`
-            });
-            processedCount++;
-            sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
-          });
-        }
-      }
-
-      logger.section('EXPORT COMPLETED');
-      logger.success(`Exported: ${results.exported}/${results.total} images in ${results.groupsFolders} group folders`);
-      if (results.errors.length > 0) {
-        logger.error(`Errors: ${results.errors.length} images`);
-      }
+      const results = await exportImagesByIdToGroupFolders({
+        users: usersWithImages,
+        folderPath,
+        exportOptions,
+        sourceFor: async (user) => {
+          const sourcePath = path.isAbsolute(user.image_path)
+            ? user.image_path
+            : path.join(importsPath, user.image_path);
+          return { sourcePath, extension: path.extname(sourcePath) };
+        },
+        progressMessage: 'Exportando imágenes...',
+        logger,
+        getMainWindow
+      });
 
       return { success: true, results };
     } catch (error) {
       logger.error('Error exporting images', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // How many of the given users have a photo in the repository, for the
+  // summary shown before exporting repository images. Worked out here from
+  // the repository itself: what the list knows depends on the Ver options.
+  ipcMain.handle('count-repository-images', async (event, users) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado el depósito de imágenes. Por favor, configúralo en Proyecto > Configurar depósito de imágenes' };
+      }
+      if (!fs.existsSync(repositoryPath)) {
+        return { success: false, error: `La carpeta del depósito no existe: ${repositoryPath}` };
+      }
+
+      const repositoryFiles = await readRepositoryFilenames(repositoryPath, logger);
+      const { withPhoto, withoutPhoto } = matchRepositoryImages(users || [], repositoryFiles);
+
+      return { success: true, withPhoto: withPhoto.size, withoutPhoto };
+    } catch (error) {
+      logger.error('Error counting repository images', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Export repository images named by ID, like export-images but taking each
+  // user's photo from the repository instead of the captured one
+  ipcMain.handle('export-repository-images', async (event, folderPath, users, options) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado el depósito de imágenes. Por favor, configúralo en Proyecto > Configurar depósito de imágenes' };
+      }
+      if (!fs.existsSync(repositoryPath)) {
+        return { success: false, error: `La carpeta del depósito no existe: ${repositoryPath}` };
+      }
+
+      const exportOptions = {
+        copyOriginal: options?.copyOriginal ?? true,
+        resizeEnabled: options?.resizeEnabled ?? false,
+        boxSize: options?.boxSize ?? 800,
+        maxSizeKB: options?.maxSizeKB ?? 500
+      };
+
+      logger.section('EXPORTING REPOSITORY IMAGES');
+      logger.info(`Export folder: ${folderPath}`);
+      logger.info(`Repository path: ${repositoryPath}`);
+      logger.info(`Export options:`, exportOptions);
+
+      // Unlike the older exports, an empty list means nothing to export, not
+      // the whole project
+      const repositoryFiles = await readRepositoryFilenames(repositoryPath, logger);
+      const { withPhoto, withoutPhoto } = matchRepositoryImages(users || [], repositoryFiles);
+
+      logger.info(`Users: ${(users || []).length}, with a repository photo: ${withPhoto.size}`);
+
+      const mirror = repositoryMirror ? repositoryMirror() : null;
+
+      const results = await exportImagesByIdToGroupFolders({
+        users: [...withPhoto.keys()],
+        folderPath,
+        exportOptions,
+        sourceFor: async (user) => ({
+          sourcePath: await repositoryImageSource(repositoryPath, withPhoto.get(user), mirror),
+          // The repository may hold .jpeg files; the export follows the {ID}.jpg convention
+          extension: '.jpg'
+        }),
+        progressMessage: 'Exportando imágenes del depósito...',
+        logger,
+        getMainWindow
+      });
+
+      return { success: true, results: { ...results, withoutRepositoryImage: withoutPhoto } };
+    } catch (error) {
+      logger.error('Error exporting repository images', error);
       return { success: false, error: error.message };
     }
   });

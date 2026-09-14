@@ -137,7 +137,7 @@ Debajo de la lista verás cuántos usuarios hay seleccionados.
 La selección la usan estas acciones:
 
 - **Solicitar impresión de carnet** y **Solicitar publicación oficial**, desde el menú contextual (ver más abajo).
-- Las exportaciones **Archivo > Exportar > Archivo CSV para Carnets del grupo seleccionado**, **Archivo > Exportar > Imágenes como ID**, **Archivo > Exportar > Imágenes como nombre y apellidos** y **Archivo > Exportar > Imágenes capturadas al depósito**. Con usuarios marcados exportan solo esos; sin selección, los de la lista. Ver [Exportaciones](exportaciones.md).
+- Las exportaciones **Archivo > Exportar > Archivo CSV para Carnets del grupo seleccionado**, **Archivo > Exportar > Imágenes capturadas como ID**, **Archivo > Exportar > Imágenes capturadas como nombre y apellidos** y **Archivo > Exportar > Imágenes capturadas al depósito**. Con usuarios marcados exportan solo esos; sin selección, los de la lista. Ver [Exportaciones](exportaciones.md).
 
 Para salir del modo selección, haz clic derecho y elige **Deseleccionar todo**, o desmarca la última casilla que quede marcada. Desmarcar la casilla de la cabecera quita todas las marcas, pero te deja dentro del modo selección.
 

@@ -45,6 +45,10 @@ Las dos primeras opciones vienen desactivadas; los iconos se explican en [Lista 
 
 La aplicación busca la foto de cada usuario por su NIA (alumnado) o su DNI (personal). Si el archivo no se llama exactamente así, el usuario aparece sin foto en el depósito.
 
+## Sacar las fotos del depósito a una carpeta
+
+Para copiar las fotos del depósito a otra carpeta, nombradas con el NIA o el DNI y separadas por grupo, usa **Archivo > Exportar > Imágenes del depósito como ID**. Se explica en [Exportaciones](exportaciones.md#exportar-imagenes-del-deposito-como-id).
+
 ## Exportar las fotos capturadas al depósito
 
 Esta exportación envía al depósito las fotos capturadas y enlazadas, con el nombre que el depósito espera: `{NIA}.jpg` para el alumnado y `{DNI}.jpg` para el personal, siempre en la carpeta principal del depósito.

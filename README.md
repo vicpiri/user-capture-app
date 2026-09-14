@@ -24,8 +24,9 @@ Edu User Capture App permite la captura, organización y exportación de fotogra
 - Asociación de imágenes a usuarios
 
 ### Exportación
-- Exportación de imágenes como ID (NIA/DNI)
-- Exportación de imágenes como nombre y apellidos
+- Exportación de imágenes capturadas como ID (NIA/DNI)
+- Exportación de imágenes del depósito como ID (NIA/DNI)
+- Exportación de imágenes capturadas como nombre y apellidos
 - Exportación a CSV para carnets
 - Depósito de imágenes de usuario
 - Procesamiento de imágenes (redimensionado y compresión)

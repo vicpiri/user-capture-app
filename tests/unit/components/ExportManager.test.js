@@ -48,6 +48,8 @@ describe('ExportManager', () => {
       exportCSV: jest.fn(),
       exportImages: jest.fn(),
       exportImagesName: jest.fn(),
+      exportRepositoryImages: jest.fn(),
+      countRepositoryImages: jest.fn(),
       exportToRepository: jest.fn(),
       checkCardPrintRequests: jest.fn().mockResolvedValue({ success: true, usersWithRequests: [] }),
       markCardsAsPrinted: jest.fn().mockResolvedValue({ success: true, movedCount: 0 }),
@@ -385,6 +387,173 @@ describe('ExportManager', () => {
         'Error',
         'Error al exportar imágenes: Disk full'
       );
+    });
+  });
+
+  describe('exportRepositoryImagesByID()', () => {
+    const USERS = [
+      { id: 1, nia: '1001', type: 'student', image_path: null },
+      { id: 2, nia: '1002', type: 'student', image_path: '/img2.jpg' },
+      { id: 3, nia: '1003', type: 'student', image_path: null }
+    ];
+
+    const RESULTS = {
+      total: 2,
+      exported: 2,
+      groupsFolders: 1,
+      withoutGroup: 0,
+      withoutRepositoryImage: 1,
+      errors: []
+    };
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      mockGetters.getCurrentUsers.mockReturnValue(USERS);
+      mockElectronAPI.countRepositoryImages.mockResolvedValue({ success: true, withPhoto: 2, withoutPhoto: 1 });
+      mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/export/path'] });
+      mockExportOptionsModal.show.mockResolvedValue({ mode: 'copy', resize: null });
+      mockElectronAPI.exportRepositoryImages.mockResolvedValue({ success: true, results: RESULTS });
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
+    });
+
+    const run = async () => {
+      const promise = manager.exportRepositoryImagesByID();
+      await jest.runAllTimersAsync();
+      await promise;
+    };
+
+    test('should not export when project is closed', async () => {
+      mockGetters.getProjectOpen.mockReturnValue(false);
+
+      await run();
+
+      expect(mockElectronAPI.countRepositoryImages).not.toHaveBeenCalled();
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+    });
+
+    test('should stop before asking anything when there is nobody to export', async () => {
+      mockGetters.getCurrentUsers.mockReturnValue([]);
+
+      await run();
+
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Aviso', expect.stringContaining('No hay usuarios'));
+      expect(mockElectronAPI.countRepositoryImages).not.toHaveBeenCalled();
+      expect(mockElectronAPI.exportRepositoryImages).not.toHaveBeenCalled();
+    });
+
+    test('should count the repository photos of the users to export', async () => {
+      await run();
+
+      expect(mockElectronAPI.countRepositoryImages).toHaveBeenCalledWith(USERS);
+    });
+
+    test('should report a repository that cannot be read', async () => {
+      mockElectronAPI.countRepositoryImages.mockResolvedValue({ success: false, error: 'No se ha configurado el depósito' });
+
+      await run();
+
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Error', 'No se ha configurado el depósito');
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+    });
+
+    test('should stop when nobody has a photo in the repository', async () => {
+      mockElectronAPI.countRepositoryImages.mockResolvedValue({ success: true, withPhoto: 0, withoutPhoto: 3 });
+
+      await run();
+
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Aviso', 'Ninguno de los 3 usuarios a exportar tiene foto en el depósito.');
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+    });
+
+    test('should show the repository figures before exporting, not the captured ones', async () => {
+      await run();
+
+      expect(mockExportOptionsModal.show).toHaveBeenCalledWith([
+        { label: 'Se exportará', value: 'Todos los grupos' },
+        { label: 'Imágenes del depósito a exportar', value: '2' },
+        { label: 'Usuarios sin foto en el depósito', value: '1' }
+      ]);
+    });
+
+    test('should not export when the folder picker is cancelled', async () => {
+      mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+
+      await run();
+
+      expect(mockExportOptionsModal.show).not.toHaveBeenCalled();
+      expect(mockElectronAPI.exportRepositoryImages).not.toHaveBeenCalled();
+    });
+
+    test('should not export when the options are cancelled', async () => {
+      mockExportOptionsModal.show.mockResolvedValue(null);
+
+      await run();
+
+      expect(mockElectronAPI.exportRepositoryImages).not.toHaveBeenCalled();
+    });
+
+    test('should export the users with the chosen options', async () => {
+      await run();
+
+      expect(mockShowProgressModal).toHaveBeenCalledWith('Exportando Imágenes del Depósito', 'Procesando archivos...');
+      expect(mockElectronAPI.exportRepositoryImages).toHaveBeenCalledWith('/export/path', USERS, {
+        copyOriginal: true,
+        resizeEnabled: false,
+        boxSize: null,
+        maxSizeKB: null
+      });
+      expect(mockCloseProgressModal).toHaveBeenCalled();
+    });
+
+    test('should say what was exported when it finishes', async () => {
+      await run();
+
+      expect(mockShowInfoModal).toHaveBeenCalledWith(
+        'Exportación completada',
+        'Se han exportado 2 imágenes en 1 carpeta de grupo.\n1 usuario no tiene foto en el depósito.'
+      );
+    });
+
+    test('should report a failed export', async () => {
+      mockElectronAPI.exportRepositoryImages.mockResolvedValue({ success: false, error: 'Disk full' });
+
+      await run();
+
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Error', 'Error al exportar imágenes del depósito: Disk full');
+    });
+  });
+
+  describe('summarizeImagesExport()', () => {
+    test('should mention users with no group', () => {
+      const text = manager.summarizeImagesExport({ exported: 1, groupsFolders: 1, withoutGroup: 2, errors: [] });
+
+      expect(text).toContain('2 usuarios sin grupo no se han exportado.');
+    });
+
+    test('should list the first errors and say how many more there are', () => {
+      const errors = Array.from({ length: 7 }, (_, i) => ({ user: `Usuario ${i}`, error: 'Imagen no encontrada' }));
+
+      const text = manager.summarizeImagesExport({ exported: 0, groupsFolders: 0, errors });
+
+      expect(text).toContain('No se pudieron exportar 7 imágenes:');
+      expect(text).toContain('- Usuario 4: Imagen no encontrada');
+      expect(text).not.toContain('Usuario 5');
+      expect(text).toContain('... y 2 más');
+    });
+
+    test('should use the singular for a single image', () => {
+      const text = manager.summarizeImagesExport({
+        exported: 1,
+        groupsFolders: 1,
+        errors: [{ user: 'Ana', error: 'Imagen no encontrada' }]
+      });
+
+      expect(text).toContain('Se han exportado 1 imagen en 1 carpeta de grupo.');
+      expect(text).toContain('No se pudo exportar 1 imagen:');
     });
   });
 

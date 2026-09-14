@@ -150,6 +150,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-export-images', callback);
   },
 
+  onMenuExportRepositoryImages: (callback) => {
+    ipcRenderer.on('menu-export-repository-images', callback);
+  },
   onMenuExportImagesName: (callback) => {
     ipcRenderer.on('menu-export-images-name', callback);
   },
@@ -176,6 +179,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportInventoryImages: (folderPath, users, options) => ipcRenderer.invoke('export-inventory-images', folderPath, users, options),
   exportImages: (folderPath, users, options) => ipcRenderer.invoke('export-images', folderPath, users, options),
   exportImagesName: (folderPath, users, options) => ipcRenderer.invoke('export-images-name', folderPath, users, options),
+  exportRepositoryImages: (folderPath, users, options) => ipcRenderer.invoke('export-repository-images', folderPath, users, options),
+  countRepositoryImages: (users) => ipcRenderer.invoke('count-repository-images', users),
   exportToRepository: (users, options) => ipcRenderer.invoke('export-to-repository', users, options),
   exportOrlaPDF: (data) => ipcRenderer.invoke('export-orla-pdf', data),
   exportPaidUsersListPDF: (data) => ipcRenderer.invoke('export-paid-users-list-pdf', data),

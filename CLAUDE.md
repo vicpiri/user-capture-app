@@ -17,7 +17,7 @@ user-capture-app/
 ├── src/
 │   ├── main/                    # Proceso principal de Electron (Node.js)
 │   │   ├── ipc/                 # Manejadores IPC organizados por funcionalidad
-│   │   │   ├── exportHandlers.js       # Exportación de CSV e imágenes (7 endpoints)
+│   │   │   ├── exportHandlers.js       # Exportación de CSV, imágenes y PDF
 │   │   │   ├── helpHandlers.js         # Manual de uso: índice, páginas y búsqueda
 │   │   │   ├── miscHandlers.js         # Manejadores misceláneos (tags, diálogos, etc.)
 │   │   │   ├── projectHandlers.js      # Gestión de proyectos, XML y cierre
@@ -167,10 +167,12 @@ una release en borrador o sin `latest.yml` no llega a nadie.
 El proceso principal ha sido refactorizado en módulos organizados por responsabilidad:
 
 ### Manejadores IPC (ipc/)
-- **exportHandlers.js**: Gestiona 7 tipos de exportación
+- **exportHandlers.js**: Gestiona las exportaciones
   - `export-csv`: CSV para carnets (ID, foto, nombre completo, etc.)
   - `export-inventory-csv`: 3 CSVs separados (Alumnado.csv, Personal.csv, Grupos.csv)
   - `export-images`: Imágenes con nombre por ID (NIA/DNI)
+  - `export-repository-images`: Igual, pero con las fotos del depósito;
+    `count-repository-images` da las cifras del resumen previo
   - `export-images-name`: Imágenes con formato "Apellido1 Apellido2, Nombre"
   - `export-inventory-images`: Exporta imágenes del repositorio con soporte ZIP
   - `export-to-repository`: Exporta imágenes capturadas al repositorio Google Drive
@@ -950,13 +952,31 @@ Aplicación completamente funcional con todas las características principales i
   - **Personal.csv**: Documento, Nombre, Apellido1, Apellido2, FechaNacimiento
   - **Grupos.csv**: Código, Nombre
 
-### 3. Imágenes como ID
-- **Comando de menú**: Archivo > Exportar > Imágenes como ID
+### 3. Imágenes capturadas como ID
+- **Comando de menú**: Archivo > Exportar > Imágenes capturadas como ID
 - **Formato**: `{NIA}.jpg` para alumnos, `{DNI}.jpg` para personal
 - **Opciones**: Copia original o redimensionamiento
 
-### 4. Imágenes como nombre y apellidos
-- **Comando de menú**: Archivo > Exportar > Imágenes como nombre y apellidos
+### 3b. Imágenes del depósito como ID
+- **Comando de menú**: Archivo > Exportar > Imágenes del depósito como ID
+- **Fuente**: la foto de cada usuario en el depósito, no la capturada
+- **Formato**: el mismo que Imágenes capturadas como ID (subcarpeta por código de grupo,
+  `{NIA}.jpg` / `{DNI}.jpg`; un `.jpeg` del depósito sale como `.jpg`)
+- **Opciones**: Copia original o redimensionamiento
+- Quién tiene foto lo averigua el proceso principal leyendo el depósito
+  (`count-repository-images` antes, para el resumen), así que no depende de
+  las opciones del depósito del menú Ver ni de `has_repository_image`
+- Lee de la copia local cuando tiene el mismo tamaño y fecha que el archivo del
+  depósito (`repositoryImageSource()`); si no, del depósito
+- Una lista vacía no exporta nada (las exportaciones antiguas exportan todo el
+  proyecto: fallo 1 de `docs/FALLOS_PENDIENTES.md`). Al acabar muestra un
+  resumen (`ExportManager.summarizeImagesExport()`)
+- Comparte con Imágenes capturadas como ID el bucle por grupos,
+  `exportImagesByIdToGroupFolders()`, que ahora también cuenta los usuarios sin
+  grupo en lugar de saltarlos sin más
+
+### 4. Imágenes capturadas como nombre y apellidos
+- **Comando de menú**: Archivo > Exportar > Imágenes capturadas como nombre y apellidos
 - **Formato**: `Apellido1 Apellido2, Nombre.jpg`
 - **Organización**: Carpetas por grupo
 - **Opciones**: Copia original o redimensionamiento

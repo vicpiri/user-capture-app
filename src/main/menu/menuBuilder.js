@@ -127,13 +127,19 @@ class MenuBuilder {
               }
             },
             {
-              label: 'Imágenes como ID',
+              label: 'Imágenes capturadas como ID',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-images');
               }
             },
             {
-              label: 'Imágenes como nombre y apellidos',
+              label: 'Imágenes del depósito como ID',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-repository-images');
+              }
+            },
+            {
+              label: 'Imágenes capturadas como nombre y apellidos',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-images-name');
               }
