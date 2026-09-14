@@ -49,7 +49,7 @@ El recibo sale directamente por la impresora configurada, sin ninguna ventana in
 - Si la orla no está pagada, la aplicación avisa de que no se puede imprimir el recibo sin que la orla esté pagada previamente.
 - Cada recibo se imprime una sola vez. Si ya está marcado como impreso, la aplicación no deja volver a imprimirlo. Para repetirlo, desmárcalo antes (ver [Deshacer un pago o un recibo](#deshacer-un-pago-o-un-recibo)).
 
-> **Importante:** el recibo queda marcado como impreso en cuanto se envía a la impresora; la aplicación no sabe si el papel ha salido. Si la impresora falla (sin papel, apagada), desmarca el recibo y vuelve a imprimirlo.
+> **Importante:** el recibo se marca como impreso cuando la impresora acepta el trabajo. Si no lo acepta (apagada, sin impresora disponible), la aplicación te avisa y no lo marca. Lo que pase después, como un atasco de papel, la aplicación no lo sabe: si el recibo no llega a salir, desmárcalo y vuelve a imprimirlo.
 
 ## Qué lleva el recibo
 
@@ -101,22 +101,20 @@ Cada opción pide confirmación.
 4. Si necesitas ajustar el papel u otras opciones de la impresora, pulsa **Abrir Preferencias de Impresora**: se abren las propiedades de la impresora en Windows.
 5. Pulsa **Guardar**.
 
-Los recibos se imprimen siempre en esta impresora, sin mostrar ningún cuadro de diálogo.
+Los recibos se imprimen siempre en esta impresora, sin mostrar ningún cuadro de diálogo. Si no eliges ninguna, se usa la impresora predeterminada de Windows.
 
-<!-- REVISAR: si no hay impresora elegida, o si la aplicación no detecta ninguna impresora, se imprime en modo silencioso sin nombre de impresora (¿la predeterminada de Windows?). Sin embargo, el mensaje que se muestra cuando no se detectan impresoras dice que se usará el cuadro de diálogo de Windows para elegirla, y la impresión es silenciosa (silent: true). Aclarar qué pasa realmente antes de documentarlo. -->
+Si la impresora no puede imprimir el recibo (está apagada, sin papel, o no hay ninguna disponible), la aplicación te lo dice y el recibo no se marca como impreso, para que puedas volver a intentarlo.
 
 ## Personalizar el contenido del recibo
 
 1. Abre **Archivo > Preferencias...** y pulsa la categoría **Impresora de Recibos**.
 2. En **Contenido del Recibo**, rellena:
    - **Subtítulo del recibo**: por ejemplo, «Reserva de una copia de Orla».
-   - **Precio (€)**: el importe que figura como entrega.
+   - **Precio (€)**: el importe que figura como entrega. Puede ser 0; si dejas el campo vacío se usan 18 €.
    - **Texto del pie del recibo**: el texto informativo final. Cada línea que escribas sale como un párrafo aparte.
 3. Pulsa **Guardar**.
 
 > **Importante:** mientras no guardes las preferencias por primera vez, el recibo usa un subtítulo y un pie de ejemplo. Una vez guardadas, usa exactamente lo que haya en estos campos, aunque esté vacío. Rellena el subtítulo y el pie antes de guardar.
-
-<!-- REVISAR: un precio de 0 se guarda como 18 (el código usa "precio || 18"), así que no se puede poner un recibo a 0 €. -->
 
 ## Imprimir un recibo de prueba
 

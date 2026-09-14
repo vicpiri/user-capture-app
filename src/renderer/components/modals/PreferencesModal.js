@@ -178,7 +178,7 @@
         this.receiptSubtitleInput.value = preferences.receiptSubtitle || '';
       }
       if (this.receiptPriceInput) {
-        this.receiptPriceInput.value = preferences.receiptPrice || 18;
+        this.receiptPriceInput.value = preferences.receiptPrice ?? 18;
       }
       if (this.receiptFooterInput) {
         this.receiptFooterInput.value = preferences.receiptFooter || '';
@@ -193,7 +193,10 @@
         centerName: this.centerNameInput?.value?.trim() || '',
         logoPath: this.currentLogoPath,
         receiptSubtitle: this.receiptSubtitleInput?.value?.trim() || '',
-        receiptPrice: parseFloat(this.receiptPriceInput?.value) || 18,
+        // 0 is a valid price; only an empty field falls back to 18
+        receiptPrice: Number.isFinite(parseFloat(this.receiptPriceInput?.value))
+          ? parseFloat(this.receiptPriceInput.value)
+          : 18,
         receiptFooter: this.receiptFooterInput?.value?.trim() || ''
       };
     }

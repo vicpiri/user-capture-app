@@ -142,6 +142,27 @@ describe('preferences handlers', () => {
     });
   });
 
+  describe('receipt price', () => {
+    test('should keep a price of 0, which used to become 18', async () => {
+      await call('save-preferences', { ...FORM, receiptPrice: 0 });
+
+      expect(loadGlobalConfig().receiptConfig.price).toBe(0);
+      expect((await call('get-preferences')).preferences.receiptPrice).toBe(0);
+    });
+
+    test.each([undefined, null, '', 'abc', -5])('should fall back to 18 for %p', async (price) => {
+      await call('save-preferences', { ...FORM, receiptPrice: price });
+
+      expect(loadGlobalConfig().receiptConfig.price).toBe(18);
+    });
+
+    test('should accept a price with cents', async () => {
+      await call('save-preferences', { ...FORM, receiptPrice: 12.5 });
+
+      expect(loadGlobalConfig().receiptConfig.price).toBe(12.5);
+    });
+  });
+
   describe('get-preferences', () => {
     test('should return what the preferences window edits, and nothing else', async () => {
       saveDisplayPreferences(DISPLAY);

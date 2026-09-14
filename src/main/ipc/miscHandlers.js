@@ -33,6 +33,17 @@ function isListingCacheValid(cache, cachedAt, cachedKey, repositoryPath, ttl) {
 }
 
 /**
+ * Receipt price to use: 0 is a valid price, only a missing or unusable value
+ * falls back to 18 (it used to be `price || 18`, which turned 0 into 18)
+ * @param {*} value
+ * @returns {number}
+ */
+function receiptPriceOrDefault(value) {
+  const price = typeof value === 'string' ? parseFloat(value) : value;
+  return typeof price === 'number' && Number.isFinite(price) && price >= 0 ? price : 18;
+}
+
+/**
  * Register miscellaneous IPC handlers
  * @param {Object} context - Shared context object
  * @param {BrowserWindow} context.mainWindow - Main window instance
@@ -1116,17 +1127,25 @@ function registerMiscHandlers(context) {
         logger.warn('[Receipt] No printer configured, using default');
       }
 
-      // Print
-      printWindow.webContents.print(printOptions, (success, errorType) => {
-        if (success) {
-          logger.info('[Receipt] Receipt printed successfully');
-        } else {
-          logger.error('[Receipt] Print failed:', errorType);
-        }
-        // Close the print window after printing
-        printWindow.close();
+      // Wait for the printer's answer. Reporting success as soon as the job
+      // was sent marked receipts as printed when the printer had failed, or
+      // when there was no printer at all.
+      const { success, errorType } = await new Promise((resolve) => {
+        printWindow.webContents.print(printOptions, (ok, reason) => resolve({ success: ok, errorType: reason }));
       });
+      printWindow.close();
 
+      if (!success) {
+        logger.error('[Receipt] Print failed:', errorType);
+        return {
+          success: false,
+          error: printerConfig && printerConfig.name
+            ? `La impresora «${printerConfig.displayName || printerConfig.name}» no ha podido imprimir el recibo (${errorType || 'error desconocido'})`
+            : `No se ha podido imprimir el recibo: no hay impresora configurada o la predeterminada no responde (${errorType || 'error desconocido'}). Elígela en Archivo > Preferencias... > Impresora de Recibos.`
+        };
+      }
+
+      logger.info('[Receipt] Receipt printed successfully');
       return { success: true };
     } catch (error) {
       logger.error('[Receipt] Error printing receipt:', error);
@@ -1433,7 +1452,7 @@ function registerMiscHandlers(context) {
           centerName: config.centerName || '',
           logoPath: config.logoPath || '',
           receiptSubtitle: receiptConfig.subtitle || '',
-          receiptPrice: receiptConfig.price || 18,
+          receiptPrice: receiptPriceOrDefault(receiptConfig.price),
           receiptFooter: receiptConfig.footerText || ''
         }
       };
@@ -1455,7 +1474,7 @@ function registerMiscHandlers(context) {
       // Update receipt config
       config.receiptConfig = {
         subtitle: preferences.receiptSubtitle || '',
-        price: preferences.receiptPrice || 18,
+        price: receiptPriceOrDefault(preferences.receiptPrice),
         footerText: preferences.receiptFooter || ''
       };
 

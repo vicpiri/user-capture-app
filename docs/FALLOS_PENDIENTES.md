@@ -23,10 +23,6 @@ Ninguno pendiente: todos están en «Corregidos».
 
 ## Prioridad baja
 
-- **Un precio de recibo de 0 € es imposible**: se guarda como 18
-  (`save-preferences`). (`orlas.md`)
-- **Imprimir sin impresora seleccionada o detectada falla en silencio**, y el
-  recibo se marca como impreso aunque la impresora falle. (`orlas.md`)
 - **La ventana de actualizaciones puede quedarse colgada**: una comprobación
   manual durante la automática recibe `already-checking`, que `UpdateModal`
   ignora, y la ventana se queda en "Buscando actualizaciones" sin botones.
@@ -204,3 +200,11 @@ Ninguno pendiente: todos están en «Corregidos».
   prioridad baja, corregido el 2026-09-14). `folderWatcher` emite
   `image-rejected` para toda foto anunciada que no llega a importarse; la
   ventana deja de parpadear y, si es por el tamaño, lo avisa.
+- **Un precio de recibo de 0 € era imposible** (de la lista de prioridad baja,
+  corregido el 2026-09-14): `price || 18` convertía 0 en 18. Ahora solo un
+  valor vacío o no numérico usa 18 (`receiptPriceOrDefault()`).
+- **Imprimir un recibo fallaba en silencio y lo marcaba como impreso** (de la
+  lista de prioridad baja, corregido el 2026-09-14). `print-orla-receipt`
+  respondía antes de que la impresora contestara; ahora espera su respuesta y,
+  si falla, devuelve el error y el recibo no se marca. Lo cubre
+  `tests/unit/main/receiptPrintHandler.test.js`.
