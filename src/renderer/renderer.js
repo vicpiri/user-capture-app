@@ -154,6 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initialize modal instances
 function initializeModals() {
+  // Escape presses the cancel button of whichever dialog is on top
+  installModalEscape(document);
+
   newProjectModalInstance = new NewProjectModal({
     showProgressModal: showProgressModal,
     closeProgressModal: closeProgressModal
@@ -868,13 +871,6 @@ function initializeEventListeners() {
       aboutModal.classList.remove('show');
     });
   }
-
-  // Close on escape key
-  aboutModal.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      aboutModal.classList.remove('show');
-    }
-  });
 
   // Close on backdrop click
   aboutModal.addEventListener('click', (e) => {
@@ -1853,9 +1849,14 @@ async function showConfirmationModal(message) {
 
 // Info/Alert modal - using promise-based InfoModal class
 async function showInfoModal(title, message) {
+  // Give the keyboard back to wherever it was. Sending it to the search box
+  // every time blocked the arrow keys until the list was clicked.
+  const previousFocus = document.activeElement;
   await infoModalInstance.show(title, message);
-  // Restore focus to search input after closing
-  searchInput.focus();
+  if (previousFocus && previousFocus !== document.body && document.contains(previousFocus)
+      && typeof previousFocus.focus === 'function') {
+    previousFocus.focus();
+  }
 }
 
 // Show the project information modal (Proyecto > Información del proyecto)

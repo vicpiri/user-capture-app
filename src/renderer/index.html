@@ -210,7 +210,7 @@
       <div id="new-project-error" class="modal-error" role="alert" hidden></div>
       <div class="modal-buttons">
         <button id="create-project-btn" class="btn btn-primary">Crear</button>
-        <button id="cancel-new-project-btn" class="btn btn-secondary">Cancelar</button>
+        <button id="cancel-new-project-btn" data-modal-cancel class="btn btn-secondary">Cancelar</button>
       </div>
     </div>
   </div>
@@ -222,7 +222,7 @@
       <p id="confirm-message"></p>
       <div class="modal-buttons">
         <button id="confirm-yes-btn" class="btn btn-primary">Sí</button>
-        <button id="confirm-no-btn" class="btn btn-secondary">No</button>
+        <button id="confirm-no-btn" data-modal-cancel class="btn btn-secondary">No</button>
       </div>
     </div>
   </div>
@@ -233,7 +233,7 @@
       <h2 id="info-modal-title">Información</h2>
       <p id="info-modal-message" style="white-space: pre-line;"></p>
       <div class="modal-buttons">
-        <button id="info-modal-ok-btn" class="btn btn-primary">Aceptar</button>
+        <button id="info-modal-ok-btn" data-modal-cancel class="btn btn-primary">Aceptar</button>
       </div>
     </div>
   </div>
@@ -250,8 +250,8 @@
       </div>
       <div class="modal-buttons">
         <button id="update-modal-skip-btn" class="btn btn-secondary" hidden>Omitir esta versión</button>
-        <button id="update-modal-later-btn" class="btn btn-secondary" hidden>Más tarde</button>
-        <button id="update-modal-primary-btn" class="btn btn-primary">Cerrar</button>
+        <button id="update-modal-later-btn" data-modal-cancel class="btn btn-secondary" hidden>Más tarde</button>
+        <button id="update-modal-primary-btn" data-modal-cancel class="btn btn-primary">Cerrar</button>
       </div>
     </div>
   </div>
@@ -270,7 +270,7 @@
       <div id="project-info-modal-counts" class="about-info-section project-info-section"></div>
 
       <div class="modal-buttons">
-        <button id="project-info-modal-close-btn" class="btn btn-primary">Cerrar</button>
+        <button id="project-info-modal-close-btn" data-modal-cancel class="btn btn-primary">Cerrar</button>
       </div>
     </div>
   </div>
@@ -325,7 +325,7 @@
 
       <div class="modal-buttons">
         <button id="export-confirm-btn" class="btn btn-primary">Exportar</button>
-        <button id="export-cancel-btn" class="btn btn-secondary">Cancelar</button>
+        <button id="export-cancel-btn" data-modal-cancel class="btn btn-secondary">Cancelar</button>
       </div>
     </div>
   </div>
@@ -406,7 +406,7 @@
 
       <div class="modal-buttons">
         <button id="inventory-export-confirm" class="btn btn-primary">Exportar</button>
-        <button id="inventory-export-cancel" class="btn btn-secondary">Cancelar</button>
+        <button id="inventory-export-cancel" data-modal-cancel class="btn btn-secondary">Cancelar</button>
       </div>
     </div>
   </div>
@@ -421,7 +421,7 @@
       </div>
       <div class="modal-buttons">
         <button id="add-tag-confirm-btn" class="btn btn-primary">Agregar</button>
-        <button id="add-tag-cancel-btn" class="btn btn-secondary">Cancelar</button>
+        <button id="add-tag-cancel-btn" data-modal-cancel class="btn btn-secondary">Cancelar</button>
       </div>
     </div>
   </div>
@@ -434,7 +434,7 @@
         <!-- Images with tags will be populated here -->
       </div>
       <div class="modal-buttons">
-        <button id="tagged-images-close-btn" class="btn btn-primary">Cerrar</button>
+        <button id="tagged-images-close-btn" data-modal-cancel class="btn btn-primary">Cerrar</button>
       </div>
     </div>
   </div>
@@ -447,7 +447,7 @@
         <img id="user-image-preview" src="" alt="Vista previa de imagen">
       </div>
       <div class="modal-buttons">
-        <button id="user-image-close-btn" class="btn btn-primary">Cerrar</button>
+        <button id="user-image-close-btn" data-modal-cancel class="btn btn-primary">Cerrar</button>
       </div>
     </div>
   </div>
@@ -507,7 +507,7 @@
       </div>
 
       <div class="modal-buttons">
-        <button id="orla-export-cancel" class="btn btn-secondary">Cancelar</button>
+        <button id="orla-export-cancel" data-modal-cancel class="btn btn-secondary">Cancelar</button>
         <button id="orla-export-confirm" class="btn btn-primary">Exportar</button>
       </div>
     </div>
@@ -540,7 +540,7 @@
 
       <div class="modal-buttons">
         <button id="about-check-updates-btn" class="btn btn-secondary">Buscar actualizaciones</button>
-        <button id="about-close-btn" class="btn btn-primary">Cerrar</button>
+        <button id="about-close-btn" data-modal-cancel class="btn btn-primary">Cerrar</button>
       </div>
     </div>
   </div>
@@ -561,7 +561,7 @@
 
       <div class="modal-buttons">
         <button id="restore-backup-btn" class="btn btn-primary" disabled>Restaurar</button>
-        <button id="cancel-restore-backup-btn" class="btn btn-secondary">Cancelar</button>
+        <button id="cancel-restore-backup-btn" data-modal-cancel class="btn btn-secondary">Cancelar</button>
       </div>
     </div>
   </div>
@@ -671,7 +671,7 @@
       </div>
 
       <div class="preferences-footer">
-        <button id="preferences-cancel-btn" class="btn btn-secondary">Cancelar</button>
+        <button id="preferences-cancel-btn" data-modal-cancel class="btn btn-secondary">Cancelar</button>
         <button id="preferences-save-btn" class="btn btn-primary">Guardar</button>
       </div>
     </div>
@@ -681,6 +681,7 @@
   <script src="utils/imageUrl.js"></script>
   <script src="core/store.js"></script>
   <script src="core/BaseModal.js"></script>
+  <script src="core/modalEscape.js"></script>
   <script src="components/modals/NewProjectModal.js"></script>
   <script src="components/modals/ConfirmModal.js"></script>
   <script src="components/modals/InfoModal.js"></script>

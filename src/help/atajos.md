@@ -82,7 +82,7 @@ Con una de estas ventanas abierta, `Intro` pulsa su botón principal:
 
 > **Importante:** En los mensajes de confirmación, `Intro` equivale a pulsar **Sí**. Léelos antes de pulsar la tecla, sobre todo si la acción quita enlaces o borra datos.
 
-<!-- REVISAR: CLAUDE.md dice que los modales se cierran con Escape, pero BaseModal solo gestiona Intro. Esc solo cierra la ventana "Acerca de", y además el manejador está en el propio modal, así que probablemente solo funciona si el foco está dentro de él. No se ha incluido en la tabla. -->
+`Esc` cierra la ventana de diálogo que está delante sin hacer nada, igual que su botón **Cancelar**, **No** o **Cerrar**. En los mensajes de confirmación equivale a **No**. No cierra la barra de progreso de una tarea en marcha.
 
 ## Manual de uso
 

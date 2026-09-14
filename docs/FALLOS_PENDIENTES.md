@@ -32,8 +32,6 @@ Ninguno pendiente: todos están en «Corregidos».
 - **Una foto de más de 5 MB deja el visor parpadeando.** `folderWatcher` avisa
   de que está procesando antes de comprobar el tamaño; al descartarla, el aviso
   no se retira hasta que llega otra foto. (`captura.md`)
-- **`Esc` no cierra los diálogos.** `BaseModal` solo gestiona `Intro`; solo
-  "Acerca de" responde a `Esc`, y únicamente con el foco dentro. (`atajos.md`)
 - **La búsqueda de usuarios no incluye el DNI ni ignora tildes** (`LIKE` de
   SQLite en `database.js`). Al personal no se le puede buscar por documento.
   (`usuarios.md`)
@@ -56,12 +54,6 @@ Ninguno pendiente: todos están en «Corregidos».
   al terminar. (`exportaciones.md`)
 - **La rejilla de imágenes capturadas no se refresca tras enlazar**: hay que
   cerrarla y abrirla o cambiar de grupo. (`enlazar.md`)
-- **Tras cerrar cualquier mensaje el foco vuelve al buscador**, lo que bloquea
-  la navegación con flechas hasta hacer clic en la lista. (`usuarios.md`)
-## CLAUDE.md desactualizado
-
-Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
-
 - **Google Drive**: describe `googleDriveManager.js`, "Google Drive API v3" y
   que la aplicación "se conecta con el servidor". Ese archivo no existe: el
   depósito es una carpeta del disco (normalmente sincronizada) con una copia
@@ -91,7 +83,7 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   carpetas por grupo.
 - **Imágenes capturadas como ID**: van en una subcarpeta por grupo.
 - **Navegación por teclado**: no hay selección con `Intro`; las flechas
-  izquierda y derecha mueven el visor. `BaseModal` no gestiona `Esc`.
+  izquierda y derecha mueven el visor.
 - **Visor de imágenes**: no tiene contador.
 - **Placeholder "sin proyecto"**: solo muestra un texto, sin botones de crear o
   abrir.
@@ -200,3 +192,10 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   salía como `non_teaching_staff` y sin color, porque la ventana esperaba
   `staff`. Los carnets marcados antes de esta corrección siguen mostrando la
   fecha de la solicitud.
+- **`Esc` no cerraba los diálogos** (de la lista de prioridad baja, corregido
+  el 2026-09-14). Ahora `core/modalEscape.js` pulsa el botón marcado con
+  `data-modal-cancel` del diálogo de delante, en todos los diálogos de la
+  ventana principal salvo la barra de progreso.
+- **Tras cerrar un mensaje el foco volvía al buscador** (de la lista de
+  prioridad baja, corregido el 2026-09-14), lo que bloqueaba las flechas.
+  `showInfoModal` devuelve ahora el foco a donde estaba antes del mensaje.

@@ -79,6 +79,7 @@ user-capture-app/
 │   │   │   └── VirtualScrollManager.js  # Virtual scroll para lista de usuarios
 │   │   ├── core/                        # Módulos core del renderer
 │   │   │   ├── BaseModal.js             # Clase base para modales
+│   │   │   ├── modalEscape.js           # Esc pulsa el botón de cancelar del diálogo de delante
 │   │   │   └── store.js                 # Estado global de la aplicación
 │   │   ├── utils/                       # Utilidades del renderer
 │   │   │   └── imageUrl.js              # URLs app-img:// de las fotos
@@ -570,11 +571,22 @@ de lista con `onImagesLoaded` y de los de cursor con `onImageChange`.
 
 **Funcionalidades**:
 - Gestión de apertura/cierre
-- Manejo de tecla Escape
+- `Intro` pulsa el botón indicado en `defaultButtonSelector`
 - Prevención de cierre durante loading
 - Soporte para Promise-based workflows
 
 **Patrón**: Herencia - todos los modales extienden BaseModal
+
+#### modalEscape.js
+`Esc` no lo gestiona `BaseModal` sino un único manejador para todo el
+documento, instalado en `initializeModals()`: pulsa el botón marcado con
+`data-modal-cancel` en el diálogo `.modal.show` que está delante (el último en
+el HTML), si está visible y habilitado. Así cada diálogo cancela por su propio
+camino y un diálogo ocupado, con el botón deshabilitado, no se cierra.
+
+**Todo diálogo nuevo debe marcar su botón de cancelar o cerrar** con
+`data-modal-cancel`. `tests/unit/core/modalEscape.test.js` lee `index.html` y
+falla si a algún diálogo le falta; la única excepción es la barra de progreso.
 
 #### store.js
 **Propósito**: Estado global de la aplicación

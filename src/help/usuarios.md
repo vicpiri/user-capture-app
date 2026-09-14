@@ -121,8 +121,6 @@ Junto con `Ctrl+L`, que enlaza la foto del visor al usuario seleccionado, puedes
 
 Las flechas no actúan mientras el cursor está en el cuadro de búsqueda ni mientras hay una ventana de aviso abierta.
 
-> **Consejo:** al cerrar un mensaje de la aplicación, el cursor vuelve al cuadro de búsqueda. Si las flechas no responden, haz clic en la lista.
-
 ## Seleccionar varios usuarios
 
 El modo selección sirve para marcar varios usuarios y aplicarles una acción a todos a la vez.
