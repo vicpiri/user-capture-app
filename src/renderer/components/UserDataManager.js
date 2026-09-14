@@ -118,7 +118,6 @@
       try {
         // Load users WITHOUT repository images for fast initial display
         const loadOptions = {
-          loadCapturedImages: this.getShowCapturedPhotos(),
           loadRepositoryImages: false // Always false for initial load
         };
 
@@ -141,7 +140,6 @@
           if (!canReuseAllUsers) {
             // Only load image_path for duplicate checking, no need for repository images
             const allLoadOptions = {
-              loadCapturedImages: true,
               loadRepositoryImages: false
             };
             const allResult = await this.electronAPI.getUsers({}, allLoadOptions);

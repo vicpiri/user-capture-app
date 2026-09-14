@@ -15,16 +15,7 @@ ajustar el texto del manual, que describe el comportamiento actual.
 
 ## Prioridad alta
 
-### 3. Las exportaciones de imágenes no encuentran fotos con "Fotografías capturadas" desactivado
-
-Con **Ver > Fotografías capturadas** desmarcado, la lista se carga sin las
-rutas de las fotos capturadas (`UserDataManager.js`, opciones de `get-users`
-en `userGroupImageHandlers.js`). **Imágenes capturadas como ID**,
-**Imágenes capturadas como nombre y apellidos** e **Imágenes capturadas al
-depósito** encuentran entonces 0 imágenes, incluso en modo selección. Solo el filtro de duplicados carga las
-rutas siempre.
-
-Manual: `exportaciones.md`.
+Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
@@ -213,3 +204,12 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   `save-preferences` solo tocan el centro, el logotipo y el recibo; esas
   opciones solo las guarda el menú Ver. Lo cubre
   `tests/unit/main/preferencesHandlers.test.js`.
+- **Con Ver > Fotografías capturadas desactivado, las exportaciones de fotos
+  capturadas no encontraban ninguna** (antes el fallo 3, corregido el
+  2026-09-14). `get-users` borraba la ruta de la foto de cada usuario cuando
+  la lista no mostraba miniaturas, y esa ruta también la leen las
+  exportaciones, **Eliminar fotografía vinculada** (que decía que el usuario
+  no tenía foto) y la detección de duplicados. Ahora la ruta llega siempre y
+  ocultar las miniaturas es cosa solo de `UserRowRenderer`; desaparecen la
+  opción `loadCapturedImages` y los dos parches que la compensaban. Lo cubre
+  `tests/unit/main/getUsersHandler.test.js`.

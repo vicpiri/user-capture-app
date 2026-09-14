@@ -351,7 +351,9 @@ describe('MenuEventManager', () => {
       expect(mockConfig.onDisplayUsers).toHaveBeenCalled();
     });
 
-    test('should reload users if captured photos enabled and all images are null', async () => {
+    test('should only repaint when captured photos are shown, even if nobody has one', async () => {
+      // The paths always come with the users, so a list without any is a
+      // list without photos, not one that has to be loaded again
       mockConfig.getCurrentUsers.mockReturnValue([
         { image_path: null },
         { image_path: null }
@@ -362,8 +364,8 @@ describe('MenuEventManager', () => {
       const handler = mockElectronAPI.onMenuToggleCapturedPhotos.mock.calls[0][0];
       await handler(true);
 
-      expect(mockConfig.onLoadUsers).toHaveBeenCalled();
-      // Should not call displayUsers after loadUsers (loadUsers calls it)
+      expect(mockConfig.onLoadUsers).not.toHaveBeenCalled();
+      expect(mockConfig.onDisplayUsers).toHaveBeenCalled();
     });
 
     test('should not reload if captured photos enabled but images are loaded', async () => {

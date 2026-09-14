@@ -34,8 +34,6 @@ Si con la selección, la búsqueda y los filtros actuales no queda ningún usuar
 
 Las demás exportaciones (inventario, orlas y listados de pagos) tienen su propio alcance, que se explica en cada apartado.
 
-<!-- REVISAR: si "Ver > Fotografías capturadas" está desactivado, la lista se carga sin la ruta de las fotos capturadas, y "Imágenes capturadas como ID", "Imágenes capturadas como nombre y apellidos" e "Imágenes capturadas al depósito" encuentran 0 imágenes (también en modo selección; solo se salva el filtro de duplicados, que usa la lista completa). ¿Es intencionado? Si se corrige, no hace falta avisar al usuario. -->
-
 ## Copiar el original o redimensionar
 
 **Imágenes capturadas como ID**, **Imágenes capturadas como nombre y apellidos**, **Imágenes capturadas al depósito** y las fotos del inventario te dejan elegir cómo sale cada foto:

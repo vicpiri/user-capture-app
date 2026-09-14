@@ -173,8 +173,7 @@ async function loadUsers() {
 
     // Load users WITHOUT repository images for fast initial display
     const result = await window.electronAPI.getUsers(filters, {
-      loadRepositoryImages: false, // Always false - repository data loaded separately
-      loadCapturedImages: false
+      loadRepositoryImages: false // Always false - repository data loaded separately
     });
 
     if (result.success) {

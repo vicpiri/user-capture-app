@@ -29,9 +29,7 @@ function registerUserGroupImageHandlers(context) {
 
       // Default options: load everything unless explicitly disabled
       const loadOptions = {
-        loadCapturedImages: options.loadCapturedImages !== false,
-        loadRepositoryImages: options.loadRepositoryImages !== false,
-        ...options
+        loadRepositoryImages: options.loadRepositoryImages !== false
       };
 
       // Map frontend filters to database filters
@@ -48,23 +46,16 @@ function registerUserGroupImageHandlers(context) {
 
       const users = await state.dbManager.getUsers(dbFilters);
 
-      // Only process captured images if needed
-      if (loadOptions.loadCapturedImages) {
-        const importsPath = path.join(state.projectPath, 'imports');
-        users.forEach(user => {
-          if (user.image_path) {
-            // If it's a relative path (just filename), convert to absolute
-            if (!path.isAbsolute(user.image_path)) {
-              user.image_path = path.join(importsPath, user.image_path);
-            }
-          }
-        });
-      } else {
-        // Clear image paths if not needed
-        users.forEach(user => {
-          user.image_path = null;
-        });
-      }
+      // Always resolved, whatever the Ver menu shows. The path is not only for
+      // the thumbnail: exports, unlinking and duplicate detection read it, and
+      // clearing it when captured photos were hidden made all of them believe
+      // nobody had a photo. Hiding the thumbnails is the row renderer's job.
+      const importsPath = path.join(state.projectPath, 'imports');
+      users.forEach(user => {
+        if (user.image_path && !path.isAbsolute(user.image_path)) {
+          user.image_path = path.join(importsPath, user.image_path);
+        }
+      });
 
       // Only check repository images if needed (for photos or indicators)
       if (loadOptions.loadRepositoryImages) {

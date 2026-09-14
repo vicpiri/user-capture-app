@@ -1455,15 +1455,12 @@ async function applyCapturedImageChange(userId, imagePath) {
   if (userInAll) {
     userInAll.image_path = imagePath;
   }
-  // get-users leaves image_path empty when captured photos are hidden, so
-  // the displayed copy only carries the path if a reload would have too
-  const displayedPath = showCapturedPhotos ? imagePath : null;
   const userInCurrent = currentUsers.find(u => u.id === userId);
   if (userInCurrent) {
-    userInCurrent.image_path = displayedPath;
+    userInCurrent.image_path = imagePath;
   }
   if (selectedUser && selectedUser.id === userId) {
-    selectedUser.image_path = displayedPath;
+    selectedUser.image_path = imagePath;
   }
 
   window._imageCountCache = countImageUsage(allUsers);

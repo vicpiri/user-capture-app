@@ -234,23 +234,11 @@
       });
 
       // Toggle captured photos
-      this.electronAPI.onMenuToggleCapturedPhotos(async (enabled) => {
+      // The photo paths are always loaded, so showing or hiding the
+      // thumbnails only needs a repaint
+      this.electronAPI.onMenuToggleCapturedPhotos((enabled) => {
         this.setShowCapturedPhotos(enabled);
         this.onUpdatePhotosColumnVisibility();
-
-        // If enabling, check if captured photo data is loaded
-        if (enabled && this.getCurrentUsers().length > 0) {
-          // Check if captured photo data was previously loaded
-          // When loadCapturedImages is false, image_path is set to null explicitly
-          // So we need to check if ALL users have null image_path (meaning data wasn't loaded)
-          const allImagesAreNull = this.getCurrentUsers().every(u => u.image_path === null);
-          if (allImagesAreNull) {
-            // Reload users with captured images
-            await this.onLoadUsers(this.getCurrentFilters());
-            return; // loadUsers already calls displayUsers
-          }
-        }
-
         this.onDisplayUsers(this.getCurrentUsers(), this.getAllUsers());
       });
 

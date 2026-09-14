@@ -197,7 +197,6 @@ describe('UserDataManager', () => {
       expect(mockElectronAPI.getUsers).toHaveBeenCalledWith(
         filters,
         {
-          loadCapturedImages: true,
           loadRepositoryImages: false
         }
       );
@@ -221,7 +220,6 @@ describe('UserDataManager', () => {
       // First call is for filtered users, second is for all users
       expect(mockElectronAPI.getUsers).toHaveBeenCalledTimes(2);
       expect(mockElectronAPI.getUsers).toHaveBeenNthCalledWith(2, {}, {
-        loadCapturedImages: true,
         loadRepositoryImages: false
       });
     });
