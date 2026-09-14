@@ -216,6 +216,9 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 
 ### Utilidades (utils/)
 - **config.js**: Persistencia de configuración y preferencias de usuario
+  - `lastExportFolder`: última carpeta de exportación, común a todas las
+    exportaciones. `getLastExportFolder()` sube a la carpeta existente más
+    cercana si ya no está
 - **formatting.js**: Formateo de fechas (ISO a español) y nombres de archivo
 - **recentProjects.js**: Gestión de lista de proyectos recientes
 - **repositoryCache.js**: Caché con TTL para verificación de existencia de archivos
@@ -921,6 +924,12 @@ Aplicación completamente funcional con todas las características principales i
 - **Nota**: El diseño del recibo está optimizado para impresoras térmicas de 80mm de ancho
 
 ## Exportación de datos
+
+Todas las exportaciones eligen su carpeta con `window.electronAPI.selectExportFolder()`
+(handler `select-export-folder`), no con `showOpenDialog`: abre el diálogo en
+la última carpeta a la que se exportó y guarda la nueva al elegirla. Una
+exportación nueva debe usarlo también. En `renderer.js`, el `showOpenDialog`
+que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
 
 ### 1. CSV para carnets
 - **Comando de menú**: Archivo > Exportar > Lista en CSV para carnets

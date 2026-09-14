@@ -144,6 +144,48 @@ function saveUpdatePreferences(partial) {
   return saveGlobalConfig(config);
 }
 
+/**
+ * Folder the export dialogs open at
+ *
+ * The last folder anything was exported to. Exports tend to go to the same
+ * place, or next to it, so when that folder is gone the nearest one above it
+ * that still exists is the next best start.
+ *
+ * @returns {string|null}
+ */
+function getLastExportFolder() {
+  let folder = loadGlobalConfig().lastExportFolder;
+
+  while (folder) {
+    try {
+      if (fs.statSync(folder).isDirectory()) {
+        return folder;
+      }
+    } catch (error) {
+      // Missing or unreachable; try the folder above
+    }
+
+    const parent = path.dirname(folder);
+    if (parent === folder) {
+      return null;
+    }
+    folder = parent;
+  }
+
+  return null;
+}
+
+/**
+ * Remember the folder an export was just sent to
+ * @param {string} folder
+ * @returns {boolean} Success status
+ */
+function setLastExportFolder(folder) {
+  const config = loadGlobalConfig();
+  config.lastExportFolder = folder;
+  return saveGlobalConfig(config);
+}
+
 module.exports = {
   getConfigPath,
   loadGlobalConfig,
@@ -154,5 +196,7 @@ module.exports = {
   setSelectedGroupFilter,
   saveDisplayPreferences,
   getUpdatePreferences,
-  saveUpdatePreferences
+  saveUpdatePreferences,
+  getLastExportFolder,
+  setLastExportFolder
 };

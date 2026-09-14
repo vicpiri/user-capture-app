@@ -2,6 +2,8 @@
 
 Desde **Archivo > Exportar** sacas de la aplicación los datos y las fotos del proyecto: listados CSV para otros programas, carpetas de fotos, orlas en PDF y listados de pagos. Todas las exportaciones necesitan un proyecto abierto y te piden la carpeta donde guardar el resultado.
 
+El cuadro para elegir la carpeta se abre en la última carpeta a la que exportaste, sea cual sea la exportación, para que no tengas que buscarla cada vez. Si esa carpeta ya no existe, se abre en la carpeta más cercana por encima de ella. La aplicación lo recuerda aunque la cierres.
+
 ## Qué hay en el menú Exportar
 
 | Entrada del menú | Qué genera |

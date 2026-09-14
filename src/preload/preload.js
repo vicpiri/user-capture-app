@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Dialog
   showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
+  // Folder picker for exports: opens at the last export folder and remembers the new one
+  selectExportFolder: (options) => ipcRenderer.invoke('select-export-folder', options),
   focusWindow: () => ipcRenderer.invoke('focus-window'),
 
   // Events from main process

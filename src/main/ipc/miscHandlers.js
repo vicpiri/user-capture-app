@@ -4,6 +4,7 @@
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
 const { getActiveIngestPath, getConfiguredIngestPath } = require('../ingestFolder');
+const { getLastExportFolder, setLastExportFolder } = require('../utils/config');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
 
@@ -52,6 +53,26 @@ function registerMiscHandlers(context) {
   ipcMain.handle('show-open-dialog', async (event, options) => {
     const mainWindow = getMainWindow();
     const result = await dialog.showOpenDialog(mainWindow, options);
+    return result;
+  });
+
+  // Choose the folder an export goes to. Every export uses this one, so the
+  // dialog opens where the previous export went, whichever export it was.
+  ipcMain.handle('select-export-folder', async (event, options = {}) => {
+    const properties = new Set(options.properties || []);
+    properties.add('openDirectory');
+    properties.add('createDirectory');
+
+    const result = await dialog.showOpenDialog(getMainWindow(), {
+      ...options,
+      defaultPath: options.defaultPath || getLastExportFolder() || undefined,
+      properties: [...properties]
+    });
+
+    if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+      setLastExportFolder(result.filePaths[0]);
+    }
+
     return result;
   });
 

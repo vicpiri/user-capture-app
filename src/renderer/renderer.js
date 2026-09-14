@@ -301,7 +301,8 @@ function initializeExportManager() {
     showProgressModal: showProgressModal,
     closeProgressModal: closeProgressModal,
     showInfoModal: showInfoModal,
-    showOpenDialog: (options) => window.electronAPI.showOpenDialog(options),
+    // Every dialog these managers open picks an export destination
+    showOpenDialog: (options) => window.electronAPI.selectExportFolder(options),
     getProjectOpen: () => projectOpen,
     getSelectionMode: () => selectionMode,
     getSelectedUsers: () => selectedUsers,
@@ -333,7 +334,8 @@ function initializeOrlaExportManager() {
     showProgressModal: showProgressModal,
     closeProgressModal: closeProgressModal,
     showInfoModal: showInfoModal,
-    showOpenDialog: (options) => window.electronAPI.showOpenDialog(options),
+    // Every dialog these managers open picks an export destination
+    showOpenDialog: (options) => window.electronAPI.selectExportFolder(options),
     getProjectOpen: () => projectOpen,
     getAllUsers: () => allUsers,
     getAllGroups: () => currentGroups,
@@ -2146,7 +2148,7 @@ async function handleExportPaidUsersCSV() {
     }
 
     // Ask user to select export folder
-    const dialogResult = await window.electronAPI.showOpenDialog({
+    const dialogResult = await window.electronAPI.selectExportFolder({
       title: 'Seleccionar carpeta de exportación',
       buttonLabel: 'Exportar',
       properties: ['openDirectory', 'createDirectory']
