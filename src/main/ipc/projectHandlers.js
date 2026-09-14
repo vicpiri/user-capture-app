@@ -75,6 +75,35 @@ function registerProjectHandlers(context) {
       // Progress: 10%
       getMainWindow()?.webContents.send('progress', {
         percentage: 10,
+        message: 'Leyendo archivo XML...',
+        details: xmlPath
+      });
+
+      // Read before anything is created or closed: a broken XML leaves the
+      // open project untouched and no half-made project in the folder
+      logger.section('PARSING XML FILE');
+      logger.info(`Reading XML file: ${xmlPath}`);
+      const xmlParser = new XMLParser(xmlPath);
+      const users = await xmlParser.parse();
+
+      const totalUsers = users.students.length + users.teachers.length + users.nonTeachingStaff.length;
+      const totalGroups = users.groups.length;
+
+      logger.success('XML parsed successfully', {
+        groups: totalGroups,
+        students: users.students.length,
+        teachers: users.teachers.length,
+        nonTeachingStaff: users.nonTeachingStaff.length,
+        totalUsers: totalUsers
+      });
+
+      // Release the previous project before taking over its globals, as
+      // opening one does: its folder watcher and database would stay alive
+      await closeCurrentProject();
+
+      // Progress: 25%
+      getMainWindow()?.webContents.send('progress', {
+        percentage: 25,
         message: 'Creando carpetas del proyecto...',
         details: ''
       });
@@ -97,9 +126,9 @@ function registerProjectHandlers(context) {
       });
       logger.success('Project structure created successfully');
 
-      // Progress: 25%
+      // Progress: 40%
       getMainWindow()?.webContents.send('progress', {
-        percentage: 25,
+        percentage: 40,
         message: 'Inicializando base de datos...',
         details: ''
       });
@@ -115,30 +144,6 @@ function registerProjectHandlers(context) {
       // Remembered so the project information can report where the users came
       // from; nothing else recorded it
       await state.dbManager.setProjectSetting('xmlFilePath', xmlPath);
-
-      // Progress: 40%
-      getMainWindow()?.webContents.send('progress', {
-        percentage: 40,
-        message: 'Leyendo archivo XML...',
-        details: xmlPath
-      });
-
-      // Parse XML and import users
-      logger.section('PARSING XML FILE');
-      logger.info(`Reading XML file: ${xmlPath}`);
-      const xmlParser = new XMLParser(xmlPath);
-      const users = await xmlParser.parse();
-
-      const totalUsers = users.students.length + users.teachers.length + users.nonTeachingStaff.length;
-      const totalGroups = users.groups.length;
-
-      logger.success('XML parsed successfully', {
-        groups: totalGroups,
-        students: users.students.length,
-        teachers: users.teachers.length,
-        nonTeachingStaff: users.nonTeachingStaff.length,
-        totalUsers: totalUsers
-      });
 
       // Progress: 60%
       getMainWindow()?.webContents.send('progress', {

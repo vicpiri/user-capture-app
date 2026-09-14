@@ -19,12 +19,6 @@ Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
-### 5. Crear un proyecto no cierra el anterior
-
-*Confirmado en el código.* `create-project` (`projectHandlers.js`) no llama a
-`closeCurrentProject()` como sí hace `open-project`: el vigilante de la carpeta
-de entrada y la conexión a la base de datos del proyecto anterior siguen vivos.
-
 ### 6. Crear un proyecto en una carpeta que ya tiene uno duplica los usuarios
 
 Nada impide elegir una carpeta con un proyecto existente: se vuelve a importar
@@ -213,3 +207,9 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   la izquierda (`identifierKey()` en `projectHandlers.js`), así que los
   reconoce en lugar de darlos de baja y de alta, y guarda el identificador con
   los ceros. Lo cubren `XMLUserParser.test.js` y `xmlUpdateHandlers.test.js`.
+- **Crear un proyecto no cerraba el anterior** (antes el fallo 5, corregido el
+  2026-09-14). `create-project` no llamaba a `closeCurrentProject()`, así que
+  el vigilante de la carpeta de entrada y la base de datos del proyecto
+  anterior seguían vivos. Ahora lo cierra, y antes lee el XML: un archivo roto
+  ya no cierra el proyecto abierto ni deja carpetas ni base de datos a medias
+  en la carpeta elegida. Lo cubre `tests/unit/main/createProjectHandler.test.js`.
