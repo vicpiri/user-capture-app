@@ -549,23 +549,53 @@ function sendProgressUpdate(getMainWindow, processedCount, total, message) {
 }
 
 /**
- * Export one image per user, named after their NIA or DNI, in a folder per group
+ * File name for an image export named by ID: NIA for students, document for
+ * everyone else
+ * @param {Object} user
+ * @returns {{name: string}|{error: string}}
+ */
+function idFileName(user) {
+  const userId = user.type === 'student' ? user.nia : user.document;
+  return userId ? { name: userId } : { error: 'Usuario sin identificador (NIA/DNI)' };
+}
+
+/**
+ * File name for an image export named "Apellido1 Apellido2, Nombre"
+ * @param {Object} user
+ * @returns {{name: string}|{error: string}}
+ */
+function fullNameFileName(user) {
+  const apellidos = [capitalizeWords(user.last_name1 || ''), capitalizeWords(user.last_name2 || '')]
+    .filter(Boolean)
+    .join(' ');
+  const fullName = `${apellidos}, ${capitalizeWords(user.first_name || '')}`;
+
+  if (!fullName.trim() || fullName.trim() === ',') {
+    return { error: 'Usuario sin nombre completo' };
+  }
+  return { name: fullName };
+}
+
+/**
+ * Export one image per user in a folder per group
  *
- * Shared by the exports that only differ in where each photo comes from: the
- * captured one in imports, or the user's photo in the repository.
+ * Shared by the image exports, which only differ in where each photo comes
+ * from (the captured one in imports, or the user's photo in the repository)
+ * and in how each file is named.
  *
  * @param {Object} params
  * @param {Array<Object>} params.users - Users that have a photo to export
  * @param {string} params.folderPath - Destination; group folders go inside
  * @param {Object} params.exportOptions - As for writeExportedImage
+ * @param {Function} params.fileNameFor - (user) => {name}|{error}, without extension
  * @param {Function} params.sourceFor - async (user) => {sourcePath, extension}|null
  * @param {string} params.progressMessage
  * @param {Object} params.logger
  * @param {Function} params.getMainWindow
  * @returns {Promise<{total: number, exported: number, withoutGroup: number, errors: Array, groupsFolders: number}>}
  */
-async function exportImagesByIdToGroupFolders({
-  users, folderPath, exportOptions, sourceFor, progressMessage, logger, getMainWindow
+async function exportImagesToGroupFolders({
+  users, folderPath, exportOptions, fileNameFor, sourceFor, progressMessage, logger, getMainWindow
 }) {
   const usersByGroup = {};
   let withoutGroup = 0;
@@ -623,11 +653,10 @@ async function exportImagesByIdToGroupFolders({
       const name = `${user.first_name} ${user.last_name1}`;
 
       try {
-        // NIA for students, document for everyone else
-        const userId = user.type === 'student' ? user.nia : user.document;
+        const fileName = fileNameFor(user);
 
-        if (!userId) {
-          results.errors.push({ user: name, error: 'Usuario sin identificador (NIA/DNI)' });
+        if (fileName.error) {
+          results.errors.push({ user: name, error: fileName.error });
           return;
         }
 
@@ -638,7 +667,7 @@ async function exportImagesByIdToGroupFolders({
           return;
         }
 
-        const destFileName = `${userId}${source.extension}`;
+        const destFileName = `${fileName.name}${source.extension}`;
         await writeExportedImage(source.sourcePath, path.join(groupFolderPath, destFileName), exportOptions, logger);
 
         results.exported++;
@@ -978,10 +1007,11 @@ function registerExportHandlers(context) {
 
       logger.info(`Found ${usersWithImages.length} users with images`);
 
-      const results = await exportImagesByIdToGroupFolders({
+      const results = await exportImagesToGroupFolders({
         users: usersWithImages,
         folderPath,
         exportOptions,
+        fileNameFor: idFileName,
         sourceFor: async (user) => {
           const sourcePath = path.isAbsolute(user.image_path)
             ? user.image_path
@@ -1064,10 +1094,11 @@ function registerExportHandlers(context) {
 
       const mirror = repositoryMirror ? repositoryMirror() : null;
 
-      const results = await exportImagesByIdToGroupFolders({
+      const results = await exportImagesToGroupFolders({
         users: [...withPhoto.keys()],
         folderPath,
         exportOptions,
+        fileNameFor: idFileName,
         sourceFor: async (user) => ({
           sourcePath: await repositoryImageSource(repositoryPath, withPhoto.get(user), mirror),
           // The repository may hold .jpeg files; the export follows the {ID}.jpg convention
@@ -1640,120 +1671,21 @@ function registerExportHandlers(context) {
 
       logger.info(`Found ${usersWithImages.length} users with images`);
 
-      // Group users by group_code
-      const usersByGroup = {};
-      for (const user of usersWithImages) {
-        if (!user.group_code) {
-          logger.warning(`User ${user.first_name} ${user.last_name1} has no group_code`);
-          continue;
-        }
-        if (!usersByGroup[user.group_code]) {
-          usersByGroup[user.group_code] = [];
-        }
-        usersByGroup[user.group_code].push(user);
-      }
-
-      const results = {
-        total: usersWithImages.length,
-        exported: 0,
-        errors: [],
-        groupsFolders: Object.keys(usersByGroup).length
-      };
-
-      logger.info(`Exporting images for ${results.groupsFolders} groups`);
-
-      // Track progress
-      let processedCount = 0;
-
-      // Export each group
-      for (const [groupCode, groupUsers] of Object.entries(usersByGroup)) {
-        try {
-          // Create group folder
-          const groupFolderPath = path.join(folderPath, groupCode);
-          if (!fs.existsSync(groupFolderPath)) {
-            fs.mkdirSync(groupFolderPath, { recursive: true });
-            logger.info(`Created folder for group: ${groupCode}`);
-          }
-
-          // Export each user's image in this group, a few at a time
-          await mapWithConcurrency(groupUsers, IMAGE_EXPORT_CONCURRENCY, async (user) => {
-            try {
-              // Format name as "Apellido1 Apellido2, Nombre"
-              const apellido1 = capitalizeWords(user.last_name1 || '');
-              const apellido2 = capitalizeWords(user.last_name2 || '');
-              const nombre = capitalizeWords(user.first_name || '');
-
-              let apellidos = apellido1;
-              if (apellido2) {
-                apellidos += ` ${apellido2}`;
-              }
-
-              const fullName = `${apellidos}, ${nombre}`;
-
-              if (!fullName.trim() || fullName.trim() === ',') {
-                results.errors.push({
-                  user: `${user.first_name} ${user.last_name1}`,
-                  error: 'Usuario sin nombre completo'
-                });
-                processedCount++;
-                return;
-              }
-
-              // Get source image path (relative path in DB)
-              const sourceImagePath = path.isAbsolute(user.image_path)
-                ? user.image_path
-                : path.join(importsPath, user.image_path);
-
-              // Check if source image exists
-              if (!fs.existsSync(sourceImagePath)) {
-                results.errors.push({
-                  user: `${user.first_name} ${user.last_name1}`,
-                  error: 'Imagen no encontrada'
-                });
-                processedCount++;
-                return;
-              }
-
-              // Create destination filename with full name in group folder
-              const ext = path.extname(sourceImagePath);
-              const destFileName = `${fullName}${ext}`;
-              const destPath = path.join(groupFolderPath, destFileName);
-
-              await writeExportedImage(sourceImagePath, destPath, exportOptions, logger);
-
-              results.exported++;
-              logger.info(`Exported image for user ${user.first_name} ${user.last_name1} as ${groupCode}/${destFileName}`);
-            } catch (error) {
-              results.errors.push({
-                user: `${user.first_name} ${user.last_name1}`,
-                error: error.message
-              });
-              logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
-            } finally {
-              // Always update progress, regardless of success or failure
-              processedCount++;
-              sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
-            }
-          });
-        } catch (error) {
-          logger.error(`Error creating folder for group ${groupCode}`, error);
-          // Add all users in this group to errors
-          groupUsers.forEach(user => {
-            results.errors.push({
-              user: `${user.first_name} ${user.last_name1}`,
-              error: `Error al crear carpeta del grupo: ${error.message}`
-            });
-            processedCount++;
-            sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes...');
-          });
-        }
-      }
-
-      logger.section('EXPORT COMPLETED');
-      logger.success(`Exported: ${results.exported}/${results.total} images in ${results.groupsFolders} group folders`);
-      if (results.errors.length > 0) {
-        logger.error(`Errors: ${results.errors.length} images`);
-      }
+      const results = await exportImagesToGroupFolders({
+        users: usersWithImages,
+        folderPath,
+        exportOptions,
+        fileNameFor: fullNameFileName,
+        sourceFor: async (user) => {
+          const sourcePath = path.isAbsolute(user.image_path)
+            ? user.image_path
+            : path.join(importsPath, user.image_path);
+          return { sourcePath, extension: path.extname(sourcePath) };
+        },
+        progressMessage: 'Exportando imágenes...',
+        logger,
+        getMainWindow
+      });
 
       return { success: true, results };
     } catch (error) {

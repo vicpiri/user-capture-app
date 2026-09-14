@@ -67,7 +67,7 @@ Para quitar de golpe las fotos de muchos usuarios después de enviarlas al depó
 **Ver > Cuadro de imágenes capturadas** (`Ctrl+G`) abre una ventana con una ficha por cada usuario del grupo elegido: su foto capturada, o una silueta si no tiene, y debajo el nombre, los apellidos y el NIA o el DNI. En la cabecera ves cuántos usuarios hay y cuántos tienen imagen. Sirve para repasar de un vistazo qué fotos faltan en una clase o si alguna está mal enlazada.
 
 - El desplegable de la ventana cambia el grupo, y está sincronizado con el de la ventana principal.
-- La ventana no se actualiza sola al enlazar fotos. Para ver los cambios, cambia de grupo, o ciérrala y vuelve a abrirla.
+- La ventana se actualiza sola cuando enlazas, quitas o restauras fotos en la ventana principal.
 - Necesita un proyecto abierto.
 
 ## Cuadro de imágenes en depósito

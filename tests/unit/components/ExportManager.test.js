@@ -637,6 +637,38 @@ describe('ExportManager', () => {
     });
   });
 
+  describe('summary after exporting captured images', () => {
+    const RESULTS = { total: 3, exported: 2, groupsFolders: 1, withoutGroup: 1, errors: [] };
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      mockGetters.getCurrentUsers.mockReturnValue([{ id: 1, image_path: '/img1.jpg' }]);
+      mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/export/path'] });
+      mockExportOptionsModal.show.mockResolvedValue({ mode: 'copy', resize: null });
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
+    });
+
+    test.each([
+      ['exportImagesByID', 'exportImages'],
+      ['exportImagesByName', 'exportImagesName']
+    ])('%s should say what was exported and who was left out', async (method, apiCall) => {
+      mockElectronAPI[apiCall].mockResolvedValue({ success: true, results: RESULTS });
+
+      const promise = manager[method]();
+      await jest.runAllTimersAsync();
+      await promise;
+
+      expect(mockShowInfoModal).toHaveBeenCalledWith(
+        'Exportación completada',
+        'Se han exportado 2 imágenes en 1 carpeta de grupo.\n1 usuario sin grupo no se ha exportado.'
+      );
+    });
+  });
+
   describe('exportImagesByName()', () => {
     beforeEach(() => {
       jest.useFakeTimers();

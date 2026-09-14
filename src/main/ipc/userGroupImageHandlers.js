@@ -18,7 +18,16 @@ const { getActiveIngestPath } = require('../ingestFolder');
  * @param {Object} context.repositoryMirror - Repository mirror instance
  */
 function registerUserGroupImageHandlers(context) {
-  const { mainWindow, logger, state, repositoryCacheManager, repositoryMirror } = context;
+  const { mainWindow, logger, state, repositoryCacheManager, repositoryMirror, imageGridWindow } = context;
+
+  // The captured images grid lists who has which photo and has no other way
+  // to learn that a link changed: it only loaded on opening
+  const notifyCapturedImagesChanged = () => {
+    const grid = imageGridWindow ? imageGridWindow() : null;
+    if (grid && !grid.isDestroyed()) {
+      grid.webContents.send('captured-images-changed');
+    }
+  };
 
   // Get all users
   ipcMain.handle('get-users', async (event, filters, options = {}) => {
@@ -229,6 +238,7 @@ function registerUserGroupImageHandlers(context) {
       }
 
       await state.dbManager.linkImageToUser(userId, relativeImagePath);
+      notifyCapturedImagesChanged();
       return { success: true };
     } catch (error) {
       console.error('Error linking image:', error);
@@ -251,6 +261,7 @@ function registerUserGroupImageHandlers(context) {
         : imagePath;
 
       await state.dbManager.linkImageToUser(userId, relativeImagePath);
+      notifyCapturedImagesChanged();
       return { success: true };
     } catch (error) {
       console.error('Error confirming link:', error);
@@ -266,6 +277,7 @@ function registerUserGroupImageHandlers(context) {
       }
 
       await state.dbManager.unlinkImageFromUser(userId);
+      notifyCapturedImagesChanged();
       return { success: true };
     } catch (error) {
       console.error('Error unlinking image:', error);
@@ -383,6 +395,9 @@ function registerUserGroupImageHandlers(context) {
         logger.error(`Errors: ${results.errors.length} files`);
       }
 
+      if (results.linked > 0) {
+        notifyCapturedImagesChanged();
+      }
       return { success: true, results };
     } catch (error) {
       logger.error('Error importing images with ID', error);

@@ -205,6 +205,10 @@ class ElectronAPIMock extends EventEmitter {
     return this._registerEvent('image-detecting', callback);
   }
 
+  onCapturedImagesChanged(callback) {
+    return this._registerEvent('captured-images-changed', callback);
+  }
+
   onImageRejected(callback) {
     return this._registerEvent('image-rejected', callback);
   }

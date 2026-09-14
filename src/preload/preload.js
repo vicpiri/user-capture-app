@@ -43,6 +43,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onImageRejected: (callback) => {
     ipcRenderer.on('image-rejected', (event, data) => callback(data));
   },
+  onCapturedImagesChanged: (callback) => {
+    ipcRenderer.on('captured-images-changed', callback);
+  },
   onNewImageDetected: (callback) => {
     ipcRenderer.on('new-image-detected', (event, filename) => callback(filename));
   },

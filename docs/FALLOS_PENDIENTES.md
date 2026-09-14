@@ -23,11 +23,12 @@ Ninguno pendiente: todos están en «Corregidos».
 
 ## Prioridad baja
 
-- **Las exportaciones de imágenes informan poco**: los usuarios sin grupo se
-  omiten en silencio, los errores por usuario solo van al log y no hay resumen
-  al terminar. (`exportaciones.md`)
-- **La rejilla de imágenes capturadas no se refresca tras enlazar**: hay que
-  cerrarla y abrirla o cambiar de grupo. (`enlazar.md`)
+Ninguno pendiente: todos están en «Corregidos».
+
+## CLAUDE.md desactualizado
+
+Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
+
 - **Google Drive**: describe `googleDriveManager.js`, "Google Drive API v3" y
   que la aplicación "se conecta con el servidor". Ese archivo no existe: el
   depósito es una carpeta del disco (normalmente sincronizada) con una copia
@@ -209,3 +210,11 @@ Ninguno pendiente: todos están en «Corregidos».
   (de la lista de prioridad baja, añadido el 2026-09-14): casilla en
   **Archivo > Preferencias... > Actualizaciones**, que guarda
   `updates.autoCheck`.
+- **Las exportaciones de imágenes informaban poco** (de la lista de prioridad
+  baja, corregido el 2026-09-14). Las tres usan ahora
+  `exportImagesToGroupFolders()`, que cuenta los usuarios sin grupo, y
+  **Imágenes capturadas como ID** y **como nombre y apellidos** muestran al
+  terminar el mismo resumen que la del depósito.
+- **La rejilla de imágenes capturadas no se refrescaba tras enlazar** (de la
+  lista de prioridad baja, corregido el 2026-09-14). Enlazar, quitar, borrar
+  los enlaces o restaurarlos avisan a la rejilla con `captured-images-changed`.

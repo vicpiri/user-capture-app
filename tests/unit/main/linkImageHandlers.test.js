@@ -37,6 +37,9 @@ describe('image linking', () => {
   let projectPath;
   let db;
   let state;
+  // The captured images grid, open or not
+  let mockGrid = null;
+  const gridNotified = () => mockGrid.webContents.send.mock.calls.filter(([channel]) => channel === 'captured-images-changed').length;
   let users;
 
   const link = (userId, imagePath) =>
@@ -61,7 +64,8 @@ describe('image linking', () => {
         loadRepositoryFileList: async () => new Set(),
         findRepositoryFile: () => null
       },
-      repositoryMirror: () => null
+      repositoryMirror: () => null,
+      imageGridWindow: () => mockGrid
     });
   });
 
@@ -100,6 +104,52 @@ describe('image linking', () => {
   afterEach(async () => {
     await db.close();
     jest.restoreAllMocks();
+  });
+
+  describe('the captured images grid', () => {
+    beforeEach(() => {
+      mockGrid = { isDestroyed: () => false, webContents: { send: jest.fn() } };
+    });
+
+    afterEach(() => {
+      mockGrid = null;
+    });
+
+    test('should be told when a photo is linked', async () => {
+      await link(users[0].id, 'foto.jpg');
+
+      expect(gridNotified()).toBe(1);
+    });
+
+    test('should be told when a link is confirmed', async () => {
+      await confirmLink(users[0].id, 'foto.jpg');
+
+      expect(gridNotified()).toBe(1);
+    });
+
+    test('should be told when a photo is unlinked', async () => {
+      await link(users[0].id, 'foto.jpg');
+
+      await unlink(users[0].id);
+
+      expect(gridNotified()).toBe(2);
+    });
+
+    test('should not be told when nothing was linked', async () => {
+      await link(users[0].id, 'foto.jpg');
+      mockGrid.webContents.send.mockClear();
+
+      // Waits for a confirmation, so nothing changed yet
+      await link(users[1].id, 'foto.jpg');
+
+      expect(gridNotified()).toBe(0);
+    });
+
+    test('should not break anything when the grid is closed', async () => {
+      mockGrid = null;
+
+      await expect(link(users[0].id, 'foto.jpg')).resolves.toEqual({ success: true });
+    });
   });
 
   describe('link-image-user', () => {

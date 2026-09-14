@@ -390,9 +390,11 @@
         await new Promise(resolve => setTimeout(resolve, 500));
         this.closeProgressModal();
 
-        // Only show error if export failed
         if (!exportResult.success) {
           this.showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
+        } else if (exportResult.results) {
+          // Users with no group or a missing photo used to be left out silently
+          await this.showInfoModal('Exportación completada', this.summarizeImagesExport(exportResult.results));
         }
       }
     }
@@ -537,9 +539,11 @@
         await new Promise(resolve => setTimeout(resolve, 500));
         this.closeProgressModal();
 
-        // Only show error if export failed
         if (!exportResult.success) {
           this.showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
+        } else if (exportResult.results) {
+          // Users with no group or a missing photo used to be left out silently
+          await this.showInfoModal('Exportación completada', this.summarizeImagesExport(exportResult.results));
         }
       }
     }

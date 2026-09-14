@@ -34,6 +34,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     displayGrid();
   });
 
+  // A photo was linked, unlinked or restored in the main window
+  window.electronAPI.onCapturedImagesChanged(async () => {
+    await loadUsers();
+    displayGrid();
+  });
+
   // Listen for group filter changes from other windows
   window.electronAPI.onGroupFilterChanged(async (groupCode) => {
     selectedGroupCode = groupCode;

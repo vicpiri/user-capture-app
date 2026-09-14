@@ -1309,6 +1309,7 @@ function registerMiscHandlers(context) {
       }
 
       const result = await state.dbManager.clearCapturedImages(userIds);
+      imageGridWindow?.()?.webContents.send('captured-images-changed');
       logger.info(
         `Cleared ${result.cleared} captured image links` +
         (Array.isArray(userIds) ? ` (restricted to ${userIds.length} users)` : ' (whole project)')
@@ -1331,6 +1332,7 @@ function registerMiscHandlers(context) {
       }
 
       const result = await state.dbManager.restoreUserImageRelationships(backupDate);
+      imageGridWindow?.()?.webContents.send('captured-images-changed');
       logger.info(`[IPC] Restored ${result.restored} image relationships from backup ${backupDate}`);
 
       return { success: true, ...result };

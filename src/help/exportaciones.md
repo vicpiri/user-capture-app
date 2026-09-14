@@ -118,9 +118,7 @@ Copia las fotos capturadas a una carpeta, nombradas con el identificador de cada
 
 Dentro de la carpeta elegida se crea una subcarpeta por grupo, con el código del grupo como nombre. Cada foto se llama `NIA.jpg` para el alumnado y `DNI.jpg` para el personal. Solo se exportan los usuarios con una foto capturada enlazada; se saltan los que no tienen NIA o DNI.
 
-Al terminar, la ventana de progreso se cierra sin mostrar un resumen; solo aparece un mensaje si la exportación falla. Abre la carpeta para comprobar el resultado.
-
-<!-- REVISAR: los usuarios sin grupo asignado se saltan sin avisar, y los errores individuales (foto no encontrada, sin NIA/DNI) no se muestran en ningún sitio: solo quedan en el registro. Vale también para "Imágenes capturadas como nombre y apellidos". -->
+Al terminar, un mensaje resume cuántas fotos se han exportado y en cuántas carpetas de grupo, cuántos usuarios sin grupo se han quedado fuera y qué fotos no se han podido exportar (por ejemplo, porque falta el archivo o el usuario no tiene NIA ni DNI).
 
 ## Exportar imágenes del depósito como ID
 
@@ -148,7 +146,7 @@ Igual que la anterior, pero cada foto se llama con los apellidos y el nombre de 
 3. Elige la carpeta de destino.
 4. Revisa el resumen, elige **Copiar imagen original** o **Redimensionar imágenes** y pulsa **Exportar**.
 
-Las fotos también se reparten en una subcarpeta por grupo, y al terminar tampoco se muestra un resumen.
+Las fotos también se reparten en una subcarpeta por grupo, y al terminar se muestra el mismo resumen.
 
 > **Importante:** si dos personas del mismo grupo se llaman exactamente igual, sus fotos tendrían el mismo nombre de archivo y la segunda sustituiría a la primera. En ese caso, usa **Imágenes capturadas como ID**.
 
