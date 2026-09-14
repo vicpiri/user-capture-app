@@ -92,10 +92,7 @@ Las dos últimas cifras salen de la última sincronización de la copia local, a
 
 > **Consejo:** activa **Ver > Indicadores de foto en el depósito** antes de exportar. Así la aplicación sabe qué fotos hay ya en el depósito y las cifras de reemplazo son fiables.
 
-> **Importante:** si el resumen indica 0 imágenes a enviar, pulsa **Cancelar** y revisa la selección, la búsqueda o el grupo antes de volver a intentarlo.
-
-<!-- REVISAR (1): con las opciones del depósito de Ver desactivadas, el resumen dice "Reemplazarán una foto existente: 0" aunque haya fotos en el depósito. get-users rellena has_repository_image = false cuando no carga el depósito, y ExportManager.describeExportScope da la cifra por conocida en cuanto el campo no es undefined. -->
-<!-- REVISAR (2): si la lista de usuarios a exportar está vacía (búsqueda sin resultados, grupo vacío), el handler export-to-repository (exportHandlers.js:950) exporta TODOS los usuarios del proyecto. Lo mismo ocurre en export-csv (665), export-images (787) y export-images-name (1456). De ahí el aviso de cancelar con 0 imágenes. -->
+<!-- REVISAR: con las opciones del depósito de Ver desactivadas, el resumen dice "Reemplazarán una foto existente: 0" aunque haya fotos en el depósito. get-users rellena has_repository_image = false cuando no carga el depósito, y ExportManager.describeExportScope da la cifra por conocida en cuanto el campo no es undefined. -->
 
 ### Opciones de copia
 

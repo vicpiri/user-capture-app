@@ -390,7 +390,7 @@ describe('export-csv handler', () => {
       expect(result.exportedUserIds.sort()).toEqual(['1001', 'D100']);
     });
 
-    test('should fall back to every user in the database when given none', async () => {
+    test('should export nobody when given none, not everyone in the database', async () => {
       await db.importUsers({
         groups: [{ code: '1ESOA', name: 'Primero ESO A' }],
         students: [
@@ -403,7 +403,8 @@ describe('export-csv handler', () => {
 
       const result = await runExport([]);
 
-      expect(result.exported).toBe(1);
+      expect(result.success).toBe(false);
+      expect(fs.existsSync(path.join(exportPath, 'carnets.csv'))).toBe(false);
     });
   });
 });

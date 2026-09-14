@@ -15,31 +15,6 @@ ajustar el texto del manual, que describe el comportamiento actual.
 
 ## Prioridad alta
 
-### 1. Una lista vacía exporta todos los usuarios del proyecto
-
-*Confirmado en el código.* Si la lista de usuarios a exportar llega vacía (una
-búsqueda sin resultados, un grupo sin usuarios), el proceso principal la
-sustituye por todos los usuarios del proyecto:
-
-```
-if (!users || users.length === 0) {
-  users = await state.dbManager.getUsers({});
-}
-```
-
-Afecta a `export-csv`, `export-images`, `export-to-repository`,
-`export-inventory-csv` y `export-images-name` (`src/main/ipc/exportHandlers.js`).
-En la exportación al depósito es especialmente grave: sobrescribe fotos del
-depósito de usuarios que nadie quería tocar.
-
-Ninguna pantalla depende de este comportamiento: la opción "Todos los
-usuarios" del inventario pide la lista completa por su cuenta
-(`ExportManager.exportInventoryCSV`). La corrección puede tratar una lista
-vacía como "nada que exportar" y avisar.
-
-Manual: `exportaciones.md` y `deposito.md` (se aconseja cancelar si el resumen
-muestra 0 imágenes).
-
 ### 2. Guardar las preferencias borra las opciones del menú Ver
 
 *Confirmado en el código.* La ventana de preferencias no envía
@@ -234,3 +209,12 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
 - **Carpeta de entrada**: no se revisa cada segundo; se reacciona a los
   eventos del sistema de archivos.
 - **exportHandlers.js**: tiene 9 manejadores, no 7.
+
+## Corregidos
+
+- **Una lista vacía exportaba todos los usuarios del proyecto** (antes el
+  fallo 1, corregido el 2026-09-14). `export-csv`, `export-images`,
+  `export-images-name`, `export-inventory-csv` y `export-to-repository`
+  sustituían una lista vacía por todos los usuarios; ahora la rechazan sin
+  leer ni escribir nada, y `ExportManager.ensureUsersToExport()` avisa antes
+  de abrir ningún diálogo. Lo cubre `tests/unit/main/exportEmptyList.test.js`.

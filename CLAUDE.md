@@ -977,9 +977,8 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
   las opciones del depósito del menú Ver ni de `has_repository_image`
 - Lee de la copia local cuando tiene el mismo tamaño y fecha que el archivo del
   depósito (`repositoryImageSource()`); si no, del depósito
-- Una lista vacía no exporta nada (las exportaciones antiguas exportan todo el
-  proyecto: fallo 1 de `docs/FALLOS_PENDIENTES.md`). Al acabar muestra un
-  resumen (`ExportManager.summarizeImagesExport()`)
+- Una lista vacía no exporta nada, como en el resto de exportaciones. Al
+  acabar muestra un resumen (`ExportManager.summarizeImagesExport()`)
 - Comparte con Imágenes capturadas como ID el bucle por grupos,
   `exportImagesByIdToGroupFolders()`, que ahora también cuenta los usuarios sin
   grupo en lugar de saltarlos sin más

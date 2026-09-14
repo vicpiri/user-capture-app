@@ -390,6 +390,86 @@ describe('ExportManager', () => {
     });
   });
 
+  describe('with nobody to export', () => {
+    // Every export that takes its users from the list on screen
+    const FLOWS = [
+      ['exportCSV', 'exportCSV'],
+      ['exportImagesByID', 'exportImages'],
+      ['exportRepositoryImagesByID', 'exportRepositoryImages'],
+      ['exportImagesByName', 'exportImagesName'],
+      ['exportToRepository', 'exportToRepository']
+    ];
+
+    beforeEach(() => {
+      mockGetters.getCurrentUsers.mockReturnValue([]);
+      mockElectronAPI.countRepositoryImages.mockResolvedValue({ success: true, withPhoto: 0, withoutPhoto: 0 });
+    });
+
+    test.each(FLOWS)('%s should warn and stop before any dialog', async (method, apiCall) => {
+      await manager[method]();
+
+      expect(mockShowInfoModal).toHaveBeenCalledWith(
+        'Aviso',
+        'No hay usuarios que exportar con la selección y los filtros actuales.'
+      );
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+      expect(mockExportOptionsModal.show).not.toHaveBeenCalled();
+      expect(mockElectronAPI[apiCall]).not.toHaveBeenCalled();
+    });
+
+    test('should also stop when a selection mode is on but nothing is selected and the list is empty', async () => {
+      mockGetters.getSelectionMode.mockReturnValue(true);
+
+      await manager.exportImagesByID();
+
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+    });
+
+    describe('inventory', () => {
+      let inventoryManager;
+      let inventoryModal;
+
+      beforeEach(() => {
+        inventoryModal = { show: jest.fn() };
+        mockElectronAPI.getGroups = jest.fn().mockResolvedValue({ success: true, groups: [{ code: '1ESOA', name: '1º ESO A' }] });
+        mockElectronAPI.getUsers = jest.fn().mockResolvedValue({ success: true, users: [] });
+        mockElectronAPI.exportInventoryCSV = jest.fn();
+
+        inventoryManager = new ExportManager({
+          exportOptionsModal: mockExportOptionsModal,
+          inventoryExportOptionsModal: inventoryModal,
+          confirmModal: mockConfirmModal,
+          showProgressModal: mockShowProgressModal,
+          closeProgressModal: mockCloseProgressModal,
+          showInfoModal: mockShowInfoModal,
+          showOpenDialog: mockShowOpenDialog,
+          ...mockGetters,
+          getCurrentFilters: jest.fn(() => ({ group: '1ESOA' })),
+          electronAPI: mockElectronAPI
+        });
+      });
+
+      test('should stop when the chosen group has no users', async () => {
+        inventoryModal.show.mockResolvedValue({ scope: 'group' });
+
+        await inventoryManager.exportInventoryCSV();
+
+        expect(mockShowInfoModal).toHaveBeenCalledWith('Aviso', 'El grupo seleccionado no tiene usuarios que exportar.');
+        expect(mockShowOpenDialog).not.toHaveBeenCalled();
+        expect(mockElectronAPI.exportInventoryCSV).not.toHaveBeenCalled();
+      });
+
+      test('should stop when the project has no users', async () => {
+        inventoryModal.show.mockResolvedValue({ scope: 'all' });
+
+        await inventoryManager.exportInventoryCSV();
+
+        expect(mockShowInfoModal).toHaveBeenCalledWith('Aviso', 'El proyecto no tiene usuarios que exportar.');
+        expect(mockElectronAPI.exportInventoryCSV).not.toHaveBeenCalled();
+      });
+    });
+  });
+
   describe('exportRepositoryImagesByID()', () => {
     const USERS = [
       { id: 1, nia: '1001', type: 'student', image_path: null },

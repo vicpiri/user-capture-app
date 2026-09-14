@@ -26,6 +26,10 @@ function sharp(...args) {
 // wider mostly queues work up rather than finishing it sooner.
 const IMAGE_EXPORT_CONCURRENCY = 4;
 
+// The exports used to replace an empty list with every user in the project,
+// so a search with no results sent everyone instead of nobody
+const NO_USERS_TO_EXPORT = 'No hay usuarios que exportar con la selección y los filtros actuales';
+
 // Exported images are written to a temporary file and renamed into place. The
 // extension matters: the repository mirror only indexes .jpg and .jpeg, so no
 // instance ever sees a half written export.
@@ -834,9 +838,9 @@ function registerExportHandlers(context) {
         throw new Error('No hay ningún proyecto abierto');
       }
 
-      // Use provided users or get all users if not provided
-      if (!users || users.length === 0) {
-        users = await state.dbManager.getUsers({});
+      // An empty list means nobody to export, never the whole project
+      if (!Array.isArray(users) || users.length === 0) {
+        return { success: false, error: NO_USERS_TO_EXPORT };
       }
 
       // Get repository path
@@ -964,9 +968,9 @@ function registerExportHandlers(context) {
 
       const importsPath = path.join(state.projectPath, 'imports');
 
-      // Use provided users or get all users if not provided
-      if (!users || users.length === 0) {
-        users = await state.dbManager.getUsers({});
+      // An empty list means nobody to export, never the whole project
+      if (!Array.isArray(users) || users.length === 0) {
+        return { success: false, error: NO_USERS_TO_EXPORT };
       }
 
       // Filter only users with images
@@ -1099,6 +1103,11 @@ function registerExportHandlers(context) {
         return { success: false, error: `La carpeta del depósito no existe: ${repositoryPath}` };
       }
 
+      // An empty list means nobody to export, never the whole project
+      if (!Array.isArray(users) || users.length === 0) {
+        return { success: false, error: NO_USERS_TO_EXPORT };
+      }
+
       // Default options
       const exportOptions = {
         copyOriginal: options?.copyOriginal ?? true,
@@ -1119,11 +1128,6 @@ function registerExportHandlers(context) {
       const archive = createReplacedArchive(repositoryPath, repositoryMirror(), logger);
 
       const importsPath = path.join(state.projectPath, 'imports');
-
-      // Use provided users or get all users if not provided
-      if (!users || users.length === 0) {
-        users = await state.dbManager.getUsers({});
-      }
 
       // Filter only users with images
       const usersWithImages = users.filter(user => user.image_path);
@@ -1440,9 +1444,9 @@ function registerExportHandlers(context) {
         throw new Error('No hay ningún proyecto abierto');
       }
 
-      // Use provided users or get all users if not provided
-      if (!users || users.length === 0) {
-        users = await state.dbManager.getUsers({});
+      // An empty list means nobody to export, never the whole project
+      if (!Array.isArray(users) || users.length === 0) {
+        return { success: false, error: NO_USERS_TO_EXPORT };
       }
 
       logger.section('INVENTORY EXPORT');
@@ -1626,9 +1630,9 @@ function registerExportHandlers(context) {
 
       const importsPath = path.join(state.projectPath, 'imports');
 
-      // Use provided users or get all users if not provided
-      if (!users || users.length === 0) {
-        users = await state.dbManager.getUsers({});
+      // An empty list means nobody to export, never the whole project
+      if (!Array.isArray(users) || users.length === 0) {
+        return { success: false, error: NO_USERS_TO_EXPORT };
       }
 
       // Filter only users with images

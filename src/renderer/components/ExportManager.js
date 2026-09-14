@@ -17,6 +17,8 @@
 (function(global) {
   'use strict';
 
+  const NO_USERS_TO_EXPORT = 'No hay usuarios que exportar con la selección y los filtros actuales.';
+
   class ExportManager {
     constructor(config = {}) {
       // Required dependencies
@@ -94,6 +96,24 @@
     }
 
     /**
+     * Stop an export that has nobody to export, before any dialog opens
+     *
+     * Reaching the main process with an empty list used to export the whole
+     * project; it now refuses, but the user should hear it here, not after
+     * choosing a folder.
+     *
+     * @param {Array} users
+     * @param {string} [message]
+     * @returns {Promise<boolean>} Whether there is anyone to export
+     */
+    async ensureUsersToExport(users, message = NO_USERS_TO_EXPORT) {
+      if (users && users.length > 0) return true;
+
+      await this.showInfoModal('Aviso', message);
+      return false;
+    }
+
+    /**
      * Export CSV file
      */
     async exportCSV() {
@@ -101,6 +121,7 @@
 
       // Get users to export
       const usersToExport = this.getUsersToExport();
+      if (!(await this.ensureUsersToExport(usersToExport))) return;
 
       // Show folder picker
       const result = await this.showOpenDialog({
@@ -244,6 +265,11 @@
         }
       }
 
+      const emptyMessage = options.scope === 'all'
+        ? 'El proyecto no tiene usuarios que exportar.'
+        : 'El grupo seleccionado no tiene usuarios que exportar.';
+      if (!(await this.ensureUsersToExport(usersToExport, emptyMessage))) return;
+
       // Show folder picker
       const dialogResult = await this.showOpenDialog({
         properties: ['openDirectory'],
@@ -330,6 +356,7 @@
 
       // Get users to export
       const usersToExport = this.getUsersToExport();
+      if (!(await this.ensureUsersToExport(usersToExport))) return;
 
       // Show folder picker
       const result = await this.showOpenDialog({
@@ -381,11 +408,7 @@
       if (!this.checkProjectOpen()) return;
 
       const usersToExport = this.getUsersToExport();
-
-      if (usersToExport.length === 0) {
-        await this.showInfoModal('Aviso', 'No hay usuarios que exportar con la selección y los filtros actuales.');
-        return;
-      }
+      if (!(await this.ensureUsersToExport(usersToExport))) return;
 
       const count = await this.electronAPI.countRepositoryImages(usersToExport);
 
@@ -480,6 +503,7 @@
 
       // Get users to export
       const usersToExport = this.getUsersToExport();
+      if (!(await this.ensureUsersToExport(usersToExport))) return;
 
       // Show folder picker
       const result = await this.showOpenDialog({
@@ -600,6 +624,7 @@
 
       // Get users to export
       const usersToExport = this.getUsersToExport();
+      if (!(await this.ensureUsersToExport(usersToExport))) return;
 
       // Show export options modal and wait for user choice
       const scope = this.describeExportScope(usersToExport, 'al depósito', { repository: true });

@@ -28,12 +28,13 @@ El CSV para carnets, **Imágenes capturadas como ID**, **Imágenes del depósito
 2. Si no, y está activado **Ver > Asignaciones duplicadas**, todos los usuarios del proyecto que comparten foto con otro.
 3. Si no, los usuarios que carga la lista: los resultados de la búsqueda (de todos los grupos) si has escrito algo en el buscador; si no, los del grupo elegido en el filtro de grupos; y si no hay ningún grupo elegido, todos.
 
+Si con la selección, la búsqueda y los filtros actuales no queda ningún usuario, la aplicación te avisa y no exporta nada.
+
 > **Importante:** los filtros **Ver > Carnets solicitados** y **Ver > Publicaciones solicitadas** cambian lo que ves, pero no lo que se exporta. Si no hay selección, se exporta el grupo del filtro de grupos. Para exportar solo los usuarios de esos filtros, selecciónalos: con el filtro activo, pulsa con el botón derecho sobre un usuario, elige **Seleccionar** y marca la casilla de la cabecera de la tabla para seleccionar todos los que se ven. El modo selección se explica en [Lista de usuarios](usuarios.md).
 
 Las demás exportaciones (inventario, orlas y listados de pagos) tienen su propio alcance, que se explica en cada apartado.
 
 <!-- REVISAR: si "Ver > Fotografías capturadas" está desactivado, la lista se carga sin la ruta de las fotos capturadas, y "Imágenes capturadas como ID", "Imágenes capturadas como nombre y apellidos" e "Imágenes capturadas al depósito" encuentran 0 imágenes (también en modo selección; solo se salva el filtro de duplicados, que usa la lista completa). ¿Es intencionado? Si se corrige, no hace falta avisar al usuario. -->
-<!-- REVISAR: si la lista de usuarios a exportar queda vacía (búsqueda sin resultados, grupo sin usuarios), el proceso principal exporta TODOS los usuarios del proyecto en lugar de ninguno. -->
 
 ## Copiar el original o redimensionar
 
@@ -86,7 +87,7 @@ Genera los listados que importa Edu Inventory Manager y, si quieres, las fotos d
 
 1. Si solo quieres un grupo, elígelo antes en el filtro de grupos.
 2. Pulsa **Archivo > Exportar > Archivos para Edu Inventory Manager**.
-3. En **Usuarios a exportar**, elige **Todos los usuarios** o **Grupo seleccionado** (el del filtro de grupos). Esta segunda opción no está disponible si no hay grupo elegido o si hay texto en el buscador.
+3. En **Usuarios a exportar**, elige **Todos los usuarios** o **Grupo seleccionado** (el del filtro de grupos). Esta segunda opción no está disponible si no hay grupo elegido o si hay texto en el buscador. Si el grupo no tiene usuarios, la aplicación te avisa y no exporta nada.
 4. Si quieres también las fotos, marca **Exportar imágenes del depósito** y elige **Copiar imagen original** o **Redimensionar imágenes** (ver [Copiar el original o redimensionar](#copiar-el-original-o-redimensionar)).
 5. Si quieres las fotos comprimidas, marca **Comprimir imágenes en archivos ZIP** e indica el **Tamaño máximo por archivo ZIP (MB)** (25 por defecto).
 6. Pulsa **Exportar** y elige la carpeta.
