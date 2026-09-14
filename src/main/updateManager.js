@@ -63,6 +63,8 @@ class UpdateManager {
     this.checking = false;
     this.manual = false;
     this.pending = null;
+    // Checks asked for while one was already running, answered with its outcome
+    this.joined = [];
     this.startupTimer = null;
     this.timeoutTimer = null;
     this.initialized = false;
@@ -164,7 +166,14 @@ class UpdateManager {
       return Promise.resolve({ status: 'unsupported', manual });
     }
     if (this.checking) {
-      return Promise.resolve({ status: 'already-checking', manual });
+      // A manual check while another runs, typically the automatic one at
+      // startup: join it rather than bail out. It becomes manual so its
+      // outcome is shown; answering 'already-checking' left the update window
+      // on "Buscando actualizaciones" with nothing to close it.
+      if (manual) {
+        this.manual = true;
+      }
+      return new Promise((resolve) => this.joined.push(resolve));
     }
 
     this.init();
@@ -304,8 +313,11 @@ class UpdateManager {
 
     this.checking = false;
     const resolve = this.pending;
+    const joined = this.joined;
     this.pending = null;
+    this.joined = [];
     if (resolve) resolve(outcome);
+    joined.forEach(join => join(outcome));
   }
 }
 

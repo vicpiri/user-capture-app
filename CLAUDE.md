@@ -267,7 +267,9 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
   de) muestra siempre el resultado. Solo funciona en la aplicación empaquetada;
   en desarrollo, `npm run dev -- --dev-updates` con un `dev-app-update.yml`
   local. Preferencias en `config.json` bajo `updates` (`autoCheck`,
-  `lastCheck`, `skippedVersion`). El flujo de publicación del que depende está
+  `lastCheck`, `skippedVersion`); `autoCheck` se cambia desde Archivo >
+  Preferencias > Actualizaciones. Una comprobación pedida mientras otra está en
+  marcha se une a ella en lugar de rechazarse. El flujo de publicación del que depende está
   en `docs/ACTUALIZACIONES_Y_RELEASE_PLAN.md`.
 
 ## Arquitectura del Proceso de Renderizado

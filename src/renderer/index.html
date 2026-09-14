@@ -579,6 +579,7 @@
         <div class="preferences-sidebar">
           <div class="preferences-category active" data-category="institution">Datos de la Institución</div>
           <div class="preferences-category" data-category="receipt-printer">Impresora de Recibos</div>
+          <div class="preferences-category" data-category="updates">Actualizaciones</div>
         </div>
 
         <!-- Content Area -->
@@ -665,6 +666,19 @@
               <label for="pref-receipt-footer">Texto del pie del recibo:</label>
               <textarea id="pref-receipt-footer" class="form-control" rows="6" style="resize: vertical;"></textarea>
               <small class="form-help">Texto informativo que aparecerá al pie del recibo</small>
+            </div>
+          </div>
+
+          <!-- Updates Panel -->
+          <div class="preferences-panel" data-panel="updates">
+            <h3>Actualizaciones</h3>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="pref-auto-check-updates" checked>
+                Buscar actualizaciones al iniciar la aplicación
+              </label>
+              <small class="form-help">Como mucho una vez al día, y sin avisar si no hay conexión. Puedes buscarlas cuando quieras con Ayuda &gt; Buscar actualizaciones...</small>
             </div>
           </div>
         </div>

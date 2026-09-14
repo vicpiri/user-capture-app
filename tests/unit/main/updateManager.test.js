@@ -180,12 +180,37 @@ describe('UpdateManager', () => {
       expect(manager.checking).toBe(false);
     });
 
-    test('refuses to overlap two checks', async () => {
+    test('answers a check asked for while another runs with the same outcome, without a second request', async () => {
       const first = manager.checkForUpdates({ manual: true });
-      await expect(manager.checkForUpdates({ manual: true })).resolves.toEqual({ status: 'already-checking', manual: true });
+      const second = manager.checkForUpdates({ manual: true });
+
       autoUpdater.emit('update-not-available', { version: '1.7.0' });
-      await first;
+
+      await expect(first).resolves.toMatchObject({ status: 'not-available' });
+      await expect(second).resolves.toMatchObject({ status: 'not-available' });
       expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    });
+
+    test('shows the outcome of the automatic check a manual one joined', async () => {
+      // The update window opened by the manual check used to stay on
+      // "Buscando actualizaciones": the automatic check reports nothing
+      const automatic = manager.checkForUpdates({ manual: false });
+      const manual = manager.checkForUpdates({ manual: true });
+
+      autoUpdater.emit('update-not-available', { version: '1.7.0' });
+      await Promise.all([automatic, manual]);
+
+      expect(sentStatuses()).toContainEqual(expect.objectContaining({ status: 'not-available', manual: true }));
+    });
+
+    test('reports the error of the joined check to the user', async () => {
+      const automatic = manager.checkForUpdates({ manual: false });
+      const manual = manager.checkForUpdates({ manual: true });
+
+      autoUpdater.emit('error', new Error('net::ERR_CONNECTION_REFUSED'));
+      await Promise.all([automatic, manual]);
+
+      expect(sentStatuses()).toContainEqual(expect.objectContaining({ status: 'error', manual: true }));
     });
   });
 

@@ -24,6 +24,7 @@
       this.logoClearBtn = document.getElementById('pref-logo-clear-btn');
       this.receiptSubtitleInput = document.getElementById('pref-receipt-subtitle');
       this.receiptPriceInput = document.getElementById('pref-receipt-price');
+      this.autoCheckUpdatesInput = document.getElementById('pref-auto-check-updates');
       this.receiptFooterInput = document.getElementById('pref-receipt-footer');
       this.printerSelect = document.getElementById('pref-printer-select');
       this.printerInfo = document.getElementById('pref-printer-info');
@@ -180,6 +181,10 @@
       if (this.receiptPriceInput) {
         this.receiptPriceInput.value = preferences.receiptPrice ?? 18;
       }
+
+      if (this.autoCheckUpdatesInput) {
+        this.autoCheckUpdatesInput.checked = preferences.autoCheckUpdates !== false;
+      }
       if (this.receiptFooterInput) {
         this.receiptFooterInput.value = preferences.receiptFooter || '';
       }
@@ -197,7 +202,8 @@
         receiptPrice: Number.isFinite(parseFloat(this.receiptPriceInput?.value))
           ? parseFloat(this.receiptPriceInput.value)
           : 18,
-        receiptFooter: this.receiptFooterInput?.value?.trim() || ''
+        receiptFooter: this.receiptFooterInput?.value?.trim() || '',
+        autoCheckUpdates: this.autoCheckUpdatesInput ? this.autoCheckUpdatesInput.checked : true
       };
     }
 

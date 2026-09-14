@@ -23,13 +23,6 @@ Ninguno pendiente: todos están en «Corregidos».
 
 ## Prioridad baja
 
-- **La ventana de actualizaciones puede quedarse colgada**: una comprobación
-  manual durante la automática recibe `already-checking`, que `UpdateModal`
-  ignora, y la ventana se queda en "Buscando actualizaciones" sin botones.
-  (`preferencias.md`)
-- **No hay forma de desactivar la comprobación automática de actualizaciones**
-  desde la aplicación: `updates.autoCheck` existe en `config.json` pero ninguna
-  pantalla lo cambia. (`preferencias.md`)
 - **Las exportaciones de imágenes informan poco**: los usuarios sin grupo se
   omiten en silencio, los errores por usuario solo van al log y no hay resumen
   al terminar. (`exportaciones.md`)
@@ -208,3 +201,11 @@ Ninguno pendiente: todos están en «Corregidos».
   respondía antes de que la impresora contestara; ahora espera su respuesta y,
   si falla, devuelve el error y el recibo no se marca. Lo cubre
   `tests/unit/main/receiptPrintHandler.test.js`.
+- **La ventana de actualizaciones podía quedarse colgada** (de la lista de
+  prioridad baja, corregido el 2026-09-14). Una comprobación manual durante la
+  automática recibía `already-checking`; ahora se une a la que está en marcha,
+  que pasa a ser manual y cuyo resultado reciben las dos.
+- **No se podía desactivar la comprobación automática de actualizaciones**
+  (de la lista de prioridad baja, añadido el 2026-09-14): casilla en
+  **Archivo > Preferencias... > Actualizaciones**, que guarda
+  `updates.autoCheck`.

@@ -4,7 +4,7 @@
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
 const { getActiveIngestPath, getConfiguredIngestPath } = require('../ingestFolder');
-const { getLastExportFolder, setLastExportFolder } = require('../utils/config');
+const { getLastExportFolder, setLastExportFolder, getUpdatePreferences, saveUpdatePreferences } = require('../utils/config');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
 
@@ -1453,7 +1453,9 @@ function registerMiscHandlers(context) {
           logoPath: config.logoPath || '',
           receiptSubtitle: receiptConfig.subtitle || '',
           receiptPrice: receiptPriceOrDefault(receiptConfig.price),
-          receiptFooter: receiptConfig.footerText || ''
+          receiptFooter: receiptConfig.footerText || '',
+          // Stored with the rest of the update checker's state, which reads it
+          autoCheckUpdates: getUpdatePreferences().autoCheck !== false
         }
       };
     } catch (error) {
@@ -1478,7 +1480,12 @@ function registerMiscHandlers(context) {
         footerText: preferences.receiptFooter || ''
       };
 
-      const success = saveGlobalConfig(config);
+      let success = saveGlobalConfig(config);
+
+      // After the rest: saveUpdatePreferences reads the file just written
+      if (success && typeof preferences.autoCheckUpdates === 'boolean') {
+        success = saveUpdatePreferences({ autoCheck: preferences.autoCheckUpdates });
+      }
 
       if (success) {
         logger.info('Preferences saved successfully');

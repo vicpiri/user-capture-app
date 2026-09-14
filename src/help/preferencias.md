@@ -5,7 +5,7 @@ Aquí se explica cómo ajustar los datos del centro, la impresora de recibos y l
 ## Abrir las preferencias
 
 1. Pulsa **Archivo > Preferencias...** o `Ctrl+,`.
-2. Elige una categoría a la izquierda: **Datos de la Institución** o **Impresora de Recibos**.
+2. Elige una categoría a la izquierda: **Datos de la Institución**, **Impresora de Recibos** o **Actualizaciones**.
 3. Haz los cambios y pulsa **Guardar**. **Cancelar**, o la **×** de la esquina, cierra la ventana sin guardar.
 
 Los cambios se aplican en cuanto guardas, sin reiniciar: los recibos y los PDF leen estos datos cada vez que se generan. Guardar no cambia las casillas del menú **Ver**, que se explican más abajo.
@@ -52,7 +52,9 @@ La aplicación instalada en Windows comprueba sola si hay una versión nueva pub
 - Si la comprobación falla (por ejemplo, sin conexión a Internet o porque la red del centro bloquea GitHub), tampoco se muestra nada, y se vuelve a intentar la próxima vez que abras la aplicación.
 - Si elegiste **Omitir esta versión**, la comprobación automática no vuelve a avisarte de esa versión, pero sí de la siguiente que se publique.
 
-<!-- REVISAR: existe una preferencia para desactivar la comprobación automática (updates.autoCheck en config.json), pero no hay ninguna opción en la interfaz para cambiarla, así que no se documenta. -->
+Para que no compruebe nada al arrancar, abre **Archivo > Preferencias...**, elige la categoría **Actualizaciones** y desmarca **Buscar actualizaciones al iniciar la aplicación**. Podrás seguir buscándolas cuando quieras, como se explica a continuación.
+
+Si pides una comprobación mientras la automática aún está en marcha, la ventana espera a su resultado y te lo muestra.
 
 ## Buscar actualizaciones manualmente
 
@@ -68,8 +70,6 @@ La comprobación manual siempre muestra el resultado:
 - **No se pudo comprobar**, con el motivo. Si no llega respuesta en un minuto, avisa de que la comprobación ha tardado demasiado.
 
 Solo funciona en la aplicación instalada; en otro caso, avisa de que la comprobación solo está disponible en la aplicación instalada.
-
-<!-- REVISAR: si se pide una comprobación manual mientras la automática sigue en marcha, UpdateModal no trata el resultado 'already-checking' y la ventana puede quedarse en "Buscando actualizaciones" sin botones (se cierra con Escape). -->
 
 ## La ventana de actualización
 

@@ -50,7 +50,8 @@ describe('preferences handlers', () => {
     logoPath: 'C:\\logos\\centro.png',
     receiptSubtitle: 'Orla 2025-2026',
     receiptPrice: 20,
-    receiptFooter: 'Gracias'
+    receiptFooter: 'Gracias',
+    autoCheckUpdates: true
   };
 
   // The Ver options, set to the opposite of every default
@@ -163,6 +164,44 @@ describe('preferences handlers', () => {
     });
   });
 
+  describe('automatic update check', () => {
+    test('should turn it off where the update checker reads it', async () => {
+      await call('save-preferences', { ...FORM, autoCheckUpdates: false });
+
+      expect(loadGlobalConfig().updates.autoCheck).toBe(false);
+      expect((await call('get-preferences')).preferences.autoCheckUpdates).toBe(false);
+    });
+
+    test('should turn it back on', async () => {
+      await call('save-preferences', { ...FORM, autoCheckUpdates: false });
+
+      await call('save-preferences', { ...FORM, autoCheckUpdates: true });
+
+      expect(loadGlobalConfig().updates.autoCheck).toBe(true);
+    });
+
+    test('should keep the rest of the update state', async () => {
+      saveGlobalConfig({ updates: { autoCheck: true, lastCheck: '2026-09-01T10:00:00.000Z', skippedVersion: '1.9.0' } });
+
+      await call('save-preferences', { ...FORM, autoCheckUpdates: false });
+
+      expect(loadGlobalConfig().updates).toEqual({
+        autoCheck: false,
+        lastCheck: '2026-09-01T10:00:00.000Z',
+        skippedVersion: '1.9.0'
+      });
+    });
+
+    test('should leave it alone when the window does not send it', async () => {
+      const { autoCheckUpdates, ...withoutIt } = FORM;
+      saveGlobalConfig({ updates: { autoCheck: false } });
+
+      await call('save-preferences', withoutIt);
+
+      expect(loadGlobalConfig().updates.autoCheck).toBe(false);
+    });
+  });
+
   describe('get-preferences', () => {
     test('should return what the preferences window edits, and nothing else', async () => {
       saveDisplayPreferences(DISPLAY);
@@ -181,7 +220,8 @@ describe('preferences handlers', () => {
         logoPath: '',
         receiptSubtitle: '',
         receiptPrice: 18,
-        receiptFooter: ''
+        receiptFooter: '',
+        autoCheckUpdates: true
       });
     });
   });
