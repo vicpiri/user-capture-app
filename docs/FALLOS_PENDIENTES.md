@@ -68,19 +68,6 @@ Ninguno pendiente: todos están en «Corregidos».
   cerrarla y abrirla o cambiar de grupo. (`enlazar.md`)
 - **Tras cerrar cualquier mensaje el foco vuelve al buscador**, lo que bloquea
   la navegación con flechas hasta hacer clic en la lista. (`usuarios.md`)
-- **Textos incorrectos o en inglés**:
-  - La confirmación de la actualización del XML llama al grupo "¡Eliminados!"
-    (`ProjectManager.js`), pero se llama "⚠ Eliminados".
-  - El informe de importación dice "solo se importó el primero" de los
-    duplicados, pero se prioriza el que tiene grupo (`projectHandlers.js`).
-  - `xmlParser.js` muestra al usuario "Invalid XML structure: missing
-    `<centro>` root element".
-  - La ayuda de la ventana de preferencias dice que el nombre del centro se usa
-    en los PDF; solo se usa en los recibos.
-- **Código muerto**: la sección de duplicados del informe que se reescribe al
-  actualizar el XML nunca puede llenarse, porque los usuarios ya llegan sin
-  duplicados (`projectHandlers.js`).
-
 ## CLAUDE.md desactualizado
 
 Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
@@ -201,3 +188,13 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   Ahora el gestor comprueba por defecto si hay cualquier `.modal.show`, así que
   también cubre los diálogos que se añadan. Lo cubre
   `KeyboardNavigationManager.test.js`.
+- **Textos incorrectos o en inglés** (de la lista de prioridad baja,
+  corregidos el 2026-09-14): la confirmación de la actualización del XML
+  llamaba al grupo «¡Eliminados!» en lugar de «⚠ Eliminados»; el aviso de
+  duplicados decía «solo se importó el primero» cuando se prioriza el que tiene
+  grupo; `xmlParser.js` daba un error en inglés; y la ayuda de Preferencias
+  decía que el nombre del centro se usa en los PDF, cuando solo va en los
+  recibos (el logotipo sí va en los PDF).
+- **Código muerto** (de la lista de prioridad baja, eliminado el 2026-09-14):
+  la sección de duplicados del informe que se reescribe al actualizar el XML,
+  que buscaba duplicados en un mapa con un usuario por identificador.

@@ -239,7 +239,7 @@
       message += `Usuarios eliminados: ${changes.toDelete}\n\n`;
 
       if (changes.toDeleteWithImage > 0) {
-        message += `- ${changes.toDeleteWithImage} usuario(s) con imagen serán movidos al grupo "¡Eliminados!"\n`;
+        message += `- ${changes.toDeleteWithImage} usuario(s) con imagen serán movidos al grupo "⚠ Eliminados"\n`;
       }
       if (changes.toDeleteWithoutImage > 0) {
         message += `- ${changes.toDeleteWithoutImage} usuario(s) sin imagen serán eliminados permanentemente\n`;

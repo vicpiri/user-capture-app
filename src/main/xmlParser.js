@@ -42,7 +42,7 @@ class XMLUserParser {
       // Fields are XML attributes, not child nodes
 
       if (!('centro' in jsonData)) {
-        throw new Error('Invalid XML structure: missing <centro> root element');
+        throw new Error('El archivo no tiene el elemento <centro> que envuelve los datos del centro');
       }
 
       const centro = jsonData.centro;

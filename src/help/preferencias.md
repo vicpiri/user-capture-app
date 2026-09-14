@@ -19,8 +19,6 @@ Las preferencias se guardan en este equipo y valen para todos los proyectos que 
 
 > **Importante:** la aplicación guarda dónde está el archivo del logotipo, no una copia. Si lo mueves, lo renombras o lo borras, el logotipo deja de aparecer. Guárdalo en una carpeta fija.
 
-<!-- REVISAR: el texto de ayuda de la ventana dice que el nombre del centro se usa "en recibos, exportaciones PDF y otros documentos", pero en el código solo lo usan los recibos. Las orlas y el listado de pagados en PDF solo llevan el logotipo. -->
-
 ## Impresora de recibos
 
 La categoría **Impresora de Recibos** sirve para elegir la impresora térmica, imprimir un recibo de prueba y escribir el subtítulo, el precio y el pie de los recibos de la orla. Todo ello se explica en [Configurar la impresora de recibos](orlas.md#configurar-la-impresora-de-recibos), [Personalizar el contenido del recibo](orlas.md#personalizar-el-contenido-del-recibo) e [Imprimir un recibo de prueba](orlas.md#imprimir-un-recibo-de-prueba).
