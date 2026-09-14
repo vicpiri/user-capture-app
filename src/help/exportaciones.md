@@ -68,7 +68,7 @@ El archivo usa punto y coma (`;`) como separador y tiene estas columnas, en este
 | `apellidos` | Los dos apellidos juntos |
 | `centro` | Siempre `1` |
 | `foto` | `NIA.jpg` para el alumnado y `DNI.jpg` para el personal |
-| `grupo` | Código del grupo |
+| `grupo` | Nombre completo del grupo, por ejemplo `1º ESO A` (el código si el grupo ya no existe en el proyecto) |
 | `direccion` | Vacía |
 | `telefono` | Vacía |
 | `departamento` | Siempre `1` |

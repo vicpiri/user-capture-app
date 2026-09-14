@@ -685,6 +685,11 @@ function registerExportHandlers(context) {
       // Use the filtered list for export
       users = usersWithRepositoryImages;
 
+      // The users carry only the group code, and the card shows the full name
+      const groupNames = new Map(
+        (await state.dbManager.getGroups()).map(group => [group.code, group.name])
+      );
+
       // Create CSV content with exact field order from CLAUDE.md
       const csvHeader = 'id;password;userlevel;nombre;apellido1;apellido2;apellidos;centro;foto;grupo;direccion;telefono;departamento;DNI;edad;fechaNacimiento;nombreApellidos\n';
       const csvRows = users.map(user => {
@@ -722,8 +727,11 @@ function registerExportHandlers(context) {
 
         // centro: always "1"
         const centro = '1';
-        // grupo: group code from user
-        const grupo = user.group_code || '';
+        // grupo: full group name; a code with no group behind it is kept
+        // rather than leaving the card without one
+        const grupo = user.group_code
+          ? (groupNames.get(user.group_code) || user.group_code)
+          : '';
         const direccion = '';
         const telefono = '';
         const departamento = '1';

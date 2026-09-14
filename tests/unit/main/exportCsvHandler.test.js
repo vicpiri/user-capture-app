@@ -169,6 +169,53 @@ describe('export-csv handler', () => {
     });
   });
 
+  describe('group', () => {
+    const addGroups = (groups) => db.importUsers({
+      groups,
+      students: [],
+      teachers: [],
+      nonTeachingStaff: []
+    });
+
+    test('should write the full name of the group, not its code', async () => {
+      await addGroups([{ code: '1ESOA', name: '1º ESO A' }]);
+      addRepositoryPhoto('1001');
+
+      await runExport([student(1001)]);
+
+      expect(readRows().rows[0][COL.grupo]).toBe('1º ESO A');
+    });
+
+    test('should name the group of each user', async () => {
+      await addGroups([
+        { code: '1ESOA', name: '1º ESO A' },
+        { code: 'DOCENTES', name: 'Docentes' }
+      ]);
+      addRepositoryPhoto('1001');
+      addRepositoryPhoto('11111111H');
+
+      await runExport([student(1001), teacher('11111111H')]);
+
+      expect(readRows().rows.map(row => row[COL.grupo])).toEqual(['1º ESO A', 'Docentes']);
+    });
+
+    test('should keep the code when there is no group with it', async () => {
+      addRepositoryPhoto('1001');
+
+      await runExport([student(1001, { group_code: '9XYZ' })]);
+
+      expect(readRows().rows[0][COL.grupo]).toBe('9XYZ');
+    });
+
+    test('should leave it empty for a user with no group', async () => {
+      addRepositoryPhoto('1001');
+
+      await runExport([student(1001, { group_code: null })]);
+
+      expect(readRows().rows[0][COL.grupo]).toBe('');
+    });
+  });
+
   describe('students', () => {
     test('should identify them by NIA', async () => {
       addRepositoryPhoto('1001');

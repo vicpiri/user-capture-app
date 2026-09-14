@@ -932,12 +932,12 @@ Aplicación completamente funcional con todas las características principales i
   - apellido1
   - apellido2
   - apellidos: suma de apellido1 y apellido2
-  - centro: no rellenar
+  - centro: siempre 1
   - foto: para alumnos NIA.jpg. Para el resto DNI.jpg
-  - grupo: no rellenar
+  - grupo: nombre largo del grupo (el código si no hay grupo con ese código)
   - direccion: no rellenar
   - telefono: no rellenar
-  - departamento: no rellenar
+  - departamento: siempre 1
   - DNI
   - edad: para alumnos mayor.jpg si es mayor de edad (18 años), si no menor.jpg. Para el resto profesor.jpg
   - fechaNacimiento
