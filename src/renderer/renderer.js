@@ -1513,7 +1513,12 @@ async function handleLinkImage() {
   } else if (result.imageAlreadyAssigned) {
     // Image is already assigned to other user(s)
     const userList = result.assignedUsers.map(u => `${u.name} (${u.nia || 'Sin NIA'})`).join(', ');
-    const message = `Esta imagen ya está asignada a: ${userList}. ¿Deseas continuar y asignarla también a ${selectedUser.first_name} ${selectedUser.last_name1}?`;
+    const userName = `${selectedUser.first_name} ${selectedUser.last_name1}`;
+    // One question for both facts: confirming also replaces the photo this
+    // user already has, which used to happen without being mentioned
+    const message = result.currentImage
+      ? `Esta imagen ya está asignada a: ${userList}. Además, ${userName} ya tiene otra imagen enlazada, que se reemplazará por esta. ¿Deseas continuar?`
+      : `Esta imagen ya está asignada a: ${userList}. ¿Deseas continuar y asignarla también a ${userName}?`;
 
     const confirmed = await showConfirmationModal(message);
     if (confirmed) {

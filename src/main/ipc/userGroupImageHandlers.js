@@ -194,6 +194,12 @@ function registerUserGroupImageHandlers(context) {
         ? path.basename(imagePath)
         : imagePath;
 
+      // The photo the user already has, as a full path for display
+      const user = await state.dbManager.getUserById(userId);
+      const currentImage = user && user.image_path
+        ? (path.isAbsolute(user.image_path) ? user.image_path : path.join(importsPath, user.image_path))
+        : null;
+
       // Check if image is already assigned to other users
       const usersWithImage = await state.dbManager.getUsersByImagePath(relativeImagePath);
       if (usersWithImage.length > 0) {
@@ -207,19 +213,19 @@ function registerUserGroupImageHandlers(context) {
               id: u.id,
               name: `${u.first_name} ${u.last_name1} ${u.last_name2 || ''}`.trim(),
               nia: u.nia
-            }))
+            })),
+            // Confirming also replaces the photo this user has, and the single
+            // question asked has to say so: it used to be replaced silently
+            currentImage: user && user.image_path && user.image_path !== relativeImagePath
+              ? currentImage
+              : null
           };
         }
       }
 
       // Check if user already has an image
-      const user = await state.dbManager.getUserById(userId);
-      if (user.image_path) {
-        // Return confirmation needed (convert to absolute for frontend display)
-        const absolutePath = path.isAbsolute(user.image_path)
-          ? user.image_path
-          : path.join(importsPath, user.image_path);
-        return { success: false, needsConfirmation: true, currentImage: absolutePath };
+      if (user && user.image_path) {
+        return { success: false, needsConfirmation: true, currentImage };
       }
 
       await state.dbManager.linkImageToUser(userId, relativeImagePath);

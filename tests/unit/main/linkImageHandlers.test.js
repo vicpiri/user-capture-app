@@ -156,6 +156,37 @@ describe('image linking', () => {
       expect(await imagePathOf(users[1].id)).toBeFalsy();
     });
 
+    test('should also say when the user already has a photo it would replace', async () => {
+      // Both at once used to report only the first, and confirming replaced
+      // LUIS's own photo without anyone being told
+      await link(users[0].id, 'foto.jpg');
+      await link(users[1].id, 'propia.jpg');
+
+      const result = await link(users[1].id, 'foto.jpg');
+
+      expect(result.imageAlreadyAssigned).toBe(true);
+      expect(result.currentImage).toBe(path.join(projectPath, 'imports', 'propia.jpg'));
+    });
+
+    test('should report no photo to replace when the user has none', async () => {
+      await link(users[0].id, 'foto.jpg');
+
+      const result = await link(users[1].id, 'foto.jpg');
+
+      expect(result.imageAlreadyAssigned).toBe(true);
+      expect(result.currentImage).toBeNull();
+    });
+
+    test('should change nobody while that question is pending', async () => {
+      await link(users[0].id, 'foto.jpg');
+      await link(users[1].id, 'propia.jpg');
+
+      await link(users[1].id, 'foto.jpg');
+
+      expect(await imagePathOf(users[0].id)).toBe('foto.jpg');
+      expect(await imagePathOf(users[1].id)).toBe('propia.jpg');
+    });
+
     test('should treat an absolute path as the same photo it already stored', async () => {
       await link(users[0].id, 'foto.jpg');
 

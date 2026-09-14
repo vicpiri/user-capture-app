@@ -38,10 +38,10 @@ Un usuario solo puede tener una foto capturada. Si ya tiene una, la aplicación 
 
 Una misma foto puede quedar enlazada a más de un usuario, aunque casi siempre es un error, por ejemplo enlazar la foto de un alumno a su compañero. Por eso, si la foto que vas a enlazar ya está asignada a otra persona, la aplicación avisa con el mensaje «Esta imagen ya está asignada a: …» y pregunta si quieres asignarla también al usuario seleccionado.
 
-- Con **No**, no se enlaza nada.
-- Con **Sí**, la foto queda enlazada a los dos. Si el usuario seleccionado tenía otra foto, se sustituye sin más preguntas.
+Si además el usuario seleccionado ya tiene otra foto, el mismo mensaje lo dice: «Además, … ya tiene otra imagen enlazada, que se reemplazará por esta».
 
-<!-- REVISAR: cuando la foto ya está asignada a otro y además el usuario ya tenía foto, solo aparece el primer aviso; al aceptar, la foto anterior del usuario se reemplaza sin la pregunta de "¿Deseas reemplazarla?" (link-image-user devuelve imageAlreadyAssigned antes de comprobar needsConfirmation). ¿Es intencionado? -->
+- Con **No**, no cambia nada.
+- Con **Sí**, la foto queda enlazada a los dos y, si el usuario seleccionado tenía otra, la sustituye.
 
 Para localizar las fotos duplicadas:
 

@@ -19,15 +19,6 @@ Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
-### 7. Enlazar una foto ya asignada a otro usuario reemplaza la del actual sin preguntar
-
-Si la foto ya está enlazada a otra persona y el usuario seleccionado ya tiene
-foto, solo aparece el aviso de que la foto está asignada. Al aceptarlo se
-reemplaza la foto del usuario sin la pregunta habitual de si se quiere
-reemplazar (`link-image-user`).
-
-Manual: `enlazar.md` (lo describe tal cual).
-
 ### 8. Actualizar el XML guarda la ruta antes de validarla
 
 `update-xml` guarda el nuevo `xmlFilePath` antes de comprobar que el archivo
@@ -210,3 +201,9 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   base de datos existente e importaba el XML encima. Ahora se niega si la
   carpeta tiene `data/users.db` y remite a **Archivo > Abrir Proyecto...**, sin
   cerrar el proyecto abierto. Lo cubre `createProjectHandler.test.js`.
+- **Enlazar una foto ya asignada a otro usuario reemplazaba la del actual sin
+  preguntar** (antes el fallo 7, corregido el 2026-09-14). `link-image-user`
+  devolvía `imageAlreadyAssigned` sin mirar si el usuario ya tenía foto, y la
+  única pregunta no lo mencionaba. Ahora devuelve también `currentImage`, y la
+  pregunta dice que esa foto se reemplazará. Lo cubre
+  `linkImageHandlers.test.js`.
