@@ -286,6 +286,20 @@ describe('card print and publication requests', () => {
       expect(result.users.map(u => u.first_name).sort()).toEqual(['ANA', 'MARIA']);
     });
 
+    test('should date the card when it was printed, not when it was requested', async () => {
+      addRepositoryPhoto('1001');
+      await call('request-card-print', [idOf('1001')]);
+      // A request made weeks ago: moving the file kept this date
+      const requested = new Date('2026-01-10T10:00:00Z');
+      fs.utimesSync(path.join(folder('To-Print-ID'), '1001'), requested, requested);
+      const before = Date.now();
+
+      await call('mark-cards-as-printed', ['1001']);
+      const result = await call('get-printed-cards');
+
+      expect(new Date(result.users[0].printed_date).getTime()).toBeGreaterThanOrEqual(before - 2000);
+    });
+
     test('should stamp each one with when it was printed', async () => {
       addRepositoryPhoto('1001');
       await call('request-card-print', [idOf('1001')]);

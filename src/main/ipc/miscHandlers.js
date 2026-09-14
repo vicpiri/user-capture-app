@@ -735,6 +735,15 @@ function registerMiscHandlers(context) {
           await fs.rename(sourcePath, destPath);
           movedCount++;
           logger.info(`Moved card print request from To-Print-ID to Printed-ID: ${userId}`);
+
+          // The printed cards window dates each card by this file's
+          // modification time, which a move keeps from the request
+          try {
+            const now = new Date();
+            await fs.utimes(destPath, now, now);
+          } catch (error) {
+            logger.warning(`Could not date the printed card for user ${userId}: ${error.message}`);
+          }
         } catch (error) {
           // File doesn't exist or couldn't be moved, skip
           logger.warning(`Could not move card print request for user ${userId}: ${error.message}`);

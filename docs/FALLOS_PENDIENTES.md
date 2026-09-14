@@ -29,10 +29,6 @@ Ninguno pendiente: todos están en «Corregidos».
 - **Cerrar la ventana de la cámara con su X deja el menú desincronizado.** El
   menú no se reconstruye y **Mostrar ventana de cámara** apunta a una ventana
   cerrada. Sin probar. (`captura.md`)
-- **Últimos carnets impresos: fecha y tipo.** La fecha de impresión es la de
-  modificación del archivo, que no cambia al moverlo a `Printed-ID`, así que
-  seguramente muestra la de la solicitud. El personal no docente sale como
-  `non_teaching_staff` porque `printed-cards.js` espera `staff`. (`carnets.md`)
 - **Una foto de más de 5 MB deja el visor parpadeando.** `folderWatcher` avisa
   de que está procesando antes de comprobar el tamaño; al descartarla, el aviso
   no se retira hasta que llega otra foto. (`captura.md`)
@@ -197,3 +193,10 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   guardaba **Publicaciones solicitadas**, y al arrancar `MenuEventManager` solo
   restauraba el filtro de duplicados: **Carnets solicitados** volvía marcado en
   el menú pero con la lista sin filtrar. Ahora se guardan y restauran los tres.
+- **Últimos carnets impresos: fecha y tipo** (de la lista de prioridad baja,
+  corregido el 2026-09-14). La fecha de impresión era la del archivo de la
+  solicitud, porque moverlo a `Printed-ID` no la cambia; ahora
+  `mark-cards-as-printed` le pone la fecha del momento. El personal no docente
+  salía como `non_teaching_staff` y sin color, porque la ventana esperaba
+  `staff`. Los carnets marcados antes de esta corrección siguen mostrando la
+  fecha de la solicitud.

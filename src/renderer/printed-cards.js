@@ -189,7 +189,7 @@
     const labels = {
       student: 'Alumno',
       teacher: 'Docente',
-      staff: 'No Docente'
+      non_teaching_staff: 'No Docente'
     };
     return labels[type] || type;
   }

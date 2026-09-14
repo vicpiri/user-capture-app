@@ -42,12 +42,10 @@ Solo se marcan los usuarios que han entrado en el CSV. La aplicación no tiene o
 **Ver > Últimos carnets impresos** abre la ventana **Últimos Carnets Impresos**, con los usuarios cuyo archivo está en la carpeta `Printed-ID` del depósito. Necesita un proyecto abierto con el depósito configurado.
 
 - Cada fila muestra **Tipo**, **ID**, **Nombre Completo**, **Grupo** y **Fecha de Impresión**, de la más reciente a la más antigua. Arriba se indica el total.
+- La **Fecha de Impresión** es el momento en que el carnet se marcó como impreso. En los marcados con versiones anteriores a la 1.10.0 aparece, en cambio, la fecha en que se solicitó.
 - Solo aparecen los usuarios del proyecto abierto. Si en `Printed-ID` hay archivos que no corresponden a nadie del proyecto, no se muestran.
 - La lista se lee al abrir la ventana. Si ya estaba abierta, ciérrala y vuelve a abrirla para ver los últimos cambios.
 - El botón **Limpiar Lista** borra todos los archivos de la carpeta `Printed-ID`, después de pedirte confirmación. No se puede deshacer. No afecta a las solicitudes pendientes ni a las fotos.
-
-<!-- REVISAR: "Fecha de Impresión" es la fecha de modificación del archivo en Printed-ID. Al marcar como impreso el archivo se mueve (rename), y mover no cambia esa fecha, así que lo que se ve es probablemente la fecha en que se SOLICITÓ el carnet, no la de impresión. Comprobar en Windows y en la unidad de Google Drive. -->
-<!-- REVISAR: en la columna Tipo, el personal no docente aparece como "non_teaching_staff" en lugar de "No Docente" (printed-cards.js espera el tipo 'staff'). -->
 
 ## Solicitar la publicación oficial de fotos
 
