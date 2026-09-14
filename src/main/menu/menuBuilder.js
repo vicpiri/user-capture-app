@@ -8,7 +8,6 @@ class MenuBuilder {
   constructor(context) {
     // Windows
     this.mainWindow = context.mainWindow;
-    this.cameraWindow = context.cameraWindow;
 
     // State
     this.cameraEnabled = context.cameraEnabled;
@@ -326,13 +325,10 @@ class MenuBuilder {
           label: 'Mostrar ventana de cámara',
           accelerator: 'CmdOrCtrl+Shift+V',
           enabled: this.cameraEnabled,
+          // Shows the window or opens it again; a window kept from when the
+          // menu was built may be gone
           click: () => {
-            if (this.cameraWindow) {
-              this.cameraWindow.show();
-              this.cameraWindow.focus();
-            } else {
-              this.callbacks.openCameraWindow();
-            }
+            this.callbacks.openCameraWindow();
           }
         },
         { type: 'separator' },

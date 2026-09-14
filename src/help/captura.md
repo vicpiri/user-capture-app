@@ -22,7 +22,9 @@ Salvo la importación con ID, todo pasa por la carpeta de entrada, así que se a
 
 Para apagar la cámara, elige **Cámara > Desactivar cámara** (el mismo atajo). Si la ventana de la cámara ha quedado detrás de otras, tráela al frente con **Cámara > Mostrar ventana de cámara** (`Ctrl+Shift+V`), disponible solo con la cámara activada.
 
-<!-- REVISAR: si se cierra la ventana de la cámara con su botón de cerrar, el menú sigue diciendo "Desactivar cámara" y "Mostrar ventana de cámara" parece apuntar a la ventana ya cerrada. No se ha probado en ejecución; por eso el texto solo recomienda apagarla desde el menú. -->
+Si cierras la ventana de la cámara con su botón de cerrar, la cámara queda desactivada, igual que con **Cámara > Desactivar cámara**.
+
+Para que la cámara se active sola, marca **Cámara > Activar la cámara al iniciar**. La próxima vez que abras la aplicación, en cuanto se abra el proyecto se abrirá también la ventana de la cámara. La opción se recuerda hasta que la desmarques.
 
 Otros detalles de la ventana de la cámara:
 
@@ -30,8 +32,6 @@ Otros detalles de la ventana de la cámara:
 - **Resolución**: la aplicación pide a la cámara 1280 × 720 píxeles. Si la cámara no la admite, usa la más parecida que ofrezca.
 - **Sin proyecto abierto** no se puede capturar: aparece el error «Error al capturar la imagen: No hay ningún proyecto abierto».
 - Si la ventana muestra «No se pudo acceder a la cámara», comprueba que la cámara está conectada y que no la está usando otro programa, o elige otra.
-
-<!-- REVISAR: el menú tiene la opción "Cámara > Activar la cámara al iniciar", pero en el código no hace nada: no se guarda entre sesiones y nada abre la cámara al arrancar. Se ha dejado fuera del manual hasta que funcione. -->
 
 ## Elegir la cámara
 
@@ -58,13 +58,11 @@ Así puedes trabajar con cualquier cámara o programa capaz de guardar sus fotos
 Reglas de la carpeta de entrada:
 
 - **Solo archivos JPG** (`.jpg` o `.jpeg`). Los demás archivos se ignoran y se quedan donde están.
-- **Hasta 5 MB por foto.** Las que pesan más no se importan y se quedan en la carpeta, sin aviso.
+- **Hasta 5 MB por foto.** Las que pesan más no se importan y se quedan en la carpeta; la aplicación te avisa con el mensaje «Foto no importada».
 - También se recogen las fotos que se dejan dentro de una subcarpeta de la carpeta de entrada, pero solo en el primer nivel.
 - **La fecha y la hora del nombre son las de llegada** a la aplicación, no las del momento en que la cámara hizo la foto. Si copias de golpe 50 fotos de una tarjeta, todas tendrán prácticamente la misma hora.
 
 > **Importante:** Solo se importan las fotos que llegan a la carpeta con el proyecto abierto. Las que ya estaban al abrirlo, o las que llegaron con la aplicación cerrada, se quedan en la carpeta sin importar. Para importarlas, sácalas de la carpeta y vuelve a dejarlas en ella con el proyecto abierto.
-
-<!-- REVISAR: con una foto de más de 5 MB el visor empieza a parpadear (aviso de "procesando") pero, como la foto se descarta, no deja de parpadear hasta que llega otra foto. No se documenta porque parece un fallo. -->
 
 ## Redirigir la carpeta de entrada
 

@@ -13,6 +13,8 @@ const IGNORE_RE = [
   /~\$.*/                    // Office temporary files
 ];
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
 class FolderWatcher extends EventEmitter {
   constructor(ingestPath, importsPath) {
     super();
@@ -102,9 +104,13 @@ class FolderWatcher extends EventEmitter {
 
       // Validate file size (max 5MB)
       const stats = fs.statSync(filePath);
-      if (stats.size > 5 * 1024 * 1024) {
+      if (stats.size > MAX_IMAGE_SIZE) {
         console.error('File too large:', filePath);
         this.isProcessing.delete(filePath);
+        this.emit('image-rejected', {
+          filename: path.basename(filePath),
+          message: `La foto ${path.basename(filePath)} pesa más de 5 MB y no se ha importado. Sigue en la carpeta de entrada.`
+        });
         return;
       }
 
@@ -135,6 +141,15 @@ class FolderWatcher extends EventEmitter {
     } catch (error) {
       console.error('Error processing file:', error);
       this.isProcessing.delete(filePath);
+
+      // 'image-detecting' was already sent, so the viewer is waiting for an
+      // answer. A file taken away before it settled needs no message.
+      this.emit('image-rejected', {
+        filename: path.basename(filePath),
+        message: error.message === 'File disappeared'
+          ? null
+          : `No se pudo importar la foto ${path.basename(filePath)}: ${error.message}`
+      });
     }
   }
 

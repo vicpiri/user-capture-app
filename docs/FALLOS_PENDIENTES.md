@@ -23,15 +23,6 @@ Ninguno pendiente: todos están en «Corregidos».
 
 ## Prioridad baja
 
-- **Cámara > Activar la cámara al iniciar no hace nada.** No se guarda
-  (`main.js`) y nada en el renderer escucha `onMenuCameraAutostart`. Se ha
-  dejado fuera del manual. (`captura.md`)
-- **Cerrar la ventana de la cámara con su X deja el menú desincronizado.** El
-  menú no se reconstruye y **Mostrar ventana de cámara** apunta a una ventana
-  cerrada. Sin probar. (`captura.md`)
-- **Una foto de más de 5 MB deja el visor parpadeando.** `folderWatcher` avisa
-  de que está procesando antes de comprobar el tamaño; al descartarla, el aviso
-  no se retira hasta que llega otra foto. (`captura.md`)
 - **Un precio de recibo de 0 € es imposible**: se guarda como 18
   (`save-preferences`). (`orlas.md`)
 - **Imprimir sin impresora seleccionada o detectada falla en silencio**, y el
@@ -201,3 +192,15 @@ Ninguno pendiente: todos están en «Corregidos».
   ocultaba la columna GRUPO** (de la lista de prioridad baja, corregido el
   2026-09-14). La regla de `tables.css` oculta ahora la última columna en lugar
   de la quinta. Lo cubre `tests/unit/styles/photosColumn.test.js`.
+- **Cámara > Activar la cámara al iniciar no hacía nada** (de la lista de
+  prioridad baja, implementado el 2026-09-14). Se guarda en `config.json`
+  (`cameraAutoStart`) y, al arrancar, la cámara se activa tras abrir el
+  proyecto reciente.
+- **Cerrar la ventana de la cámara con su X dejaba el menú desincronizado**
+  (de la lista de prioridad baja, corregido el 2026-09-14). El cierre de la
+  ventana desactiva la cámara y reconstruye el menú, y **Mostrar ventana de
+  cámara** ya no usa una referencia a la ventana guardada al construirlo.
+- **Una foto de más de 5 MB dejaba el visor parpadeando** (de la lista de
+  prioridad baja, corregido el 2026-09-14). `folderWatcher` emite
+  `image-rejected` para toda foto anunciada que no llega a importarse; la
+  ventana deja de parpadear y, si es por el tamaño, lo avisa.

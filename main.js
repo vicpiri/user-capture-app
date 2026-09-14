@@ -29,6 +29,7 @@ const HelpWindowManager = require('./src/main/window/helpWindow');
 const { getLogger } = require('./src/main/logger');
 const {
   loadGlobalConfig,
+  saveGlobalConfig,
   getImageRepositoryPath,
   setImageRepositoryPath,
   saveDisplayPreferences,
@@ -201,7 +202,6 @@ function createMenu() {
   menuBuilder = new MenuBuilder({
     // Windows
     mainWindow: mainWindowManager.getWindow(),
-    cameraWindow: cameraWindowManager.getWindow(),
 
     // State
     cameraEnabled,
@@ -263,10 +263,10 @@ function createMenu() {
       },
       setCameraAutoStart: (checked) => {
         cameraAutoStart = checked;
-        const mainWindow = mainWindowManager.getWindow();
-        if (mainWindow) {
-          mainWindow.webContents.send('menu-camera-autostart', cameraAutoStart);
-        }
+        // Kept between sessions; openRecentProject acts on it at startup
+        const config = loadGlobalConfig();
+        config.cameraAutoStart = cameraAutoStart;
+        saveGlobalConfig(config);
       },
       toggleDuplicates: (checked) => {
         showDuplicatesOnly = checked;
@@ -464,8 +464,17 @@ function createWindow() {
       // Deferred so the synchronous start of openRecentProject does not run
       // inside this handler. setImmediate yields without the arbitrary wait a
       // fixed timeout would add to every startup.
-      setImmediate(() => {
-        openRecentProject(mostRecentProjectPath);
+      setImmediate(async () => {
+        await openRecentProject(mostRecentProjectPath);
+
+        // Cámara > Activar la cámara al iniciar. Only with a project, since
+        // captures are saved into the project's input folder.
+        if (cameraAutoStart && projectPath && !cameraEnabled) {
+          logger.info('[STARTUP] Starting the camera, as set in the Cámara menu');
+          cameraEnabled = true;
+          openCameraWindow();
+          createMenu();
+        }
       });
     }
   });
@@ -521,7 +530,20 @@ function closeSecondaryWindows() {
 
 function openCameraWindow() {
   const isDev = process.argv.includes('--dev');
-  cameraWindowManager.open({ isDev });
+  cameraWindowManager.open({ isDev, onClosed: handleCameraWindowClosed });
+}
+
+// However the camera window goes away, its close button included, the camera
+// is off: the menu used to keep offering to turn it off and to show a window
+// that no longer existed
+function handleCameraWindowClosed() {
+  if (!cameraEnabled) return;
+  cameraEnabled = false;
+
+  const mainWindow = mainWindowManager.getWindow();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    createMenu();
+  }
 }
 
 function closeCameraWindow() {
@@ -967,6 +989,7 @@ app.whenReady().then(() => {
   showRepositoryIndicators = config.showRepositoryIndicators ?? false;
   showAdditionalActions = config.showAdditionalActions ?? true;
   showCaptureHistory = config.showCaptureHistory ?? false;
+  cameraAutoStart = config.cameraAutoStart ?? false;
 
   // Serve user photos before any window can ask for one
   thumbnailService = new ThumbnailService(

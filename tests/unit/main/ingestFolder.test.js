@@ -258,6 +258,23 @@ describe('Ingest folder', () => {
       expect(mainWindow.webContents.send).toHaveBeenCalledWith('new-image-detected', filename);
     });
 
+    test('should tell the viewer when a photo over 5 MB is not imported', async () => {
+      await start();
+      const rejected = new Promise((resolve) => state.folderWatcher.once('image-rejected', resolve));
+      const big = path.join(getDefaultIngestPath(projectPath), 'enorme.jpg');
+
+      fs.writeFileSync(big, Buffer.alloc(5 * 1024 * 1024 + 1));
+      await rejected;
+
+      expect(mainWindow.webContents.send).toHaveBeenCalledWith('image-rejected', {
+        filename: 'enorme.jpg',
+        message: expect.stringContaining('más de 5 MB')
+      });
+      // Left where it was, so it can be made smaller and dropped in again
+      expect(fs.existsSync(big)).toBe(true);
+      expect(fs.readdirSync(path.join(projectPath, 'imports'))).toEqual([]);
+    });
+
     test('should watch the default folder and warn when the custom one is missing', async () => {
       const missing = path.join(workPath, 'unplugged');
       await setConfiguredIngestPath(state.dbManager, missing);

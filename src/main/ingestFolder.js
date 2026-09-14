@@ -215,6 +215,13 @@ async function startIngestWatcher({ state, logger, getMainWindow }) {
     getMainWindow()?.webContents.send('new-image-detected', filename);
   });
 
+  // Sent for every photo announced with 'image-detecting' that will not arrive,
+  // so the viewer stops waiting for it
+  watcher.on('image-rejected', ({ filename, message }) => {
+    logger.warning(`Image not imported: ${filename}${message ? ` (${message})` : ''}`);
+    getMainWindow()?.webContents.send('image-rejected', { filename, message });
+  });
+
   state.folderWatcher = watcher;
   await watcher.start();
   logger.success('Folder watcher started', { watchPath: watch.path });

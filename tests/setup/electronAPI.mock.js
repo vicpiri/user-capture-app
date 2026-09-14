@@ -205,6 +205,10 @@ class ElectronAPIMock extends EventEmitter {
     return this._registerEvent('image-detecting', callback);
   }
 
+  onImageRejected(callback) {
+    return this._registerEvent('image-rejected', callback);
+  }
+
   onNewImageDetected(callback) {
     return this._registerEvent('new-image-detected', callback);
   }
@@ -245,9 +249,6 @@ class ElectronAPIMock extends EventEmitter {
     return this._registerEvent('menu-toggle-camera', callback);
   }
 
-  onMenuCameraAutostart(callback) {
-    return this._registerEvent('menu-camera-autostart', callback);
-  }
 
   onChangeCamera(callback) {
     return this._registerEvent('change-camera', callback);

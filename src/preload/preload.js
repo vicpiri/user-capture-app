@@ -40,6 +40,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('image-detecting', (event, filename) => callback(filename));
   },
 
+  onImageRejected: (callback) => {
+    ipcRenderer.on('image-rejected', (event, data) => callback(data));
+  },
   onNewImageDetected: (callback) => {
     ipcRenderer.on('new-image-detected', (event, filename) => callback(filename));
   },
@@ -84,9 +87,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-toggle-camera', (event, enabled) => callback(enabled));
   },
 
-  onMenuCameraAutostart: (callback) => {
-    ipcRenderer.on('menu-camera-autostart', (event, enabled) => callback(enabled));
-  },
 
   onProjectOpened: (callback) => {
     ipcRenderer.on('project-opened', (event, data) => callback(data));

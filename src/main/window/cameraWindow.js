@@ -13,10 +13,12 @@ class CameraWindowManager {
    * Create the camera window
    * @param {Object} options - Window creation options
    * @param {boolean} options.isDev - Whether running in development mode
+   * @param {Function} [options.onClosed] - Called once the window has closed,
+   *   however it was closed
    * @returns {BrowserWindow} The created window
    */
   create(options = {}) {
-    const { isDev = false } = options;
+    const { isDev = false, onClosed = null } = options;
 
     this.window = new BrowserWindow({
       width: 800,
@@ -46,6 +48,7 @@ class CameraWindowManager {
 
     this.window.on('closed', () => {
       this.window = null;
+      if (onClosed) onClosed();
     });
 
     // Open DevTools in development

@@ -784,9 +784,7 @@ function initializeEventListeners() {
     }
   });
 
-  // Listen for new images (after processing is complete)
-  window.electronAPI.onNewImageDetected(async (filename) => {
-    // Stop blinking
+  const stopBlinking = () => {
     if (blinkInterval) {
       clearInterval(blinkInterval);
       blinkInterval = null;
@@ -794,6 +792,20 @@ function initializeEventListeners() {
         imageGridManager.setDetecting(false);
       }
     }
+  };
+
+  // A photo announced as being processed that will not be imported, for
+  // instance because it is over 5 MB: the viewer used to keep blinking
+  window.electronAPI.onImageRejected(async ({ message }) => {
+    stopBlinking();
+    if (message) {
+      await showInfoModal('Foto no importada', message);
+    }
+  });
+
+  // Listen for new images (after processing is complete)
+  window.electronAPI.onNewImageDetected(async (filename) => {
+    stopBlinking();
 
     if (imageGridManager) {
       await imageGridManager.loadImages(true);
