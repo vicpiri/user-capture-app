@@ -19,13 +19,7 @@ Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
-### 11. Las flechas mueven la lista de usuarios con algunos diálogos abiertos
-
-`isModalOpen` (`renderer.js`, configuración de `KeyboardNavigationManager`)
-solo tiene en cuenta algunos modales. Con las opciones de exportación, la
-etiqueta, la restauración, las preferencias, la orla, la actualización o la
-vista previa de foto abiertos, las flechas siguen moviendo la selección de la
-lista que queda detrás.
+Ninguno pendiente: todos están en «Corregidos».
 
 ## Prioridad baja
 
@@ -201,3 +195,9 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
 - **El aviso «Depósito no configurado» indicaba una ruta de menú que no
   existe** (de la lista de prioridad baja, corregido el 2026-09-14). Ahora
   remite a **Proyecto > Configurar depósito de imágenes**.
+- **Las flechas movían la lista de usuarios con algunos diálogos abiertos**
+  (antes el fallo 11, corregido el 2026-09-14). `renderer.js` pasaba a
+  `KeyboardNavigationManager` una lista a mano de cinco diálogos de dieciséis.
+  Ahora el gestor comprueba por defecto si hay cualquier `.modal.show`, así que
+  también cubre los diálogos que se añadan. Lo cubre
+  `KeyboardNavigationManager.test.js`.

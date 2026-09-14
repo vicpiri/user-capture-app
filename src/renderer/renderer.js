@@ -454,15 +454,7 @@ function initializeKeyboardNavigationManager() {
         imageGridManager.next();
       }
     },
-    isModalOpen: () => {
-      return (
-        (newProjectModalInstance && newProjectModalInstance.modal && newProjectModalInstance.modal.classList.contains('show')) ||
-        (confirmModalInstance && confirmModalInstance.modal && confirmModalInstance.modal.classList.contains('show')) ||
-        (progressModal && progressModal.classList.contains('show')) ||
-        (infoModalInstance && infoModalInstance.modal && infoModalInstance.modal.classList.contains('show')) ||
-        (projectInfoModalInstance && projectInfoModalInstance.modal && projectInfoModalInstance.modal.classList.contains('show'))
-      );
-    },
+    // isModalOpen is left to the manager, which checks for any open dialog
     hasImages: () => imageGridManager && imageGridManager.getImageCount() > 0
   });
 

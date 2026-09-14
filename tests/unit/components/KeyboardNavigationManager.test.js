@@ -130,6 +130,64 @@ describe('KeyboardNavigationManager', () => {
     });
   });
 
+  describe('dialogs open by default', () => {
+    // Without an isModalOpen of its own the manager looks for any open
+    // dialog. The list renderer.js used to pass named five of sixteen, so the
+    // arrows moved the user list behind the other eleven.
+    let defaultManager;
+    let callbacks;
+
+    const press = (key) => defaultManager.handleKeyDown(new KeyboardEvent('keydown', { key }));
+
+    beforeEach(() => {
+      document.body.innerHTML = `
+        <div id="export-options-modal" class="modal"></div>
+        <div id="preferences-modal" class="modal"></div>
+        <div id="user-image-modal" class="modal"></div>
+        <p class="modal-error show"></p>
+      `;
+      callbacks = {
+        onNavigateUserPrev: jest.fn(),
+        onNavigateUserNext: jest.fn(),
+        onNavigateImagePrev: jest.fn(),
+        onNavigateImageNext: jest.fn()
+      };
+      defaultManager = new KeyboardNavigationManager({ ...callbacks, hasImages: () => true });
+    });
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    test('should see no dialog open when none is shown', () => {
+      expect(defaultManager.isModalOpen()).toBe(false);
+    });
+
+    test.each(['export-options-modal', 'preferences-modal', 'user-image-modal'])('should see %s as open', (id) => {
+      document.getElementById(id).classList.add('show');
+
+      expect(defaultManager.isModalOpen()).toBe(true);
+    });
+
+    test('should leave the list and the viewer alone while a dialog is open', () => {
+      document.getElementById('export-options-modal').classList.add('show');
+
+      ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].forEach(press);
+
+      Object.values(callbacks).forEach(callback => expect(callback).not.toHaveBeenCalled());
+    });
+
+    test('should navigate again once the dialog closes', () => {
+      const dialog = document.getElementById('export-options-modal');
+      dialog.classList.add('show');
+      dialog.classList.remove('show');
+
+      press('ArrowDown');
+
+      expect(callbacks.onNavigateUserNext).toHaveBeenCalled();
+    });
+  });
+
   describe('handleKeyDown()', () => {
     beforeEach(() => {
       manager.enable();

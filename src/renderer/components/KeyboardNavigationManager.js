@@ -24,7 +24,11 @@
       this.onNavigateImageNext = config.onNavigateImageNext || (() => {});
 
       // State getters
-      this.isModalOpen = config.isModalOpen || (() => false);
+      // Any open dialog, whichever it is: every modal carries the "modal"
+      // class and gets "show" while open. A hand-kept list of modals missed
+      // most of them, and the arrows moved the list behind them.
+      this.isModalOpen = config.isModalOpen
+        || (() => typeof document !== 'undefined' && document.querySelector('.modal.show') !== null);
       this.hasImages = config.hasImages || (() => false);
 
       // Event handler (bound to this)

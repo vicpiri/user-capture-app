@@ -60,7 +60,7 @@ En la ventana principal puedes moverte con las flechas del teclado, sin usar el 
 
 - Al llegar al final de la lista o de las fotos, la navegación vuelve a empezar por el otro extremo.
 - Las flechas solo recorren los usuarios que se ven en la lista, con la búsqueda y los filtros aplicados.
-- Las flechas no actúan mientras escribes en un cuadro de texto, como el buscador, ni con un mensaje o una confirmación en pantalla.
+- Las flechas no actúan mientras escribes en un cuadro de texto, como el buscador, ni con cualquier ventana de diálogo abierta: mensajes, confirmaciones, opciones de exportación, preferencias, etc.
 
 Un flujo rápido para enlazar fotos: `↓` hasta la persona, `←` o `→` hasta su foto y `Ctrl+L`. Consulta [Enlazar fotos](enlazar.md).
 
