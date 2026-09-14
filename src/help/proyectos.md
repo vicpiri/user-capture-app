@@ -105,7 +105,7 @@ Cuando recibas un XML más reciente (altas, bajas o cambios de grupo durante el 
 
 Las personas se reconocen por su NIA (alumnado) o su documento (personal). De las que siguen en el XML se actualizan el nombre, los apellidos, la fecha de nacimiento, el documento y el grupo. Sus fotos enlazadas se mantienen.
 
-Tras la actualización, el archivo `import-report.log` se reescribe con la lista actual del alumnado sin grupo, y la fila **Archivo XML** de la información del proyecto pasa a mostrar el nuevo archivo.
+Tras la actualización, el archivo `import-report.log` se reescribe con la lista actual del alumnado sin grupo, y la fila **Archivo XML** de la información del proyecto pasa a mostrar el nuevo archivo. Si la actualización falla o respondes **No**, esa fila sigue mostrando el XML anterior.
 
 > **Importante:** Revisa el número de usuarios eliminados antes de aceptar. Un XML correcto pero parcial, por ejemplo con un solo grupo, haría que el resto del centro pareciera dado de baja.
 

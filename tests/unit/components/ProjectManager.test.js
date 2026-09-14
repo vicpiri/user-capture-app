@@ -455,7 +455,8 @@ describe('ProjectManager', () => {
         groups: ['G1'],
         newUsersMap: { 1: { name: 'User1' } },
         deletedUsers: [2],
-        currentUsers: [{ id: 3 }]
+        currentUsers: [{ id: 3 }],
+        xmlPath: '/path/to/new.xml'
       };
       mockElectronAPI.updateXML.mockResolvedValue({
         success: true,

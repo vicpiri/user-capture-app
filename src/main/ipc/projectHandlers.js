@@ -414,9 +414,6 @@ function registerProjectHandlers(context) {
       logger.section('UPDATING XML FILE');
       logger.info(`New XML file: ${xmlPath}`);
 
-      // Keep the project information pointing at the file actually in use
-      await state.dbManager.setProjectSetting('xmlFilePath', xmlPath);
-
       // Validate XML path
       if (!fs.existsSync(xmlPath)) {
         throw new Error('El archivo XML no existe');
@@ -558,7 +555,9 @@ function registerProjectHandlers(context) {
         groups: newData.groups,
         newUsersMap: Array.from(newUsersMap.entries()),
         deletedUsers: changes.toDelete,
-        currentUsers: currentUsers // Pass current users to avoid reloading
+        currentUsers: currentUsers, // Pass current users to avoid reloading
+        // Handed back on confirmation, which is when it becomes the project's XML
+        xmlPath
       };
     } catch (error) {
       logger.error('Error analyzing XML update', error);
@@ -573,7 +572,7 @@ function registerProjectHandlers(context) {
         throw new Error('No hay ningún proyecto abierto');
       }
 
-      const { groups, newUsersMap, deletedUsers, currentUsers } = data;
+      const { groups, newUsersMap, deletedUsers, currentUsers, xmlPath } = data;
 
       logger.section('APPLYING XML UPDATE');
 
@@ -732,6 +731,12 @@ function registerProjectHandlers(context) {
 
       logger.section('XML UPDATE COMPLETED');
       logger.success('XML update completed successfully');
+
+      // Only now is this the file the users came from. Recording it on
+      // analysis showed a file that was missing, unreadable or never applied.
+      if (xmlPath) {
+        await state.dbManager.setProjectSetting('xmlFilePath', xmlPath);
+      }
 
       // Generate updated import report
       try {

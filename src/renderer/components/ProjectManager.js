@@ -258,7 +258,8 @@
           groups: updateResult.groups,
           newUsersMap: updateResult.newUsersMap,
           deletedUsers: updateResult.deletedUsers,
-          currentUsers: updateResult.currentUsers
+          currentUsers: updateResult.currentUsers,
+          xmlPath: updateResult.xmlPath
         });
 
         // Wait a moment to show 100% progress

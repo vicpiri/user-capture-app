@@ -62,7 +62,8 @@ describe('XML update', () => {
       groups: analysis.groups,
       newUsersMap: analysis.newUsersMap,
       deletedUsers: analysis.deletedUsers,
-      currentUsers: analysis.currentUsers
+      currentUsers: analysis.currentUsers,
+      xmlPath: analysis.xmlPath
     });
 
   const usersInDb = async () => {
@@ -223,6 +224,45 @@ describe('XML update', () => {
 
       expect(result.changes.toDeleteWithImage).toBe(1);
       expect(result.changes.toDeleteWithoutImage).toBe(2);
+    });
+  });
+
+  describe('the XML recorded for the project information', () => {
+    const PREVIOUS = 'C:\\anterior\\centro.xml';
+    const recorded = () => db.getProjectSetting('xmlFilePath');
+    const unchangedRoll = () => writeXml(
+      `${groupsXml}<alumnos>${studentXml(1001)}${studentXml(1002, '1ESOA', 'LUIS')}</alumnos>` +
+      `<docentes>${teacherXml('D100')}</docentes>`
+    );
+
+    beforeEach(async () => {
+      await db.setProjectSetting('xmlFilePath', PREVIOUS);
+    });
+
+    test('should keep the previous one when the new file does not exist', async () => {
+      await analyse(path.join(projectPath, 'no-existe.xml'));
+
+      await expect(recorded()).resolves.toBe(PREVIOUS);
+    });
+
+    test('should keep the previous one when the new file cannot be read', async () => {
+      await analyse(writeXml('<alumnos><alumno nombre="ANA"'));
+
+      await expect(recorded()).resolves.toBe(PREVIOUS);
+    });
+
+    test('should keep the previous one while the changes wait for confirmation', async () => {
+      await analyse(unchangedRoll());
+
+      await expect(recorded()).resolves.toBe(PREVIOUS);
+    });
+
+    test('should record the new one once the changes are applied', async () => {
+      const xmlPath = unchangedRoll();
+
+      await apply(await analyse(xmlPath));
+
+      await expect(recorded()).resolves.toBe(xmlPath);
     });
   });
 

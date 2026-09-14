@@ -19,13 +19,6 @@ Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
-### 8. Actualizar el XML guarda la ruta antes de validarla
-
-`update-xml` guarda el nuevo `xmlFilePath` antes de comprobar que el archivo
-existe y antes de que el usuario confirme los cambios. Tras una actualización
-fallida o cancelada, la información del proyecto muestra un XML que no se
-llegó a usar.
-
 ### 9. El resumen de la exportación al depósito dice "0 reemplazos" sin las opciones del depósito
 
 Con las opciones del depósito del menú Ver desactivadas, `get-users` rellena
@@ -207,3 +200,10 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   única pregunta no lo mencionaba. Ahora devuelve también `currentImage`, y la
   pregunta dice que esa foto se reemplazará. Lo cubre
   `linkImageHandlers.test.js`.
+- **Actualizar el XML guardaba la ruta antes de validarla** (antes el fallo 8,
+  corregido el 2026-09-14). `update-xml` guardaba `xmlFilePath` al empezar el
+  análisis, así que un archivo inexistente, ilegible o una actualización
+  cancelada dejaban en la información del proyecto un XML que no se usó. Ahora
+  el análisis devuelve la ruta, la ventana la pasa a `confirm-update-xml` y
+  esta la guarda al terminar de aplicar los cambios. Lo cubre
+  `xmlUpdateHandlers.test.js`.
