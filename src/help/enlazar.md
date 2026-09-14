@@ -77,8 +77,6 @@ Para quitar de golpe las fotos de muchos usuarios después de enviarlas al depó
 - Esta ventana sí se actualiza sola cuando cambia el contenido del depósito.
 - Necesita que el proyecto tenga un depósito configurado en **Proyecto > Configurar depósito de imágenes**. Si no lo tiene, aparece el aviso «Depósito no configurado».
 
-<!-- REVISAR: el aviso "Depósito no configurado" (main.js:563) dice "Ve a Archivo > Configuración > Depósito imágenes de usuario", una ruta de menú que no existe. La correcta es Proyecto > Configurar depósito de imágenes. -->
-
 ## Etiquetas de imágenes
 
 Las etiquetas son notas cortas que puedes poner a una foto capturada, por ejemplo para marcar las que hay que repetir. La etiqueta se guarda en la foto, no en el usuario, y una foto puede tener varias.

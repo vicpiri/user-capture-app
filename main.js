@@ -370,25 +370,50 @@ function createMenu() {
         }
       },
       refreshRepositoryImages: async () => {
-        if (repositoryMirror) {
-          logger.info('[Menu] Manual repository refresh requested');
-          const mainWindow = mainWindowManager.getWindow();
+        logger.info('[Menu] Manual repository refresh requested');
+        const mainWindow = mainWindowManager.getWindow();
 
+        if (repositoryMirror) {
           // Force a full resync by marking all files for resync
           await repositoryMirror.forceFullResync();
+        } else {
+          // The local copy only starts when something needs it, and with the
+          // Ver repository options off nothing had: this used to do nothing.
+          // Starting it already syncs every file.
+          if (!dbManager) {
+            dialog.showMessageBox(mainWindow, {
+              type: 'warning',
+              title: 'Proyecto no abierto',
+              message: 'Debes abrir o crear un proyecto primero',
+              buttons: ['Aceptar']
+            });
+            return;
+          }
 
-          // Broadcast to all windows
-          if (mainWindow) {
-            mainWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
+          await ensureRepositoryMirrorStarted();
+
+          if (!repositoryMirror) {
+            dialog.showMessageBox(mainWindow, {
+              type: 'warning',
+              title: 'Depósito no configurado',
+              message: 'Debes configurar el depósito de imágenes primero.\n\nVe a Proyecto > Configurar depósito de imágenes',
+              buttons: ['Aceptar']
+            });
+            return;
           }
-          const imageGridWindow = imageGridWindowManager.getWindow();
-          if (imageGridWindow) {
-            imageGridWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
-          }
-          const repositoryGridWindow = repositoryGridWindowManager.getWindow();
-          if (repositoryGridWindow) {
-            repositoryGridWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
-          }
+        }
+
+        // Broadcast to all windows
+        if (mainWindow) {
+          mainWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
+        }
+        const imageGridWindow = imageGridWindowManager.getWindow();
+        if (imageGridWindow) {
+          imageGridWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
+        }
+        const repositoryGridWindow = repositoryGridWindowManager.getWindow();
+        if (repositoryGridWindow) {
+          repositoryGridWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
         }
       },
       openImageGridWindow,
@@ -560,7 +585,7 @@ async function openRepositoryGridWindow() {
     dialog.showMessageBox(mainWindow, {
       type: 'warning',
       title: 'Depósito no configurado',
-      message: 'Debes configurar el depósito de imágenes primero.\n\nVe a Archivo > Configuración > Depósito imágenes de usuario',
+      message: 'Debes configurar el depósito de imágenes primero.\n\nVe a Proyecto > Configurar depósito de imágenes',
       buttons: ['Aceptar']
     });
     return;

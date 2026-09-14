@@ -19,15 +19,6 @@ Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
-### 10. La copia local del depósito no arranca al abrir un proyecto reciente
-
-Al arrancar o al abrir desde Proyectos Recientes, `openRecentProject`
-(`main.js`) solo inicia la copia local si alguna opción del depósito del menú
-Ver está activa. Hasta entonces **Ver > Actualizar imágenes del depósito** no
-hace nada. Con **Abrir Proyecto...** se inicia siempre.
-
-Manual: `deposito.md`.
-
 ### 11. Las flechas mueven la lista de usuarios con algunos diálogos abiertos
 
 `isModalOpen` (`renderer.js`, configuración de `KeyboardNavigationManager`)
@@ -44,10 +35,6 @@ lista que queda detrás.
 - **Cerrar la ventana de la cámara con su X deja el menú desincronizado.** El
   menú no se reconstruye y **Mostrar ventana de cámara** apunta a una ventana
   cerrada. Sin probar. (`captura.md`)
-- **Ruta de menú inexistente en el aviso "Depósito no configurado"**
-  (`main.js`, *confirmado*): dice "Archivo > Configuración > Depósito
-  imágenes de usuario"; la correcta es **Proyecto > Configurar depósito de
-  imágenes**. (`enlazar.md`)
 - **Los filtros de solicitudes no se recuerdan bien.** `saveDisplayPreferences`
   (`utils/config.js`, *confirmado*) no guarda `showPublicationRequestsOnly`
   aunque al arrancar se lee. **Carnets solicitados** sí se guarda y aparece
@@ -204,3 +191,13 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   `get-users` deja a `false` cuando no carga el depósito. Ahora
   `exportToRepository` pregunta a `count-repository-images`, que lee el
   depósito, y el resumen usa esas cifras. Lo cubre `ExportManager.test.js`.
+- **Ver > Actualizar imágenes del depósito no hacía nada si la copia local no
+  estaba en marcha** (antes el fallo 10, corregido el 2026-09-14). La copia
+  local solo arranca cuando algo la necesita, a propósito, y al abrir un
+  proyecto reciente con las opciones del depósito de **Ver** desactivadas no
+  arrancaba. El comando solo actuaba sobre una copia ya en marcha; ahora la
+  arranca si hace falta y avisa si no hay proyecto o depósito configurado.
+  Probado en la aplicación: `main.js` no tiene tests unitarios.
+- **El aviso «Depósito no configurado» indicaba una ruta de menú que no
+  existe** (de la lista de prioridad baja, corregido el 2026-09-14). Ahora
+  remite a **Proyecto > Configurar depósito de imágenes**.

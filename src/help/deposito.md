@@ -26,14 +26,12 @@ Para cambiar de depósito, repite los pasos: la aplicación deja de usar el ante
 
 Como el depósito suele estar en la red o en Google Drive, la aplicación guarda en tu equipo una copia de sus fotos y trabaja con ella, para no quedarse esperando a la red.
 
-- La copia se pone en marcha sola, en segundo plano, cuando la aplicación necesita las fotos del depósito: normalmente al abrir el proyecto, o al activar las opciones del depósito del menú **Ver**.
+- La copia se pone en marcha sola, en segundo plano, cuando la aplicación necesita las fotos del depósito: al activar las opciones del depósito del menú **Ver**, al abrir el cuadro de imágenes en depósito o al elegir **Ver > Actualizar imágenes del depósito**. Si abres el proyecto con esas opciones activadas, arranca al abrirlo.
 - La primera vez copia todas las fotos y, si el depósito es grande, puede tardar varios minutos. Después solo copia lo que cambia.
 - Mientras tanto puedes seguir trabajando. En la lista, las miniaturas e indicadores del depósito muestran un pequeño círculo girando hasta que llegan los datos. En el cuadro de imágenes en depósito verás el progreso («Sincronizando: … archivos»).
 - La aplicación revisa el depósito cada pocos segundos. Si alguien añade, cambia o borra una foto, la lista se actualiza sola poco después, y las fotos borradas del depósito desaparecen también de la copia local.
 
-Si una foto que sabes que está en el depósito no aparece, elige **Ver > Actualizar imágenes del depósito** (`Ctrl+Shift+D`). La aplicación vuelve a comparar el depósito con la copia local y trae lo que haya cambiado.
-
-<!-- REVISAR: al abrir un proyecto desde Proyectos Recientes o al arrancar, la copia local solo se inicia si alguna opción del depósito del menú Ver está activa (main.js, openRecentProject). En ese caso Ver > Actualizar imágenes del depósito no hace nada hasta que algo la inicie. Con Abrir Proyecto... se inicia siempre. -->
+Si una foto que sabes que está en el depósito no aparece, elige **Ver > Actualizar imágenes del depósito** (`Ctrl+Shift+D`). La aplicación vuelve a comparar el depósito con la copia local y trae lo que haya cambiado, o pone la copia en marcha si aún no lo estaba. Si el proyecto no tiene depósito configurado, te avisa.
 
 ## Ver las fotos del depósito en la lista
 
