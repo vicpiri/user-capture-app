@@ -1,4 +1,3 @@
-- Migrar Electron 28 (fuera de soporte) a la línea 44. Plan redactado en [docs/MIGRACION_ELECTRON_PLAN.md](docs/MIGRACION_ELECTRON_PLAN.md); pendiente de implementar.
 - Purgar la carpeta `Reemplazadas` del depósito: crece sin límite, y por ser compartida entre equipos se decidió no borrar nada automáticamente. Ver [docs/EXPORTACION_DEPOSITO_PLAN.md](docs/EXPORTACION_DEPOSITO_PLAN.md).
 - Hacer que todas las exportaciones pregunten si se exportan todos los usuarios, el grupo seleccionado o los usuarios filtrados.
 - Rotar el `app.log` del proyecto: crece indefinidamente (más de 8 MB en un proyecto en uso) porque cada apertura añade al mismo archivo y nunca se trunca ni se archiva.
