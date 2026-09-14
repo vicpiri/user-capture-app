@@ -107,6 +107,8 @@ Tras la actualización, el archivo `import-report.log` se reescribe con la lista
 
 > **Importante:** Revisa el número de usuarios eliminados antes de aceptar. Un XML correcto pero parcial, por ejemplo con un solo grupo, haría que el resto del centro pareciera dado de baja.
 
+> **Consejo:** Las versiones anteriores a la 1.10.0 perdían los ceros a la izquierda de los NIA y documentos formados solo por números: `0123456` se guardaba como `123456`, y las fotos del depósito con el identificador completo no se encontraban. Si tu proyecto es anterior, actualiza el XML una vez: la aplicación reconoce a esas personas y guarda su identificador con los ceros, sin perder sus fotos.
+
 ## El grupo Eliminados
 
 Cuando una persona desaparece del XML:

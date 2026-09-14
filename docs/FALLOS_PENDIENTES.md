@@ -19,14 +19,6 @@ Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
-### 4. El XML pierde los ceros a la izquierda de NIA y documentos
-
-*Confirmado en el código.* `parseAttributeValue: true` (`src/main/xmlParser.js`)
-convierte en número los atributos que lo parecen, así que un NIA o documento
-como `0123456` se guarda como `123456`. La importación de imágenes con ID y el
-depósito buscan después archivos con el identificador sin ceros y no los
-encuentran.
-
 ### 5. Crear un proyecto no cierra el anterior
 
 *Confirmado en el código.* `create-project` (`projectHandlers.js`) no llama a
@@ -213,3 +205,11 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   ocultar las miniaturas es cosa solo de `UserRowRenderer`; desaparecen la
   opción `loadCapturedImages` y los dos parches que la compensaban. Lo cubre
   `tests/unit/main/getUsersHandler.test.js`.
+- **El XML perdía los ceros a la izquierda de NIA y documentos** (antes el
+  fallo 4, corregido el 2026-09-14). `parseAttributeValue: true` convertía en
+  número los atributos que lo parecían. Ahora el analizador lo lee todo como
+  texto. Los proyectos importados antes guardaron los identificadores sin
+  ceros: la actualización del XML los compara sin tener en cuenta los ceros de
+  la izquierda (`identifierKey()` en `projectHandlers.js`), así que los
+  reconoce en lugar de darlos de baja y de alta, y guarda el identificador con
+  los ceros. Lo cubren `XMLUserParser.test.js` y `xmlUpdateHandlers.test.js`.

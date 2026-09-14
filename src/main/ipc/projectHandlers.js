@@ -10,6 +10,27 @@ const ImageManager = require('../imageManager');
 const { startIngestWatcher } = require('../ingestFolder');
 
 /**
+ * Identifier as the XML update compares it
+ *
+ * Until the parser kept attributes as text, an all-digit NIA or document lost
+ * its leading zeros on import: "0123456" was stored as "123456". Comparing
+ * all-digit identifiers without those zeros lets an update recognise those
+ * users instead of treating them as removed and added again, which would lose
+ * their photo link. Applying the update then stores the identifier as the XML
+ * has it, zeros included.
+ *
+ * @param {string|number|null|undefined} value
+ * @returns {string}
+ */
+function identifierKey(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  const text = String(value).trim();
+  return /^\d+$/.test(text) ? (text.replace(/^0+/, '') || '0') : text;
+}
+
+/**
  * Register project-related IPC handlers
  * @param {Object} context - Shared context object
  * @param {BrowserWindow} context.mainWindow - Main window instance
@@ -428,7 +449,7 @@ function registerProjectHandlers(context) {
       // Add students (identified by NIA)
       newData.students.forEach(student => {
         if (student.nia) {
-          newUsersMap.set(`student_${student.nia}`, {
+          newUsersMap.set(`student_${identifierKey(student.nia)}`, {
             type: 'student',
             identifier: student.nia,
             ...student
@@ -439,7 +460,7 @@ function registerProjectHandlers(context) {
       // Add teachers (identified by document)
       newData.teachers.forEach(teacher => {
         if (teacher.document) {
-          newUsersMap.set(`teacher_${teacher.document}`, {
+          newUsersMap.set(`teacher_${identifierKey(teacher.document)}`, {
             type: 'teacher',
             identifier: teacher.document,
             ...teacher
@@ -450,7 +471,7 @@ function registerProjectHandlers(context) {
       // Add non-teaching staff (identified by document)
       newData.nonTeachingStaff.forEach(staff => {
         if (staff.document) {
-          newUsersMap.set(`non_teaching_staff_${staff.document}`, {
+          newUsersMap.set(`non_teaching_staff_${identifierKey(staff.document)}`, {
             type: 'non_teaching_staff',
             identifier: staff.document,
             ...staff
@@ -469,11 +490,9 @@ function registerProjectHandlers(context) {
       for (const [key, newUser] of newUsersMap) {
         const existingUser = currentUsers.find(u => {
           if (u.type === 'student' && newUser.type === 'student') {
-            // Use == instead of === to handle number vs string comparison
-            return u.nia == newUser.nia;
+            return identifierKey(u.nia) === identifierKey(newUser.nia);
           } else if (u.type !== 'student' && newUser.type !== 'student') {
-            // Use == instead of === to handle number vs string comparison
-            return u.document == newUser.document;
+            return identifierKey(u.document) === identifierKey(newUser.document);
           }
           return false;
         });
@@ -494,8 +513,8 @@ function registerProjectHandlers(context) {
       // Check for users to delete (not in new XML)
       for (const currentUser of currentUsers) {
         const key = currentUser.type === 'student'
-          ? `student_${currentUser.nia}`
-          : `${currentUser.type}_${currentUser.document}`;
+          ? `student_${identifierKey(currentUser.nia)}`
+          : `${currentUser.type}_${identifierKey(currentUser.document)}`;
 
         if (!newUsersMap.has(key)) {
           changes.toDelete.push(currentUser);
@@ -613,11 +632,10 @@ function registerProjectHandlers(context) {
         // Find if user existed in original database (before deletions)
         const existingUser = currentUsers.find(u => {
           if (newUser.type === 'student') {
-            // Compare with type coercion (== instead of ===) to handle number vs string
-            return u.type === 'student' && u.nia == newUser.nia;
+            return u.type === 'student' && identifierKey(u.nia) === identifierKey(newUser.nia);
           } else {
             // For teachers and non_teaching_staff, match by document and type
-            return u.type === newUser.type && u.document == newUser.document;
+            return u.type === newUser.type && identifierKey(u.document) === identifierKey(newUser.document);
           }
         });
 
@@ -629,6 +647,8 @@ function registerProjectHandlers(context) {
             existingUser.last_name2 !== newUser.last_name2 ||
             existingUser.birth_date !== newUser.birth_date ||
             existingUser.document !== newUser.document ||
+            // Restores the leading zeros an older import dropped
+            (newUser.type === 'student' && String(existingUser.nia) !== String(newUser.nia)) ||
             existingUser.group_code !== newUser.group_code;
 
           if (needsUpdate) {

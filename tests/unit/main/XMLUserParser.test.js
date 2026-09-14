@@ -143,7 +143,7 @@ describe('XMLUserParser', () => {
         last_name2: 'LOPEZ',
         birth_date: '2008-05-12',
         document: '12345678Z',
-        nia: 10785059,
+        nia: '10785059',
         group_code: '1ESOA'
       });
     });
@@ -177,6 +177,40 @@ describe('XMLUserParser', () => {
       );
 
       expect(result.students).toHaveLength(1);
+    });
+  });
+
+  describe('identifiers', () => {
+    const zerosXml = `
+      <centro>
+        <grupos><grupo codigo="101" nombre="Aula 101"/></grupos>
+        <alumnos>
+          <alumno nombre="ANA" apellido1="GARCIA" NIA="0123456" documento="01234567" grupo="101"/>
+        </alumnos>
+        <docentes>
+          <docente nombre="MARIA" apellido1="RUIZ" documento="00012345"/>
+        </docentes>
+      </centro>
+    `;
+
+    test('should keep the leading zeros of an NIA', async () => {
+      const [ana] = (await parseXml(zerosXml)).students;
+
+      expect(ana.nia).toBe('0123456');
+    });
+
+    test('should keep the leading zeros of a document made only of digits', async () => {
+      const result = await parseXml(zerosXml);
+
+      expect(result.students[0].document).toBe('01234567');
+      expect(result.teachers[0].document).toBe('00012345');
+    });
+
+    test('should read values that look like numbers as text', async () => {
+      const result = await parseXml(zerosXml);
+
+      expect(result.groups[0].code).toBe('101');
+      expect(result.students[0].group_code).toBe('101');
     });
   });
 

@@ -4,10 +4,13 @@ const { XMLParser, XMLValidator } = require('fast-xml-parser');
 class XMLUserParser {
   constructor(xmlPath) {
     this.xmlPath = xmlPath;
+    // Every attribute is kept as text. Converting the ones that look like
+    // numbers turned an NIA or document such as "0123456" into 123456, and the
+    // photos named after the real identifier were then never found.
     this.parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_',
-      parseAttributeValue: true
+      parseAttributeValue: false
     });
   }
 

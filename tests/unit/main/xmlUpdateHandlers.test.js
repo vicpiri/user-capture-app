@@ -170,9 +170,9 @@ describe('XML update', () => {
       expect(result.changes.toUpdate).toBe(3);
     });
 
-    test('should match students by NIA even though the XML gives it as a number', async () => {
-      // The database stores NIA as text; a strict comparison would see every
-      // student as new and every existing one as deleted
+    test('should match students by an NIA made only of digits', async () => {
+      // A mismatch between how the XML and the database hold the NIA would
+      // see every student as new and every existing one as deleted
       const xmlPath = writeXml(`${groupsXml}<alumnos>${studentXml(1001)}</alumnos>`);
 
       const result = await analyse(xmlPath);
@@ -223,6 +223,68 @@ describe('XML update', () => {
 
       expect(result.changes.toDeleteWithImage).toBe(1);
       expect(result.changes.toDeleteWithoutImage).toBe(2);
+    });
+  });
+
+  describe('identifiers an older import stored without their leading zeros', () => {
+    // What a project imported before the parser kept attributes as text holds
+    // for an NIA "0123456" and a document "01234567"
+    beforeEach(async () => {
+      await db.importUsers({
+        groups: [],
+        students: [
+          { first_name: 'EVA', last_name1: 'SOLER', last_name2: '', nia: '123456', group_code: '1ESOA', document: '', birth_date: '2008-03-03' }
+        ],
+        teachers: [
+          { first_name: 'JUAN', last_name1: 'MARTIN', last_name2: '', document: '1234567', birth_date: '1975-01-01' }
+        ],
+        nonTeachingStaff: []
+      });
+
+      const eva = (await db.getUsers({})).find(u => u.first_name === 'EVA');
+      await db.linkImageToUser(eva.id, 'eva.jpg');
+    });
+
+    const rollWithZeros = () => writeXml(
+      `${groupsXml}<alumnos>${studentXml(1001)}${studentXml(1002, '1ESOA', 'LUIS')}` +
+      '<alumno nombre="EVA" apellido1="SOLER" NIA="0123456" grupo="1ESOA" fecha_nac="2008-03-03"/></alumnos>' +
+      `<docentes>${teacherXml('D100')}<docente nombre="JUAN" apellido1="MARTIN" documento="01234567" fecha_nac="1975-01-01"/></docentes>`
+    );
+
+    test('should recognise them instead of reporting them as removed and new', async () => {
+      const result = await analyse(rollWithZeros());
+
+      expect(result.changes.toAdd).toBe(0);
+      expect(result.changes.toDelete).toBe(0);
+    });
+
+    test('should store them as the XML has them, zeros included', async () => {
+      await apply(await analyse(rollWithZeros()));
+
+      const users = await usersInDb();
+      expect(users.find(u => u.first_name === 'EVA').nia).toBe('0123456');
+      expect(users.find(u => u.first_name === 'JUAN').document).toBe('01234567');
+    });
+
+    test('should keep the photo and the group of the user it recognised', async () => {
+      await apply(await analyse(rollWithZeros()));
+
+      const eva = (await usersInDb()).find(u => u.first_name === 'EVA');
+      expect(eva.image_path).toBe('eva.jpg');
+      expect(eva.group_code).toBe('1ESOA');
+    });
+
+    test('should not take identifiers that differ in more than zeros for the same person', async () => {
+      const xmlPath = writeXml(
+        `${groupsXml}<alumnos>${studentXml(1001)}${studentXml(1002, '1ESOA', 'LUIS')}` +
+        '<alumno nombre="EVA" apellido1="SOLER" NIA="0123457" grupo="1ESOA"/></alumnos>' +
+        `<docentes>${teacherXml('D100')}<docente nombre="JUAN" apellido1="MARTIN" documento="01234567"/></docentes>`
+      );
+
+      const result = await analyse(xmlPath);
+
+      expect(result.changes.toAdd).toBe(1);
+      expect(result.changes.toDelete).toBe(1);
     });
   });
 
