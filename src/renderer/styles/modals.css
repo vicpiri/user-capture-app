@@ -34,6 +34,40 @@
   margin-bottom: 20px;
 }
 
+/* Error shown inside a modal, next to what caused it, so the user can fix it
+   without the modal closing */
+.modal-error {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #fecaca;
+  background-color: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 6px;
+}
+
+.modal-error::before {
+  content: '!';
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  color: #1a1f2e;
+  background-color: #ef4444;
+  border-radius: 50%;
+}
+
+.modal-error[hidden] {
+  display: none;
+}
+
 .form-group label {
   display: block;
   margin-bottom: 8px;

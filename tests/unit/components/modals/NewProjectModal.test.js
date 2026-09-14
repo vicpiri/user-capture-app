@@ -7,6 +7,12 @@ const { BaseModal } = require('../../../../src/renderer/core/BaseModal');
 const { store } = require('../../../../src/renderer/core/store');
 
 describe('NewProjectModal', () => {
+  const errorBox = () => document.getElementById('new-project-error');
+  const expectError = (message) => {
+    expect(errorBox().hidden).toBe(false);
+    expect(errorBox().textContent).toBe(message);
+  };
+
   let modal;
   let mockElectronAPI;
 
@@ -19,6 +25,7 @@ describe('NewProjectModal', () => {
           <button id="select-folder-btn">Seleccionar carpeta</button>
           <input id="xml-file" />
           <button id="select-xml-btn">Seleccionar XML</button>
+          <div id="new-project-error" hidden></div>
           <button id="create-project-btn">Crear</button>
           <button id="cancel-new-project-btn">Cancelar</button>
         </div>
@@ -38,6 +45,7 @@ describe('NewProjectModal', () => {
       closeProgressModal: jest.fn()
     });
     modal.init();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -123,12 +131,9 @@ describe('NewProjectModal', () => {
 
     it('should handle errors gracefully', async () => {
       mockElectronAPI.showOpenDialog.mockRejectedValue(new Error('Test error'));
-      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
-
       await modal.handleSelectFolder();
 
-      expect(alertSpy).toHaveBeenCalledWith('Error al seleccionar carpeta');
-      alertSpy.mockRestore();
+      expectError('Error al seleccionar carpeta');
     });
   });
 
@@ -175,12 +180,9 @@ describe('NewProjectModal', () => {
 
     it('should handle errors gracefully', async () => {
       mockElectronAPI.showOpenDialog.mockRejectedValue(new Error('Test error'));
-      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
-
       await modal.handleSelectXml();
 
-      expect(alertSpy).toHaveBeenCalledWith('Error al seleccionar archivo XML');
-      alertSpy.mockRestore();
+      expectError('Error al seleccionar archivo XML');
     });
   });
 
@@ -192,22 +194,16 @@ describe('NewProjectModal', () => {
 
     it('should validate folder selection', async () => {
       modal.selectedFolder = null;
-      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
-
       await modal.handleCreate();
 
-      expect(alertSpy).toHaveBeenCalledWith('Por favor, selecciona la carpeta del proyecto');
-      alertSpy.mockRestore();
+      expectError('Por favor, selecciona la carpeta del proyecto');
     });
 
     it('should validate XML file selection', async () => {
       modal.selectedXmlFile = null;
-      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
-
       await modal.handleCreate();
 
-      expect(alertSpy).toHaveBeenCalledWith('Por favor, selecciona el archivo XML');
-      alertSpy.mockRestore();
+      expectError('Por favor, selecciona el archivo XML');
     });
 
     it('should call createProject with correct parameters', async () => {
@@ -269,22 +265,16 @@ describe('NewProjectModal', () => {
         error: 'Test error message'
       });
 
-      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
-
       await modal.handleCreate();
 
-      expect(alertSpy).toHaveBeenCalledWith('Test error message');
-      alertSpy.mockRestore();
+      expectError('Test error message');
     });
 
     it('should handle exceptions', async () => {
       mockElectronAPI.createProject.mockRejectedValue(new Error('Test exception'));
-      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
-
       await modal.handleCreate();
 
-      expect(alertSpy).toHaveBeenCalledWith('Error al crear proyecto: Test exception');
-      alertSpy.mockRestore();
+      expectError('Error al crear proyecto: Test exception');
     });
   });
 
@@ -331,6 +321,75 @@ describe('NewProjectModal', () => {
 
       // Clean up
       modal.handleCancel();
+    });
+  });
+
+  describe('error message', () => {
+    const EXISTING = 'La carpeta ya contiene un proyecto. Para trabajar con él, ábrelo con Archivo > Abrir Proyecto...';
+
+    const failCreation = async () => {
+      modal.selectedFolder = 'C:\\test\\folder';
+      modal.selectedXmlFile = 'C:\\test\\file.xml';
+      mockElectronAPI.createProject.mockResolvedValue({ success: false, error: EXISTING });
+      await modal.handleCreate();
+    };
+
+    it('should start hidden', () => {
+      expect(errorBox().hidden).toBe(true);
+    });
+
+    it('should show why the project could not be created, inside the modal', async () => {
+      const closeSpy = jest.spyOn(modal, 'close');
+
+      await failCreation();
+
+      expectError(EXISTING);
+      expect(closeSpy).not.toHaveBeenCalled();
+    });
+
+    it('should go away when another folder is chosen', async () => {
+      await failCreation();
+      mockElectronAPI.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:\\otra'] });
+
+      await modal.handleSelectFolder();
+
+      expect(errorBox().hidden).toBe(true);
+    });
+
+    it('should stay when choosing a folder is cancelled', async () => {
+      await failCreation();
+      mockElectronAPI.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+
+      await modal.handleSelectFolder();
+
+      expectError(EXISTING);
+    });
+
+    it('should go away when another XML is chosen', async () => {
+      await failCreation();
+      mockElectronAPI.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:\\otro.xml'] });
+
+      await modal.handleSelectXml();
+
+      expect(errorBox().hidden).toBe(true);
+    });
+
+    it('should go away when the modal is opened again', async () => {
+      await failCreation();
+
+      modal.resetForm();
+
+      expect(errorBox().hidden).toBe(true);
+      expect(errorBox().textContent).toBe('');
+    });
+
+    it('should not linger once a new attempt succeeds', async () => {
+      await failCreation();
+      mockElectronAPI.createProject.mockResolvedValue({ success: true, project: {} });
+
+      await modal.handleCreate();
+
+      expect(errorBox().hidden).toBe(true);
     });
   });
 

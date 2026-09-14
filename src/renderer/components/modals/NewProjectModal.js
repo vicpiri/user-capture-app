@@ -37,6 +37,7 @@
     this.selectXmlBtn = null;
     this.createBtn = null;
     this.cancelBtn = null;
+    this.errorEl = null;
 
     // State
     this.selectedFolder = null;
@@ -58,6 +59,7 @@
     this.selectXmlBtn = this.modal.querySelector('#select-xml-btn');
     this.createBtn = this.modal.querySelector('#create-project-btn');
     this.cancelBtn = this.modal.querySelector('#cancel-new-project-btn');
+    this.errorEl = this.modal.querySelector('#new-project-error');
 
     // Setup event listeners
     this.addEventListener(this.selectFolderBtn, 'click', () => this.handleSelectFolder());
@@ -101,6 +103,7 @@
       if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
         this.selectedFolder = result.filePaths[0];
         this.projectFolderInput.value = result.filePaths[0];
+        this._clearError();
         this._log('Folder selected:', result.filePaths[0]);
       }
     } catch (error) {
@@ -123,6 +126,7 @@
       if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
         this.selectedXmlFile = result.filePaths[0];
         this.xmlFileInput.value = result.filePaths[0];
+        this._clearError();
         this._log('XML file selected:', result.filePaths[0]);
       }
     } catch (error) {
@@ -135,6 +139,8 @@
    * Handle create project
    */
   async handleCreate() {
+    this._clearError();
+
     // Validate
     if (!this.selectedFolder) {
       this._showError('Por favor, selecciona la carpeta del proyecto');
@@ -252,6 +258,7 @@
 
     if (this.projectFolderInput) this.projectFolderInput.value = '';
     if (this.xmlFileInput) this.xmlFileInput.value = '';
+    this._clearError();
 
     if (this.createBtn) {
       this.createBtn.disabled = false;
@@ -264,9 +271,25 @@
    * @private
    */
   _showError(message) {
-    // TODO: Show error in modal or use InfoModal
     console.error('[NewProjectModal]', message);
-    alert(message); // Temporary
+
+    // Inside the modal, which stays open, so a wrong folder or XML can be
+    // replaced without starting over
+    if (this.errorEl) {
+      this.errorEl.textContent = message;
+      this.errorEl.hidden = false;
+    }
+  }
+
+  /**
+   * Hide the error message
+   * @private
+   */
+  _clearError() {
+    if (this.errorEl) {
+      this.errorEl.textContent = '';
+      this.errorEl.hidden = true;
+    }
   }
 
   /**
