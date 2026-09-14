@@ -88,11 +88,7 @@ Antes de exportar, la ventana «Opciones de Exportación» muestra qué va a pas
 | Reemplazarán una foto existente | Fotos que sustituirán a otra que ya está en el depósito. |
 | Son fotos nuevas en el depósito | Fotos de usuarios que aún no tenían foto en el depósito. |
 
-Las dos últimas cifras salen de la última sincronización de la copia local, así que pueden variar si otro equipo acaba de exportar.
-
-> **Consejo:** activa **Ver > Indicadores de foto en el depósito** antes de exportar. Así la aplicación sabe qué fotos hay ya en el depósito y las cifras de reemplazo son fiables.
-
-<!-- REVISAR: con las opciones del depósito de Ver desactivadas, el resumen dice "Reemplazarán una foto existente: 0" aunque haya fotos en el depósito. get-users rellena has_repository_image = false cuando no carga el depósito, y ExportManager.describeExportScope da la cifra por conocida en cuanto el campo no es undefined. -->
+Para las dos últimas cifras, la aplicación consulta el depósito en ese momento, tengas o no activadas sus opciones en el menú **Ver**. Aun así, pueden variar si otro equipo exporta a la vez. Si no se puede consultar el depósito (no está configurado o su carpeta no está disponible), la aplicación te avisa y no llega a mostrar el resumen.
 
 ### Opciones de copia
 

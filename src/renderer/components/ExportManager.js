@@ -577,9 +577,10 @@
      * @param {Array} usersToExport
      * @param {string} destination - Where the images are going, for the wording
      * @param {Object} [options]
-     * @param {boolean} [options.repository] - Also break the images down into
-     *   the ones that replace a photo already in the repository and the ones
-     *   that are new there
+     * @param {{withPhoto: number, withoutPhoto: number}} [options.repositoryCount] -
+     *   How many of the images to send already have a photo in the repository,
+     *   read from the repository itself (count-repository-images). Given, the
+     *   images are broken down into replacements and new ones
      * @returns {{rows: Array<{label: string, value: string}>, note: string|null}}
      */
     describeExportScope(usersToExport, destination, options = {}) {
@@ -593,25 +594,20 @@
         { label: 'Usuarios sin foto capturada', value: String(usersToExport.length - withImage.length) }
       ];
 
-      // has_repository_image only arrives when the repository preferences are
-      // on. With them off nobody knows, and reporting zero replacements would
-      // be worse than saying nothing.
-      const repositoryKnown = options.repository
-        && withImage.some(user => user.has_repository_image !== undefined);
-
-      if (!repositoryKnown) {
+      // Not what the list knows: that depends on the Ver repository options,
+      // and with them off it reported zero replacements
+      const count = options.repositoryCount;
+      if (!count) {
         return { rows, note: null };
       }
 
-      const replacing = withImage.filter(user => user.has_repository_image).length;
-
-      rows.push({ label: 'Reemplazarán una foto existente', value: String(replacing) });
-      rows.push({ label: 'Son fotos nuevas en el depósito', value: String(withImage.length - replacing) });
+      rows.push({ label: 'Reemplazarán una foto existente', value: String(count.withPhoto) });
+      rows.push({ label: 'Son fotos nuevas en el depósito', value: String(count.withoutPhoto) });
 
       return {
         rows,
-        note: 'Las cifras del depósito salen de la última sincronización, así que pueden '
-          + 'variar si otro equipo acaba de exportar. Las anteriores no se pierden: se '
+        note: 'Las cifras del depósito son las de este momento, así que pueden variar si '
+          + 'otro equipo exporta a la vez. Las fotos que se reemplacen no se pierden: se '
           + 'guardan en la carpeta "Reemplazadas" del depósito.'
       };
     }
@@ -626,8 +622,21 @@
       const usersToExport = this.getUsersToExport();
       if (!(await this.ensureUsersToExport(usersToExport))) return;
 
+      // What the repository holds for the photos about to be sent, read from
+      // the repository rather than from what the list happens to know
+      const withImage = usersToExport.filter(user => user.image_path);
+      let repositoryCount = null;
+      if (withImage.length > 0) {
+        const count = await this.electronAPI.countRepositoryImages(withImage);
+        if (!count || !count.success) {
+          await this.showInfoModal('Error', (count && count.error) || 'No se pudo consultar el depósito de imágenes.');
+          return;
+        }
+        repositoryCount = { withPhoto: count.withPhoto, withoutPhoto: count.withoutPhoto };
+      }
+
       // Show export options modal and wait for user choice
-      const scope = this.describeExportScope(usersToExport, 'al depósito', { repository: true });
+      const scope = this.describeExportScope(usersToExport, 'al depósito', { repositoryCount });
       const options = await this.exportOptionsModal.show(scope.rows, scope.note);
 
       if (!options) {

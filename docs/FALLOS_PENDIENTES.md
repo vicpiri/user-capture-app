@@ -19,15 +19,6 @@ Ninguno pendiente: los tres que había están en «Corregidos».
 
 ## Prioridad media
 
-### 9. El resumen de la exportación al depósito dice "0 reemplazos" sin las opciones del depósito
-
-Con las opciones del depósito del menú Ver desactivadas, `get-users` rellena
-`has_repository_image = false` y `ExportManager.describeExportScope` da la
-cifra por conocida: el resumen dice "Reemplazarán una foto existente: 0"
-aunque haya fotos en el depósito.
-
-Manual: `deposito.md` (se aconseja activar los indicadores antes de exportar).
-
 ### 10. La copia local del depósito no arranca al abrir un proyecto reciente
 
 Al arrancar o al abrir desde Proyectos Recientes, `openRecentProject`
@@ -207,3 +198,9 @@ Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
   el análisis devuelve la ruta, la ventana la pasa a `confirm-update-xml` y
   esta la guarda al terminar de aplicar los cambios. Lo cubre
   `xmlUpdateHandlers.test.js`.
+- **El resumen de la exportación al depósito decía «0 reemplazos» sin las
+  opciones del depósito** (antes el fallo 9, corregido el 2026-09-14).
+  `describeExportScope` contaba los reemplazos con `has_repository_image`, que
+  `get-users` deja a `false` cuando no carga el depósito. Ahora
+  `exportToRepository` pregunta a `count-repository-images`, que lee el
+  depósito, y el resumen usa esas cifras. Lo cubre `ExportManager.test.js`.
