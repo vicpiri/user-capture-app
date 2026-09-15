@@ -1377,6 +1377,22 @@
   overflow-y: auto;
 }
 
+.update-modal-progress {
+  margin-top: 8px;
+}
+
+.update-modal-progress-track {
+  height: 14px;
+  margin: 12px 0 8px;
+}
+
+.update-modal-progress-text {
+  font-size: 13px;
+  color: #8a8f9e;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .update-modal-notes-label {
   padding: 8px 12px 0;
   font-size: 12px;

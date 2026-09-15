@@ -2,8 +2,11 @@
  * UpdateManager - checks GitHub Releases for a newer version of the app
  *
  * Wraps electron-updater's autoUpdater and is the only module that touches it.
- * Phase 1: it only finds out whether a newer release exists and tells the
- * renderer, which offers to open the release page. Nothing is downloaded.
+ * It finds out whether a newer release exists and tells the renderer, which
+ * offers to download it. The download starts only when the user asks for it,
+ * reports its progress, and leaves the installer waiting until the user
+ * restarts the app to install or simply closes it. Nothing is downloaded or
+ * installed without being asked.
  *
  * Every dependency is injected so the manager can be tested with a fake
  * autoUpdater and without Electron.
@@ -68,6 +71,17 @@ class UpdateManager {
     this.startupTimer = null;
     this.timeoutTimer = null;
     this.initialized = false;
+
+    // The version the last check found: the only one electron-updater can
+    // download, since it downloads what that check returned
+    this.availableVersion = null;
+    this.downloading = false;
+    this.downloadingVersion = null;
+    this.lastProgress = null;
+    this.downloadError = null;
+    this.downloadedVersion = null;
+    this.installing = false;
+    this.installError = null;
   }
 
   /**
@@ -92,6 +106,8 @@ class UpdateManager {
     updater.autoDownload = false;
     updater.autoInstallOnAppQuit = false;
     updater.allowPrerelease = false;
+    // Only full NSIS installers are published
+    updater.disableWebInstaller = true;
     updater.logger = {
       info: (message) => this.logger.info(`[Updates] ${shortMessage(message)}`),
       warn: (message) => this.logger.warning(`[Updates] ${shortMessage(message)}`),
@@ -108,6 +124,7 @@ class UpdateManager {
 
     updater.on('update-available', (info) => {
       const version = info.version;
+      this.availableVersion = version;
       const preferences = this.loadPreferences();
       this.savePreferences({ lastCheck: new Date().toISOString() });
       this.logger.info(`[Updates] Version ${version} available`);
@@ -131,6 +148,7 @@ class UpdateManager {
     });
 
     updater.on('update-not-available', (info) => {
+      this.availableVersion = null;
       this.savePreferences({ lastCheck: new Date().toISOString() });
       this.logger.info(`[Updates] No update available (latest is ${info?.version})`);
       const payload = { status: 'not-available', manual: this.manual, version: info?.version };
@@ -138,8 +156,28 @@ class UpdateManager {
       this._resolve(payload);
     });
 
+    updater.on('download-progress', (progress) => {
+      if (!this.downloading) return;
+      this.lastProgress = this._progressPayload(progress);
+      this._send(this.lastProgress);
+    });
+
+    updater.on('update-downloaded', (info) => {
+      this._downloadFinished(info?.version || this.downloadingVersion);
+    });
+
     updater.on('error', (error) => {
       const message = shortMessage(error);
+      // The same event reports failed checks, downloads and installs. They
+      // never overlap: no check runs while a download is under way.
+      if (this.installing) {
+        this._installFailed(message);
+        return;
+      }
+      if (this.downloading) {
+        this._downloadFailed(message);
+        return;
+      }
       // An automatic check that fails must stay silent: school networks may
       // block GitHub, and that is not something to show at every startup
       if (this.manual) {
@@ -164,6 +202,15 @@ class UpdateManager {
   checkForUpdates({ manual = false } = {}) {
     if (!this.isSupported()) {
       return Promise.resolve({ status: 'unsupported', manual });
+    }
+    // Once the user has asked for a download, a check could only offer the
+    // same version again: show how far the download has got instead
+    if (this.downloading || this.downloadedVersion) {
+      const payload = this.downloading
+        ? this.lastProgress
+        : { status: 'downloaded', version: this.downloadedVersion };
+      if (manual) this._send(payload);
+      return Promise.resolve({ ...payload, manual });
     }
     if (this.checking) {
       // A manual check while another runs, typically the automatic one at
@@ -191,6 +238,87 @@ class UpdateManager {
           this._resolve({ status: 'error', manual, message: shortMessage(error) });
         });
     });
+  }
+
+  /**
+   * Download the version the last check found
+   *
+   * Progress and the outcome reach the renderer as 'update-status' events;
+   * the returned promise settles when the download does. electron-updater
+   * downloads only the blocks that changed when it has the installer of the
+   * running version (the NSIS installer leaves a copy for this) and the
+   * release publishes its .blockmap; otherwise it falls back to the whole
+   * installer on its own.
+   * @returns {Promise<Object>} outcome: { status, version, ... }
+   */
+  downloadUpdate() {
+    if (!this.isSupported()) {
+      return Promise.resolve({ status: 'unsupported' });
+    }
+    if (this.downloadedVersion) {
+      const payload = { status: 'downloaded', version: this.downloadedVersion };
+      this._send(payload);
+      return Promise.resolve(payload);
+    }
+    if (this.downloading) {
+      return Promise.resolve(this.lastProgress);
+    }
+    if (!this.availableVersion) {
+      const payload = {
+        status: 'download-error',
+        version: null,
+        message: 'No hay ninguna versión nueva que descargar. Vuelve a buscar actualizaciones.'
+      };
+      this._send(payload);
+      return Promise.resolve(payload);
+    }
+
+    this.downloading = true;
+    this.downloadingVersion = this.availableVersion;
+    this.downloadError = null;
+    this.lastProgress = this._progressPayload();
+    // electron-updater registers its install-on-quit handler when a download
+    // finishes, and only if this is already set by then: turning it on later
+    // does nothing. Both choices offered once the download is done end in
+    // installing, so from here on closing the app installs the update.
+    this.autoUpdater.autoInstallOnAppQuit = true;
+    this.logger.info(`[Updates] Downloading version ${this.downloadingVersion}`);
+    this._send(this.lastProgress);
+
+    return Promise.resolve()
+      .then(() => this.autoUpdater.downloadUpdate())
+      .then(() => {
+        // 'update-downloaded' has normally been handled already
+        this._downloadFinished(this.downloadingVersion);
+        return { status: 'downloaded', version: this.downloadedVersion };
+      })
+      .catch((error) => this._downloadFailed(shortMessage(error)));
+  }
+
+  /**
+   * Quit, run the downloaded installer and start the app again
+   *
+   * The renderer closes the project first. The installer runs silently: the
+   * user already chose to install, and the wizard would only ask again.
+   * @returns {{success: boolean, error?: string}} on success the app is
+   *   already quitting, so the answer may never reach the renderer
+   */
+  installUpdate() {
+    if (!this.downloadedVersion) {
+      return { success: false, error: 'No hay ninguna actualización descargada.' };
+    }
+
+    this.installing = true;
+    this.installError = null;
+    this.logger.info(`[Updates] Installing version ${this.downloadedVersion} and restarting`);
+    this.dispose();
+    this.autoUpdater.quitAndInstall(true, true);
+
+    // An installer that cannot start is reported, synchronously, through
+    // the 'error' event
+    return this.installing
+      ? { success: true }
+      : { success: false, error: this.installError };
   }
 
   /**
@@ -288,6 +416,62 @@ class UpdateManager {
     }
 
     this._resolve({ status: 'error', manual: this.manual, message, timedOut: true });
+  }
+
+  /**
+   * @private
+   */
+  _progressPayload(progress = {}) {
+    return {
+      status: 'downloading',
+      version: this.downloadingVersion,
+      percent: Number(progress.percent) || 0,
+      transferred: progress.transferred || 0,
+      total: progress.total || 0,
+      bytesPerSecond: progress.bytesPerSecond || 0
+    };
+  }
+
+  /**
+   * Reached from both the 'update-downloaded' event and the download promise
+   * @private
+   */
+  _downloadFinished(version) {
+    if (!this.downloading) return;
+
+    this.downloading = false;
+    this.downloadedVersion = version;
+    this.lastProgress = null;
+    this.logger.info(`[Updates] Version ${version} downloaded, ready to install`);
+    this._send({ status: 'downloaded', version });
+  }
+
+  /**
+   * Reached from both the 'error' event and the download promise, so the
+   * failure is reported once and both get the same answer
+   * @private
+   */
+  _downloadFailed(message) {
+    if (this.downloading) {
+      const version = this.downloadingVersion;
+      this.downloading = false;
+      this.lastProgress = null;
+      this.autoUpdater.autoInstallOnAppQuit = false;
+      this.downloadError = { status: 'download-error', version, message };
+      this.logger.error(`[Updates] Download of version ${version} failed: ${message}`);
+      this._send(this.downloadError);
+    }
+    return this.downloadError;
+  }
+
+  /**
+   * @private
+   */
+  _installFailed(message) {
+    this.installing = false;
+    this.installError = message;
+    this.logger.error(`[Updates] Could not start the installer: ${message}`);
+    this._send({ status: 'install-error', version: this.downloadedVersion, message });
   }
 
   /**

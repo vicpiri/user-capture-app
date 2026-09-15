@@ -2,8 +2,9 @@
  * Update Handlers - IPC surface of the update checker
  *
  * Thin layer over UpdateManager: the renderer asks for a manual check, skips a
- * version or opens a release page. Status updates travel the other way through
- * the 'update-status' event that UpdateManager sends on its own.
+ * version, opens a release page, downloads the new version and installs it.
+ * Status updates, download progress included, travel the other way through the
+ * 'update-status' event that UpdateManager sends on its own.
  */
 
 const { ipcMain } = require('electron');
@@ -47,6 +48,33 @@ function registerUpdateHandlers(context) {
       return { success: true };
     } catch (error) {
       logger.error('[Updates] Could not open release page:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Settles when the download does; progress arrives through 'update-status'
+  ipcMain.handle('download-update', async () => {
+    try {
+      const updateManager = manager();
+      if (!updateManager) {
+        return { status: 'unsupported' };
+      }
+      return await updateManager.downloadUpdate();
+    } catch (error) {
+      logger.error('[Updates] Download failed:', error);
+      return { status: 'download-error', message: error.message };
+    }
+  });
+
+  ipcMain.handle('install-update', async () => {
+    try {
+      const updateManager = manager();
+      if (!updateManager) {
+        return { success: false, error: 'Las actualizaciones no están disponibles.' };
+      }
+      return updateManager.installUpdate();
+    } catch (error) {
+      logger.error('[Updates] Install failed:', error);
       return { success: false, error: error.message };
     }
   });

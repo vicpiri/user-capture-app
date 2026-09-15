@@ -24,14 +24,43 @@ describe('update handlers', () => {
     updateManager = {
       checkForUpdates: jest.fn(async () => ({ status: 'available', manual: true, version: '1.8.0' })),
       skipVersion: jest.fn(),
-      openReleasePage: jest.fn(async () => {})
+      openReleasePage: jest.fn(async () => {}),
+      downloadUpdate: jest.fn(async () => ({ status: 'downloaded', version: '1.8.0' })),
+      installUpdate: jest.fn(() => ({ success: true }))
     };
     logger = { info: jest.fn(), error: jest.fn() };
     registerUpdateHandlers({ updateManager: () => updateManager, logger });
   });
 
-  test('registers the three channels', () => {
-    expect([...mockHandlers.keys()].sort()).toEqual(['check-for-updates', 'open-release-page', 'skip-update-version']);
+  test('registers the five channels', () => {
+    expect([...mockHandlers.keys()].sort()).toEqual([
+      'check-for-updates', 'download-update', 'install-update', 'open-release-page', 'skip-update-version'
+    ]);
+  });
+
+  test('download-update returns the outcome of the download', async () => {
+    await expect(call('download-update')).resolves.toEqual({ status: 'downloaded', version: '1.8.0' });
+  });
+
+  test('download-update reports unsupported when there is no manager', async () => {
+    updateManager = null;
+    await expect(call('download-update')).resolves.toEqual({ status: 'unsupported' });
+  });
+
+  test('download-update turns an exception into a download error', async () => {
+    updateManager.downloadUpdate.mockRejectedValue(new Error('disk full'));
+    await expect(call('download-update')).resolves.toEqual({ status: 'download-error', message: 'disk full' });
+    expect(logger.error).toHaveBeenCalled();
+  });
+
+  test('install-update hands over to the manager', async () => {
+    await expect(call('install-update')).resolves.toEqual({ success: true });
+    expect(updateManager.installUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  test('install-update fails without a manager', async () => {
+    updateManager = null;
+    await expect(call('install-update')).resolves.toMatchObject({ success: false });
   });
 
   test('check-for-updates runs a manual check and returns its outcome', async () => {

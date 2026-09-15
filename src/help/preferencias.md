@@ -69,24 +69,40 @@ La comprobación manual siempre muestra el resultado:
 - **Sin novedades**: ya tienes la última versión.
 - **No se pudo comprobar**, con el motivo. Si no llega respuesta en un minuto, avisa de que la comprobación ha tardado demasiado.
 
+Si ya estás descargando una versión nueva, o ya la has descargado, en lugar de volver a comprobar te muestra cómo va la descarga o te ofrece instalarla.
+
 Solo funciona en la aplicación instalada; en otro caso, avisa de que la comprobación solo está disponible en la aplicación instalada.
 
 ## La ventana de actualización
 
 Cuando hay una versión nueva, la ventana **Hay una versión nueva** indica qué versión está disponible, cuál tienes y cuándo se publicó. Debajo, en **Novedades**, muestra los cambios de esa versión. Tiene tres botones:
 
-- **Abrir página de descarga**: abre en el navegador la página de esa versión en GitHub.
+- **Descargar**: descarga la versión nueva sin salir de la aplicación. Ver [Descargar e instalar la versión nueva](#descargar-e-instalar-la-version-nueva).
 - **Más tarde**: cierra la ventana. La comprobación automática volverá a avisarte cuando toque.
 - **Omitir esta versión**: cierra la ventana y deja de avisarte de esa versión en las comprobaciones automáticas.
 
-## Instalar la versión nueva
+## Descargar e instalar la versión nueva
 
-La aplicación no descarga ni instala nada por su cuenta: solo te avisa y te lleva a la página de descarga.
+La aplicación no descarga ni instala nada por su cuenta: la descarga empieza cuando pulsas **Descargar**.
 
-1. En la ventana de actualización, pulsa **Abrir página de descarga**.
-2. En la página de GitHub, dentro del apartado **Assets**, descarga el instalador para Windows, el archivo que termina en `.exe`.
-3. Cierra Edu User Capture y ejecuta el instalador.
-4. Sigue los pasos del asistente de instalación.
+1. En la ventana **Hay una versión nueva**, pulsa **Descargar**.
+2. La ventana **Descargando actualización** muestra el avance: el porcentaje, los megas descargados y la velocidad. Normalmente solo se descarga lo que ha cambiado respecto a tu versión, así que suele ser bastante menos que el instalador completo.
+3. Puedes seguir trabajando mientras tanto. Si pulsas **Seguir en segundo plano** (o `Esc`), la ventana se cierra y la descarga continúa; volverá a abrirse sola cuando termine.
+4. Al terminar aparece **Actualización lista**, con dos opciones:
+   - **Reiniciar e instalar**: cierra el proyecto y la aplicación, instala la versión nueva sin preguntar nada más y vuelve a abrir la aplicación con el mismo proyecto.
+   - **Al cerrar la aplicación** (o `Esc`): sigues trabajando, y la versión nueva se instala sola la próxima vez que cierres la aplicación. La siguiente vez que la abras ya tendrás la versión nueva.
+
+**Reiniciar e instalar** no funciona mientras hay una tarea en marcha, como una exportación o una importación: la ventana te pide que esperes a que termine o que dejes la instalación para cuando cierres la aplicación. Tampoco se activa con `Intro`, para que una pulsación pensada para otra cosa no te cierre la aplicación en mitad del trabajo: hay que pulsar el botón.
+
+> **Nota:** Windows puede pedir permiso de administrador para instalar si la aplicación se instaló para todos los usuarios del equipo.
+
+### Si la descarga o la instalación fallan
+
+Si se corta la conexión o el instalador no puede arrancar, la ventana muestra **No se pudo descargar** o **No se pudo instalar** con el motivo. Puedes volver a intentarlo más tarde, o pulsar **Abrir página de descarga** para instalarla a mano:
+
+1. En la página de GitHub, dentro del apartado **Assets**, descarga el instalador para Windows, el archivo que termina en `.exe`.
+2. Cierra Edu User Capture y ejecuta el instalador.
+3. Sigue los pasos del asistente de instalación.
 
 ## La ventana Acerca de
 

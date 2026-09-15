@@ -173,7 +173,17 @@ function initializeModals() {
     checkForUpdates: () => window.electronAPI.checkForUpdates(),
     skipUpdateVersion: (version) => window.electronAPI.skipUpdateVersion(version),
     openReleasePage: (version) => window.electronAPI.openReleasePage(version),
-    getAppVersion: () => window.electronAPI.getAppVersion()
+    getAppVersion: () => window.electronAPI.getAppVersion(),
+    downloadUpdate: () => window.electronAPI.downloadUpdate(),
+    installUpdate: () => window.electronAPI.installUpdate(),
+    // The same close as Ctrl+W: the project reopens on its own after the
+    // restart, being the most recent one
+    closeProject: async () => {
+      if (projectOpen && projectManager) {
+        await projectManager.closeProject();
+      }
+    },
+    isBusy: () => Boolean(progressManager && progressManager.isShowing())
   });
   updateModalInstance.init();
 

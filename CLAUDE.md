@@ -21,7 +21,7 @@ user-capture-app/
 │   │   │   ├── helpHandlers.js         # Manual de uso: índice, páginas y búsqueda
 │   │   │   ├── miscHandlers.js         # Manejadores misceláneos (tags, diálogos, etc.)
 │   │   │   ├── projectHandlers.js      # Gestión de proyectos, XML y cierre
-│   │   │   ├── updateHandlers.js       # Comprobación de actualizaciones (GitHub Releases)
+│   │   │   ├── updateHandlers.js       # Comprobación, descarga e instalación de actualizaciones
 │   │   │   └── userGroupImageHandlers.js # Usuarios, grupos e imágenes
 │   │   ├── menu/                # Sistema de menús
 │   │   │   └── menuBuilder.js          # Constructor de menús de la aplicación
@@ -45,7 +45,7 @@ user-capture-app/
 │   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
-│   │   ├── updateManager.js     # Envoltorio de electron-updater (aviso de versión nueva)
+│   │   ├── updateManager.js     # Envoltorio de electron-updater (comprobar, descargar, instalar)
 │   │   └── xmlParser.js         # Parseo de archivos XML de usuarios
 │   ├── help/          # Manual de uso en Markdown (pages.json + una página por área)
 │   ├── preload/       # Scripts preload (comunicación segura entre procesos)
@@ -260,8 +260,13 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado
 - **updateManager.js**: Comprobación de versiones nuevas contra las Releases de
-  GitHub mediante `electron-updater`. Solo comprueba y avisa (fase 1): nunca
-  descarga ni instala por su cuenta. La comprobación automática arranca 15 s
+  GitHub mediante `electron-updater`. Nunca descarga ni instala por su cuenta:
+  la descarga (diferencial, con progreso) empieza cuando la persona pulsa
+  "Descargar", y al acabar elige "Reiniciar e instalar" o "Al cerrar la
+  aplicación". Ojo: `autoInstallOnAppQuit` se activa al empezar la descarga,
+  porque `electron-updater` solo registra la instalación al salir si ya estaba
+  activo al terminar; en pruebas con `--dev-updates`, desactivarlo antes de
+  cerrar la aplicación. La comprobación automática arranca 15 s
   después de mostrar la ventana, como mucho una vez cada 24 h, y si falla solo
   lo anota en el log; la manual (Ayuda > Buscar actualizaciones, o desde Acerca
   de) muestra siempre el resultado. Solo funciona en la aplicación empaquetada;

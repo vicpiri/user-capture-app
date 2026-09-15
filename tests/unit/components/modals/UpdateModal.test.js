@@ -19,6 +19,10 @@ describe('UpdateModal', () => {
       <div id="update-modal-spinner" hidden></div>
       <p id="update-modal-message"></p>
       <div id="update-modal-notes" hidden><pre id="update-modal-notes-text"></pre></div>
+      <div id="update-modal-progress" hidden>
+        <div id="update-modal-progress-bar"></div>
+        <div id="update-modal-progress-text"></div>
+      </div>
       <button id="update-modal-skip-btn" hidden></button>
       <button id="update-modal-later-btn" hidden></button>
       <button id="update-modal-primary-btn"></button>
@@ -29,7 +33,11 @@ describe('UpdateModal', () => {
       checkForUpdates: jest.fn(async () => ({ status: 'not-available', manual: true })),
       skipUpdateVersion: jest.fn(async () => {}),
       openReleasePage: jest.fn(async () => {}),
-      getAppVersion: jest.fn(async () => '1.7.0-DEV')
+      getAppVersion: jest.fn(async () => '1.7.0-DEV'),
+      downloadUpdate: jest.fn(async () => ({ status: 'downloaded', version: '1.8.0' })),
+      installUpdate: jest.fn(async () => ({ success: true })),
+      closeProject: jest.fn(async () => {}),
+      isBusy: jest.fn(() => false)
     };
     modal = new UpdateModal(callbacks);
     modal.init();
@@ -65,7 +73,7 @@ describe('UpdateModal', () => {
       expect(text('update-modal-message')).not.toContain('-DEV');
       expect(visible('update-modal-notes')).toBe(true);
       expect(text('update-modal-notes-text')).toBe('Features\n\n• add x\n• add y');
-      expect(text('update-modal-primary-btn')).toBe('Abrir página de descarga');
+      expect(text('update-modal-primary-btn')).toBe('Descargar');
       expect(visible('update-modal-later-btn')).toBe(true);
       expect(visible('update-modal-skip-btn')).toBe(true);
     });
@@ -116,10 +124,21 @@ describe('UpdateModal', () => {
       await Promise.resolve();
     });
 
-    test('primary opens the release page of the offered version and closes', async () => {
-      await modal.handlePrimary();
-      expect(callbacks.openReleasePage).toHaveBeenCalledWith('1.8.0');
-      expect(modal.isModalOpen()).toBe(false);
+    test('primary downloads the offered version and stays open', async () => {
+      callbacks.downloadUpdate.mockReturnValue(new Promise(() => {}));
+      modal.handlePrimary();
+      await Promise.resolve();
+      expect(callbacks.downloadUpdate).toHaveBeenCalledTimes(1);
+      expect(callbacks.openReleasePage).not.toHaveBeenCalled();
+      expect(modal.isModalOpen()).toBe(true);
+      expect(text('update-modal-title')).toBe('Descargando actualización');
+    });
+
+    test('Enter downloads, like the primary button', async () => {
+      callbacks.downloadUpdate.mockReturnValue(new Promise(() => {}));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await Promise.resolve();
+      expect(callbacks.downloadUpdate).toHaveBeenCalledTimes(1);
     });
 
     test('skip persists the version and closes', async () => {
@@ -138,6 +157,172 @@ describe('UpdateModal', () => {
       modal.handleStatus({ status: 'not-available', manual: true });
       await modal.handlePrimary();
       expect(callbacks.openReleasePage).not.toHaveBeenCalled();
+      expect(callbacks.downloadUpdate).not.toHaveBeenCalled();
+    });
+
+    test('an answer about the version arriving late does not paint over a newer view', async () => {
+      modal.handleStatus({ status: 'available', manual: true, version: '1.8.0' });
+      modal.handleStatus({ status: 'downloading', version: '1.8.0', percent: 10 });
+      await Promise.resolve();
+      expect(text('update-modal-title')).toBe('Descargando actualización');
+    });
+  });
+
+  describe('downloading', () => {
+    const progress = (overrides = {}) => ({
+      status: 'downloading',
+      version: '1.8.0',
+      percent: 45.7,
+      transferred: 36.6 * 1024 * 1024,
+      total: 80.1 * 1024 * 1024,
+      bytesPerSecond: 2.4 * 1024 * 1024,
+      ...overrides
+    });
+
+    beforeEach(async () => {
+      modal.handleStatus({ status: 'available', manual: false, version: '1.8.0' });
+      await Promise.resolve();
+    });
+
+    test('shows the progress with its size and speed', () => {
+      modal.handleStatus(progress());
+      expect(visible('update-modal-progress')).toBe(true);
+      expect(document.getElementById('update-modal-progress-bar').style.width).toBe('45.7%');
+      expect(text('update-modal-progress-text')).toBe('45 % · 36,6 de 80,1 MB · 2,4 MB/s');
+    });
+
+    test('leaves out the size before the first progress arrives', () => {
+      modal.handleStatus(progress({ percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 }));
+      expect(text('update-modal-progress-text')).toBe('0 %');
+    });
+
+    test('Enter does not press the hidden primary button', () => {
+      modal.handleStatus(progress());
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(modal.isModalOpen()).toBe(true);
+      expect(text('update-modal-title')).toBe('Descargando actualización');
+    });
+
+    test('only offers to keep going in the background', () => {
+      modal.handleStatus(progress());
+      expect(visible('update-modal-primary-btn')).toBe(false);
+      expect(visible('update-modal-skip-btn')).toBe(false);
+      expect(text('update-modal-later-btn')).toBe('Seguir en segundo plano');
+      expect(visible('update-modal-notes')).toBe(false);
+    });
+
+    test('progress does not reopen the window the user sent to the background', () => {
+      modal.handleStatus(progress());
+      document.getElementById('update-modal-later-btn').click();
+
+      modal.handleStatus(progress({ percent: 80 }));
+
+      expect(modal.isModalOpen()).toBe(false);
+    });
+
+    test('the end of the download reopens it', () => {
+      modal.handleStatus(progress());
+      document.getElementById('update-modal-later-btn').click();
+
+      modal.handleStatus({ status: 'downloaded', version: '1.8.0' });
+
+      expect(modal.isModalOpen()).toBe(true);
+      expect(text('update-modal-title')).toBe('Actualización lista');
+    });
+
+    test('a failed download reopens it with the release page as a way out', async () => {
+      modal.handleStatus(progress());
+      document.getElementById('update-modal-later-btn').click();
+
+      modal.handleStatus({ status: 'download-error', version: '1.8.0', message: 'net::ERR_CONNECTION_RESET' });
+
+      expect(modal.isModalOpen()).toBe(true);
+      expect(text('update-modal-title')).toBe('No se pudo descargar');
+      expect(text('update-modal-message')).toContain('net::ERR_CONNECTION_RESET');
+      expect(visible('update-modal-progress')).toBe(false);
+      await modal.handlePrimary();
+      expect(callbacks.openReleasePage).toHaveBeenCalledWith('1.8.0');
+    });
+
+    test('a download that could not even start is reported', async () => {
+      callbacks.downloadUpdate.mockResolvedValue({ status: 'unsupported' });
+      await modal.handlePrimary();
+      expect(text('update-modal-title')).toBe('No se pudo descargar');
+    });
+
+    test('the outcome of the download does not repaint what the main process already reported', async () => {
+      callbacks.downloadUpdate.mockImplementation(async () => {
+        modal.handleStatus({ status: 'downloaded', version: '1.8.0' });
+        return { status: 'downloaded', version: '1.8.0' };
+      });
+      await modal.handlePrimary();
+      expect(text('update-modal-title')).toBe('Actualización lista');
+    });
+  });
+
+  describe('ready to install', () => {
+    beforeEach(() => {
+      modal.handleStatus({ status: 'downloaded', version: '1.8.0' });
+    });
+
+    test('offers to restart now or install on closing', () => {
+      expect(text('update-modal-primary-btn')).toBe('Reiniciar e instalar');
+      expect(text('update-modal-later-btn')).toBe('Al cerrar la aplicación');
+      expect(text('update-modal-message')).toContain('cuando la cierres');
+    });
+
+    test('restarting closes the project before installing', async () => {
+      const order = [];
+      callbacks.closeProject.mockImplementation(async () => order.push('close'));
+      callbacks.installUpdate.mockImplementation(async () => { order.push('install'); return { success: true }; });
+
+      await modal.handlePrimary();
+
+      expect(order).toEqual(['close', 'install']);
+      expect(text('update-modal-title')).toBe('Instalando actualización');
+      expect(visible('update-modal-primary-btn')).toBe(false);
+      expect(visible('update-modal-later-btn')).toBe(false);
+    });
+
+    test('does not restart while a task is running', async () => {
+      callbacks.isBusy.mockReturnValue(true);
+
+      await modal.handlePrimary();
+
+      expect(callbacks.closeProject).not.toHaveBeenCalled();
+      expect(callbacks.installUpdate).not.toHaveBeenCalled();
+      expect(text('update-modal-message')).toContain('tarea en curso');
+      expect(modal.isModalOpen()).toBe(true);
+    });
+
+    test('still installs when the project fails to close', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      callbacks.closeProject.mockRejectedValue(new Error('busy'));
+
+      await modal.handlePrimary();
+
+      expect(callbacks.installUpdate).toHaveBeenCalled();
+    });
+
+    test('reports an installer that could not start', async () => {
+      callbacks.installUpdate.mockResolvedValue({ success: false, error: 'spawn ENOENT' });
+
+      await modal.handlePrimary();
+
+      expect(text('update-modal-title')).toBe('No se pudo instalar');
+      expect(text('update-modal-message')).toContain('spawn ENOENT');
+    });
+
+    test('Enter does not restart: the view opens by itself, maybe mid-keystroke', () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(callbacks.installUpdate).not.toHaveBeenCalled();
+      expect(modal.isModalOpen()).toBe(true);
+    });
+
+    test('"Al cerrar la aplicación" just closes, the main process installs on quit', () => {
+      document.getElementById('update-modal-later-btn').click();
+      expect(modal.isModalOpen()).toBe(false);
+      expect(callbacks.installUpdate).not.toHaveBeenCalled();
     });
   });
 

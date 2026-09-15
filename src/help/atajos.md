@@ -78,7 +78,7 @@ Con una de estas ventanas abierta, `Intro` pulsa su botón principal:
 | Agregar Etiqueta a Imagen | **Agregar** |
 | Información del proyecto | **Cerrar** |
 | Vista previa de una foto | **Cerrar** |
-| Actualizaciones | El botón destacado |
+| Actualizaciones | El botón destacado, salvo **Reiniciar e instalar**, que hay que pulsar |
 
 > **Importante:** En los mensajes de confirmación, `Intro` equivale a pulsar **Sí**. Léelos antes de pulsar la tecla, sobre todo si la acción quita enlaces o borra datos.
 

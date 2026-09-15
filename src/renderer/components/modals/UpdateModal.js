@@ -1,13 +1,18 @@
 /**
- * UpdateModal - Tells the user whether a newer version of the app exists
+ * UpdateModal - Offers, downloads and installs newer versions of the app
  *
  * One modal, several views driven by the 'update-status' events the main
- * process sends: checking, available, not-available and error. In phase 1 the
- * "available" view only offers to open the GitHub release page; downloading
- * and installing come later.
+ * process sends:
+ * - checking, not-available, error: the outcome of a check
+ * - available: a newer version, which the user may download
+ * - downloading: progress of that download
+ * - downloaded: ready to install now (restarting) or when the app closes
+ * - download-error, install-error: offer the release page instead
  *
- * Automatic checks only ever produce the "available" view. The other states
- * are shown solely when the user asked for a check.
+ * The outcome of a check only shows when the user asked for it, except a
+ * version found by the automatic one. What follows a download the user
+ * started always shows, save the progress while the user sent the download
+ * to the background.
  *
  * @extends BaseModal
  */
@@ -23,6 +28,11 @@
     ({ BaseModal } = require('../../core/BaseModal'));
   }
 
+  // Shown whether or not the user asked for a check
+  const UNPROMPTED_STATUSES = ['available', 'downloading', 'downloaded', 'download-error', 'install-error'];
+
+  const BYTES_PER_MB = 1024 * 1024;
+
   class UpdateModal extends BaseModal {
     /**
      * @param {Object} config
@@ -30,6 +40,10 @@
      * @param {Function} config.skipUpdateVersion - (version) => Promise
      * @param {Function} config.openReleasePage - (version) => Promise
      * @param {Function} config.getAppVersion - () => Promise<string>
+     * @param {Function} config.downloadUpdate - () => Promise<outcome>
+     * @param {Function} config.installUpdate - () => Promise<{success, error}>
+     * @param {Function} config.closeProject - () => Promise, run before installing
+     * @param {Function} config.isBusy - () => boolean, a task that restarting would cut short
      */
     constructor(config = {}) {
       super('update-modal', {
@@ -40,6 +54,10 @@
       this.skipUpdateVersion = config.skipUpdateVersion || (async () => {});
       this.openReleasePage = config.openReleasePage || (async () => {});
       this.getAppVersion = config.getAppVersion || (async () => '');
+      this.downloadUpdate = config.downloadUpdate || (async () => ({ status: 'unsupported' }));
+      this.installUpdate = config.installUpdate || (async () => ({ success: false }));
+      this.closeProject = config.closeProject || (async () => {});
+      this.isBusy = config.isBusy || (() => false);
 
       // Elements
       this.titleEl = null;
@@ -47,12 +65,16 @@
       this.spinnerEl = null;
       this.notesEl = null;
       this.notesTextEl = null;
+      this.progressEl = null;
+      this.progressBarEl = null;
+      this.progressTextEl = null;
       this.primaryBtn = null;
       this.laterBtn = null;
       this.skipBtn = null;
 
       // State
       this.currentStatus = null;
+      // The version the current view is about
       this.availableVersion = null;
     }
 
@@ -69,6 +91,9 @@
       this.spinnerEl = this.modal.querySelector('#update-modal-spinner');
       this.notesEl = this.modal.querySelector('#update-modal-notes');
       this.notesTextEl = this.modal.querySelector('#update-modal-notes-text');
+      this.progressEl = this.modal.querySelector('#update-modal-progress');
+      this.progressBarEl = this.modal.querySelector('#update-modal-progress-bar');
+      this.progressTextEl = this.modal.querySelector('#update-modal-progress-text');
       this.primaryBtn = this.modal.querySelector('#update-modal-primary-btn');
       this.laterBtn = this.modal.querySelector('#update-modal-later-btn');
       this.skipBtn = this.modal.querySelector('#update-modal-skip-btn');
@@ -78,6 +103,22 @@
       this.addEventListener(this.skipBtn, 'click', () => this.handleSkip());
 
       this._log('UpdateModal initialized');
+    }
+
+    /**
+     * Enter presses the primary button, but not a hidden one, and never
+     * "Reiniciar e instalar": that view opens by itself when a download ends,
+     * often while the user is pressing Enter to link photos, and a stray key
+     * would restart the app in the middle of a session
+     * @private
+     */
+    handleEnterKey(event) {
+      if (event.key !== 'Enter' || !this.isOpen) return;
+      if (this.currentStatus === 'downloaded' || (this.primaryBtn && this.primaryBtn.hidden)) {
+        event.preventDefault();
+        return;
+      }
+      super.handleEnterKey(event);
     }
 
     /**
@@ -101,17 +142,21 @@
 
     /**
      * Render a status sent by the main process
-     * @param {Object} payload - { status, manual, version, releaseNotes, message }
+     * @param {Object} payload - { status, manual, version, releaseNotes,
+     *   message, percent, transferred, total, bytesPerSecond }
      */
     handleStatus(payload) {
       if (!payload || !this.modal) return;
 
       const { status, manual } = payload;
       // Silent outcomes of automatic checks never open the modal
-      if (!manual && status !== 'available') return;
+      if (!manual && !UNPROMPTED_STATUSES.includes(status)) return;
+      // "Seguir en segundo plano" closed the window on purpose; the progress
+      // must not keep bringing it back. The end of the download will.
+      if (status === 'downloading' && !this.isOpen) return;
 
       this.currentStatus = status;
-      this.availableVersion = status === 'available' ? payload.version : null;
+      this.availableVersion = payload.version || null;
 
       switch (status) {
         case 'checking':
@@ -123,16 +168,45 @@
           break;
         case 'available':
           this.getAppVersion().then((current) => {
+            // The user may have moved on while the version was being read
+            if (this.currentStatus !== 'available') return;
             this.render({
               title: 'Hay una versión nueva',
               message: `Está disponible la versión ${payload.version}` +
                 (current ? ` (tienes la ${this._cleanVersion(current)}).` : '.') +
                 (payload.releaseDate ? ` Publicada el ${this._formatDate(payload.releaseDate)}.` : ''),
               notes: this._cleanNotes(payload.releaseNotes),
-              primary: 'Abrir página de descarga',
+              primary: 'Descargar',
               later: 'Más tarde',
               skip: 'Omitir esta versión'
             });
+          });
+          break;
+        case 'downloading':
+          this.render({
+            title: 'Descargando actualización',
+            message: `Descargando la versión ${payload.version}. Puedes seguir trabajando mientras tanto.`,
+            progress: payload,
+            later: 'Seguir en segundo plano'
+          });
+          break;
+        case 'downloaded':
+          this.render({
+            title: 'Actualización lista',
+            message: `La versión ${payload.version} está descargada. Reinicia la aplicación para instalarla ahora, ` +
+              'o se instalará sola cuando la cierres.',
+            primary: 'Reiniciar e instalar',
+            later: 'Al cerrar la aplicación'
+          });
+          break;
+        case 'download-error':
+        case 'install-error':
+          this.render({
+            title: status === 'download-error' ? 'No se pudo descargar' : 'No se pudo instalar',
+            message: (payload.message || 'Se produjo un error con la actualización.') +
+              (payload.version ? ' Puedes descargarla a mano desde la página de la versión.' : ''),
+            primary: payload.version ? 'Abrir página de descarga' : 'Cerrar',
+            later: payload.version ? 'Cerrar' : null
           });
           break;
         case 'not-available':
@@ -158,10 +232,19 @@
      * Paint one view
      * @private
      */
-    render({ title, message, spinner = false, notes = '', primary = null, later = null, skip = null }) {
+    render({ title, message, spinner = false, notes = '', progress = null, primary = null, later = null, skip = null }) {
       if (this.titleEl) this.titleEl.textContent = title;
       if (this.messageEl) this.messageEl.textContent = message;
       if (this.spinnerEl) this.spinnerEl.hidden = !spinner;
+
+      if (this.progressEl) {
+        this.progressEl.hidden = !progress;
+        if (progress) {
+          const percent = Math.max(0, Math.min(100, Number(progress.percent) || 0));
+          if (this.progressBarEl) this.progressBarEl.style.width = `${percent}%`;
+          if (this.progressTextEl) this.progressTextEl.textContent = this._formatProgress(progress);
+        }
+      }
 
       if (this.notesEl) {
         this.notesEl.hidden = !notes;
@@ -178,14 +261,85 @@
     }
 
     /**
-     * Primary button: open the release page when an update is available,
-     * otherwise just close
+     * Primary button: what it does depends on the view
      */
     async handlePrimary() {
-      if (this.currentStatus === 'available' && this.availableVersion) {
-        await this.openReleasePage(this.availableVersion);
+      switch (this.currentStatus) {
+        case 'available':
+          if (this.availableVersion) {
+            await this.startDownload();
+            return;
+          }
+          break;
+        case 'downloaded':
+          await this.install();
+          return;
+        case 'download-error':
+        case 'install-error':
+          if (this.availableVersion) {
+            await this.openReleasePage(this.availableVersion);
+          }
+          break;
+        default:
+          break;
       }
       this.close();
+    }
+
+    /**
+     * Download the version on show, staying on the progress view
+     */
+    async startDownload() {
+      const version = this.availableVersion;
+      this.handleStatus({ status: 'downloading', version, percent: 0 });
+
+      const outcome = await this.downloadUpdate();
+      // The main process reports every step through 'update-status', so by
+      // now the view has moved on. It has not only when the main process
+      // could not even start (no update manager).
+      if (this.currentStatus === 'downloading' && outcome &&
+          !['downloading', 'downloaded', 'download-error'].includes(outcome.status)) {
+        this.handleStatus({
+          status: 'download-error',
+          version,
+          message: outcome.message || 'La descarga de actualizaciones no está disponible en esta instalación.'
+        });
+      }
+    }
+
+    /**
+     * Close the project and hand over to the installer, which restarts the app
+     */
+    async install() {
+      const version = this.availableVersion;
+
+      // Restarting would cut an export or an import short
+      if (this.isBusy()) {
+        if (this.messageEl) {
+          this.messageEl.textContent = 'Hay una tarea en curso. Espera a que termine para reiniciar, ' +
+            'o deja que la actualización se instale al cerrar la aplicación.';
+        }
+        return;
+      }
+
+      this.currentStatus = 'installing';
+      this.render({
+        title: 'Instalando actualización',
+        message: `La aplicación se cerrará para instalar la versión ${version} y volverá a abrirse sola.`,
+        spinner: true
+      });
+
+      try {
+        await this.closeProject();
+      } catch (error) {
+        // The app is about to quit either way
+        this._log(`Could not close the project before installing: ${error.message}`, 'error');
+      }
+
+      const result = await this.installUpdate();
+      if (this.currentStatus === 'installing' && result && result.success === false) {
+        this.handleStatus({ status: 'install-error', version, message: result.error });
+      }
     }
 
     async handleSkip() {
@@ -202,6 +356,21 @@
       if (!button) return;
       button.hidden = !label;
       if (label) button.textContent = label;
+    }
+
+    /**
+     * "45 % · 12,3 de 80,1 MB · 2,4 MB/s"
+     * @private
+     */
+    _formatProgress({ percent, transferred, total, bytesPerSecond }) {
+      const mb = (bytes) => (bytes / BYTES_PER_MB).toLocaleString('es-ES', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      });
+      const parts = [`${Math.floor(Number(percent) || 0)} %`];
+      if (total > 0) parts.push(`${mb(transferred || 0)} de ${mb(total)} MB`);
+      if (bytesPerSecond > 0) parts.push(`${mb(bytesPerSecond)} MB/s`);
+      return parts.join(' · ');
     }
 
     /**

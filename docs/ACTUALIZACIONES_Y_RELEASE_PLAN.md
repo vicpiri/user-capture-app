@@ -1,6 +1,6 @@
 # Comprobación de actualizaciones y nuevo flujo de release
 
-**Estado**: 🚧 Pasos 1 a 5 hechos. La 1.7.0 (2026-09-13) fue la primera Release de GitHub pero **no arranca** (leía `build.publish` del `package.json` recortado); la **1.7.1** la corrige y es la primera publicada con el flujo completo de la sección 1 sin intervención manual. Pendiente el paso 6 (que una 1.7.1 instalada avise de la siguiente versión) y la fase 2.
+**Estado**: 🚧 Pasos 1 a 5 hechos. La 1.7.0 (2026-09-13) fue la primera Release de GitHub pero **no arranca** (leía `build.publish` del `package.json` recortado); la **1.7.1** la corrige y es la primera publicada con el flujo completo de la sección 1 sin intervención manual. Pendiente el paso 6 (que una 1.7.1 instalada avise de la siguiente versión). La fase 2 (descarga e instalación) está implementada y probada con una descarga real de la 1.9.0; falta verla actualizar de extremo a extremo entre dos releases (paso 7).
 **Redactado**: 2026-09-13, tras la migración a Electron 44.
 **Alcance**: (1) un flujo de publicación reproducible que deje cada versión
 como Release de GitHub, y (2) que la aplicación instalada avise de que existe
@@ -284,8 +284,16 @@ aplicación.
 **Fase 2, descargar e instalar.** Desde el mismo modal, "Descargar" baja el
 instalador en segundo plano (diferencial gracias al `.blockmap`, así que
 suele ser una fracción de los 129 MB), muestra progreso y termina con
-"Reiniciar e instalar". La aplicación cierra el proyecto, se cierra y lanza el
-instalador en silencio.
+"Reiniciar e instalar" o "Al cerrar la aplicación". La aplicación cierra el
+proyecto, se cierra y lanza el instalador en silencio.
+
+**Descarga diferencial.** No hay nada que configurar. `electron-updater`
+compara el `.blockmap` de la versión instalada con el de la nueva (los dos
+están en sus Releases) y descarga solo los bloques distintos, reconstruyendo
+el instalador a partir de `installer.exe`, la copia que el instalador NSIS deja
+de sí mismo en `%LOCALAPPDATA%\edu-user-capture-app-updater\`. Si falta algo,
+descarga el instalador entero sin más; en desarrollo siempre pasa, porque no
+hay `installer.exe`.
 
 La fase 1 se puede publicar sola. La fase 2 reutiliza todo lo de la 1 y añade
 dos eventos y un botón.
@@ -316,14 +324,31 @@ Envuelve `autoUpdater` de `electron-updater` y es el único sitio que lo toca.
   la comprobación con estado `error` y `timedOut: true`, siguiendo la misma
   regla de silencio. Lo verosímil que lo provoque es una conexión colgada tras
   el proxy de un centro.
-- `downloadUpdate()` y `installUpdate()` (fase 2). `installUpdate` llama a
-  `autoUpdater.quitAndInstall(true, true)`: silencioso y relanza la
-  aplicación. Con el NSIS actual (`oneClick: false`) el primer argumento es
-  lo que evita que aparezca el asistente de instalación.
-- Antes de instalar, el cierre debe ser el mismo que el de salir de la
-  aplicación: cerrar la base de datos y parar los vigilantes. Hay que
-  comprobar que `before-quit` en `main.js` ya lo hace, y si no, hacerlo
-  desde `installUpdate` antes de `quitAndInstall`.
+- `downloadUpdate()` (fase 2) descarga la versión que encontró la última
+  comprobación: `electron-updater` descarga lo que esa comprobación
+  devolvió, así que sin una que haya encontrado versión contesta
+  `download-error`. Emite `downloading` al empezar (0 %) y con cada
+  `download-progress`, y `downloaded` o `download-error` al acabar. El error
+  llega a la vez por el evento `error` y por la promesa; se notifica una sola
+  vez. Mientras hay una descarga en marcha o terminada, una comprobación no
+  consulta GitHub: devuelve el progreso o `downloaded`.
+- `installUpdate()` (fase 2) llama a `autoUpdater.quitAndInstall(true, true)`:
+  silencioso y relanza la aplicación. Con el NSIS actual (`oneClick: false`)
+  el primer argumento es lo que evita que aparezca el asistente. Si el
+  instalador no arranca, `electron-updater` lo avisa por `error` de forma
+  síncrona y sale `install-error`.
+- **Proyecto abierto al instalar.** Lo cierra el renderer antes de pedir la
+  instalación, con el mismo cierre que Ctrl+W (base de datos, vigilantes,
+  estado del renderer). Así, si la instalación fallara, los dos procesos
+  quedan de acuerdo con el proyecto cerrado. `close-project` no lo quita de
+  recientes, de modo que al relanzarse se vuelve a abrir solo.
+- **Instalar al cerrar.** `electron-updater` registra su manejador de
+  instalación al salir cuando **termina** la descarga, y solo si
+  `autoInstallOnAppQuit` ya está activo en ese momento: activarlo después no
+  hace nada. Por eso `downloadUpdate()` lo activa al empezar la descarga (y lo
+  desactiva si falla). Las dos opciones de la vista "descargada" acaban
+  instalando, así que desde que la persona pide la descarga, cerrar la
+  aplicación instala. "Al cerrar la aplicación" solo cierra el modal.
 
 Persistencia en `config.json` (mediante `utils/config.js`), bajo una clave
 `updates`:
@@ -376,10 +401,17 @@ estado recibido:
   rellena desde el changelog; si está vacío, un enlace al changelog). Botones:
   fase 1 "Abrir página de descarga"; fase 2 "Descargar". Siempre "Más tarde" y
   "Omitir esta versión".
-- **Descargando** (fase 2): barra de progreso con porcentaje y MB. Se puede
-  cerrar el modal; la descarga sigue y al terminar vuelve a abrirse.
-- **Descargada** (fase 2): "Reiniciar e instalar" y "Al salir" (deja
-  `autoInstallOnAppQuit` para esa sesión).
+- **Descargando** (fase 2): barra de progreso con porcentaje, MB y velocidad.
+  "Seguir en segundo plano" (o Esc) cierra el modal; el progreso no lo vuelve
+  a abrir, el final de la descarga sí.
+- **Descargada** (fase 2): "Reiniciar e instalar" y "Al cerrar la aplicación"
+  (Esc). Se abre sola al terminar la descarga, así que `Intro` no pulsa
+  "Reiniciar e instalar": en plena sesión de fotos se enlaza con `Intro`, y una
+  pulsación a destiempo cerraría la aplicación. Con una tarea en marcha
+  (`ProgressManager.isShowing()`) el botón no reinicia y explica por qué, en
+  lugar de estar deshabilitado sin más.
+- **Error de descarga o de instalación** (fase 2): el motivo y "Abrir página
+  de descarga" como salida.
 - **Sin novedades** y **Error**: texto y "Cerrar". Solo en manual.
 
 **Las notas llegan en HTML, no en markdown.** El cuerpo de la Release se
@@ -433,8 +465,16 @@ que lo que corrige la versión N solo se puede observar cuando salga la N+1.
   `lastCheck` y `skippedVersion`.
 - `tests/unit/main/updateHandlers.test.js`: capturar los handlers desde el
   `ipcMain` mockeado, como los demás.
-- `tests/unit/components/modals/UpdateModal.test.js`: las cuatro vistas y los
-  callbacks de los botones.
+- `tests/unit/components/modals/UpdateModal.test.js`: todas las vistas, los
+  callbacks de los botones y las teclas.
+
+La descarga se probó en desarrollo contra la Release real: con
+`--dev-updates`, un `updaterCacheDirName` propio en `dev-app-update.yml` para
+no tocar la caché de la aplicación instalada, y la versión que ve
+`electron-updater` bajada en memoria desde el inspector
+(`autoUpdater.currentVersion`). **Antes de cerrar la aplicación hay que poner
+`autoInstallOnAppQuit = false`**: si no, al cerrarla se instala en silencio la
+versión descargada sobre la instalada.
 
 ### 5.8 Riesgos y decisiones
 
@@ -493,8 +533,12 @@ En orden, con un commit por paso. Los pasos 1 a 3 no tocan la aplicación.
    En la aplicación empaquetada de la 1.7.1 ya se comprobó que tanto la
    comprobación automática como la manual responden "Sin novedades" contra
    la Release real.
-7. **Fase 2** (descarga e instalación), con sus tests, y verificación igual
-   que en el paso 6 con la siguiente versión.
+7. **Fase 2** (descarga e instalación), con sus tests. ✅ Implementada; la
+   descarga, el progreso, el segundo plano y la vista "descargada" se
+   comprobaron con una descarga real de la 1.9.0. Falta la verificación de
+   extremo a extremo: con la versión que la incluye instalada, publicar la
+   siguiente y comprobar que se descarga (diferencial), se instala y se
+   relanza, por las dos vías.
 
 ## 7. Fuera de alcance
 

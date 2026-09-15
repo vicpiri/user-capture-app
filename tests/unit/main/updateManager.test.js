@@ -39,6 +39,8 @@ describe('UpdateManager', () => {
     jest.useRealTimers();
     autoUpdater = new EventEmitter();
     autoUpdater.checkForUpdates = jest.fn(() => Promise.resolve());
+    autoUpdater.downloadUpdate = jest.fn(() => new Promise(() => {}));
+    autoUpdater.quitAndInstall = jest.fn();
     logger = { info: jest.fn(), warning: jest.fn(), error: jest.fn() };
     preferences = { autoCheck: true, lastCheck: null, skippedVersion: null };
     webContents = { send: jest.fn() };
@@ -68,6 +70,7 @@ describe('UpdateManager', () => {
       expect(autoUpdater.autoDownload).toBe(false);
       expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
       expect(autoUpdater.allowPrerelease).toBe(false);
+      expect(autoUpdater.disableWebInstaller).toBe(true);
     });
 
     test('adapts the application logger to electron-updater (warn -> warning)', () => {
@@ -282,6 +285,201 @@ describe('UpdateManager', () => {
    * check, including the manual one from the menu, bailed out with
    * 'already-checking' and the menu entry looked dead.
    */
+  describe('download', () => {
+    // A check that found 1.8.0, which is what electron-updater downloads
+    const findUpdate = async () => {
+      const check = manager.checkForUpdates({ manual: true });
+      autoUpdater.emit('update-available', { version: '1.8.0' });
+      await check;
+      webContents.send.mockClear();
+    };
+
+    // Resolves the way electron-updater does: the event first, then the promise
+    const finishingDownload = () => {
+      autoUpdater.downloadUpdate.mockImplementation(async () => {
+        autoUpdater.emit('update-downloaded', { version: '1.8.0' });
+        return ['C:/cache/installer.exe'];
+      });
+    };
+
+    const failingDownload = (message) => {
+      autoUpdater.downloadUpdate.mockImplementation(async () => {
+        const error = new Error(message);
+        autoUpdater.emit('error', error);
+        throw error;
+      });
+    };
+
+    test('downloads only when asked', async () => {
+      await findUpdate();
+      expect(autoUpdater.downloadUpdate).not.toHaveBeenCalled();
+      expect(autoUpdater.autoDownload).toBe(false);
+    });
+
+    test('refuses when no check has found a version', async () => {
+      manager.init();
+      await expect(manager.downloadUpdate()).resolves.toMatchObject({ status: 'download-error', version: null });
+      expect(autoUpdater.downloadUpdate).not.toHaveBeenCalled();
+    });
+
+    test('refuses after a check that found nothing new', async () => {
+      await findUpdate();
+      const check = manager.checkForUpdates({ manual: true });
+      autoUpdater.emit('update-not-available', { version: '1.7.0' });
+      await check;
+
+      await expect(manager.downloadUpdate()).resolves.toMatchObject({ status: 'download-error' });
+    });
+
+    test('reports the start at 0 % and then each progress event', async () => {
+      await findUpdate();
+      manager.downloadUpdate();
+      await Promise.resolve();
+
+      autoUpdater.emit('download-progress', { percent: 42.5, transferred: 42, total: 100, bytesPerSecond: 7 });
+
+      expect(sentStatuses()).toEqual([
+        { channel: 'update-status', status: 'downloading', version: '1.8.0', percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 },
+        { channel: 'update-status', status: 'downloading', version: '1.8.0', percent: 42.5, transferred: 42, total: 100, bytesPerSecond: 7 }
+      ]);
+    });
+
+    test('reports the finished download once and resolves with it', async () => {
+      await findUpdate();
+      finishingDownload();
+
+      await expect(manager.downloadUpdate()).resolves.toEqual({ status: 'downloaded', version: '1.8.0' });
+
+      expect(sentStatuses().filter(s => s.status === 'downloaded')).toEqual([
+        { channel: 'update-status', status: 'downloaded', version: '1.8.0' }
+      ]);
+      expect(manager.downloadedVersion).toBe('1.8.0');
+    });
+
+    test('arms installing on quit before the download finishes, as electron-updater needs', async () => {
+      await findUpdate();
+      let armedWhenDone = null;
+      autoUpdater.downloadUpdate.mockImplementation(async () => {
+        armedWhenDone = autoUpdater.autoInstallOnAppQuit;
+        autoUpdater.emit('update-downloaded', { version: '1.8.0' });
+      });
+
+      await manager.downloadUpdate();
+
+      expect(armedWhenDone).toBe(true);
+      expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+    });
+
+    test('reports a failed download once, not as a failed check', async () => {
+      await findUpdate();
+      failingDownload('net::ERR_CONNECTION_RESET\nHTTP headers...');
+
+      await expect(manager.downloadUpdate()).resolves.toEqual({
+        status: 'download-error', version: '1.8.0', message: 'net::ERR_CONNECTION_RESET'
+      });
+
+      expect(sentStatuses().filter(s => s.status === 'download-error')).toHaveLength(1);
+      expect(sentStatuses().filter(s => s.status === 'error')).toHaveLength(0);
+      expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
+    });
+
+    test('lets the user try the download again after a failure', async () => {
+      await findUpdate();
+      failingDownload('offline');
+      await manager.downloadUpdate();
+
+      finishingDownload();
+      await expect(manager.downloadUpdate()).resolves.toMatchObject({ status: 'downloaded' });
+      expect(autoUpdater.downloadUpdate).toHaveBeenCalledTimes(2);
+    });
+
+    test('does not start a second download while one runs', async () => {
+      await findUpdate();
+      manager.downloadUpdate();
+
+      await expect(manager.downloadUpdate()).resolves.toMatchObject({ status: 'downloading' });
+      expect(autoUpdater.downloadUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    test('a manual check during the download shows its progress instead of checking', async () => {
+      await findUpdate();
+      autoUpdater.checkForUpdates.mockClear();
+      manager.downloadUpdate();
+      autoUpdater.emit('download-progress', { percent: 30, transferred: 3, total: 10, bytesPerSecond: 1 });
+      webContents.send.mockClear();
+
+      const outcome = await manager.checkForUpdates({ manual: true });
+
+      expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+      expect(outcome).toMatchObject({ status: 'downloading', percent: 30 });
+      expect(sentStatuses()).toEqual([expect.objectContaining({ status: 'downloading', percent: 30 })]);
+    });
+
+    test('a manual check after the download offers to install it again', async () => {
+      await findUpdate();
+      finishingDownload();
+      await manager.downloadUpdate();
+      webContents.send.mockClear();
+
+      await expect(manager.checkForUpdates({ manual: true })).resolves.toMatchObject({ status: 'downloaded', version: '1.8.0' });
+      expect(sentStatuses()).toEqual([{ channel: 'update-status', status: 'downloaded', version: '1.8.0' }]);
+    });
+
+    test('ignores progress when no download was asked for', () => {
+      manager.init();
+      autoUpdater.emit('download-progress', { percent: 50 });
+      expect(webContents.send).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('install', () => {
+    const download = async () => {
+      const check = manager.checkForUpdates({ manual: true });
+      autoUpdater.emit('update-available', { version: '1.8.0' });
+      await check;
+      autoUpdater.downloadUpdate.mockImplementation(async () => {
+        autoUpdater.emit('update-downloaded', { version: '1.8.0' });
+      });
+      await manager.downloadUpdate();
+      webContents.send.mockClear();
+    };
+
+    test('runs the installer silently and starts the app again', async () => {
+      await download();
+
+      expect(manager.installUpdate()).toEqual({ success: true });
+
+      expect(autoUpdater.quitAndInstall).toHaveBeenCalledWith(true, true);
+    });
+
+    test('refuses with nothing downloaded', () => {
+      manager.init();
+      expect(manager.installUpdate()).toMatchObject({ success: false });
+      expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
+    });
+
+    test('reports an installer that cannot start', async () => {
+      await download();
+      autoUpdater.quitAndInstall.mockImplementation(() => {
+        autoUpdater.emit('error', new Error("No update filepath provided, can't quit and install"));
+      });
+
+      const result = manager.installUpdate();
+
+      expect(result).toEqual({ success: false, error: "No update filepath provided, can't quit and install" });
+      expect(sentStatuses()).toEqual([expect.objectContaining({ status: 'install-error', version: '1.8.0' })]);
+    });
+
+    test('cancels a pending startup check, the app is about to quit', async () => {
+      await download();
+      manager.startupTimer = setTimeout(() => {}, 100000);
+
+      manager.installUpdate();
+
+      expect(manager.startupTimer).toBeNull();
+    });
+  });
+
   describe('a check that never answers', () => {
     // Short enough to wait for it in a real-timer test
     const withTimeout = (overrides = {}) => createManager({ checkTimeoutMs: 40, ...overrides });

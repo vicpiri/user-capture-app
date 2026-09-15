@@ -340,6 +340,8 @@ class ElectronAPIMock extends EventEmitter {
   checkForUpdates = jest.fn(async () => ({ status: 'not-available', manual: true }));
   skipUpdateVersion = jest.fn(async () => ({ success: true }));
   openReleasePage = jest.fn(async () => ({ success: true }));
+  downloadUpdate = jest.fn(async () => ({ status: 'downloaded', version: '1.8.0' }));
+  installUpdate = jest.fn(async () => ({ success: true }));
   onUpdateStatus = jest.fn((callback) => { this.on('update-status', callback); });
   onMenuCheckUpdates = jest.fn((callback) => { this.on('menu-check-updates', callback); });
 
