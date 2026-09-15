@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.11.0](https://github.com/vicpiri/user-capture-app/compare/v1.10.1...v1.11.0) (2026-09-15)
+
+### Features
+
+* add a thumbnail view of the users to the main window ([6fd3761](https://github.com/vicpiri/user-capture-app/commit/6fd3761b70564e458bf8c68574be747de76c4488))
+* add workspaces to the Ver menu ([71cb1ac](https://github.com/vicpiri/user-capture-app/commit/71cb1acec56b2656c1e51459670903eae762198b))
 ## [1.10.1](https://github.com/vicpiri/user-capture-app/compare/v1.10.0...v1.10.1) (2026-09-15)
 
 ### Bug Fixes
