@@ -1,6 +1,6 @@
 # Comprobación de actualizaciones y nuevo flujo de release
 
-**Estado**: 🚧 Pasos 1 a 5 hechos. La 1.7.0 (2026-09-13) fue la primera Release de GitHub pero **no arranca** (leía `build.publish` del `package.json` recortado); la **1.7.1** la corrige y es la primera publicada con el flujo completo de la sección 1 sin intervención manual. Pendiente el paso 6 (que una 1.7.1 instalada avise de la siguiente versión). La fase 2 (descarga e instalación) está implementada y probada con una descarga real de la 1.9.0; falta verla actualizar de extremo a extremo entre dos releases (paso 7).
+**Estado**: ✅ Completo. La 1.7.0 (2026-09-13) fue la primera Release de GitHub pero **no arranca** (leía `build.publish` del `package.json` recortado); la **1.7.1** la corrige y es la primera publicada con el flujo completo de la sección 1 sin intervención manual. Las versiones instaladas avisan de las nuevas desde entonces (paso 6), y la fase 2 se comprobó de extremo a extremo el 2026-09-15: una 1.10.0 instalada, desde Ayuda > Buscar actualizaciones, descargó, instaló y relanzó la 1.10.1 (paso 7).
 **Redactado**: 2026-09-13, tras la migración a Electron 44.
 **Alcance**: (1) un flujo de publicación reproducible que deje cada versión
 como Release de GitHub, y (2) que la aplicación instalada avise de que existe
@@ -532,13 +532,14 @@ En orden, con un commit por paso. Los pasos 1 a 3 no tocan la aplicación.
    (La 1.7.0 no sirve para esto: nunca llega a ejecutar el actualizador.)
    En la aplicación empaquetada de la 1.7.1 ya se comprobó que tanto la
    comprobación automática como la manual responden "Sin novedades" contra
-   la Release real.
+   la Release real. ✅ Hecho: las versiones instaladas avisan de las
+   siguientes (así se vio, en la 1.7.2, que las notas llegaban en HTML).
 7. **Fase 2** (descarga e instalación), con sus tests. ✅ Implementada; la
    descarga, el progreso, el segundo plano y la vista "descargada" se
-   comprobaron con una descarga real de la 1.9.0. Falta la verificación de
-   extremo a extremo: con la versión que la incluye instalada, publicar la
-   siguiente y comprobar que se descarga (diferencial), se instala y se
-   relanza, por las dos vías.
+   comprobaron con una descarga real de la 1.9.0. ✅ Verificada de extremo a
+   extremo el 2026-09-15: con la 1.10.0 instalada y la comprobación pedida
+   desde Ayuda > Buscar actualizaciones, la 1.10.1 se descargó, se instaló y
+   la aplicación volvió a abrirse ya actualizada.
 
 ## 7. Fuera de alcance
 
