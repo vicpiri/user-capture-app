@@ -112,6 +112,25 @@
     canvas {
       display: none;
     }
+    /* Problems with a capture, shown over the preview for a few seconds */
+    .camera-notice {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      max-width: calc(100% - 32px);
+      padding: 10px 16px;
+      font-size: 14px;
+      line-height: 1.4;
+      color: #fecaca;
+      background-color: rgba(26, 31, 46, 0.95);
+      border: 1px solid rgba(239, 68, 68, 0.6);
+      border-radius: 8px;
+      z-index: 10;
+    }
+    .camera-notice[hidden] {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -125,6 +144,7 @@
     </div>
     <video id="camera-preview" autoplay></video>
     <canvas id="capture-canvas"></canvas>
+    <div id="camera-notice" class="camera-notice" role="alert" hidden></div>
   </div>
 
   <div class="controls">

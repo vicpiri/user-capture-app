@@ -1,7 +1,8 @@
 /**
  * Project-related IPC handlers
  */
-const { ipcMain, dialog } = require('electron');
+const { ipcMain } = require('electron');
+const { showAppMessage } = require('../appDialogs');
 const fs = require('fs');
 const path = require('path');
 const DatabaseManager = require('../database');
@@ -306,16 +307,11 @@ function registerProjectHandlers(context) {
 
         reportMessage += `\nConsulte el archivo 'import-report.log' en la carpeta del proyecto para más detalles.`;
 
-        const mainWindow = getMainWindow();
-        if (mainWindow) {
-          dialog.showMessageBox(mainWindow, {
-            type: 'warning',
-            title: 'Informe de Importación',
-            message: 'Proyecto creado con advertencias',
-            detail: reportMessage,
-            buttons: ['Aceptar']
-          });
-        }
+        showAppMessage(getMainWindow(), {
+          title: 'Informe de importación',
+          message: 'Proyecto creado con advertencias.',
+          detail: reportMessage
+        });
       }
 
       return {

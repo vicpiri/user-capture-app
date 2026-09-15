@@ -59,6 +59,8 @@
       // Get quality select
       this.qualitySelect = document.getElementById('orla-export-quality');
 
+      this.errorEl = document.getElementById('orla-export-error');
+
       // Get buttons
       this.confirmBtn = document.getElementById('orla-export-confirm');
       this.cancelBtn = document.getElementById('orla-export-cancel');
@@ -77,11 +79,14 @@
       // Enable/disable group select based on radio selection
       this.allGroupsRadio.addEventListener('change', () => {
         this.groupSelect.disabled = true;
+        this.showError(null);
       });
 
       this.singleGroupRadio.addEventListener('change', () => {
         this.groupSelect.disabled = false;
       });
+
+      this.groupSelect.addEventListener('change', () => this.showError(null));
     }
 
     /**
@@ -102,10 +107,21 @@
         this.groupSelect.disabled = true;
         this.capturedRadio.checked = true;
         this.qualitySelect.value = '80'; // Default to high quality
+        this.showError(null);
 
         // Show modal using base class
         super.open();
       });
+    }
+
+    /**
+     * Show a problem inside the modal, next to what caused it
+     * @param {string|null} message - null hides it
+     */
+    showError(message) {
+      if (!this.errorEl) return;
+      this.errorEl.textContent = message || '';
+      this.errorEl.hidden = !message;
     }
 
     /**
@@ -135,7 +151,8 @@
 
       // Validate single group selection
       if (groupScope === 'single' && (!selectedGroup || selectedGroup === '')) {
-        alert('Por favor, selecciona un grupo para exportar.');
+        this.showError('Selecciona el grupo que quieres exportar.');
+        this.groupSelect.focus();
         return;
       }
 

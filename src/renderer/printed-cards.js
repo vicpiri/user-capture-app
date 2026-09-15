@@ -15,11 +15,20 @@
   const tableBodyEl = document.getElementById('table-body');
   const subtitleEl = document.getElementById('subtitle');
   const clearListBtn = document.getElementById('clear-list-btn');
+  const confirmModalEl = document.getElementById('confirm-modal');
+  const confirmMessageEl = document.getElementById('confirm-message');
+  const confirmYesBtn = document.getElementById('confirm-yes-btn');
+  const confirmNoBtn = document.getElementById('confirm-no-btn');
 
   /**
    * Initialize the window
    */
   async function init() {
+    // Escape presses the Cancelar of the dialog, as in the main window
+    if (typeof installModalEscape === 'function') {
+      installModalEscape(document);
+    }
+
     try {
       // Add click handler for clear button
       if (clearListBtn) {
@@ -69,14 +78,30 @@
   }
 
   /**
-   * Show confirmation dialog
+   * Ask before a destructive action, with the app's own dialog
+   *
+   * Enter does not confirm: clearing deletes files and cannot be undone, so
+   * it takes a click on the button.
    * @param {string} message - Confirmation message
    * @returns {Promise<boolean>}
    */
   function showConfirmDialog(message) {
     return new Promise((resolve) => {
-      const result = confirm(message);
-      resolve(result);
+      confirmMessageEl.textContent = message;
+
+      const finish = (answer) => {
+        confirmYesBtn.removeEventListener('click', onYes);
+        confirmNoBtn.removeEventListener('click', onNo);
+        confirmModalEl.classList.remove('show');
+        resolve(answer);
+      };
+      const onYes = () => finish(true);
+      const onNo = () => finish(false);
+
+      confirmYesBtn.addEventListener('click', onYes);
+      confirmNoBtn.addEventListener('click', onNo);
+      confirmModalEl.classList.add('show');
+      confirmNoBtn.focus();
     });
   }
 

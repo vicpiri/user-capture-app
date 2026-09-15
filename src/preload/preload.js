@@ -266,6 +266,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Version
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+  // Notices and questions of the main process (see src/main/appDialogs.js)
+  onAppDialog: (callback) => {
+    ipcRenderer.on('app-dialog', (event, request) => callback(request));
+  },
+  answerAppDialog: (id, response) => ipcRenderer.send('app-dialog-response', { id, response }),
+
   // Updates (GitHub Releases)
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   skipUpdateVersion: (version) => ipcRenderer.invoke('skip-update-version', version),

@@ -7,6 +7,8 @@ let rotationDegrees = 0;
 const cameraPreview = document.getElementById('camera-preview');
 const captureBtn = document.getElementById('capture-btn');
 const rotateBtn = document.getElementById('rotate-btn');
+const cameraNotice = document.getElementById('camera-notice');
+let noticeTimer = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -99,6 +101,17 @@ function showCameraPlaceholder(message = 'No se pudo acceder a la cámara') {
   document.querySelector('.camera-container').appendChild(placeholder);
 }
 
+// Tell the user about a failed capture inside the window, instead of a
+// system message box
+function showNotice(message) {
+  cameraNotice.textContent = message;
+  cameraNotice.hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => {
+    cameraNotice.hidden = true;
+  }, 5000);
+}
+
 // Rotate camera
 function handleRotate() {
   rotationDegrees = (rotationDegrees + 90) % 360;
@@ -108,7 +121,7 @@ function handleRotate() {
 // Capture image
 async function handleCapture() {
   if (!cameraStream) {
-    alert('La cámara no está disponible');
+    showNotice('La cámara no está disponible.');
     return;
   }
 
@@ -161,7 +174,7 @@ async function handleCapture() {
       cameraPreview.style.filter = 'brightness(1)';
     }, 100);
   } else {
-    alert('Error al capturar la imagen: ' + result.error);
+    showNotice('No se pudo guardar la captura: ' + result.error);
   }
 }
 

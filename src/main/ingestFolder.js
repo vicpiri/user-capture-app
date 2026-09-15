@@ -13,6 +13,7 @@
  * folder nobody watches.
  */
 const { dialog } = require('electron');
+const { showAppMessage, askAppQuestion, CANCELLED } = require('./appDialogs');
 const fs = require('fs');
 const path = require('path');
 const FolderWatcher = require('./folderWatcher');
@@ -227,18 +228,13 @@ async function startIngestWatcher({ state, logger, getMainWindow }) {
   logger.success('Folder watcher started', { watchPath: watch.path });
 
   if (watch.unavailable) {
-    const mainWindow = getMainWindow();
-    if (mainWindow) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'warning',
-        title: 'Carpeta de entrada no disponible',
-        message: 'No se encuentra la carpeta de entrada configurada para este proyecto',
-        detail: `Carpeta configurada: ${watch.configuredPath}\n\n` +
-          `Mientras no esté disponible se vigila la carpeta por defecto:\n${watch.path}\n\n` +
-          'Puedes cambiarla en Proyecto > Configurar carpeta de entrada.',
-        buttons: ['Aceptar']
-      });
-    }
+    showAppMessage(getMainWindow(), {
+      title: 'Carpeta de entrada no disponible',
+      message: 'No se encuentra la carpeta de entrada configurada para este proyecto.',
+      detail: `Carpeta configurada: ${watch.configuredPath}\n\n` +
+        `Mientras no esté disponible se vigila la carpeta por defecto:\n${watch.path}\n\n` +
+        'Puedes cambiarla en Proyecto > Configurar carpeta de entrada.'
+    });
   }
 
   return watch;
@@ -272,9 +268,7 @@ async function configureIngestFolder({ state, logger, getMainWindow, mirrorPath 
   const mainWindow = getMainWindow();
 
   if (!state.projectPath || !state.dbManager) {
-    if (mainWindow) {
-      dialog.showErrorBox('Carpeta de entrada', 'No hay ningún proyecto abierto');
-    }
+    showAppMessage(mainWindow, { title: 'Carpeta de entrada', message: 'No hay ningún proyecto abierto.' });
     return { success: false, changed: false, error: 'No hay ningún proyecto abierto' };
   }
 
@@ -286,22 +280,18 @@ async function configureIngestFolder({ state, logger, getMainWindow, mirrorPath 
   // offered first whenever there is something to go back from
   let useDefault = false;
   if (configuredPath) {
-    const choice = await dialog.showMessageBox(mainWindow, {
-      type: 'question',
+    const choice = await askAppQuestion(mainWindow, {
       title: 'Carpeta de entrada',
       message: 'Carpeta de entrada de imágenes (ingest)',
       detail: `Carpeta actual (personalizada):\n${configuredPath}\n\n` +
         `Carpeta por defecto:\n${defaultPath}`,
-      buttons: ['Elegir otra carpeta...', 'Usar la carpeta por defecto', 'Cancelar'],
-      defaultId: 0,
-      cancelId: 2,
-      noLink: true
+      choices: ['Elegir otra carpeta...', 'Usar la carpeta por defecto']
     });
 
-    if (choice.response === 2) {
+    if (choice === CANCELLED) {
       return { success: true, changed: false };
     }
-    useDefault = choice.response === 1;
+    useDefault = choice === 1;
   }
 
   let newPath = null;
@@ -323,7 +313,7 @@ async function configureIngestFolder({ state, logger, getMainWindow, mirrorPath 
       const repositoryPath = await getImageRepositoryPath(state.dbManager);
       const error = validateIngestPath(selectedPath, { projectPath, repositoryPath, mirrorPath });
       if (error) {
-        dialog.showErrorBox('Carpeta de entrada', error);
+        showAppMessage(mainWindow, { title: 'Carpeta de entrada', message: error });
         return { success: false, changed: false, error };
       }
       newPath = selectedPath;
@@ -339,14 +329,12 @@ async function configureIngestFolder({ state, logger, getMainWindow, mirrorPath 
 
   const watch = await restartIngestWatcher({ state, logger, getMainWindow });
 
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
+  showAppMessage(mainWindow, {
     title: 'Configuración guardada',
-    message: newPath ? 'Carpeta de entrada configurada' : 'Se usa la carpeta de entrada por defecto',
+    message: newPath ? 'Carpeta de entrada configurada.' : 'Se usa la carpeta de entrada por defecto.',
     detail: `Ruta: ${watch.path}\n\n` +
       'Las imágenes JPG nuevas que lleguen a esta carpeta se moverán a la carpeta imports del proyecto. ' +
-      'Las que ya estuvieran en ella no se importan.',
-    buttons: ['Aceptar']
+      'Las que ya estuvieran en ella no se importan.'
   });
 
   return { success: true, changed: true, ingestPath: watch.path };

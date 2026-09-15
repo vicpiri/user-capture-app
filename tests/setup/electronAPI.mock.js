@@ -205,6 +205,10 @@ class ElectronAPIMock extends EventEmitter {
     return this._registerEvent('image-detecting', callback);
   }
 
+  onAppDialog(callback) {
+    return this._registerEvent('app-dialog', callback);
+  }
+
   onCapturedImagesChanged(callback) {
     return this._registerEvent('captured-images-changed', callback);
   }
@@ -337,6 +341,8 @@ class ElectronAPIMock extends EventEmitter {
   }
 
   // === UPDATES ===
+  answerAppDialog = jest.fn();
+
   checkForUpdates = jest.fn(async () => ({ status: 'not-available', manual: true }));
   skipUpdateVersion = jest.fn(async () => ({ success: true }));
   openReleasePage = jest.fn(async () => ({ success: true }));

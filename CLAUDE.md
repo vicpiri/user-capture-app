@@ -37,6 +37,7 @@ user-capture-app/
 │   │   │   ├── imageGridWindow.js      # Grid de imágenes capturadas
 │   │   │   ├── mainWindow.js           # Ventana principal
 │   │   │   └── repositoryGridWindow.js # Grid de imágenes del repositorio
+│   │   ├── appDialogs.js        # Avisos y preguntas del proceso principal, con los modales propios
 │   │   ├── database.js          # Gestión de base de datos SQLite
 │   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
 │   │   ├── googleDriveManager.js # Integración con Google Drive API
@@ -53,6 +54,7 @@ user-capture-app/
 │   │   ├── components/                  # Componentes modulares de UI
 │   │   │   ├── modals/                  # Componentes de modales
 │   │   │   │   ├── AddTagModal.js           # Modal para agregar etiquetas a imágenes
+│   │   │   │   ├── ChoiceModal.js           # Pregunta con varias respuestas y Cancelar
 │   │   │   │   ├── ConfirmModal.js          # Modal de confirmación genérico
 │   │   │   │   ├── ExportOptionsModal.js    # Modal de opciones de exportación
 │   │   │   │   ├── InfoModal.js             # Modal informativo genérico
@@ -61,6 +63,7 @@ user-capture-app/
 │   │   │   │   ├── ProjectInfoModal.js      # Modal de información del proyecto
 │   │   │   │   ├── UpdateModal.js           # Modal de actualizaciones disponibles
 │   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
+│   │   │   ├── AppDialogManager.js      # Muestra en orden los avisos y preguntas del proceso principal
 │   │   │   ├── CaptureHistoryManager.js # Tira de miniaturas del historial de capturas
 │   │   │   ├── DragDropManager.js       # Gestión de drag & drop de imágenes
 │   │   │   ├── ExportManager.js         # Coordinador de exportaciones (CSV/imágenes)
@@ -259,6 +262,23 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 - **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado
+- **appDialogs.js**: Avisos y preguntas del proceso principal. **No se usan los
+  cuadros de mensaje del sistema** (`dialog.showMessageBox`,
+  `dialog.showErrorBox`), ni `alert()`/`confirm()` en el renderer: rompen la
+  apariencia de la aplicación. Desde el proceso principal,
+  `showAppMessage(ventana, { title, message, detail })` y
+  `askAppQuestion(ventana, { title, message, detail, choices, cancel })`, que
+  devuelve el índice de la opción o `CANCELLED` (-1)
+  - Envían `app-dialog` a la ventana principal, que los muestra con `InfoModal`
+    o `ChoiceModal` a través de `AppDialogManager`, **uno detrás de otro**, y
+    contesta por `app-dialog-response`
+  - Sin ventana, con la ventana cerrada o recargándose, la promesa se resuelve
+    como cancelada: nada se queda esperando
+  - Los selectores de archivos y carpetas (`showOpenDialog`,
+    `showSaveDialog`) sí siguen siendo los del sistema
+  - Las ventanas secundarias no tienen estos modales: la de cámara avisa con un
+    mensaje sobre la vista previa y la de carnets impresos lleva su propio
+    diálogo de confirmación
 - **updateManager.js**: Comprobación de versiones nuevas contra las Releases de
   GitHub mediante `electron-updater`. Nunca descarga ni instala por su cuenta:
   la descarga (diferencial, con progreso) empieza cuando la persona pulsa

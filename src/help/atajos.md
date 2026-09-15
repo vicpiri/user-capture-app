@@ -72,6 +72,7 @@ Con una de estas ventanas abierta, `Intro` pulsa su botón principal:
 |---|---|
 | Mensajes de confirmación | **Sí** |
 | Mensajes informativos y avisos | **Aceptar** |
+| Preguntas con varias opciones (por ejemplo, al cambiar la carpeta de entrada) | La opción destacada |
 | Nuevo Proyecto | **Crear** |
 | Opciones de Exportación | **Exportar** |
 | Opciones de Exportación de Inventario | **Exportar** |
@@ -83,6 +84,8 @@ Con una de estas ventanas abierta, `Intro` pulsa su botón principal:
 > **Importante:** En los mensajes de confirmación, `Intro` equivale a pulsar **Sí**. Léelos antes de pulsar la tecla, sobre todo si la acción quita enlaces o borra datos.
 
 `Esc` cierra la ventana de diálogo que está delante sin hacer nada, igual que su botón **Cancelar**, **No** o **Cerrar**. En los mensajes de confirmación equivale a **No**. No cierra la barra de progreso de una tarea en marcha.
+
+En la ventana **Últimos carnets impresos**, `Intro` no confirma **Limpiar lista**: borra los archivos de la lista y no se puede deshacer, así que hay que pulsar el botón.
 
 ## Manual de uso
 

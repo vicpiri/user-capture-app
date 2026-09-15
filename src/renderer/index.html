@@ -512,6 +512,8 @@
         </div>
       </div>
 
+      <div id="orla-export-error" class="modal-error" role="alert" hidden></div>
+
       <div class="modal-buttons">
         <button id="orla-export-cancel" data-modal-cancel class="btn btn-secondary">Cancelar</button>
         <button id="orla-export-confirm" class="btn btn-primary">Exportar</button>
@@ -697,6 +699,18 @@
     </div>
   </div>
 
+  <!-- Questions from the main process with more answers than Sí/No. Last in
+       the page so it is drawn over any dialog already open -->
+  <div id="choice-modal" class="modal">
+    <div class="modal-content">
+      <h2 id="choice-modal-title"></h2>
+      <p id="choice-modal-message" style="white-space: pre-line;"></p>
+      <div id="choice-modal-buttons" class="modal-buttons">
+        <button id="choice-modal-cancel-btn" type="button" data-choice="-1" data-modal-cancel class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Load modules in dependency order -->
   <script src="utils/imageUrl.js"></script>
   <script src="core/store.js"></script>
@@ -705,6 +719,7 @@
   <script src="components/modals/NewProjectModal.js"></script>
   <script src="components/modals/ConfirmModal.js"></script>
   <script src="components/modals/InfoModal.js"></script>
+  <script src="components/modals/ChoiceModal.js"></script>
   <script src="components/modals/UpdateModal.js"></script>
   <script src="components/modals/ExportOptionsModal.js"></script>
   <script src="components/modals/InventoryExportOptionsModal.js"></script>
@@ -748,6 +763,7 @@
   <script src="components/MenuEventManager.js"></script>
   <script src="components/UserDataManager.js"></script>
   <script src="components/ProjectManager.js"></script>
+  <script src="components/AppDialogManager.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

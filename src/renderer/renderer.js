@@ -85,6 +85,8 @@ const progressModal = document.getElementById('progress-modal');
 let newProjectModalInstance = null;
 let confirmModalInstance = null;
 let infoModalInstance = null;
+let choiceModalInstance = null;
+let appDialogManager = null;
 let updateModalInstance = null;
 let exportOptionsModalInstance = null;
 let inventoryExportOptionsModalInstance = null;
@@ -168,6 +170,18 @@ function initializeModals() {
 
   infoModalInstance = new InfoModal();
   infoModalInstance.init();
+
+  choiceModalInstance = new ChoiceModal();
+  choiceModalInstance.init();
+
+  // Notices and questions of the main process, shown with the app's modals
+  // instead of the system's message boxes
+  appDialogManager = new AppDialogManager({
+    infoModal: infoModalInstance,
+    choiceModal: choiceModalInstance,
+    answer: (id, response) => window.electronAPI.answerAppDialog(id, response)
+  });
+  window.electronAPI.onAppDialog((request) => appDialogManager.handle(request));
 
   updateModalInstance = new UpdateModal({
     checkForUpdates: () => window.electronAPI.checkForUpdates(),
@@ -364,6 +378,7 @@ function initializeOrlaExportManager() {
 function initializeImageTagsManager() {
   imageTagsManager = new ImageTagsManager({
     addTagModal: addTagModalInstance,
+    confirmModal: confirmModalInstance,
     showInfoModal: showInfoModal,
     imageGridManager: imageGridManager,
     getProjectOpen: () => projectOpen,

@@ -11,6 +11,7 @@ describe('ImageTagsManager', () => {
   let mockImageGridManager;
   let mockElectronAPI;
   let mockDOM;
+  let mockConfirmModal;
 
   beforeEach(() => {
     // Mock AddTagModal
@@ -66,8 +67,11 @@ describe('ImageTagsManager', () => {
     };
 
     // Create manager instance
+    mockConfirmModal = { show: jest.fn(async () => true) };
+
     manager = new ImageTagsManager({
       addTagModal: mockAddTagModal,
+      confirmModal: mockConfirmModal,
       showInfoModal: mockShowInfoModal,
       imageGridManager: mockImageGridManager,
       getProjectOpen: () => true,
@@ -294,6 +298,28 @@ describe('ImageTagsManager', () => {
       expect(element.className).toBe('image-tag');
       expect(element.querySelector('.image-tag-text').textContent).toBe('Test Tag');
       expect(element.querySelector('.image-tag-delete')).toBeTruthy();
+    });
+
+    test('should ask in the app confirm dialog before deleting', async () => {
+      mockElectronAPI.deleteImageTag.mockResolvedValue({ success: true });
+      mockElectronAPI.getImageTags.mockResolvedValue({ success: true, tags: [] });
+      const element = manager.createTagElement({ id: 1, tag: 'Repetir' });
+
+      element.querySelector('.image-tag-delete').click();
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+
+      expect(mockConfirmModal.show).toHaveBeenCalledWith('¿Deseas eliminar la etiqueta "Repetir"?');
+      expect(mockElectronAPI.deleteImageTag).toHaveBeenCalledWith(1);
+    });
+
+    test('should keep the tag when the deletion is not confirmed', async () => {
+      mockConfirmModal.show.mockResolvedValue(false);
+      const element = manager.createTagElement({ id: 1, tag: 'Repetir' });
+
+      element.querySelector('.image-tag-delete').click();
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+
+      expect(mockElectronAPI.deleteImageTag).not.toHaveBeenCalled();
     });
   });
 

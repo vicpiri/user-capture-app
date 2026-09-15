@@ -7,7 +7,7 @@ if (!process.env.UV_THREADPOOL_SIZE) {
   process.env.UV_THREADPOOL_SIZE = String(Math.min(Math.max(cores, 8), 32));
 }
 
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -59,6 +59,7 @@ const { registerExportHandlers } = require('./src/main/ipc/exportHandlers');
 const { registerMiscHandlers } = require('./src/main/ipc/miscHandlers');
 const { registerUpdateHandlers } = require('./src/main/ipc/updateHandlers');
 const { registerHelpHandlers } = require('./src/main/ipc/helpHandlers');
+const { registerAppDialogHandlers, showAppMessage } = require('./src/main/appDialogs');
 
 // Enable hot reload in development
 if (process.argv.includes('--dev')) {
@@ -240,7 +241,11 @@ function createMenu() {
           }
         } catch (error) {
           logger.error('Error configuring ingest folder', error);
-          dialog.showErrorBox('Error', 'No se pudo cambiar la carpeta de entrada: ' + error.message);
+          showAppMessage(mainWindowManager.getWindow(), {
+            title: 'Error',
+            message: 'No se pudo cambiar la carpeta de entrada.',
+            detail: error.message
+          });
         }
       },
       toggleCamera: () => {
@@ -381,24 +386,14 @@ function createMenu() {
           // Ver repository options off nothing had: this used to do nothing.
           // Starting it already syncs every file.
           if (!dbManager) {
-            dialog.showMessageBox(mainWindow, {
-              type: 'warning',
-              title: 'Proyecto no abierto',
-              message: 'Debes abrir o crear un proyecto primero',
-              buttons: ['Aceptar']
-            });
+            warnNoProject();
             return;
           }
 
           await ensureRepositoryMirrorStarted();
 
           if (!repositoryMirror) {
-            dialog.showMessageBox(mainWindow, {
-              type: 'warning',
-              title: 'Depósito no configurado',
-              message: 'Debes configurar el depósito de imágenes primero.\n\nVe a Proyecto > Configurar depósito de imágenes',
-              buttons: ['Aceptar']
-            });
+            warnNoRepository();
             return;
           }
         }
@@ -550,6 +545,21 @@ function closeCameraWindow() {
   cameraWindowManager.close();
 }
 
+function warnNoProject() {
+  showAppMessage(mainWindowManager.getWindow(), {
+    title: 'Proyecto no abierto',
+    message: 'Debes abrir o crear un proyecto primero.'
+  });
+}
+
+function warnNoRepository() {
+  showAppMessage(mainWindowManager.getWindow(), {
+    title: 'Depósito no configurado',
+    message: 'Debes configurar el depósito de imágenes primero.',
+    detail: 'Ve a Proyecto > Configurar depósito de imágenes.'
+  });
+}
+
 // The manual needs no open project: it is most useful before creating one
 function openHelpWindow(target = {}) {
   const isDev = process.argv.includes('--dev');
@@ -558,13 +568,7 @@ function openHelpWindow(target = {}) {
 
 function openPrintedCardsWindow() {
   if (!dbManager) {
-    const mainWindow = mainWindowManager.getWindow();
-    dialog.showMessageBox(mainWindow, {
-      type: 'warning',
-      title: 'Proyecto no abierto',
-      message: 'Debes abrir o crear un proyecto primero',
-      buttons: ['Aceptar']
-    });
+    warnNoProject();
     return;
   }
 
@@ -574,13 +578,7 @@ function openPrintedCardsWindow() {
 
 function openImageGridWindow() {
   if (!dbManager) {
-    const mainWindow = mainWindowManager.getWindow();
-    dialog.showMessageBox(mainWindow, {
-      type: 'warning',
-      title: 'Proyecto no abierto',
-      message: 'Debes abrir o crear un proyecto primero',
-      buttons: ['Aceptar']
-    });
+    warnNoProject();
     return;
   }
 
@@ -589,27 +587,15 @@ function openImageGridWindow() {
 }
 
 async function openRepositoryGridWindow() {
-  const mainWindow = mainWindowManager.getWindow();
-
   if (!dbManager) {
-    dialog.showMessageBox(mainWindow, {
-      type: 'warning',
-      title: 'Proyecto no abierto',
-      message: 'Debes abrir o crear un proyecto primero',
-      buttons: ['Aceptar']
-    });
+    warnNoProject();
     return;
   }
 
   // Check if repository path is configured
   const repositoryPath = await getImageRepositoryPath(dbManager);
   if (!repositoryPath) {
-    dialog.showMessageBox(mainWindow, {
-      type: 'warning',
-      title: 'Depósito no configurado',
-      message: 'Debes configurar el depósito de imágenes primero.\n\nVe a Proyecto > Configurar depósito de imágenes',
-      buttons: ['Aceptar']
-    });
+    warnNoRepository();
     return;
   }
 
@@ -913,7 +899,11 @@ async function openRecentProject(folderPath) {
     }
   } catch (error) {
     logger.error('Error opening recent project', error);
-    dialog.showErrorBox('Error', 'Error al abrir el proyecto: ' + error.message);
+    showAppMessage(mainWindowManager.getWindow(), {
+      title: 'Error',
+      message: 'No se pudo abrir el proyecto.',
+      detail: error.message
+    });
   }
 }
 
@@ -954,6 +944,7 @@ function registerIPCHandlers() {
   registerMiscHandlers(context);
   registerUpdateHandlers(context);
   registerHelpHandlers(context);
+  registerAppDialogHandlers();
 
   // Filter toggle handlers from renderer (badge clicks)
   ipcMain.on('menu-toggle-duplicates-from-renderer', (event, enabled) => {

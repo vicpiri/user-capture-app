@@ -1,4 +1,5 @@
 const { Menu, dialog } = require('electron');
+const { showAppMessage } = require('../appDialogs');
 const path = require('path');
 
 /**
@@ -265,15 +266,16 @@ class MenuBuilder {
                 // Notify renderer to update status bar
                 this.mainWindow.webContents.send('repository-path-changed');
 
-                dialog.showMessageBox(this.mainWindow, {
-                  type: 'info',
+                showAppMessage(this.mainWindow, {
                   title: 'Configuración guardada',
-                  message: 'Depósito de imágenes configurado',
-                  detail: `Ruta: ${selectedPath}`,
-                  buttons: ['Aceptar']
+                  message: 'Depósito de imágenes configurado.',
+                  detail: `Ruta: ${selectedPath}`
                 });
               } else {
-                dialog.showErrorBox('Error', 'No se pudo guardar la configuración');
+                showAppMessage(this.mainWindow, {
+                  title: 'Error',
+                  message: 'No se pudo guardar la configuración del depósito.'
+                });
               }
             }
           }

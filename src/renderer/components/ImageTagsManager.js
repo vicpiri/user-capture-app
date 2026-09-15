@@ -30,6 +30,7 @@
       // Required dependencies
       this.addTagModal = config.addTagModal; // AddTagModal instance
       this.showInfoModal = config.showInfoModal; // Function to show info/error messages
+      this.confirmModal = config.confirmModal; // ConfirmModal, to confirm deletions
       this.imageGridManager = config.imageGridManager; // ImageGridManager instance
 
       // Required callbacks
@@ -170,7 +171,7 @@
       `;
 
       deleteBtn.addEventListener('click', async () => {
-        const confirmDelete = confirm(`¿Deseas eliminar la etiqueta "${tag.tag}"?`);
+        const confirmDelete = await this.confirmModal.show(`¿Deseas eliminar la etiqueta "${tag.tag}"?`);
         if (confirmDelete) {
           await this.deleteTag(tag.id);
         }

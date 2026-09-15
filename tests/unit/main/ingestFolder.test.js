@@ -18,14 +18,20 @@ const path = require('path');
 
 jest.mock('electron', () => ({
   dialog: {
-    showMessageBox: jest.fn(),
-    showOpenDialog: jest.fn(),
-    showErrorBox: jest.fn()
+    showOpenDialog: jest.fn()
   },
   app: { getPath: jest.fn(() => require('os').tmpdir()) }
 }));
 
+// Messages and questions go to the main window's own modals
+jest.mock('../../../src/main/appDialogs', () => ({
+  showAppMessage: jest.fn(async () => {}),
+  askAppQuestion: jest.fn(async () => 0),
+  CANCELLED: -1
+}));
+
 const { dialog } = require('electron');
+const { showAppMessage, askAppQuestion } = require('../../../src/main/appDialogs');
 const DatabaseManager = require('../../../src/main/database');
 const FolderWatcher = require('../../../src/main/folderWatcher');
 const {
@@ -50,7 +56,7 @@ const logger = {
 // Buttons of the question asked when a custom folder is already configured
 const CHOOSE_OTHER = 0;
 const USE_DEFAULT = 1;
-const CANCEL = 2;
+const CANCEL = -1;
 
 describe('Ingest folder', () => {
   const fixturesPath = path.join(os.tmpdir(), 'edu-capture-ingest-tests');
@@ -106,7 +112,7 @@ describe('Ingest folder', () => {
     mainWindow = { webContents: { send: jest.fn() } };
     getMainWindow = () => mainWindow;
 
-    dialog.showMessageBox.mockResolvedValue({ response: 0 });
+    askAppQuestion.mockResolvedValue(CHOOSE_OTHER);
     dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
   });
 
@@ -283,8 +289,8 @@ describe('Ingest folder', () => {
 
       expect(watch.unavailable).toBe(true);
       expect(state.folderWatcher.ingestPath).toBe(getDefaultIngestPath(projectPath));
-      expect(dialog.showMessageBox).toHaveBeenCalledWith(mainWindow, expect.objectContaining({
-        type: 'warning',
+      expect(showAppMessage).toHaveBeenCalledWith(mainWindow, expect.objectContaining({
+        title: 'Carpeta de entrada no disponible',
         detail: expect.stringContaining(missing)
       }));
       // Kept, so the folder is used again once it is back
@@ -308,12 +314,26 @@ describe('Ingest folder', () => {
 
       expect(result).toEqual(expect.objectContaining({ success: false, changed: false }));
       expect(dialog.showOpenDialog).not.toHaveBeenCalled();
+      expect(showAppMessage).toHaveBeenCalledWith(mainWindow, expect.objectContaining({
+        message: expect.stringContaining('ningún proyecto')
+      }));
+    });
+
+    test('should confirm the new folder in the app\'s own dialog', async () => {
+      pick(externalPath);
+
+      await configure();
+
+      expect(showAppMessage).toHaveBeenCalledWith(mainWindow, expect.objectContaining({
+        title: 'Configuración guardada',
+        detail: expect.stringContaining(externalPath)
+      }));
     });
 
     test('should go straight to the folder picker when the default is in use', async () => {
       await configure();
 
-      expect(dialog.showMessageBox).not.toHaveBeenCalled();
+      expect(askAppQuestion).not.toHaveBeenCalled();
       expect(dialog.showOpenDialog).toHaveBeenCalledTimes(1);
     });
 
@@ -368,7 +388,10 @@ describe('Ingest folder', () => {
       const result = await configure();
 
       expect(result.success).toBe(false);
-      expect(dialog.showErrorBox).toHaveBeenCalledWith('Carpeta de entrada', expect.stringMatching(/imports/));
+      expect(showAppMessage).toHaveBeenCalledWith(mainWindow, {
+        title: 'Carpeta de entrada',
+        message: expect.stringMatching(/imports/)
+      });
       expect(state.folderWatcher).toBe(previousWatcher);
       await expect(getConfiguredIngestPath(state.dbManager)).resolves.toBeNull();
     });
@@ -381,7 +404,10 @@ describe('Ingest folder', () => {
       const result = await configure();
 
       expect(result.success).toBe(false);
-      expect(dialog.showErrorBox).toHaveBeenCalledWith('Carpeta de entrada', expect.stringMatching(/depósito/));
+      expect(showAppMessage).toHaveBeenCalledWith(mainWindow, {
+        title: 'Carpeta de entrada',
+        message: expect.stringMatching(/depósito/)
+      });
     });
 
     describe('with a custom folder configured', () => {
@@ -392,18 +418,18 @@ describe('Ingest folder', () => {
       });
 
       test('should offer going back to the default before the picker', async () => {
-        dialog.showMessageBox.mockResolvedValueOnce({ response: CANCEL });
+        askAppQuestion.mockResolvedValueOnce(CANCEL);
 
         await configure();
 
-        expect(dialog.showMessageBox).toHaveBeenCalledWith(mainWindow, expect.objectContaining({
-          buttons: expect.arrayContaining(['Usar la carpeta por defecto'])
+        expect(askAppQuestion).toHaveBeenCalledWith(mainWindow, expect.objectContaining({
+          choices: ['Elegir otra carpeta...', 'Usar la carpeta por defecto']
         }));
         expect(dialog.showOpenDialog).not.toHaveBeenCalled();
       });
 
       test('should go back to the default folder', async () => {
-        dialog.showMessageBox.mockResolvedValueOnce({ response: USE_DEFAULT });
+        askAppQuestion.mockResolvedValueOnce(USE_DEFAULT);
 
         const result = await configure();
 
@@ -413,7 +439,7 @@ describe('Ingest folder', () => {
       });
 
       test('should treat picking the default folder as going back to it', async () => {
-        dialog.showMessageBox.mockResolvedValueOnce({ response: CHOOSE_OTHER });
+        askAppQuestion.mockResolvedValueOnce(CHOOSE_OTHER);
         pick(getDefaultIngestPath(projectPath));
 
         await configure();
@@ -423,7 +449,7 @@ describe('Ingest folder', () => {
 
       test('should report no change when the same folder is picked again', async () => {
         const previousWatcher = state.folderWatcher;
-        dialog.showMessageBox.mockResolvedValueOnce({ response: CHOOSE_OTHER });
+        askAppQuestion.mockResolvedValueOnce(CHOOSE_OTHER);
         pick(externalPath);
 
         const result = await configure();
