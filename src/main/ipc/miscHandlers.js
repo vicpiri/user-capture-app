@@ -1055,10 +1055,8 @@ function registerMiscHandlers(context) {
   // Print receipt for orla payment
   ipcMain.handle('print-orla-receipt', async (event, receiptData) => {
     try {
-      const { BrowserWindow } = require('electron');
       const { loadGlobalConfig } = require('../utils/config');
       const fs = require('fs');
-      const path = require('path');
 
       logger.info('[Receipt] Printing receipt for user:', receiptData.userName);
 
@@ -1071,71 +1069,48 @@ function registerMiscHandlers(context) {
         footerText: 'Este resguardo es personal e intransferible.\nPor favor, si no eres el/la titular que aparece en él, entrégalo en la dirección del centro para que se lo hagan llegar a su propietario/a.\nEs imprescindible presentar este resguardo para recoger la copia de la orla reservada en las fechas que indique la dirección del centro.'
       };
 
-      // Get center name from global config
-      const centerName = config.centerName || 'IES La Marxadella';
-
-      // Load logo from global config as base64 if exists
-      let logoBase64 = '';
+      // What goes on the receipt, the same whichever way it is printed
       const logoPath = config.logoPath || '';
-      if (logoPath && fs.existsSync(logoPath)) {
-        try {
-          const logoData = fs.readFileSync(logoPath);
-          const ext = path.extname(logoPath).toLowerCase();
-          const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
-          logoBase64 = `data:${mimeType};base64,${logoData.toString('base64')}`;
-        } catch (err) {
-          logger.warn('[Receipt] Could not load logo:', err.message);
-        }
-      }
-
-      // Create a hidden window for printing
-      const printWindow = new BrowserWindow({
-        show: false,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true
-        }
-      });
-
-      // Generate receipt HTML
-      const receiptHTML = generateReceiptHTML(receiptData, receiptConfig, logoBase64, centerName);
-
-      // Load HTML content
-      await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHTML)}`);
-
-      // Wait for content to load
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Print options for thermal printer (80mm width)
-      const printOptions = {
-        silent: true, // Silent printing (no dialog)
-        printBackground: true,
-        margins: {
-          marginType: 'none'
-        },
-        pageSize: {
-          width: 80000, // 80mm in microns
-          height: 297000 // A4 height, will be cut by printer
-        }
+      const now = new Date();
+      const receipt = {
+        logoPath: logoPath && fs.existsSync(logoPath) ? logoPath : '',
+        centerName: config.centerName || 'IES La Marxadella',
+        subtitle: receiptConfig.subtitle || '',
+        userName: receiptData.userName || '',
+        groupName: receiptData.groupName || '',
+        date: `${now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} ` +
+          now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        price: receiptPriceOrDefault(receiptConfig.price).toFixed(2),
+        footerLines: String(receiptConfig.footerText || '').split('\n').map(line => line.trim()).filter(line => line)
       };
 
-      // Set printer if configured
       if (printerConfig && printerConfig.name) {
-        printOptions.deviceName = printerConfig.name;
         logger.info('[Receipt] Using configured printer:', printerConfig.name);
       } else {
         logger.warn('[Receipt] No printer configured, using default');
       }
 
-      // Wait for the printer's answer. Reporting success as soon as the job
-      // was sent marked receipts as printed when the printer had failed, or
-      // when there was no printer at all.
-      const { success, errorType } = await new Promise((resolve) => {
-        printWindow.webContents.print(printOptions, (ok, reason) => resolve({ success: ok, errorType: reason }));
-      });
-      printWindow.close();
+      // The Windows helper first: sharp text and faster. Chromium only when
+      // the helper cannot be used at all; when it is the printer that fails,
+      // printing again another way could give two receipts.
+      let outcome = null;
+      const helper = context.receiptPrinter ? context.receiptPrinter() : null;
+      if (helper && helper.isAvailable()) {
+        try {
+          outcome = await helper.print({ ...receipt, printer: (printerConfig && printerConfig.name) || '' });
+          if (outcome.success) {
+            logger.info('[Receipt] Printed with the Windows text engine');
+          }
+        } catch (error) {
+          logger.warn(`[Receipt] ${error.message}; printing through Chromium instead`);
+        }
+      }
+      if (!outcome) {
+        outcome = await printReceiptWithChromium(receipt, printerConfig);
+      }
 
-      if (!success) {
+      if (!outcome.success) {
+        const errorType = outcome.error;
         logger.error('[Receipt] Print failed:', errorType);
         return {
           success: false,
@@ -1153,22 +1128,80 @@ function registerMiscHandlers(context) {
     }
   });
 
-  // Helper function to generate receipt HTML
-  function generateReceiptHTML(data, config, logoBase64, centerName) {
-    const currentDate = new Date().toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-    const currentTime = new Date().toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+  /**
+   * Print a receipt as an HTML page, through Chromium
+   *
+   * The way receipts were printed before the Windows helper, kept for when
+   * the helper cannot be used. Its text is less sharp on a thermal printer.
+   *
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  async function printReceiptWithChromium(receipt, printerConfig) {
+    const { BrowserWindow } = require('electron');
+    const fs = require('fs');
+
+    // The logo goes inline, as a data URL
+    let logoBase64 = '';
+    if (receipt.logoPath) {
+      try {
+        const logoData = fs.readFileSync(receipt.logoPath);
+        const ext = path.extname(receipt.logoPath).toLowerCase();
+        const mimeType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+        logoBase64 = `data:${mimeType};base64,${logoData.toString('base64')}`;
+      } catch (err) {
+        logger.warn('[Receipt] Could not load logo:', err.message);
+      }
+    }
+
+    const printWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
     });
 
-    // Format footer text with line breaks
-    const footerLines = config.footerText.split('\n').map(line => line.trim()).filter(line => line);
+    const receiptHTML = generateReceiptHTML(receipt, logoBase64);
 
+    // Resolves on the page's load event, by which time the logo, an inline
+    // data URL, is decoded too. A fixed half-second wait used to follow,
+    // adding to every receipt for nothing.
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHTML)}`);
+
+    // Print options for thermal printer (80mm width)
+    const printOptions = {
+      silent: true, // Silent printing (no dialog)
+      printBackground: true,
+      margins: {
+        marginType: 'none'
+      },
+      // The height of the driver's roll page. A page cut to the receipt's
+      // height was placed in the middle of that one, and the printer fed
+      // blank paper before the logo; the driver already trims the blank
+      // below the receipt.
+      pageSize: {
+        width: 80000, // 80mm in microns
+        height: 297000
+      }
+    };
+    if (printerConfig && printerConfig.name) {
+      printOptions.deviceName = printerConfig.name;
+    }
+
+    // Wait for the printer's answer. Reporting success as soon as the job
+    // was sent marked receipts as printed when the printer had failed, or
+    // when there was no printer at all.
+    const { success, errorType } = await new Promise((resolve) => {
+      printWindow.webContents.print(printOptions, (ok, reason) => resolve({ success: ok, errorType: reason }));
+    });
+    printWindow.close();
+
+    return success ? { success: true } : { success: false, error: errorType };
+  }
+
+  // The receipt as an HTML page, for printReceiptWithChromium. The Windows
+  // helper (native/receipt-printer) draws the same layout.
+  function generateReceiptHTML(receipt, logoBase64) {
     return `
 <!DOCTYPE html>
 <html>
@@ -1252,28 +1285,28 @@ function registerMiscHandlers(context) {
   ` : ''}
 
   <div class="header center">
-    <div class="center-name">${centerName}</div>
-    <div class="subtitle">${config.subtitle}</div>
+    <div class="center-name">${receipt.centerName}</div>
+    <div class="subtitle">${receipt.subtitle}</div>
   </div>
 
   <div class="user-section center bold">
-    ${data.userName}
+    ${receipt.userName}
   </div>
 
   <div class="group-row center">
-    Grupo: ${data.groupName}
+    Grupo: ${receipt.groupName}
   </div>
 
   <div class="date-section center">
-    Fecha:${currentDate} ${currentTime}
+    Fecha:${receipt.date}
   </div>
 
   <div class="entrega-section center">
-    <strong>Entrega: ${config.price.toFixed(2)}€</strong>
+    <strong>Entrega: ${receipt.price}€</strong>
   </div>
 
   <div class="footer">
-    ${footerLines.map(line => `<div class="footer-line">${line}</div>`).join('')}
+    ${receipt.footerLines.map(line => `<div class="footer-line">${line}</div>`).join('')}
   </div>
 </body>
 </html>

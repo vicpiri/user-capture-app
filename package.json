@@ -8,20 +8,27 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "predev": "node scripts/build-receipt-printer.mjs --optional",
     "dev": "electron . --dev",
     "clean": "node -e \"require('fs').rmSync('node_modules', {recursive:true, force:true}); require('fs').rmSync('dist', {recursive:true, force:true}); require('fs').rmSync('build', {recursive:true, force:true})\"",
     "clean:dist": "node -e \"require('fs').rmSync('dist', {recursive:true, force:true}); require('fs').rmSync('build', {recursive:true, force:true})\"",
     "install:clean": "npm run clean && npm ci",
+    "build:receipt-printer": "node scripts/build-receipt-printer.mjs",
+    "predist:win": "npm run build:receipt-printer",
     "dist:win": "electron-builder --win nsis --x64",
+    "predist:unpacked": "npm run build:receipt-printer",
     "dist:unpacked": "electron-builder --win dir --x64",
+    "predist:win:portable": "npm run build:receipt-printer",
     "dist:win:portable": "electron-builder --win portable --x64",
+    "predist:win:zip": "npm run build:receipt-printer",
     "dist:win:zip": "electron-builder --win zip --x64",
     "dist:mac": "electron-builder --mac dmg --x64",
     "dist:linux": "electron-builder --linux AppImage --x64",
-    "postinstall": "echo skip electron-rebuild",
+    "postinstall": "node scripts/build-receipt-printer.mjs --optional",
     "release": "commit-and-tag-version",
     "release:minor": "commit-and-tag-version --release-as minor",
     "release:major": "commit-and-tag-version --release-as major",
+    "prerelease:publish": "npm run build:receipt-printer",
     "release:publish": "git push --follow-tags origin main && node scripts/release-notes.mjs && electron-builder --win nsis --x64 --publish always",
     "release:notes": "node scripts/release-notes.mjs",
     "test": "jest",
@@ -88,7 +95,13 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icons/icon.ico",
-      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}",
+      "extraResources": [
+        {
+          "from": "build/receipt-printer/ReceiptPrinter.exe",
+          "to": "receipt-printer/ReceiptPrinter.exe"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,

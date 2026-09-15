@@ -46,6 +46,7 @@ user-capture-app/
 │   │   ├── imageManager.js      # Procesamiento y gestión de imágenes
 │   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
+│   │   ├── receiptPrinter.js    # Impresión de recibos con el auxiliar de Windows (native/receipt-printer)
 │   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
 │   │   ├── updateManager.js     # Envoltorio de electron-updater (comprobar, descargar, instalar)
 │   │   ├── workspaces.js        # Espacios de trabajo: combinaciones guardadas de las opciones de Ver
@@ -102,6 +103,9 @@ user-capture-app/
 │   │   ├── help.html            # HTML de la ventana del manual
 │   │   └── help.js              # Arranque de la ventana del manual
 │   └── shared/        # Código compartido (tipos, constantes, utilidades)
+├── native/
+│   └── receipt-printer/ # Auxiliar en C# que imprime los recibos con el motor de texto de Windows
+├── scripts/           # release-notes.mjs, build-receipt-printer.mjs
 ├── tests/             # Tests unitarios (Jest)
 │   └── unit/
 │       ├── components/          # Tests de componentes del renderer
@@ -152,6 +156,19 @@ user-capture-app/
 sqlite3 y sharp son N-API e instalan binarios precompilados: no se recompilan
 para Electron. electron-builder ejecuta `install-app-deps` por su cuenta antes
 de empaquetar, así que no hay ningún paso manual.
+
+El auxiliar de impresión de recibos (`native/receipt-printer/ReceiptPrinter.cs`)
+se compila con `scripts/build-receipt-printer.mjs`, que usa el compilador de C#
+de .NET Framework 4.x incluido en Windows 10 y 11: no hay que instalar nada. Lo
+genera en `build/receipt-printer/` y se ejecuta solo, sin repetir el trabajo si
+el `.exe` es más reciente que el código:
+- al instalar dependencias (`postinstall`) y antes de `npm run dev` (`predev`),
+  con `--optional`: si no puede compilar, avisa y los recibos salen por Chromium
+- antes de empaquetar y de publicar (`predist:*`, `prerelease:publish`), sin
+  `--optional`: si falla, se para, para no publicar un instalador sin él
+- a mano, `npm run build:receipt-printer`
+El instalador lo lleva como recurso (`build.win.extraResources`) en
+`resources/receipt-printer/`.
 
 ### Distribución
 - `npm run dist:win` - Build para Windows (NSIS instalador x64)
@@ -1009,6 +1026,38 @@ Aplicación completamente funcional con todas las características principales i
   - Impresión automática tras marcar orla como pagada
   - Los recibos incluyen nombre del usuario y grupo
 - **Nota**: El diseño del recibo está optimizado para impresoras térmicas de 80mm de ancho
+- **Cómo se imprime** (`print-orla-receipt` en `miscHandlers.js`): con el
+  auxiliar de Windows `native/receipt-printer/ReceiptPrinter.exe`, que dibuja el
+  recibo con GDI, el motor de texto de Windows. Chromium convertía la página en
+  una imagen y en la Epson TM-T20II (203 ppp) el texto salía con los trazos
+  deformados; GDI ajusta cada carácter a los puntos de la impresora, como hacía
+  la aplicación antigua de ActionScript
+  - `receiptPrinter.js` arranca el auxiliar una vez (a los 5 s de abrir la
+    aplicación si hay impresora configurada, o con el primer recibo) y lo deja
+    esperando; los trabajos van como una línea JSON por stdin, en ASCII puro, y
+    las respuestas vuelven por stdout emparejadas por `id`
+  - Si falla **la impresora**, se informa y no se reimprime: imprimir otra vez
+    por otro camino podría sacar dos recibos. Si el que no se puede usar es **el
+    auxiliar** (no compilado, no arranca, se cae o no contesta), se imprime por
+    Chromium (`printReceiptWithChromium()`), como antes
+  - La maquetación está en dos sitios que deben coincidir:
+    `generateReceiptHTML()` (Chromium) y `Receipt.Draw()` en el auxiliar, que
+    reproduce los tamaños, márgenes e interlineados del HTML
+  - Detalles de GDI: `TextRenderer` calcula los tamaños como si el dispositivo
+    fuera una pantalla de 96 ppp, así que las fuentes se escalan por los ppp de
+    la impresora (sin eso, la letra salía a la mitad); el logotipo se pinta
+    sobre fondo blanco antes de enviarlo, porque los controladores pueden
+    descartar las imágenes con transparencia
+  - Un trabajo con `previewFile` dibuja el recibo en un PNG a 203 ppp en lugar
+    de imprimirlo: lo usan los tests (`receiptPrinterHelper.test.js`, que
+    ejecuta el `.exe` real) y sirve para revisar la maquetación sin papel
+  - Medido con la Epson el 2026-09-15, hasta que el trabajo sale hacia la
+    impresora: 2,0–2,4 s con la versión anterior, 1,56–1,63 s con Chromium sin
+    la espera fija de medio segundo que tenía, y ~1,0 s con el auxiliar
+- **Con Chromium, la página debe medir 80 × 297 mm**, la del controlador de
+  rollo. Una página a la medida del recibo se colocaba centrada en la del
+  controlador y la impresora echaba papel en blanco antes del logotipo; el
+  blanco de debajo ya lo recorta el controlador
 
 ## Exportación de datos
 

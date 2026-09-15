@@ -39,6 +39,7 @@ const {
   saveWorkspaceSettings
 } = require('./src/main/utils/config');
 const { WorkspaceStore, VIEW_KEYS } = require('./src/main/workspaces');
+const { ReceiptPrinter } = require('./src/main/receiptPrinter');
 const UpdateManager = require('./src/main/updateManager');
 const {
   loadRecentProjects: loadRecentProjectsUtil,
@@ -130,6 +131,16 @@ const repositoryCacheManager = new RepositoryCacheManager();
 
 // Ver > Espacios de trabajo
 const workspaceStore = new WorkspaceStore({ load: getWorkspaceSettings, save: saveWorkspaceSettings });
+
+// Prints the orla receipts with the Windows text engine. Installed next to
+// the app's resources; in development, built into build/ by
+// scripts/build-receipt-printer.mjs
+const receiptPrinter = new ReceiptPrinter({
+  exePath: app.isPackaged
+    ? path.join(process.resourcesPath, 'receipt-printer', 'ReceiptPrinter.exe')
+    : path.join(__dirname, 'build', 'receipt-printer', 'ReceiptPrinter.exe'),
+  logger
+});
 
 // Application state shared with the IPC handlers and the ingest folder module
 const sharedState = {
@@ -598,6 +609,12 @@ function createWindow() {
     if (updateManager) {
       updateManager.scheduleStartupCheck();
     }
+
+    // With a receipt printer configured, the helper is started ahead of the
+    // first receipt, once the window and the project are done starting
+    if (loadGlobalConfig().printer) {
+      setTimeout(() => receiptPrinter.warmUp(), 5000);
+    }
   });
 }
 
@@ -1048,6 +1065,7 @@ function registerIPCHandlers() {
     updateManager: () => updateManager,
     openHelpWindow,
     workspaceStore,
+    receiptPrinter: () => receiptPrinter,
     getCurrentView,
     applyWorkspace,
     refreshWorkspaces
@@ -1156,6 +1174,7 @@ app.on('window-all-closed', () => {
   if (updateManager) {
     updateManager.dispose();
   }
+  receiptPrinter.dispose();
 
   // Cleanup repository mirror watcher
   if (repositoryMirror) {
