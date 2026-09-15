@@ -46,6 +46,7 @@ El resto de exportaciones no tienen atajo. Consulta [Exportaciones](exportacione
 | `Ctrl+Shift+G` | Abrir el cuadro de imágenes del depósito | **Ver > Cuadro de imágenes en depósito** |
 | `Ctrl+Shift+T` | Ver el listado de imágenes con etiquetas | **Ver > Listado de imágenes con etiquetas** |
 | `Ctrl+Shift+D` | Volver a leer las imágenes del depósito | **Ver > Actualizar imágenes del depósito** |
+| `Ctrl+1` … `Ctrl+9` | Cambiar al espacio de trabajo que ocupa esa posición | **Ver > Espacios de trabajo** |
 
 ## Navegar por la lista y el visor
 

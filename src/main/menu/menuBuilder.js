@@ -24,6 +24,8 @@ class MenuBuilder {
     this.showAdditionalActions = context.showAdditionalActions;
     this.showCaptureHistory = context.showCaptureHistory;
     this.recentProjects = context.recentProjects;
+    this.workspaces = context.workspaces || [];
+    this.activeWorkspaceId = context.activeWorkspaceId || null;
 
     // Functions/callbacks
     this.callbacks = context.callbacks;
@@ -352,12 +354,51 @@ class MenuBuilder {
   }
 
   /**
+   * Ver > Espacios de trabajo: one entry per workspace, the first nine with
+   * Ctrl+1…9, and the one the view matches marked
+   */
+  buildWorkspacesMenu() {
+    const entries = this.workspaces.map((workspace, index) => ({
+      // '&' marks the access key in a Windows menu label; '&&' is a literal one
+      label: workspace.name.replace(/&/g, '&&'),
+      type: 'checkbox',
+      checked: workspace.id === this.activeWorkspaceId,
+      accelerator: index < 9 ? `CmdOrCtrl+${index + 1}` : undefined,
+      click: () => {
+        this.callbacks.applyWorkspace(workspace.id);
+      }
+    }));
+
+    return {
+      label: 'Espacios de trabajo',
+      submenu: [
+        ...entries,
+        ...(entries.length > 0 ? [{ type: 'separator' }] : []),
+        {
+          label: 'Guardar la vista actual como espacio nuevo...',
+          click: () => {
+            this.callbacks.openWorkspaces('save');
+          }
+        },
+        {
+          label: 'Gestionar espacios de trabajo...',
+          click: () => {
+            this.callbacks.openWorkspaces('manage');
+          }
+        }
+      ]
+    };
+  }
+
+  /**
    * Build View menu
    */
   buildViewMenu() {
     return {
       label: 'Ver',
       submenu: [
+        this.buildWorkspacesMenu(),
+        { type: 'separator' },
         {
           label: 'Asignaciones duplicadas',
           type: 'checkbox',

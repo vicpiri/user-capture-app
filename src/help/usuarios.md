@@ -98,6 +98,52 @@ Si desactivas las tres primeras, la columna FOTOS desaparece de la tabla. La apl
 
 > **Consejo:** si solo necesitas saber quién tiene ya foto en el depósito, basta con **Indicadores de foto en el depósito**; la miniatura te sirve cuando quieres comparar la foto antigua con la nueva.
 
+## Espacios de trabajo
+
+Un espacio de trabajo guarda una combinación de las opciones de visualización del menú **Ver**: **Fotografías capturadas**, **Fotografías del depósito**, **Indicadores de foto en el depósito**, **Acciones adicionales** e **Historial de capturas**. Así cambias de una fase del trabajo a otra de una vez, en lugar de activar y desactivar las opciones una a una.
+
+Los filtros del menú **Ver** (**Asignaciones duplicadas**, **Carnets solicitados** y **Publicaciones solicitadas**) no forman parte de los espacios: al cambiar de espacio siguen como estaban.
+
+### Espacios predefinidos
+
+La aplicación trae tres:
+
+| Espacio | Para qué | Qué muestra |
+|---|---|---|
+| **Captura** | La sesión de fotos | Fotografías capturadas, indicadores del depósito e historial de capturas |
+| **Revisión** | Comparar las fotos nuevas con las antiguas | Fotografías capturadas, fotografías del depósito e indicadores del depósito |
+| **Carnets** | Preparar la impresión de carnets | Fotografías del depósito, indicadores del depósito y acciones adicionales |
+
+No se pueden cambiar ni borrar, pero puedes quitarlos del menú si no los usas (ver más abajo).
+
+### Cambiar de espacio
+
+- Elige el espacio en **Ver > Espacios de trabajo**.
+- O pulsa `Ctrl+1` a `Ctrl+9`: el número es la posición del espacio en ese menú. Solo los nueve primeros tienen atajo.
+
+El menú marca el espacio que coincide con lo que se ve ahora. Si después cambias alguna opción a mano, la marca desaparece; si la vuelves a dejar como estaba, reaparece.
+
+### Crear un espacio personalizado
+
+1. Deja las opciones del menú **Ver** como las quieras.
+2. Elige **Ver > Espacios de trabajo > Guardar la vista actual como espacio nuevo...**.
+3. Escribe un nombre y pulsa **Guardar** o `Intro`.
+
+El espacio nuevo aparece en el menú detrás de los que ya había. El nombre no puede repetir el de otro espacio, sin contar mayúsculas ni tildes, y tiene como máximo 40 caracteres.
+
+### Gestionar los espacios
+
+**Ver > Espacios de trabajo > Gestionar espacios de trabajo...** abre la ventana **Espacios de trabajo**, con la lista de espacios, lo que muestra cada uno y su atajo. El que coincide con la vista actual lleva la etiqueta **En uso**.
+
+- **Aplicar** cambia a ese espacio y cierra la ventana.
+- En tus espacios:
+  - **Guardar vista actual** sustituye sus opciones por las que tienes ahora. Antes te lo pregunta.
+  - **Renombrar** cambia el nombre. Escríbelo y pulsa `Intro`; `Esc` deja el nombre como estaba.
+  - **Borrar** lo elimina, después de preguntarte.
+- En los predefinidos, la casilla **En el menú** los quita del menú **Ver** o los vuelve a poner. Un espacio quitado no ocupa ningún atajo: los siguientes suben un puesto.
+
+Los espacios son de la aplicación, no de cada proyecto: los mismos sirven para todos tus proyectos.
+
 ## Ver la foto de un usuario en grande
 
 Haz doble clic en una miniatura de la columna FOTOS:

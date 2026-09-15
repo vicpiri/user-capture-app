@@ -215,6 +215,28 @@
     </div>
   </div>
 
+  <!-- Ver > Espacios de trabajo. Before the confirmation modal, so the
+       questions it asks are drawn over it -->
+  <div id="workspaces-modal" class="modal">
+    <div class="modal-content workspaces-modal-content">
+      <h2>Espacios de trabajo</h2>
+      <p class="workspaces-intro">Cada espacio guarda qué fotos y paneles muestra el menú Ver. Los nueve primeros del menú se eligen con <kbd>Ctrl+1</kbd> a <kbd>Ctrl+9</kbd>.</p>
+      <ul id="workspaces-list" class="workspaces-list"></ul>
+      <div class="workspaces-new">
+        <h3>Guardar la vista actual como espacio nuevo</h3>
+        <p id="workspaces-current-view" class="workspace-view"></p>
+        <div class="workspaces-new-row">
+          <input id="workspaces-new-name" type="text" class="workspaces-input" maxlength="40" placeholder="Nombre del espacio de trabajo" autocomplete="off">
+          <button id="workspaces-new-btn" type="button" class="btn btn-primary">Guardar</button>
+        </div>
+      </div>
+      <div id="workspaces-error" class="modal-error" role="alert" hidden></div>
+      <div class="modal-buttons">
+        <button id="workspaces-close-btn" data-modal-cancel class="btn btn-secondary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal for Confirmation -->
   <div id="confirm-modal" class="modal">
     <div class="modal-content">
@@ -720,6 +742,7 @@
   <script src="components/modals/ConfirmModal.js"></script>
   <script src="components/modals/InfoModal.js"></script>
   <script src="components/modals/ChoiceModal.js"></script>
+  <script src="components/modals/WorkspacesModal.js"></script>
   <script src="components/modals/UpdateModal.js"></script>
   <script src="components/modals/ExportOptionsModal.js"></script>
   <script src="components/modals/InventoryExportOptionsModal.js"></script>

@@ -205,6 +205,14 @@ class ElectronAPIMock extends EventEmitter {
     return this._registerEvent('image-detecting', callback);
   }
 
+  onMenuWorkspaces(callback) {
+    return this._registerEvent('menu-workspaces', callback);
+  }
+
+  onWorkspacesChanged(callback) {
+    return this._registerEvent('workspaces-changed', callback);
+  }
+
   onAppDialog(callback) {
     return this._registerEvent('app-dialog', callback);
   }
@@ -342,6 +350,14 @@ class ElectronAPIMock extends EventEmitter {
 
   // === UPDATES ===
   answerAppDialog = jest.fn();
+
+  getWorkspaces = jest.fn(async () => ({ workspaces: [], activeId: null, currentView: {} }));
+  applyWorkspace = jest.fn(async () => ({ success: true }));
+  createWorkspace = jest.fn(async () => ({ success: true }));
+  overwriteWorkspace = jest.fn(async () => ({ success: true }));
+  renameWorkspace = jest.fn(async () => ({ success: true }));
+  deleteWorkspace = jest.fn(async () => ({ success: true }));
+  setWorkspaceHidden = jest.fn(async () => ({ success: true }));
 
   checkForUpdates = jest.fn(async () => ({ status: 'not-available', manual: true }));
   skipUpdateVersion = jest.fn(async () => ({ success: true }));

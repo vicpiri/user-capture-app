@@ -266,6 +266,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Version
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+  // Ver > Espacios de trabajo
+  getWorkspaces: () => ipcRenderer.invoke('get-workspaces'),
+  applyWorkspace: (id) => ipcRenderer.invoke('apply-workspace', id),
+  createWorkspace: (name) => ipcRenderer.invoke('create-workspace', name),
+  overwriteWorkspace: (id) => ipcRenderer.invoke('overwrite-workspace', id),
+  renameWorkspace: (id, name) => ipcRenderer.invoke('rename-workspace', id, name),
+  deleteWorkspace: (id) => ipcRenderer.invoke('delete-workspace', id),
+  setWorkspaceHidden: (id, hidden) => ipcRenderer.invoke('set-workspace-hidden', id, hidden),
+  onMenuWorkspaces: (callback) => {
+    ipcRenderer.on('menu-workspaces', (event, mode) => callback(mode));
+  },
+  onWorkspacesChanged: (callback) => {
+    ipcRenderer.on('workspaces-changed', () => callback());
+  },
+
   // Notices and questions of the main process (see src/main/appDialogs.js)
   onAppDialog: (callback) => {
     ipcRenderer.on('app-dialog', (event, request) => callback(request));

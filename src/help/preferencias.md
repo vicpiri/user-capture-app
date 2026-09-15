@@ -42,6 +42,8 @@ Los tres primeros son filtros y solo puede haber uno activo a la vez: al activar
 
 La aplicación recuerda estas casillas al cerrarla y las vuelve a aplicar la próxima vez, filtros incluidos.
 
+Para cambiar de golpe las opciones de fotos y paneles, usa los espacios de trabajo del mismo menú. Ver [Espacios de trabajo](usuarios.md#espacios-de-trabajo).
+
 ## Comprobación automática de actualizaciones
 
 La aplicación instalada en Windows comprueba sola si hay una versión nueva publicada:

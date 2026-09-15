@@ -86,6 +86,7 @@ let newProjectModalInstance = null;
 let confirmModalInstance = null;
 let infoModalInstance = null;
 let choiceModalInstance = null;
+let workspacesModalInstance = null;
 let appDialogManager = null;
 let updateModalInstance = null;
 let exportOptionsModalInstance = null;
@@ -224,6 +225,19 @@ function initializeModals() {
 
   projectInfoModalInstance = new ProjectInfoModal();
   projectInfoModalInstance.init();
+
+  // Ver > Espacios de trabajo
+  workspacesModalInstance = new WorkspacesModal({
+    api: window.electronAPI,
+    confirm: (message) => confirmModalInstance.show(message)
+  });
+  workspacesModalInstance.init();
+  window.electronAPI.onMenuWorkspaces((mode) => workspacesModalInstance.show(mode));
+  window.electronAPI.onWorkspacesChanged(() => {
+    if (workspacesModalInstance.isModalOpen()) {
+      workspacesModalInstance.refresh();
+    }
+  });
 
   // Changed from the Proyecto menu while the modal is showing the old folder
   window.electronAPI.onIngestFolderChanged(() => {

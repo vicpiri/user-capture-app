@@ -34,8 +34,11 @@ const {
   setImageRepositoryPath,
   saveDisplayPreferences,
   getUpdatePreferences,
-  saveUpdatePreferences
+  saveUpdatePreferences,
+  getWorkspaceSettings,
+  saveWorkspaceSettings
 } = require('./src/main/utils/config');
+const { WorkspaceStore, VIEW_KEYS } = require('./src/main/workspaces');
 const UpdateManager = require('./src/main/updateManager');
 const {
   loadRecentProjects: loadRecentProjectsUtil,
@@ -60,6 +63,7 @@ const { registerMiscHandlers } = require('./src/main/ipc/miscHandlers');
 const { registerUpdateHandlers } = require('./src/main/ipc/updateHandlers');
 const { registerHelpHandlers } = require('./src/main/ipc/helpHandlers');
 const { registerAppDialogHandlers, showAppMessage } = require('./src/main/appDialogs');
+const { registerWorkspaceHandlers } = require('./src/main/ipc/workspaceHandlers');
 
 // Enable hot reload in development
 if (process.argv.includes('--dev')) {
@@ -119,6 +123,9 @@ let updateManager = null; // Checks GitHub Releases for newer versions
 
 // Repository cache manager
 const repositoryCacheManager = new RepositoryCacheManager();
+
+// Ver > Espacios de trabajo
+const workspaceStore = new WorkspaceStore({ load: getWorkspaceSettings, save: saveWorkspaceSettings });
 
 // Application state shared with the IPC handlers and the ingest folder module
 const sharedState = {
@@ -199,6 +206,102 @@ function persistDisplayPreferences() {
   });
 }
 
+// ============================================================================
+// Display options of the Ver menu
+// ============================================================================
+// Each one is switched from its own menu entry or, all at once, by a
+// workspace. The renderer is told about each change on its own channel.
+
+function setShowCapturedPhotos(checked) {
+  showCapturedPhotos = checked;
+  persistDisplayPreferences();
+  mainWindowManager.getWindow()?.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
+}
+
+async function setShowRepositoryPhotos(checked) {
+  showRepositoryPhotos = checked;
+  persistDisplayPreferences();
+  if (showRepositoryPhotos) {
+    logger.info('[MENU] Mostrar imágenes del depósito activated');
+    await ensureRepositoryMirrorStarted();
+  }
+  mainWindowManager.getWindow()?.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
+}
+
+async function setShowRepositoryIndicators(checked) {
+  showRepositoryIndicators = checked;
+  persistDisplayPreferences();
+  if (showRepositoryIndicators) {
+    await ensureRepositoryMirrorStarted();
+  }
+  mainWindowManager.getWindow()?.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
+}
+
+function setShowAdditionalActions(checked) {
+  showAdditionalActions = checked;
+  persistDisplayPreferences();
+  mainWindowManager.getWindow()?.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
+}
+
+function setShowCaptureHistory(checked) {
+  showCaptureHistory = checked;
+  persistDisplayPreferences();
+  mainWindowManager.getWindow()?.webContents.send('menu-toggle-capture-history', showCaptureHistory);
+}
+
+const DISPLAY_SETTERS = {
+  showCapturedPhotos: setShowCapturedPhotos,
+  showRepositoryPhotos: setShowRepositoryPhotos,
+  showRepositoryIndicators: setShowRepositoryIndicators,
+  showAdditionalActions: setShowAdditionalActions,
+  showCaptureHistory: setShowCaptureHistory
+};
+
+/**
+ * The display options a workspace saves, as they are now
+ */
+function getCurrentView() {
+  return {
+    showCapturedPhotos,
+    showRepositoryPhotos,
+    showRepositoryIndicators,
+    showAdditionalActions,
+    showCaptureHistory
+  };
+}
+
+/**
+ * Switch to a workspace: only the options that differ change, so the list
+ * is not repainted for the ones already right
+ * @param {string} id
+ */
+async function applyWorkspace(id) {
+  const workspace = workspaceStore.get(id);
+  if (!workspace) {
+    return { success: false, error: 'Ese espacio de trabajo ya no existe.' };
+  }
+
+  const current = getCurrentView();
+  for (const key of VIEW_KEYS) {
+    if (current[key] !== workspace.view[key]) {
+      await DISPLAY_SETTERS[key](workspace.view[key]);
+    }
+  }
+
+  logger.info(`[Workspaces] Applied "${workspace.name}"`);
+  return { success: true };
+}
+
+/**
+ * The menu marks the workspace the view matches and lists the workspaces
+ * with their shortcuts, so it is rebuilt whenever either changes; an open
+ * Espacios de trabajo window refreshes too
+ */
+function refreshWorkspaces() {
+  createMenu();
+  mainWindowManager.getWindow()?.webContents.send('workspaces-changed');
+}
+
 function createMenu() {
   menuBuilder = new MenuBuilder({
     // Windows
@@ -218,6 +321,8 @@ function createMenu() {
     showAdditionalActions,
     showCaptureHistory,
     recentProjects,
+    workspaces: workspaceStore.visible(),
+    activeWorkspaceId: workspaceStore.matching(getCurrentView()),
 
     // Logger
     logger,
@@ -327,52 +432,34 @@ function createMenu() {
           mainWindow.webContents.send('menu-toggle-publication-requests', showPublicationRequestsOnly);
         }
       },
+      // Each option switched by hand may make the view match a workspace,
+      // or stop matching the one marked
       toggleCapturedPhotos: (checked) => {
-        showCapturedPhotos = checked;
-        persistDisplayPreferences();
-        const mainWindow = mainWindowManager.getWindow();
-        if (mainWindow) {
-          mainWindow.webContents.send('menu-toggle-captured-photos', showCapturedPhotos);
-        }
+        setShowCapturedPhotos(checked);
+        refreshWorkspaces();
       },
       toggleRepositoryPhotos: async (checked) => {
-        showRepositoryPhotos = checked;
-        persistDisplayPreferences();
-        if (showRepositoryPhotos) {
-          logger.info('[MENU] Mostrar imágenes del depósito activated');
-          await ensureRepositoryMirrorStarted();
-        }
-        const mainWindow = mainWindowManager.getWindow();
-        if (mainWindow) {
-          mainWindow.webContents.send('menu-toggle-repository-photos', showRepositoryPhotos);
-        }
+        await setShowRepositoryPhotos(checked);
+        refreshWorkspaces();
       },
       toggleRepositoryIndicators: async (checked) => {
-        showRepositoryIndicators = checked;
-        persistDisplayPreferences();
-        if (showRepositoryIndicators) {
-          await ensureRepositoryMirrorStarted();
-        }
-        const mainWindow = mainWindowManager.getWindow();
-        if (mainWindow) {
-          mainWindow.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
-        }
+        await setShowRepositoryIndicators(checked);
+        refreshWorkspaces();
       },
       toggleAdditionalActions: (checked) => {
-        showAdditionalActions = checked;
-        persistDisplayPreferences();
-        const mainWindow = mainWindowManager.getWindow();
-        if (mainWindow) {
-          mainWindow.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
-        }
+        setShowAdditionalActions(checked);
+        refreshWorkspaces();
       },
       toggleCaptureHistory: (checked) => {
-        showCaptureHistory = checked;
-        persistDisplayPreferences();
-        const mainWindow = mainWindowManager.getWindow();
-        if (mainWindow) {
-          mainWindow.webContents.send('menu-toggle-capture-history', showCaptureHistory);
-        }
+        setShowCaptureHistory(checked);
+        refreshWorkspaces();
+      },
+      applyWorkspace: async (id) => {
+        await applyWorkspace(id);
+        refreshWorkspaces();
+      },
+      openWorkspaces: (mode) => {
+        mainWindowManager.getWindow()?.webContents.send('menu-workspaces', mode);
       },
       refreshRepositoryImages: async () => {
         logger.info('[Menu] Manual repository refresh requested');
@@ -934,7 +1021,11 @@ function registerIPCHandlers() {
     reinitializeRepositoryMirror,
     closeCurrentProject,
     updateManager: () => updateManager,
-    openHelpWindow
+    openHelpWindow,
+    workspaceStore,
+    getCurrentView,
+    applyWorkspace,
+    refreshWorkspaces
   };
 
   // Register all handler modules
@@ -945,6 +1036,7 @@ function registerIPCHandlers() {
   registerUpdateHandlers(context);
   registerHelpHandlers(context);
   registerAppDialogHandlers();
+  registerWorkspaceHandlers(context);
 
   // Filter toggle handlers from renderer (badge clicks)
   ipcMain.on('menu-toggle-duplicates-from-renderer', (event, enabled) => {

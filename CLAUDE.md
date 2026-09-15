@@ -22,6 +22,7 @@ user-capture-app/
 │   │   │   ├── miscHandlers.js         # Manejadores misceláneos (tags, diálogos, etc.)
 │   │   │   ├── projectHandlers.js      # Gestión de proyectos, XML y cierre
 │   │   │   ├── updateHandlers.js       # Comprobación, descarga e instalación de actualizaciones
+│   │   │   ├── workspaceHandlers.js    # Espacios de trabajo (Ver > Espacios de trabajo)
 │   │   │   └── userGroupImageHandlers.js # Usuarios, grupos e imágenes
 │   │   ├── menu/                # Sistema de menús
 │   │   │   └── menuBuilder.js          # Constructor de menús de la aplicación
@@ -47,6 +48,7 @@ user-capture-app/
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
 │   │   ├── updateManager.js     # Envoltorio de electron-updater (comprobar, descargar, instalar)
+│   │   ├── workspaces.js        # Espacios de trabajo: combinaciones guardadas de las opciones de Ver
 │   │   └── xmlParser.js         # Parseo de archivos XML de usuarios
 │   ├── help/          # Manual de uso en Markdown (pages.json + una página por área)
 │   ├── preload/       # Scripts preload (comunicación segura entre procesos)
@@ -62,6 +64,7 @@ user-capture-app/
 │   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
 │   │   │   │   ├── ProjectInfoModal.js      # Modal de información del proyecto
 │   │   │   │   ├── UpdateModal.js           # Modal de actualizaciones disponibles
+│   │   │   │   ├── WorkspacesModal.js       # Ventana Espacios de trabajo (aplicar, crear, gestionar)
 │   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
 │   │   │   ├── AppDialogManager.js      # Muestra en orden los avisos y preguntas del proceso principal
 │   │   │   ├── CaptureHistoryManager.js # Tira de miniaturas del historial de capturas
@@ -262,6 +265,22 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 - **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado
+- **workspaces.js**: Espacios de trabajo del menú **Ver**. Cada uno guarda las
+  cinco opciones de fotos y paneles (`VIEW_KEYS`: fotografías capturadas y del
+  depósito, indicadores, acciones adicionales, historial de capturas); los
+  filtros no. `WorkspaceStore` con almacenamiento inyectado; en la aplicación,
+  `config.json` bajo `workspaces` (`custom`, `hiddenBuiltIns`)
+  - Predefinidos: Captura, Revisión y Carnets. No se cambian ni se borran,
+    solo se ocultan del menú
+  - El submenú **Ver > Espacios de trabajo** da `Ctrl+1…9` a los nueve
+    primeros visibles y marca el primero cuya combinación coincide con la
+    vista (`matching()`). Por eso `main.js` reconstruye el menú
+    (`refreshWorkspaces()`) tras cada cambio de una de esas opciones, a mano
+    o por espacio, y tras cada cambio de la lista
+  - Las cinco opciones se cambian con `setShow...()` de `main.js`, que usan
+    tanto el menú como `applyWorkspace()`; este solo toca las que difieren
+  - Una opción nueva del menú Ver que cambie la forma de ver la lista debe
+    añadirse a `VIEW_KEYS`, a los predefinidos y a `DISPLAY_SETTERS`
 - **appDialogs.js**: Avisos y preguntas del proceso principal. **No se usan los
   cuadros de mensaje del sistema** (`dialog.showMessageBox`,
   `dialog.showErrorBox`), ni `alert()`/`confirm()` en el renderer: rompen la

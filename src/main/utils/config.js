@@ -187,6 +187,25 @@ function setLastExportFolder(folder) {
   return saveGlobalConfig(config);
 }
 
+/**
+ * The user's workspaces and the built-in ones they hid (see workspaces.js)
+ * @returns {{custom: Array, hiddenBuiltIns: string[]}}
+ */
+function getWorkspaceSettings() {
+  const config = loadGlobalConfig();
+  return { custom: [], hiddenBuiltIns: [], ...(config.workspaces || {}) };
+}
+
+/**
+ * @param {{custom: Array, hiddenBuiltIns: string[]}} settings
+ * @returns {boolean} Success status
+ */
+function saveWorkspaceSettings(settings) {
+  const config = loadGlobalConfig();
+  config.workspaces = settings;
+  return saveGlobalConfig(config);
+}
+
 module.exports = {
   getConfigPath,
   loadGlobalConfig,
@@ -199,5 +218,7 @@ module.exports = {
   getUpdatePreferences,
   saveUpdatePreferences,
   getLastExportFolder,
+  getWorkspaceSettings,
+  saveWorkspaceSettings,
   setLastExportFolder
 };
