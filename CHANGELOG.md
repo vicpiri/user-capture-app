@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.10.0](https://github.com/vicpiri/user-capture-app/compare/v1.9.0...v1.10.0) (2026-09-15)
+
+### Features
+
+* close dialogs with Escape and keep the arrow keys after messages ([be8af68](https://github.com/vicpiri/user-capture-app/commit/be8af680e4d82db34144028ded81e286e537eb0c))
+* download and install updates from inside the app ([cea773f](https://github.com/vicpiri/user-capture-app/commit/cea773fffb007ad9a8eb1ab486808d8071a00f45))
+* export repository images named by ID ([c9b3bcf](https://github.com/vicpiri/user-capture-app/commit/c9b3bcfa9e233094b73621d0972c0044156b2efd))
+* open export dialogs at the last export folder ([4825918](https://github.com/vicpiri/user-capture-app/commit/4825918bb112a694232055e4f5e5f8d268593fd9))
+
+### Bug Fixes
+
+* allow a receipt price of 0 and report receipts that fail to print ([f60fe11](https://github.com/vicpiri/user-capture-app/commit/f60fe11da27c6ac606e56c3379522c8e9963cf93))
+* answer an update check asked for mid-check, and let the automatic one be turned off ([ae4217c](https://github.com/vicpiri/user-capture-app/commit/ae4217c714e4ecdbfa2c903322d68518f98213f2))
+* close the open project when creating a new one ([f9b6d5b](https://github.com/vicpiri/user-capture-app/commit/f9b6d5b01591282887c12fd72e7d55b3b2be1940))
+* correct misleading texts and drop an unreachable report section ([6b384b4](https://github.com/vicpiri/user-capture-app/commit/6b384b4813bef38dda0f87c63bcf4b53129d689f))
+* count repository replacements from the repository itself ([7acc953](https://github.com/vicpiri/user-capture-app/commit/7acc9536d9ee64124f728f4773fb5448b0f791fc))
+* date printed cards when they are printed and label non-teaching staff ([67539a7](https://github.com/vicpiri/user-capture-app/commit/67539a7f551ddff3b8ab1dce96ad82181855f9c3))
+* ignore arrow keys while any dialog is open ([45a51bd](https://github.com/vicpiri/user-capture-app/commit/45a51bd58335e50edb813b17e47d7afb225c147b))
+* keep captured photo paths when their thumbnails are hidden ([b22148c](https://github.com/vicpiri/user-capture-app/commit/b22148ca0810310c538c3117ea3454e2b192c6d0))
+* keep leading zeros in NIA and document numbers from the XML ([ae4ae37](https://github.com/vicpiri/user-capture-app/commit/ae4ae373f43b0fa6a8e8bbade0b10f99748a70df))
+* keep the Ver options when saving preferences ([7e72c3c](https://github.com/vicpiri/user-capture-app/commit/7e72c3c33b867bbd2cc28d9616b27ac13052c28e))
+* never export the whole project when there is nobody to export ([fa1712a](https://github.com/vicpiri/user-capture-app/commit/fa1712a8441ba006bc326a4e4744f99ba1a7ec63))
+* record the new XML only once its update is applied ([093ea43](https://github.com/vicpiri/user-capture-app/commit/093ea435a1dd400fdf8f9d5db5248902dc2a0138))
+* refuse to create a project over an existing one ([02e8ecd](https://github.com/vicpiri/user-capture-app/commit/02e8ecdb61c746596133530761770983aca75c00))
+* remember the card and publication request filters ([7973c17](https://github.com/vicpiri/user-capture-app/commit/7973c175845b43a923a59768d9bbc90e7026f681))
+* report photos that are not imported and keep the camera menu in sync ([ddbcdb6](https://github.com/vicpiri/user-capture-app/commit/ddbcdb613b5be83f3c5d2bdcea0384697846bc35))
+* search users by document, ignoring case and accents, and hide the right column ([9099c6b](https://github.com/vicpiri/user-capture-app/commit/9099c6bad72c276159c104813f031bf5bb7cdbb6))
+* show project creation errors inside the new project modal ([ca21176](https://github.com/vicpiri/user-capture-app/commit/ca21176bdad05a0c15d53e75b8226c4e3e446c70))
+* start the repository copy when a refresh is asked for ([5ad0212](https://github.com/vicpiri/user-capture-app/commit/5ad021277e67711e7c609484c300d47550801878))
+* summarise captured image exports and refresh the captured images grid ([18f1248](https://github.com/vicpiri/user-capture-app/commit/18f1248cae83b3788de7c4a0507f83ceae51b176))
+* warn that linking a shared photo replaces the user's own ([0c759bb](https://github.com/vicpiri/user-capture-app/commit/0c759bb0aec5cf71d75d9cc32df2a463142c2ff7))
 ## [1.9.0](https://github.com/vicpiri/user-capture-app/compare/v1.8.0...v1.9.0) (2026-09-14)
 
 ### Features
