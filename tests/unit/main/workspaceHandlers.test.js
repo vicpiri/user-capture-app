@@ -37,7 +37,8 @@ describe('workspace handlers', () => {
       showRepositoryPhotos: true,
       showRepositoryIndicators: true,
       showAdditionalActions: false,
-      showCaptureHistory: false
+      showCaptureHistory: false,
+      showThumbnailGrid: false
     };
     applyWorkspace = jest.fn(async () => ({ success: true }));
     refreshWorkspaces = jest.fn();

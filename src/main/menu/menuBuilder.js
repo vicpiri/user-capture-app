@@ -23,6 +23,7 @@ class MenuBuilder {
     this.showRepositoryIndicators = context.showRepositoryIndicators;
     this.showAdditionalActions = context.showAdditionalActions;
     this.showCaptureHistory = context.showCaptureHistory;
+    this.showThumbnailGrid = context.showThumbnailGrid;
     this.recentProjects = context.recentProjects;
     this.workspaces = context.workspaces || [];
     this.activeWorkspaceId = context.activeWorkspaceId || null;
@@ -471,6 +472,15 @@ class MenuBuilder {
           checked: this.showCaptureHistory,
           click: (menuItem) => {
             this.callbacks.toggleCaptureHistory(menuItem.checked);
+          }
+        },
+        {
+          label: 'Vista de miniaturas',
+          type: 'checkbox',
+          accelerator: 'CmdOrCtrl+M',
+          checked: this.showThumbnailGrid,
+          click: (menuItem) => {
+            this.callbacks.toggleThumbnailGrid(menuItem.checked);
           }
         },
         { type: 'separator' },

@@ -94,6 +94,21 @@
         </table>
       </div>
 
+      <!-- Ver > Vista de miniaturas: takes the place of the table -->
+      <div id="thumbnail-grid-panel" class="thumbnail-grid-panel">
+        <div class="thumbnail-grid-toolbar">
+          <div id="thumbnail-grid-source" class="thumbnail-grid-source" role="group" aria-label="Fotos que se muestran">
+            <button type="button" data-source="captured" class="thumbnail-source-btn">Capturadas</button>
+            <button type="button" data-source="repository" class="thumbnail-source-btn">Depósito</button>
+          </div>
+          <label id="thumbnail-grid-select-all" class="thumbnail-grid-select-all" hidden>
+            <input type="checkbox"> Seleccionar todos
+          </label>
+          <span id="thumbnail-grid-count" class="thumbnail-grid-count"></span>
+        </div>
+        <div id="thumbnail-grid" class="thumbnail-grid"></div>
+      </div>
+
       <div class="panel-footer">
         <div class="selection-info">
           <div id="selected-user-info" class="selected-user-name">-</div>
@@ -772,6 +787,7 @@
   <script src="components/modals/UserImageModal.js"></script>
   <script src="components/modals/OrlaExportModal.js"></script>
   <script src="components/UserRowRenderer.js"></script>
+  <script src="components/ThumbnailGridManager.js"></script>
   <script src="components/VirtualScrollManager.js"></script>
   <script src="components/ImageGridManager.js"></script>
   <script src="components/CaptureHistoryManager.js"></script>

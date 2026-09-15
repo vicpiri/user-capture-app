@@ -80,6 +80,7 @@ user-capture-app/
 │   │   │   ├── ProgressManager.js       # Gestión de modal de progreso
 │   │   │   ├── ProjectManager.js        # Gestión de ciclo de vida de proyectos
 │   │   │   ├── SelectionModeManager.js  # Gestión de modo multi-selección
+│   │   │   ├── ThumbnailGridManager.js  # Ver > Vista de miniaturas (cuadrícula en lugar de la tabla)
 │   │   │   ├── UserDataManager.js       # Gestión de carga de datos de usuarios/grupos
 │   │   │   ├── UserRowRenderer.js       # Renderizado de filas de usuarios
 │   │   │   └── VirtualScrollManager.js  # Virtual scroll para lista de usuarios
@@ -266,9 +267,9 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado
 - **workspaces.js**: Espacios de trabajo del menú **Ver**. Cada uno guarda las
-  cinco opciones de fotos y paneles (`VIEW_KEYS`: fotografías capturadas y del
-  depósito, indicadores, acciones adicionales, historial de capturas); los
-  filtros no. `WorkspaceStore` con almacenamiento inyectado; en la aplicación,
+  seis opciones de fotos y paneles (`VIEW_KEYS`: fotografías capturadas y del
+  depósito, indicadores, acciones adicionales, historial de capturas y vista
+  de miniaturas); los filtros no, ni la fuente de las miniaturas. `WorkspaceStore` con almacenamiento inyectado; en la aplicación,
   `config.json` bajo `workspaces` (`custom`, `hiddenBuiltIns`)
   - Predefinidos: Captura, Revisión y Carnets. No se cambian ni se borran,
     solo se ocultan del menú
@@ -512,6 +513,34 @@ que ya navega `ImageGridManager`, así que pulsar una miniatura sólo mueve el
 cursor del visor; la foto queda seleccionada para enlazarla igual que si se
 hubiera llegado a ella con las flechas. `ImageGridManager` avisa de los cambios
 de lista con `onImagesLoaded` y de los de cursor con `onImageChange`.
+
+#### ThumbnailGridManager.js
+**Propósito**: Ver > Vista de miniaturas (`Ctrl+M`). Cambia la tabla de usuarios
+por una cuadrícula de fichas (foto, nombre, apellidos y grupo), con la foto
+capturada o la del depósito según el selector **Capturadas | Depósito**
+
+**Cómo encaja**: es otra forma de pintar la misma lista. `displayUsers()` le
+pasa `displayedUsers`, los mismos usuarios que la tabla con los mismos
+filtros, y una ficha se comporta como una fila: clic con `selectUserRow()`,
+doble clic con `showUserImageModal()`, botón derecho con `showContextMenu()` y
+casilla en modo selección. `↑`/`↓` en `navigateUsers()` siguen el orden lineal
+de la cuadrícula, para que el flujo de enlazar sea el mismo en las dos vistas
+
+**Cuidado**:
+- Solo se dibuja la vista visible; `applyUsersViewMode()` pone al día la otra
+  al cambiar (la tabla oculta no puede medir sus filas y se re-renderiza al
+  volver). Sin proyecto abierto se ve siempre la tabla, que es donde está el
+  aviso de "sin proyecto"
+- Los caminos que parchean filas en su sitio (`applyCapturedImageChange()`,
+  `syncCheckboxes` del modo selección, `repository-changed`) tocan también las
+  fichas: `replaceCard()`, `syncCheckboxes()` y `render()`
+- Con la fuente **Depósito**, la cuadrícula necesita los datos del depósito
+  igual que la columna de fotos: el getter `getShowRepositoryPhotos` de
+  `UserDataManager` la tiene en cuenta, y el proceso principal arranca la copia
+  local al elegir esa fuente o al abrir el proyecto con ella
+- `showThumbnailGrid` se guarda con las demás preferencias de Ver y forma parte
+  de los espacios de trabajo; `thumbnailGridSource` se guarda en `config.json`
+  aparte (`set-thumbnail-grid-source`)
 
 #### ImageGridManager.js
 **Propósito**: Gestión del grid de imágenes capturadas del usuario seleccionado

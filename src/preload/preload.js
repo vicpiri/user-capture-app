@@ -266,6 +266,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Version
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+  // Ver > Vista de miniaturas
+  onMenuToggleThumbnailGrid: (callback) => {
+    ipcRenderer.on('menu-toggle-thumbnail-grid', (event, enabled) => callback(enabled));
+  },
+  setThumbnailGridSource: (source) => ipcRenderer.invoke('set-thumbnail-grid-source', source),
+
   // Ver > Espacios de trabajo
   getWorkspaces: () => ipcRenderer.invoke('get-workspaces'),
   applyWorkspace: (id) => ipcRenderer.invoke('apply-workspace', id),

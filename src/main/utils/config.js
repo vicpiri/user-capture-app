@@ -117,6 +117,7 @@ function saveDisplayPreferences(preferences) {
   config.showRepositoryIndicators = preferences.showRepositoryIndicators;
   config.showAdditionalActions = preferences.showAdditionalActions;
   config.showCaptureHistory = preferences.showCaptureHistory;
+  config.showThumbnailGrid = preferences.showThumbnailGrid;
   return saveGlobalConfig(config);
 }
 

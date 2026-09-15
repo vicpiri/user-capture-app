@@ -34,6 +34,174 @@
   position: relative;
 }
 
+/* Ver > Vista de miniaturas: the grid replaces the table while it is on */
+.thumbnail-grid-panel {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.left-panel.is-thumbnail-view .table-container {
+  display: none;
+}
+
+.left-panel.is-thumbnail-view .thumbnail-grid-panel {
+  display: flex;
+}
+
+.thumbnail-grid-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px 12px;
+}
+
+.thumbnail-grid-source {
+  display: inline-flex;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.thumbnail-source-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a0a4b0;
+  background-color: #1a1f2e;
+  border: none;
+  cursor: pointer;
+}
+
+.thumbnail-source-btn + .thumbnail-source-btn {
+  border-left: 1px solid #3a3f4e;
+}
+
+.thumbnail-source-btn:hover {
+  color: #e0e0e0;
+}
+
+.thumbnail-source-btn.is-active {
+  color: #ffffff;
+  background-color: #4a7cc7;
+}
+
+.thumbnail-grid-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #c0c4d0;
+  cursor: pointer;
+}
+
+.thumbnail-grid-select-all[hidden] {
+  display: none;
+}
+
+.thumbnail-grid-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: #8a8f9a;
+}
+
+.thumbnail-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  align-content: start;
+  gap: 12px;
+  padding: 4px 20px 20px;
+}
+
+.thumbnail-card {
+  position: relative;
+  padding: 8px;
+  text-align: center;
+  background-color: #2a2f3e;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.thumbnail-card:hover {
+  background-color: #323848;
+}
+
+.thumbnail-card.selected {
+  border-color: #4a7cc7;
+  background-color: #2f3a52;
+}
+
+.thumbnail-card.is-checked {
+  background-color: rgba(74, 124, 199, 0.18);
+}
+
+.thumbnail-card-checkbox {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Portrait, the shape of an ID photo */
+.thumbnail-card-image {
+  aspect-ratio: 3 / 4;
+  margin-bottom: 8px;
+  overflow: hidden;
+  border-radius: 6px;
+  background-color: #1a1f2e;
+}
+
+.thumbnail-card-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-card-placeholder,
+.thumbnail-card-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #4a4f5e;
+}
+
+.thumbnail-card-placeholder svg {
+  width: 45%;
+  height: 45%;
+}
+
+.thumbnail-card-name,
+.thumbnail-card-surnames {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #e0e0e0;
+}
+
+.thumbnail-card-name {
+  font-weight: 600;
+}
+
+.thumbnail-card-group {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8a8f9a;
+}
+
 /* Loading Spinner */
 .loading-spinner {
   position: absolute;

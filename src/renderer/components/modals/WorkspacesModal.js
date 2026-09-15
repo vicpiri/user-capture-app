@@ -26,7 +26,8 @@
     ['showRepositoryPhotos', 'Fotografías del depósito'],
     ['showRepositoryIndicators', 'Indicadores del depósito'],
     ['showAdditionalActions', 'Acciones adicionales'],
-    ['showCaptureHistory', 'Historial de capturas']
+    ['showCaptureHistory', 'Historial de capturas'],
+    ['showThumbnailGrid', 'Vista de miniaturas']
   ];
 
   const SHORTCUTS = 9;

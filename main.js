@@ -115,6 +115,10 @@ let showRepositoryPhotos = false;
 let showRepositoryIndicators = false;
 let showAdditionalActions = true;
 let showCaptureHistory = false;
+// Thumbnails of every user instead of the table, of the captured photos or of
+// the repository ones
+let showThumbnailGrid = false;
+let thumbnailGridSource = 'captured';
 let availableCameras = [];
 let selectedCameraId = null;
 let repositoryMirror = null; // Repository mirror manager
@@ -202,7 +206,8 @@ function persistDisplayPreferences() {
     showRepositoryPhotos,
     showRepositoryIndicators,
     showAdditionalActions,
-    showCaptureHistory
+    showCaptureHistory,
+    showThumbnailGrid
   });
 }
 
@@ -249,12 +254,23 @@ function setShowCaptureHistory(checked) {
   mainWindowManager.getWindow()?.webContents.send('menu-toggle-capture-history', showCaptureHistory);
 }
 
+async function setShowThumbnailGrid(checked) {
+  showThumbnailGrid = checked;
+  persistDisplayPreferences();
+  // Repository thumbnails come from the local copy
+  if (showThumbnailGrid && thumbnailGridSource === 'repository') {
+    await ensureRepositoryMirrorStarted();
+  }
+  mainWindowManager.getWindow()?.webContents.send('menu-toggle-thumbnail-grid', showThumbnailGrid);
+}
+
 const DISPLAY_SETTERS = {
   showCapturedPhotos: setShowCapturedPhotos,
   showRepositoryPhotos: setShowRepositoryPhotos,
   showRepositoryIndicators: setShowRepositoryIndicators,
   showAdditionalActions: setShowAdditionalActions,
-  showCaptureHistory: setShowCaptureHistory
+  showCaptureHistory: setShowCaptureHistory,
+  showThumbnailGrid: setShowThumbnailGrid
 };
 
 /**
@@ -266,7 +282,8 @@ function getCurrentView() {
     showRepositoryPhotos,
     showRepositoryIndicators,
     showAdditionalActions,
-    showCaptureHistory
+    showCaptureHistory,
+    showThumbnailGrid
   };
 }
 
@@ -320,6 +337,7 @@ function createMenu() {
     showRepositoryIndicators,
     showAdditionalActions,
     showCaptureHistory,
+    showThumbnailGrid,
     recentProjects,
     workspaces: workspaceStore.visible(),
     activeWorkspaceId: workspaceStore.matching(getCurrentView()),
@@ -454,6 +472,10 @@ function createMenu() {
         setShowCaptureHistory(checked);
         refreshWorkspaces();
       },
+      toggleThumbnailGrid: async (checked) => {
+        await setShowThumbnailGrid(checked);
+        refreshWorkspaces();
+      },
       applyWorkspace: async (id) => {
         await applyWorkspace(id);
         refreshWorkspaces();
@@ -533,7 +555,9 @@ function createWindow() {
       showRepositoryPhotos,
       showRepositoryIndicators,
       showAdditionalActions,
-      showCaptureHistory
+      showCaptureHistory,
+      showThumbnailGrid,
+      thumbnailGridSource
     });
 
     // Auto-open most recent project if available
@@ -979,8 +1003,9 @@ async function openRecentProject(folderPath) {
       mainWindow.webContents.send('project-opened', { success: true });
     }
 
-    // Start repository mirror if repository options are enabled
-    if (showRepositoryPhotos || showRepositoryIndicators) {
+    // Start repository mirror if something on screen shows repository photos
+    const gridShowsRepository = showThumbnailGrid && thumbnailGridSource === 'repository';
+    if (showRepositoryPhotos || showRepositoryIndicators || gridShowsRepository) {
       logger.info('[PROJECT-OPEN] Repository options enabled, starting repository mirror');
       await ensureRepositoryMirrorStarted();
     }
@@ -1038,6 +1063,18 @@ function registerIPCHandlers() {
   registerAppDialogHandlers();
   registerWorkspaceHandlers(context);
 
+  // Capturadas | Depósito above the thumbnails
+  ipcMain.handle('set-thumbnail-grid-source', async (event, source) => {
+    thumbnailGridSource = source === 'repository' ? 'repository' : 'captured';
+    const config = loadGlobalConfig();
+    config.thumbnailGridSource = thumbnailGridSource;
+    saveGlobalConfig(config);
+    if (showThumbnailGrid && thumbnailGridSource === 'repository') {
+      await ensureRepositoryMirrorStarted();
+    }
+    return { success: true, source: thumbnailGridSource };
+  });
+
   // Filter toggle handlers from renderer (badge clicks)
   ipcMain.on('menu-toggle-duplicates-from-renderer', (event, enabled) => {
     const menu = menuBuilder.callbacks?.toggleDuplicates;
@@ -1072,6 +1109,8 @@ app.whenReady().then(() => {
   showRepositoryIndicators = config.showRepositoryIndicators ?? false;
   showAdditionalActions = config.showAdditionalActions ?? true;
   showCaptureHistory = config.showCaptureHistory ?? false;
+  showThumbnailGrid = config.showThumbnailGrid ?? false;
+  thumbnailGridSource = config.thumbnailGridSource === 'repository' ? 'repository' : 'captured';
   cameraAutoStart = config.cameraAutoStart ?? false;
 
   // Serve user photos before any window can ask for one

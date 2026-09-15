@@ -37,6 +37,7 @@ Estas casillas del menú **Ver** cambian lo que muestra la lista de usuarios:
 | **Indicadores de foto en el depósito** | Marca a los usuarios que tienen foto en el depósito |
 | **Acciones adicionales** | Muestra la sección **Acciones Adicionales** (**Pagar Orla** e **Imp. Recibo**) y los iconos de orla pagada y recibo impreso. Ver [Orlas, pagos y recibos](orlas.md) |
 | **Historial de capturas** | Muestra, junto al visor de fotos, la tira de miniaturas con las capturas del proyecto |
+| **Vista de miniaturas** | Cambia la tabla de usuarios por una cuadrícula con la foto de cada uno. Ver [Vista de miniaturas](usuarios.md#vista-de-miniaturas) |
 
 Los tres primeros son filtros y solo puede haber uno activo a la vez: al activar uno, los otros se desactivan.
 

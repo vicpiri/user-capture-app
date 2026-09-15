@@ -27,6 +27,7 @@ describe('WorkspaceStore', () => {
     showRepositoryIndicators: false,
     showAdditionalActions: false,
     showCaptureHistory: false,
+    showThumbnailGrid: false,
     ...overrides
   });
 
@@ -53,7 +54,8 @@ describe('WorkspaceStore', () => {
         showRepositoryPhotos: false,
         showRepositoryIndicators: true,
         showAdditionalActions: false,
-        showCaptureHistory: true
+        showCaptureHistory: true,
+        showThumbnailGrid: false
       });
     });
 
@@ -226,7 +228,20 @@ describe('WorkspaceStore', () => {
       showRepositoryPhotos: true,
       showRepositoryIndicators: false,
       showAdditionalActions: false,
-      showCaptureHistory: false
+      showCaptureHistory: false,
+      showThumbnailGrid: false
     });
+  });
+
+  test('a workspace saved before the thumbnail view existed shows the table', () => {
+    stored = { custom: [{ id: 'old', name: 'Antiguo', view: { showCapturedPhotos: true } }], hiddenBuiltIns: [] };
+    expect(store.get('old').view.showThumbnailGrid).toBe(false);
+  });
+
+  test('remembers the thumbnail view', () => {
+    const { workspace } = store.create('Galería', view({ showThumbnailGrid: true }));
+    expect(store.get(workspace.id).view.showThumbnailGrid).toBe(true);
+    expect(store.matching(view({ showThumbnailGrid: true }))).toBe(workspace.id);
+    expect(store.matching(view())).not.toBe(workspace.id);
   });
 });

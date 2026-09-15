@@ -19,7 +19,8 @@ const VIEW_KEYS = [
   'showRepositoryPhotos',
   'showRepositoryIndicators',
   'showAdditionalActions',
-  'showCaptureHistory'
+  'showCaptureHistory',
+  'showThumbnailGrid'
 ];
 
 const BUILT_IN_WORKSPACES = [
@@ -31,7 +32,8 @@ const BUILT_IN_WORKSPACES = [
       showRepositoryPhotos: false,
       showRepositoryIndicators: true,
       showAdditionalActions: false,
-      showCaptureHistory: true
+      showCaptureHistory: true,
+      showThumbnailGrid: false
     }
   },
   {
@@ -42,7 +44,8 @@ const BUILT_IN_WORKSPACES = [
       showRepositoryPhotos: true,
       showRepositoryIndicators: true,
       showAdditionalActions: false,
-      showCaptureHistory: false
+      showCaptureHistory: false,
+      showThumbnailGrid: false
     }
   },
   {
@@ -53,7 +56,8 @@ const BUILT_IN_WORKSPACES = [
       showRepositoryPhotos: true,
       showRepositoryIndicators: true,
       showAdditionalActions: true,
-      showCaptureHistory: false
+      showCaptureHistory: false,
+      showThumbnailGrid: false
     }
   }
 ];
@@ -81,7 +85,7 @@ function sameView(a, b) {
 function nameKey(name) {
   return String(name)
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();

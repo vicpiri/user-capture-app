@@ -98,15 +98,32 @@ Si desactivas las tres primeras, la columna FOTOS desaparece de la tabla. La apl
 
 > **Consejo:** si solo necesitas saber quién tiene ya foto en el depósito, basta con **Indicadores de foto en el depósito**; la miniatura te sirve cuando quieres comparar la foto antigua con la nueva.
 
+## Vista de miniaturas
+
+**Ver > Vista de miniaturas** (`Ctrl+M`) cambia la tabla de usuarios por una cuadrícula con la foto de cada uno y, debajo, su nombre, sus apellidos y su grupo. Sirve para repasar de un vistazo las fotos de muchos usuarios a la vez. Vuelve a pulsar `Ctrl+M` para regresar a la tabla.
+
+- Encima de la cuadrícula eliges qué fotos se ven: **Capturadas**, las enlazadas en el proyecto, o **Depósito**, las del depósito de imágenes. La primera vez que eliges **Depósito**, las fotos pueden tardar unos segundos en aparecer mientras se consulta el depósito.
+- Al lado verás cuántos usuarios hay y cuántos tienen foto de la clase elegida. Los que no tienen foto aparecen con una silueta gris.
+- Aparecen los mismos usuarios que en la tabla: con el grupo, la búsqueda y los filtros del menú **Ver** que tengas puestos. Con **Todos los grupos** ves a todo el proyecto.
+
+Cada miniatura funciona como una fila de la tabla:
+
+- Un clic selecciona al usuario, así que puedes enlazarle la foto del visor con **Enlazar** o `Ctrl+L`, como siempre.
+- `↑` y `↓` pasan al usuario anterior o siguiente, en el orden de la cuadrícula, y `←` y `→` siguen recorriendo las fotos del visor.
+- Un doble clic amplía la foto que se ve en la miniatura.
+- El botón derecho abre el mismo menú contextual que en la tabla. Con **Seleccionar** aparece una casilla en cada miniatura, y encima de la cuadrícula la casilla **Seleccionar todos**.
+
+La aplicación recuerda si usabas la vista de miniaturas y qué fotos mostraba. La vista de miniaturas también se guarda en los espacios de trabajo.
+
 ## Espacios de trabajo
 
-Un espacio de trabajo guarda una combinación de las opciones de visualización del menú **Ver**: **Fotografías capturadas**, **Fotografías del depósito**, **Indicadores de foto en el depósito**, **Acciones adicionales** e **Historial de capturas**. Así cambias de una fase del trabajo a otra de una vez, en lugar de activar y desactivar las opciones una a una.
+Un espacio de trabajo guarda una combinación de las opciones de visualización del menú **Ver**: **Fotografías capturadas**, **Fotografías del depósito**, **Indicadores de foto en el depósito**, **Acciones adicionales**, **Historial de capturas** y **Vista de miniaturas**. La elección entre **Capturadas** y **Depósito** de la vista de miniaturas no forma parte del espacio. Así cambias de una fase del trabajo a otra de una vez, en lugar de activar y desactivar las opciones una a una.
 
 Los filtros del menú **Ver** (**Asignaciones duplicadas**, **Carnets solicitados** y **Publicaciones solicitadas**) no forman parte de los espacios: al cambiar de espacio siguen como estaban.
 
 ### Espacios predefinidos
 
-La aplicación trae tres:
+La aplicación trae tres, todos con la tabla en lugar de las miniaturas:
 
 | Espacio | Para qué | Qué muestra |
 |---|---|---|

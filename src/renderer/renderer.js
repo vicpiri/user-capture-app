@@ -31,6 +31,10 @@ let showRepositoryPhotos = false;  // Default to false to avoid blocking on Goog
 let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
 let showAdditionalActions = true;  // Show/hide additional actions section and related indicators
 let showCaptureHistory = false;  // Show/hide the capture history strip beside the viewer
+// Ver > Vista de miniaturas, and whose photos it shows: 'captured' or 'repository'
+let showThumbnailGrid = false;
+let thumbnailGridSource = 'captured';
+let thumbnailGridManager = null;
 let isLoadingRepositoryPhotos = false;  // Track if repository photos are being loaded
 let isLoadingRepositoryIndicators = false;  // Track if repository indicators are being loaded
 let repositorySyncCompleted = false;  // Track if initial repository sync has completed
@@ -108,6 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize virtual scroll manager
   initializeVirtualScroll();
+
+  // Ver > Vista de miniaturas
+  initializeThumbnailGrid();
 
   // Initialize image grid manager
   initializeImageGridManager();
@@ -288,6 +295,122 @@ function initializeVirtualScroll() {
   virtualScrollManager.init();
 }
 
+// ============================================================================
+// Ver > Vista de miniaturas
+// ============================================================================
+
+function initializeThumbnailGrid() {
+  thumbnailGridManager = new ThumbnailGridManager({
+    grid: document.getElementById('thumbnail-grid'),
+    countEl: document.getElementById('thumbnail-grid-count'),
+    sourceButtons: document.getElementById('thumbnail-grid-source'),
+    selectAllLabel: document.getElementById('thumbnail-grid-select-all'),
+    getSource: () => thumbnailGridSource,
+    getSelectionMode: () => selectionMode,
+    getSelectedUsers: () => selectedUsers,
+    getRepositoryVersion: () => repositoryImageVersion,
+    isLoadingRepository: () => isLoadingRepositoryPhotos,
+    // A card is selected exactly like a row
+    onUserSelect: (card, user) => selectUserRow(card, user),
+    onUserContextMenu: (event, user, card) => showContextMenu(event, user, card),
+    onImagePreview: (user, type) => showUserImageModal(user, type),
+    onCheckboxToggle: (userId, checked) => toggleUserSelection(userId, checked),
+    onSelectAll: (checked) => {
+      if (!selectionModeManager) return;
+      if (checked) {
+        selectionModeManager.selectAll();
+      } else {
+        selectionModeManager.deselectAll();
+      }
+    },
+    onSourceChange: (source) => setThumbnailGridSource(source),
+    observeImages: () => observeLazyImages()
+  });
+  thumbnailGridManager.init();
+
+  window.electronAPI.onMenuToggleThumbnailGrid((enabled) => {
+    showThumbnailGrid = enabled;
+    applyUsersViewMode();
+  });
+
+  // Also read by MenuEventManager; this listener only takes the grid's part
+  window.electronAPI.onInitialDisplayPreferences((prefs) => {
+    showThumbnailGrid = Boolean(prefs.showThumbnailGrid);
+    thumbnailGridSource = prefs.thumbnailGridSource === 'repository' ? 'repository' : 'captured';
+    applyUsersViewMode();
+  });
+}
+
+/**
+ * The grid only takes the table's place with a project open: without one,
+ * the table area holds the "no project" placeholder
+ */
+function isThumbnailGridActive() {
+  return showThumbnailGrid && projectOpen;
+}
+
+/**
+ * Show the table or the grid, and draw the one that is now visible
+ *
+ * Only the visible one is kept up to date while the other is hidden, so the
+ * switch is where it catches up.
+ */
+function applyUsersViewMode() {
+  const leftPanel = document.querySelector('.left-panel');
+  const gridActive = isThumbnailGridActive();
+  if (leftPanel) {
+    leftPanel.classList.toggle('is-thumbnail-view', gridActive);
+  }
+  if (!thumbnailGridManager) return;
+
+  if (gridActive) {
+    ensureRepositoryDataForGrid();
+    thumbnailGridManager.setItems(displayedUsers);
+  } else if (virtualScrollManager) {
+    // A hidden table cannot measure its rows; it does so again now
+    virtualScrollManager.forceRerender();
+  }
+  restoreSelectedRowHighlight();
+}
+
+/**
+ * Capturadas | Depósito
+ * @param {'captured'|'repository'} source
+ */
+async function setThumbnailGridSource(source) {
+  thumbnailGridSource = source === 'repository' ? 'repository' : 'captured';
+  if (isThumbnailGridActive()) {
+    // Repaint at once, so the buttons answer the click
+    thumbnailGridManager.render();
+    restoreSelectedRowHighlight();
+  }
+  // Waited for: the main process starts the repository copy first, and
+  // asking for the repository photos before that finds none
+  await window.electronAPI.setThumbnailGridSource(thumbnailGridSource);
+  if (ensureRepositoryDataForGrid()) {
+    // Spinners until the repository photos arrive
+    thumbnailGridManager.render();
+    restoreSelectedRowHighlight();
+  }
+}
+
+/**
+ * The repository photos are only looked up when something shows them; the
+ * grid on its repository source is one of those things
+ * @returns {boolean} whether a lookup started
+ */
+function ensureRepositoryDataForGrid() {
+  if (!isThumbnailGridActive() || thumbnailGridSource !== 'repository' || currentUsers.length === 0) {
+    return false;
+  }
+  if (isLoadingRepositoryPhotos || currentUsers.some(user => user.repository_image_path)) {
+    return false;
+  }
+  isLoadingRepositoryPhotos = true;
+  loadRepositoryDataInBackground(currentUsers);
+  return true;
+}
+
 // Initialize image grid manager
 function initializeImageGridManager() {
   imageGridManager = new ImageGridManager({
@@ -428,6 +551,9 @@ function initializeSelectionModeManager() {
       } else {
         displayUsers(currentUsers, allUsers);
       }
+      if (isThumbnailGridActive() && thumbnailGridManager) {
+        thumbnailGridManager.render();
+      }
 
       restoreSelectedRowHighlight();
     },
@@ -442,6 +568,9 @@ function initializeSelectionModeManager() {
           checkbox.checked = selected.has(Number(row.dataset.userId));
         }
       });
+      if (thumbnailGridManager) {
+        thumbnailGridManager.syncCheckboxes(selected);
+      }
     },
     onRequestCardPrint: handleRequestCardPrint,
     onRequestPublication: handleRequestPublication,
@@ -527,7 +656,10 @@ function initializeMenuEventManager() {
     setIsLoadingRepositoryPhotos: (value) => { isLoadingRepositoryPhotos = value; },
     setIsLoadingRepositoryIndicators: (value) => { isLoadingRepositoryIndicators = value; },
     setRepositorySyncCompleted: (value) => { repositorySyncCompleted = value; },
-    setProjectOpen: (value) => { projectOpen = value; },
+    setProjectOpen: (value) => {
+      projectOpen = value;
+      applyUsersViewMode();
+    },
 
     // State getters
     getCurrentUsers: () => currentUsers,
@@ -594,7 +726,9 @@ function initializeUserDataManager() {
     getAllUsers: () => allUsers,
     getCurrentGroups: () => currentGroups,
     getShowCapturedPhotos: () => showCapturedPhotos,
-    getShowRepositoryPhotos: () => showRepositoryPhotos,
+    // The grid on its repository source needs the same data the column does
+    getShowRepositoryPhotos: () => showRepositoryPhotos ||
+      (isThumbnailGridActive() && thumbnailGridSource === 'repository'),
     getShowRepositoryIndicators: () => showRepositoryIndicators,
 
     // Callbacks
@@ -629,7 +763,10 @@ function initializeUserDataManager() {
 function initializeProjectManager() {
   projectManager = new ProjectManager({
     // State setters
-    setProjectOpen: (value) => { projectOpen = value; },
+    setProjectOpen: (value) => {
+      projectOpen = value;
+      applyUsersViewMode();
+    },
     setCurrentUsers: (users) => { currentUsers = users; },
     setAllUsers: (users) => { allUsers = users; },
     setCurrentGroups: (groups) => { currentGroups = groups; },
@@ -867,6 +1004,11 @@ function initializeEventListeners() {
       await userDataManager.refreshRepositoryIndicators((updatedUsers) => {
         // Update repository indicators in existing rows
         userRowRenderer.updateRepositoryIndicators(userTableBody, updatedUsers);
+        // The grid's repository photos carry the version in their URLs
+        if (isThumbnailGridActive() && thumbnailGridSource === 'repository') {
+          thumbnailGridManager.render();
+          restoreSelectedRowHighlight();
+        }
         // Trigger lazy image observation for new repository images
         if (lazyImageManager) {
           lazyImageManager.observeAll();
@@ -1065,6 +1207,10 @@ async function displayUsers(users, allUsers = null) {
     virtualScrollManager.setItems(displayedUsers);
   }
 
+  if (isThumbnailGridActive() && thumbnailGridManager) {
+    thumbnailGridManager.setItems(displayedUsers);
+  }
+
   restoreSelectedRowHighlight();
 }
 
@@ -1096,7 +1242,18 @@ function syncUserRowRendererConfig() {
  * whenever anything refreshed the table under the user.
  */
 function restoreSelectedRowHighlight() {
-  if (!selectedUser || !userTableBody) return;
+  if (!selectedUser) return;
+
+  if (isThumbnailGridActive() && thumbnailGridManager) {
+    const card = thumbnailGridManager.getCard(selectedUser.id);
+    if (card) {
+      card.classList.add('selected');
+      selectedRowElement = card;
+    }
+    return;
+  }
+
+  if (!userTableBody) return;
 
   const row = userTableBody.querySelector(`tr[data-user-id="${selectedUser.id}"]`);
   if (row) {
@@ -1440,6 +1597,17 @@ function navigateUsers(direction) {
   const user = displayedUsers[targetIndex];
   if (!user) return;
 
+  // In the grid ↑ and ↓ still go to the previous and next user, so moving
+  // through people and linking works the same in both views
+  if (isThumbnailGridActive() && thumbnailGridManager) {
+    const card = thumbnailGridManager.getCard(user.id);
+    if (card) {
+      selectUserRow(card, user);
+      card.scrollIntoView({ block: 'nearest' });
+    }
+    return;
+  }
+
   let row = userTableBody.querySelector(`tr[data-user-id="${user.id}"]`);
 
   // Only when the row is not rendered. scrollToIndex puts the target at the top
@@ -1516,10 +1684,14 @@ async function applyCapturedImageChange(userId, imagePath) {
   // either list, so that is where the row data has to come from
   syncUserRowRendererConfig();
   const displayedById = new Map(displayedUsers.map(user => [user.id, user]));
+  const gridActive = isThumbnailGridActive() && thumbnailGridManager;
   affectedIds.forEach(id => {
     const user = displayedById.get(id);
     if (user) {
       userRowRenderer.replaceRow(userTableBody, user, window._imageCountCache);
+      if (gridActive) {
+        thumbnailGridManager.replaceCard(user);
+      }
     }
   });
 
