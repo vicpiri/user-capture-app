@@ -310,7 +310,18 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
     la fecha de modificación, que cambia al reescribir el archivo
 - **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
-- **logger.js**: Sistema de logging centralizado
+- **logger.js**: Sistema de logging centralizado. El `app.log` del proyecto se
+  corta al llegar a 5 MB y se conservan los dos anteriores (`app.1.log` y
+  `app.2.log`): antes cada apertura añadía al mismo archivo y nunca se
+  archivaba, así que pasaba de 8 MB en un proyecto en uso
+  - Se comprueba al abrir el proyecto y con cada entrada, contando lo escrito
+    en lugar de preguntar al sistema de archivos por el tamaño
+  - El corte cierra el stream, que vacía lo pendiente de forma asíncrona;
+    mientras tanto las entradas se encolan y se escriben al reabrir, así que no
+    se pierde ninguna. Si el proyecto se cierra o se abre otro en ese momento,
+    la cola se escribe al final del log que se deja atrás
+  - Si el renombrado falla (otra ventana con el archivo abierto), se anota en
+    la consola y el log sigue creciendo: mejor eso que perder lo que dice
 - **workspaces.js**: Espacios de trabajo del menú **Ver**. Cada uno guarda las
   seis opciones de fotos y paneles (`VIEW_KEYS`: fotografías capturadas y del
   depósito, indicadores, acciones adicionales, historial de capturas y vista

@@ -30,7 +30,7 @@ Al crear un proyecto, la aplicación prepara esta estructura dentro de la carpet
 | `ingest` | La carpeta de entrada. Cada foto JPG que llega aquí se mueve sola a `imports`, así que normalmente está vacía. |
 | `imports` | Todas las fotos del proyecto, renombradas con la fecha y la hora de llegada (salvo las traídas con la importación de imágenes con ID, que conservan su nombre). De aquí salen las fotos enlazadas. |
 | `data` | La base de datos del proyecto: usuarios, grupos, enlaces entre fotos y usuarios, etiquetas y configuración del proyecto. |
-| `app.log` | Registro de actividad de la aplicación, útil si hay que investigar un problema. |
+| `app.log` | Registro de actividad de la aplicación, útil si hay que investigar un problema. Cuando llega a 5 MB se guarda como `app.1.log` y se empieza uno nuevo; se conservan los dos últimos. |
 | `import-report.log` | Informe de la importación del XML. Solo aparece si hubo incidencias al crear el proyecto, o después de actualizar el XML. |
 
 > **Importante:** No cambies el nombre ni borres a mano las fotos de `imports`. Cada enlace recuerda el nombre del archivo, y si lo cambias la foto deja de verse en la ficha del usuario. Tampoco modifiques nada dentro de `data`.
