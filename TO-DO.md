@@ -1,2 +1,1 @@
-- Podar la caché de miniaturas (`%APPDATA%/Edu User Capture/thumbnail-cache`): al reemplazar una foto, su miniatura anterior queda huérfana y nunca se borra. Ver [docs/FILE_URL_ESCAPING.md](docs/FILE_URL_ESCAPING.md).
 - Poner al día CLAUDE.md con las discrepancias que lista [docs/FALLOS_PENDIENTES.md](docs/FALLOS_PENDIENTES.md) (los fallos que encontró el manual de uso ya están corregidos).

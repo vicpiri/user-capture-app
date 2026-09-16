@@ -687,6 +687,7 @@
           <div class="preferences-category active" data-category="institution">Datos de la Institución</div>
           <div class="preferences-category" data-category="receipt-printer">Impresora de Recibos</div>
           <div class="preferences-category" data-category="updates">Actualizaciones</div>
+          <div class="preferences-category" data-category="maintenance">Mantenimiento</div>
         </div>
 
         <!-- Content Area -->
@@ -786,6 +787,18 @@
                 Buscar actualizaciones al iniciar la aplicación
               </label>
               <small class="form-help">Como mucho una vez al día, y sin avisar si no hay conexión. Puedes buscarlas cuando quieras con Ayuda &gt; Buscar actualizaciones...</small>
+            </div>
+          </div>
+
+          <!-- Maintenance Category -->
+          <div class="preferences-panel" data-panel="maintenance">
+            <h3>Mantenimiento</h3>
+
+            <div class="form-group">
+              <label>Caché de miniaturas</label>
+              <p id="pref-thumbnail-cache-size" class="form-help">Calculando...</p>
+              <button id="pref-clear-thumbnail-cache" type="button" class="btn btn-secondary">Vaciar la caché</button>
+              <small class="form-help">Las miniaturas se vuelven a crear solas cuando hagan falta. Vacíala solo si alguna se ve mal.</small>
             </div>
           </div>
         </div>

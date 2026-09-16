@@ -155,19 +155,32 @@ describe('ThumbnailService', () => {
       expect(generate).toHaveBeenCalledTimes(1);
     });
 
-    test('should rebuild when the source is replaced', async () => {
+    test('should rebuild in place when the source is replaced', async () => {
       const source = await createPhoto('photo.jpg', 1200, 1600);
       const first = await service.getThumbnail(source, 128);
 
       // Replacing a photo keeps its name but moves its timestamp, and that is
-      // what has to invalidate the cached copy
+      // what has to invalidate the cached copy. Only the timestamp is moved
+      // here: libvips keeps the source open on Windows, so it cannot be
+      // rewritten from the test.
       const later = new Date(Date.now() + 5000);
       fs.utimesSync(source, later, later);
 
       const second = await service.getThumbnail(source, 128);
 
-      expect(second).not.toBe(first);
-      expect(fs.existsSync(second)).toBe(true);
+      // The same file, rewritten: the old one used to be left behind forever
+      expect(second).toBe(first);
+      expect(fs.readdirSync(cacheDir)).toHaveLength(1);
+      expect(Math.round(fs.statSync(second).mtimeMs)).toBe(Math.round(later.getTime()));
+    });
+
+    test('should keep the photo\'s time on the cached copy', async () => {
+      const source = await createPhoto('photo.jpg');
+      const cached = await service.getThumbnail(source, 128);
+
+      // That time is what says which photo the thumbnail was built from
+      expect(Math.round(fs.statSync(cached).mtimeMs))
+        .toBe(Math.round(fs.statSync(source).mtimeMs));
     });
 
     test('should reject a source that does not exist', async () => {
@@ -186,6 +199,70 @@ describe('ThumbnailService', () => {
         ? fs.readdirSync(cacheDir).filter(name => name.endsWith('.tmp'))
         : [];
       expect(leftovers).toEqual([]);
+    });
+  });
+
+  describe('pruneCache()', () => {
+    const fillCache = (count, bytes = 1024) => {
+      fs.mkdirSync(cacheDir, { recursive: true });
+
+      return Array.from({ length: count }, (unused, index) => {
+        const filePath = path.join(cacheDir, `${index}.jpg`);
+        fs.writeFileSync(filePath, Buffer.alloc(bytes, index));
+        // Older the further down the list, so the order to drop is known
+        const born = new Date(Date.now() - (count - index) * 60000);
+        fs.utimesSync(filePath, born, born);
+        return filePath;
+      });
+    };
+
+    test('should leave a cache under the ceiling alone', async () => {
+      fillCache(4);
+
+      const done = await service.pruneCache(1024 * 1024);
+
+      expect(done).toMatchObject({ removed: 0, total: 4096 });
+      expect(fs.readdirSync(cacheDir)).toHaveLength(4);
+    });
+
+    test('should drop the oldest until it is back under the ceiling', async () => {
+      const files = fillCache(10);
+
+      // Ten files of 1 KB with a ceiling of 5 KB: it goes down to 4 KB, so six
+      // have to go
+      const done = await service.pruneCache(5 * 1024);
+
+      expect(done.removed).toBe(6);
+      expect(done.bytes).toBe(6 * 1024);
+      expect(fs.existsSync(files[0])).toBe(false);
+      expect(fs.existsSync(files[9])).toBe(true);
+      expect(fs.readdirSync(cacheDir)).toHaveLength(4);
+    });
+
+    test('should sweep temporary files a crash left behind', async () => {
+      fs.mkdirSync(cacheDir, { recursive: true });
+      const abandoned = path.join(cacheDir, 'a.jpg.4321.tmp');
+      const inFlight = path.join(cacheDir, 'b.jpg.4321.tmp');
+      fs.writeFileSync(abandoned, 'x');
+      fs.writeFileSync(inFlight, 'x');
+      const old = new Date(Date.now() - 60 * 60000);
+      fs.utimesSync(abandoned, old, old);
+
+      await service.pruneCache(1024 * 1024);
+
+      expect(fs.existsSync(abandoned)).toBe(false);
+      // A generation running right now writes one of these
+      expect(fs.existsSync(inFlight)).toBe(true);
+    });
+
+    test('should do nothing without a cache folder', async () => {
+      await expect(service.pruneCache(1024)).resolves.toMatchObject({ removed: 0, total: 0 });
+    });
+
+    test('should measure what the cache holds', async () => {
+      fillCache(3, 2048);
+
+      await expect(service.measureCache()).resolves.toEqual({ files: 3, bytes: 6144 });
     });
   });
 

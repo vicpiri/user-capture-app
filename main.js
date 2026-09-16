@@ -852,6 +852,9 @@ async function reinitializeRepositoryMirror() {
 // itself; the folder of replaced photos is not urgent
 const REPLACED_NOTICE_DELAY = 30000;
 
+// Same idea for the thumbnail cache, which is only swept to keep it capped
+const THUMBNAIL_PRUNE_DELAY = 60000;
+
 /**
  * Offer to purge the replaced photos when there are enough of them
  *
@@ -1148,6 +1151,7 @@ function registerIPCHandlers() {
     openHelpWindow,
     workspaceStore,
     receiptPrinter: () => receiptPrinter,
+    thumbnailService: () => thumbnailService,
     getCurrentView,
     applyWorkspace,
     refreshWorkspaces
@@ -1223,6 +1227,14 @@ app.whenReady().then(() => {
     getAllowedRoots: getImageRoots,
     logger
   });
+
+  // Once, in the background, well after the window is up: the cache is capped,
+  // not managed, and reading the folder must not delay anything
+  setTimeout(() => {
+    thumbnailService.pruneCache().catch((error) => {
+      logger.warning(`Could not prune the thumbnail cache: ${error.message}`);
+    });
+  }, THUMBNAIL_PRUNE_DELAY);
 
   loadRecentProjects();
   createMenu();

@@ -23,6 +23,14 @@ Las preferencias se guardan en este equipo y valen para todos los proyectos que 
 
 La categoría **Impresora de Recibos** sirve para elegir la impresora térmica, imprimir un recibo de prueba y escribir el subtítulo, el precio y el pie de los recibos de la orla. Todo ello se explica en [Configurar la impresora de recibos](orlas.md#configurar-la-impresora-de-recibos), [Personalizar el contenido del recibo](orlas.md#personalizar-el-contenido-del-recibo) e [Imprimir un recibo de prueba](orlas.md#imprimir-un-recibo-de-prueba).
 
+## Mantenimiento
+
+La aplicación guarda copias pequeñas de las fotos (miniaturas) para que las listas se pinten rápido, en una carpeta propia fuera del proyecto. Se mantiene sola: cada foto tiene una sola miniatura por tamaño, que se rehace si cambias la foto, y la carpeta nunca pasa de un tamaño máximo.
+
+En **Preferencias > Mantenimiento** puedes ver cuántas miniaturas hay y cuánto ocupan, y vaciarlas con **Vaciar la caché**.
+
+> **Consejo:** no hace falta vaciarla por rutina. Hazlo solo si alguna miniatura se ve mal; se vuelven a crear solas según se necesitan, y las fotos originales no se tocan.
+
 ## Opciones de visualización del menú Ver
 
 Estas casillas del menú **Ver** cambian lo que muestra la lista de usuarios:

@@ -329,6 +329,23 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
     `replacedArchive.lastNotice`, escrito **antes** de preguntar). Lo dispara
     `offerReplacedArchivePurge()` en `main.js`, 30 s después de que el mirror
     arranque, y si se acepta manda el mismo evento que el menú
+- **thumbnailService.js**: Miniaturas de las fotos, en
+  `%APPDATA%/Edu User Capture/thumbnail-cache`, servidas por el protocolo
+  `app-img://` cuando la URL lleva `size`
+  - **El nombre es `sha1(ruta|tamaño)`, sin la fecha**, y la fecha de la foto
+    se graba con `utimes` en la propia miniatura: así una foto tiene una sola
+    miniatura por tamaño y al cambiarla se sobrescribe. Antes la fecha iba en
+    el nombre, de modo que cada reemplazo o giro abandonaba la anterior con un
+    nombre que ya nadie volvería a pedir
+  - `utimes` guarda milisegundos enteros, así que la comparación es al
+    milisegundo redondeado (`sameMoment()`); con `===` sobre el valor crudo no
+    acertaría nunca y se regeneraría todo en cada lectura
+  - `pruneCache()` no intenta saber cuáles están huérfanas —el nombre es un
+    hash, no se puede— sino que **pone techo** a la carpeta (200 MB, bajando al
+    80% al podar) y barre los `.tmp` de más de 5 minutos. Ordena por fecha de
+    creación, que es cuando se hizo la miniatura; la de modificación ya lleva
+    la de la foto. Se ejecuta una vez, 60 s después de arrancar
+  - `measureCache()` y `clearCache()` alimentan Preferencias > Mantenimiento
 - **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado. El `app.log` del proyecto se

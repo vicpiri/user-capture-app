@@ -33,6 +33,9 @@
       this.printerConfigContent = document.getElementById('pref-printer-config-content');
       this.printerSystemFallback = document.getElementById('pref-printer-system-fallback');
 
+      this.thumbnailCacheSize = document.getElementById('pref-thumbnail-cache-size');
+      this.clearThumbnailCacheBtn = document.getElementById('pref-clear-thumbnail-cache');
+
       this.saveBtn = document.getElementById('preferences-save-btn');
       this.cancelBtn = document.getElementById('preferences-cancel-btn');
       this.closeXBtn = document.getElementById('preferences-close-x');
@@ -94,6 +97,10 @@
         category.addEventListener('click', this.handleCategoryClick);
       });
 
+      if (this.clearThumbnailCacheBtn) {
+        this.clearThumbnailCacheBtn.addEventListener('click', () => this.handleClearThumbnailCache());
+      }
+
       // Setup printer configuration
       if (this.printerSelect) {
         this.printerSelect.addEventListener('change', this.handlePrinterChange);
@@ -150,10 +157,58 @@
       // Show the modal
       this.open();
 
+      // Not awaited: the folder is read from disk and the dialog should not
+      // wait on it to appear
+      this.showThumbnailCacheSize();
+
       // Return promise that resolves when user makes a choice
       return new Promise((resolve) => {
         this.resolvePromise = resolve;
       });
+    }
+
+    /**
+     * What the thumbnail cache holds, under Mantenimiento
+     *
+     * The cache keeps itself under a ceiling, so this is not something to act
+     * on: it is here to say what emptying it would free.
+     */
+    async showThumbnailCacheSize() {
+      if (!this.thumbnailCacheSize) {
+        return;
+      }
+
+      this.thumbnailCacheSize.textContent = 'Calculando...';
+
+      try {
+        const held = await window.electronAPI.measureThumbnailCache();
+
+        this.thumbnailCacheSize.textContent = held.success
+          ? `${held.files} ${held.files === 1 ? 'miniatura' : 'miniaturas'}, ${formatBytes(held.bytes)}`
+          : held.error;
+      } catch (error) {
+        this.thumbnailCacheSize.textContent = 'No se pudo leer la caché.';
+      }
+    }
+
+    /**
+     * @private
+     */
+    async handleClearThumbnailCache() {
+      if (!this.clearThumbnailCacheBtn) {
+        return;
+      }
+
+      this.clearThumbnailCacheBtn.disabled = true;
+
+      try {
+        await window.electronAPI.clearThumbnailCache();
+      } catch (error) {
+        // The size below says what actually happened
+      }
+
+      this.clearThumbnailCacheBtn.disabled = false;
+      await this.showThumbnailCacheSize();
     }
 
     /**
@@ -454,6 +509,16 @@
         }
       }
     }
+  }
+
+  function formatBytes(bytes) {
+    if (!bytes) {
+      return '0 MB';
+    }
+
+    const megabytes = bytes / (1024 * 1024);
+
+    return megabytes >= 1 ? `${megabytes.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
   }
 
   // Export (for tests and browser)

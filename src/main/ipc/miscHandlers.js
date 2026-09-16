@@ -54,7 +54,7 @@ function receiptPriceOrDefault(value) {
  * @param {Function} context.createMenu - Create menu function
  */
 function registerMiscHandlers(context) {
-  const { mainWindow: getMainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu, reinitializeRepositoryMirror, repositoryMirror: getRepositoryMirror } = context;
+  const { mainWindow: getMainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu, reinitializeRepositoryMirror, repositoryMirror: getRepositoryMirror, thumbnailService } = context;
 
   // ============================================================================
   // Dialog Handlers
@@ -352,6 +352,44 @@ function registerMiscHandlers(context) {
   });
 
   // Update window title
+  /**
+   * What the thumbnail cache holds, for Preferencias. It is swept on its own
+   * to stay under a ceiling; this is for emptying it by hand, which is what to
+   * do if a thumbnail ever looks wrong.
+   */
+  ipcMain.handle('measure-thumbnail-cache', async () => {
+    try {
+      const service = thumbnailService && thumbnailService();
+
+      if (!service) {
+        return { success: false, error: 'La caché de miniaturas no está disponible.' };
+      }
+
+      return { success: true, ...(await service.measureCache()) };
+    } catch (error) {
+      logger.error('Error measuring the thumbnail cache', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('clear-thumbnail-cache', async () => {
+    try {
+      const service = thumbnailService && thumbnailService();
+
+      if (!service) {
+        return { success: false, error: 'La caché de miniaturas no está disponible.' };
+      }
+
+      const held = await service.measureCache();
+      await service.clearCache();
+
+      return { success: true, ...held };
+    } catch (error) {
+      logger.error('Error clearing the thumbnail cache', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('update-window-title', async () => {
     try {
       const { updateWindowTitle } = context;

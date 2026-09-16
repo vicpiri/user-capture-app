@@ -191,6 +191,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportRepositoryImages: (folderPath, users, options) => ipcRenderer.invoke('export-repository-images', folderPath, users, options),
   countRepositoryImages: (users) => ipcRenderer.invoke('count-repository-images', users),
   exportToRepository: (users, options) => ipcRenderer.invoke('export-to-repository', users, options),
+  measureThumbnailCache: () => ipcRenderer.invoke('measure-thumbnail-cache'),
+  clearThumbnailCache: () => ipcRenderer.invoke('clear-thumbnail-cache'),
   scanReplacedArchive: () => ipcRenderer.invoke('scan-replaced-archive'),
   purgeReplacedArchive: (before) => ipcRenderer.invoke('purge-replaced-archive', before),
   exportOrlaPDF: (data) => ipcRenderer.invoke('export-orla-pdf', data),

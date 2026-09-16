@@ -58,9 +58,15 @@ dentro de las carpetas del proyecto: `imports`, `ingest`, el espejo local y el
 depósito configurado. Cualquier otra ruta se rechaza con un aviso en el log.
 Cubierto en `tests/unit/main/imageProtocol.test.js`.
 
-## Pendiente menor
+## La caché de miniaturas, después
 
-La caché de miniaturas no se poda nunca. Está en
-`%APPDATA%/Edu User Capture/thumbnail-cache`, con una entrada por combinación de
-ruta, fecha de modificación y tamaño, así que reemplazar una foto deja huérfana la
-miniatura anterior. En uso real son unos pocos MB, pero crece de forma monótona.
+Lo anterior describía una caché que solo crecía: la entrada era
+`ruta + fecha de modificación + tamaño`, así que reemplazar una foto dejaba
+huérfana la miniatura anterior para siempre.
+
+Ya no. La entrada es `ruta + tamaño` y la fecha de la foto se graba en la propia
+miniatura, de modo que una foto que cambia sobrescribe la suya. Lo que queda
+fuera del alcance de eso —fotos y proyectos borrados— lo acota un techo de
+200 MB que se aplica al arrancar; qué miniaturas están huérfanas es indecidible,
+porque el nombre es un hash. Ver `pruneCache()` en `src/main/thumbnailService.js`
+y el botón de Preferencias > Mantenimiento.
