@@ -1,1 +1,4 @@
-- Poner al día CLAUDE.md con las discrepancias que lista [docs/FALLOS_PENDIENTES.md](docs/FALLOS_PENDIENTES.md) (los fallos que encontró el manual de uso ya están corregidos).
+Nada pendiente.
+
+Los fallos que salieron al redactar el manual de uso, y las discrepancias que
+tenía CLAUDE.md, están en [docs/FALLOS_PENDIENTES.md](docs/FALLOS_PENDIENTES.md).

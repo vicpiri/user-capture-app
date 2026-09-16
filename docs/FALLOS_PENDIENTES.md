@@ -25,48 +25,22 @@ Ninguno pendiente: todos están en «Corregidos».
 
 Ninguno pendiente: todos están en «Corregidos».
 
-## CLAUDE.md desactualizado
-
-Discrepancias entre CLAUDE.md y el código. El manual sigue al código.
-
-- **Google Drive**: describe `googleDriveManager.js`, "Google Drive API v3" y
-  que la aplicación "se conecta con el servidor". Ese archivo no existe: el
-  depósito es una carpeta del disco (normalmente sincronizada) con una copia
-  local que mantiene `repositoryMirror.js`.
-- **Nombres del menú** que no coinciden con los reales:
-  - "Lista en CSV para carnets" → **Archivo CSV para Carnets del grupo seleccionado**
-  - "CSV Inventario por grupos" → **Archivos para Edu Inventory Manager**
-  - "Imágenes a repositorio" → **Imágenes capturadas al depósito**
-  - "Orla PDF" → **Orlas en PDF**
-  - "Mostrar solo usuarios con solicitud de carnet/publicación" → **Carnets solicitados** / **Publicaciones solicitadas**
-  - "Proyecto > Configurar depósito" → **Configurar depósito de imágenes**
-- **Impresora de recibos**: no hay menú Herramientas; se configura en
-  **Archivo > Preferencias...** Los recibos no se imprimen automáticamente al
-  marcar la orla como pagada: hay un botón **Imp. Recibo**.
-- **Solicitudes de carnet y publicación**: solo aparecen en el menú contextual
-  en modo selección.
-- **Exportación al depósito**: ya no sobrescribe sin más; las fotos
-  reemplazadas se archivan en `Reemplazadas/<YYYYMMDDHHMMSS>_<equipo>`.
-- **Orlas**: la rejilla es de 6 × 6, no de 4 columnas; la calidad se elige
-  entre 60, 80, 90 y 100, no de 0 a 100.
-- **CSV para carnets**: solo incluye usuarios con foto en el depósito.
-- **CSV de inventario**: las cabeceras no coinciden (`Alumnado.csv` empieza por
-  `Codigo` y usa `Fecha Nacimiento`; `Personal.csv` añade `Función`,
-  `Teléfono 1`, `Teléfono 2` y `Email`; `Grupos.csv` usa `CódigoGrupo` y lista
-  siempre todos los grupos).
-- **Inventario de imágenes**: un `imagenes.zip` (o `imagenes_N.zip`) plano, sin
-  carpetas por grupo.
-- **Imágenes capturadas como ID**: van en una subcarpeta por grupo.
-- **Navegación por teclado**: no hay selección con `Intro`; las flechas
-  izquierda y derecha mueven el visor.
-- **Visor de imágenes**: no tiene contador.
-- **Placeholder "sin proyecto"**: solo muestra un texto, sin botones de crear o
-  abrir.
-- **Carpeta de entrada**: no se revisa cada segundo; se reacciona a los
-  eventos del sistema de archivos.
-- **exportHandlers.js**: tiene 9 manejadores, no 7.
-
 ## Corregidos
+
+- **CLAUDE.md estaba desactualizado** (corregido el 2026-09-16). Describía un
+  `googleDriveManager.js` con la API v3 de Google Drive que no existe (el
+  depósito es una carpeta del disco con una copia local que mantiene
+  `repositoryMirror.js`), daba nombres de menú que ya no existen, contaba 7
+  manejadores de exportación donde hay 13, y se equivocaba en la rejilla de las
+  orlas (6 × 6, no 4 columnas), su calidad (60/80/90/100), las cabeceras de los
+  CSV de inventario, el ZIP de imágenes (plano), las subcarpetas por grupo de
+  las imágenes como ID, el CSV de carnets (solo usuarios con foto en el
+  depósito), la configuración de la impresora (Preferencias, no un menú
+  Herramientas que no existe), las solicitudes de carnet y publicación (solo en
+  modo selección), la navegación por teclado, el contador del visor (no hay),
+  el placeholder sin proyecto (solo texto) y la carpeta de entrada (eventos del
+  sistema de archivos, no una consulta por segundo). Cada punto se comprobó
+  contra el código antes de escribirlo.
 
 - **Una lista vacía exportaba todos los usuarios del proyecto** (antes el
   fallo 1, corregido el 2026-09-14). `export-csv`, `export-images`,

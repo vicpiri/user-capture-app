@@ -41,7 +41,6 @@ user-capture-app/
 │   │   ├── appDialogs.js        # Avisos y preguntas del proceso principal, con los modales propios
 │   │   ├── database.js          # Gestión de base de datos SQLite
 │   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
-│   │   ├── googleDriveManager.js # Integración con Google Drive API
 │   │   ├── helpContent.js       # Lectura, conversión y búsqueda del manual (Markdown)
 │   │   ├── imageManager.js      # Procesamiento y gestión de imágenes
 │   │   ├── imageOrientation.js  # Leer y cambiar la orientación EXIF de un JPEG sin recomprimir
@@ -49,7 +48,7 @@ user-capture-app/
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── receiptPrinter.js    # Impresión de recibos con el auxiliar de Windows (native/receipt-printer)
 │   │   ├── replacedArchive.js   # Carpeta Reemplazadas del depósito: leerla y purgarla
-│   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
+│   │   ├── repositoryMirror.js  # Copia local de la carpeta del depósito
 │   │   ├── updateManager.js     # Envoltorio de electron-updater (comprobar, descargar, instalar)
 │   │   ├── workspaces.js        # Espacios de trabajo: combinaciones guardadas de las opciones de Ver
 │   │   └── xmlParser.js         # Parseo de archivos XML de usuarios
@@ -196,16 +195,21 @@ una release en borrador o sin `latest.yml` no llega a nadie.
 El proceso principal ha sido refactorizado en módulos organizados por responsabilidad:
 
 ### Manejadores IPC (ipc/)
-- **exportHandlers.js**: Gestiona las exportaciones
-  - `export-csv`: CSV para carnets (ID, foto, nombre completo, etc.)
+- **exportHandlers.js**: Gestiona las exportaciones (13 manejadores)
+  - `export-csv`: CSV para carnets. **Solo los usuarios con foto en el
+    depósito**; el resto se cuentan como ignorados
   - `export-inventory-csv`: 3 CSVs separados (Alumnado.csv, Personal.csv, Grupos.csv)
-  - `export-images`: Imágenes con nombre por ID (NIA/DNI)
+  - `export-images`: Imágenes con nombre por ID (NIA/DNI), en una subcarpeta
+    por código de grupo
   - `export-repository-images`: Igual, pero con las fotos del depósito;
     `count-repository-images` da las cifras del resumen previo
   - `export-images-name`: Imágenes con formato "Apellido1 Apellido2, Nombre"
-  - `export-inventory-images`: Exporta imágenes del repositorio con soporte ZIP
-  - `export-to-repository`: Exporta imágenes capturadas al repositorio Google Drive
-  - `export-orla-pdf`: Genera PDF de orlas con grid 4x columnas por grupo
+  - `export-inventory-images`: Imágenes del depósito en un ZIP plano
+  - `export-to-repository`: Exporta las fotos capturadas a la carpeta del depósito
+  - `export-orla-pdf`: Genera PDF de orlas con una rejilla de 6 × 6 por página
+  - `export-paid-users-list-pdf` y `export-paid-users-csv`: listados de pagos
+  - `scan-replaced-archive` y `purge-replaced-archive`: la carpeta
+    `Reemplazadas` (ver `replacedArchive.js`)
 - **miscHandlers.js**: Diálogos del sistema, etiquetas de imágenes, y utilidades generales
   - Incluye `update-window-title` para actualizar título de ventana
 - **projectHandlers.js**: Gestión completa de ciclo de vida de proyectos
@@ -259,7 +263,6 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
 ### Módulos Core
 - **database.js**: Gestión completa de SQLite (usuarios, grupos, imágenes, tags)
 - **folderWatcher.js**: Vigilancia de carpetas ingest/imports con chokidar
-- **googleDriveManager.js**: Integración con Google Drive API v3
 - **imageManager.js**: Procesamiento de imágenes con sharp (validación, redimensionamiento)
 - **ingestFolder.js**: Carpeta de entrada de cada proyecto. Por defecto es
   `ingest` dentro del proyecto, pero se puede redirigir a cualquier otra
@@ -346,7 +349,10 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
     creación, que es cuando se hizo la miniatura; la de modificación ya lleva
     la de la foto. Se ejecuta una vez, 60 s después de arrancar
   - `measureCache()` y `clearCache()` alimentan Preferencias > Mantenimiento
-- **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
+- **repositoryMirror.js**: Copia local de la carpeta del depósito, y su
+  sincronización. **No hay integración con la API de Google Drive**: el
+  depósito es una carpeta del disco, normalmente sincronizada por el cliente
+  de escritorio de Drive, y la aplicación solo lee y escribe archivos
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado. El `app.log` del proyecto se
   corta al llegar a 5 MB y se conservan los dos anteriores (`app.1.log` y
@@ -641,8 +647,9 @@ de la cuadrícula, para que el flujo de enlazar sea el mismo en las dos vistas
 
 **Funcionalidades**:
 - Carga de imágenes del usuario
-- Navegación entre imágenes (prev/next)
-- Actualización de UI (contador, botones)
+- Navegación entre imágenes (prev/next), también con las flechas izquierda y
+  derecha del teclado
+- Actualización de los botones (el visor no lleva contador)
 - Callback `onImageChange` para sincronización
 
 #### VirtualScrollManager.js
@@ -726,8 +733,10 @@ de la cuadrícula, para que el flujo de enlazar sea el mismo en las dos vistas
 **Propósito**: Gestión de navegación por teclado en tabla de usuarios
 
 **Funcionalidades**:
-- Navegación con flechas arriba/abajo
-- Selección con Enter
+- Navegación con flechas arriba/abajo, que además selecciona la fila a la que
+  se llega: no hay una tecla aparte para seleccionar
+- Las flechas izquierda y derecha son del visor de fotos, no de la lista
+- No actúa mientras haya cualquier `.modal.show` abierto
 - Scroll automático para mantener elemento visible
 - Integración con virtual scroll
 
@@ -874,10 +883,8 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
 
 #### Exportación de CSV Inventario (v1.3.0)
 - **Funcionalidad**: Exporta 3 archivos CSV separados por tipo de usuario
-- **Archivos**:
-  - **Alumnado.csv**: NIA, Nombre, Apellido1, Apellido2, FechaNacimiento, Grupo
-  - **Personal.csv**: Documento, Nombre, Apellido1, Apellido2, FechaNacimiento
-  - **Grupos.csv**: Código, Nombre
+- **Archivos y cabeceras**: ver [Archivos para Edu Inventory Manager](#2-archivos-para-edu-inventory-manager),
+  que es como se llama hoy en el menú
 - **Uso**: Ideal para inventarios y reportes administrativos
 
 #### Exportación de Imágenes por Nombre Completo (v1.3.0)
@@ -897,15 +904,14 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
 - **Funcionalidad**: Muestra información del proyecto en tiempo real
 - **Información mostrada**:
   - Nombre del proyecto
-  - Ruta del repositorio Google Drive
+  - Ruta de la carpeta del depósito
   - Contador de usuarios totales
 - **Visibilidad**: Se oculta automáticamente cuando no hay proyecto abierto
 
 #### Placeholder "Sin Proyecto" (v1.3.0)
-- **Funcionalidad**: Muestra mensaje cuando no hay proyecto abierto
-- **Acciones disponibles**:
-  - Crear nuevo proyecto
-  - Abrir proyecto existente
+- **Funcionalidad**: Muestra un icono y el texto «Abre o crea un nuevo
+  proyecto» cuando no hay ninguno abierto. No lleva botones: se crea o se abre
+  desde el menú Archivo
 - **Comportamiento**: Se oculta automáticamente al abrir/crear proyecto
 
 #### Spinners de Carga (v1.3.0)
@@ -918,14 +924,15 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
 
 #### Sistema de Petición de Carnets (v1.4.0)
 - **Funcionalidad**: Sistema para solicitar la impresión de carnets de usuarios
-- **Acceso**: Menú contextual > "Solicitar impresión de carnet"
+- **Acceso**: menú contextual > "Solicitar impresión de carnet", que **solo
+  aparece en modo selección**
 - **Características**:
-  - Funciona con modo multi-selección de usuarios
+  - Se pide para los usuarios marcados
   - Genera archivos con ID del usuario en carpeta `To-Print-ID` dentro del repositorio
   - Nombre de archivos: `{ID}` sin extensión (NIA para alumnos, DNI para personal)
   - Icono de "ID card" visible en la lista cuando existe archivo en `To-Print-ID`
   - Solo procesa usuarios que tienen imagen en el repositorio
-  - Filtro en menú Ver > "Mostrar solo usuarios con solicitud de carnet"
+  - Filtro en menú Ver > "Carnets solicitados"
   - El icono desaparece automáticamente cuando se elimina el archivo
   - **Marcado automático como impresos**: Al exportar CSV para carnets, si algún usuario exportado tiene solicitud pendiente, se pregunta al usuario si desea marcarlos como impresos (mueve archivos de `To-Print-ID` a `Printed-ID`)
 - **Optimización**: Usa caché con TTL para minimizar operaciones de filesystem
@@ -933,14 +940,15 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
 
 #### Sistema de Petición de Publicación Oficial (v1.4.0)
 - **Funcionalidad**: Sistema para solicitar publicación oficial de fotografías
-- **Acceso**: Menú contextual > "Solicitar publicación oficial"
+- **Acceso**: menú contextual > "Solicitar publicación oficial", que **solo
+  aparece en modo selección**
 - **Características**:
-  - Funciona con modo multi-selección de usuarios
+  - Se pide para los usuarios marcados
   - Copia imágenes del repositorio a carpeta `To-Publish` dentro del repositorio
   - Nombre de archivos: `{ID}.jpg` (NIA para alumnos, DNI para personal)
   - Icono de "Upload" visible en la lista cuando existe imagen en `To-Publish`
   - Solo procesa usuarios que tienen imagen en el repositorio
-  - Filtro en menú Ver > "Mostrar solo usuarios con solicitud de publicación"
+  - Filtro en menú Ver > "Publicaciones solicitadas"
   - El icono desaparece automáticamente cuando se elimina la imagen
 - **Optimización**: Usa caché con TTL para minimizar operaciones de filesystem
 - **Uso**: Ideal para gestionar publicaciones oficiales (sistemas de gestión académica, etc.)
@@ -993,7 +1001,7 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
 
 ## Estado Actual
 
-**Versión**: 1.4.0
+**Versión**: la de `package.json`; este documento no la repite
 
 Aplicación completamente funcional con todas las características principales implementadas:
 
@@ -1001,22 +1009,25 @@ Aplicación completamente funcional con todas las características principales i
 - ✅ **Captura de imágenes**: desde webcam con previsualización
 - ✅ **Importación automática**: desde carpeta ingest con vigilancia en tiempo real
 - ✅ **Asociación de imágenes**: vincular imágenes a usuarios con confirmación
-- ✅ **Integración Google Drive**: repositorio de imágenes con API v3
-- ✅ **Mirror local**: sincronización automática del repositorio en background
+- ✅ **Depósito de imágenes**: una carpeta del disco, normalmente sincronizada
+  con Google Drive para escritorio
+- ✅ **Copia local**: sincronización automática del depósito en segundo plano
 - ✅ **Exportaciones múltiples**:
   - CSV para carnets (formato completo)
-  - CSV inventario por grupos (3 archivos separados)
-  - Imágenes por ID (NIA/DNI)
+  - Archivos para Edu Inventory Manager (3 CSV separados)
+  - Imágenes por ID (NIA/DNI), capturadas o del depósito
   - Imágenes por nombre completo
-  - Imágenes del repositorio en ZIP
-  - Orlas PDF con grid personalizable
-  - Exportación a repositorio Google Drive
+  - Imágenes del depósito en ZIP
+  - Orlas en PDF
+  - Exportación de las fotos capturadas al depósito
 - ✅ **Sistema de etiquetado**: tags personalizados para imágenes
 - ✅ **Detección de duplicados**: identificación automática
 - ✅ **Sistema de petición de carnets**: solicitar impresión de carnets con indicadores visuales
 - ✅ **Sistema de petición de publicación**: solicitar publicación oficial con indicadores visuales
 - ✅ **Múltiples ventanas**: principal, cámara, grids (capturadas y repositorio)
-- ✅ **Filtros avanzados**: búsqueda, grupo, duplicados, carnets pendientes, publicación pendiente
+- ✅ **Filtros avanzados**: búsqueda (nombre, apellidos, NIA y documento, sin
+  distinguir tildes), grupo, asignaciones duplicadas, carnets solicitados y
+  publicaciones solicitadas
 - ✅ **Optimizaciones**:
   - Caché de archivos con TTL
   - Virtual scrolling para listas grandes
@@ -1034,7 +1045,7 @@ Aplicación completamente funcional con todas las características principales i
 - **Comunicación IPC**: Separación clara entre main y renderer con preload
 - **Arquitectura modular**: Código organizado por responsabilidad y funcionalidad
 - **Caché optimizado**: Sistema de caché con TTL para reducir operaciones de filesystem
-- **Sincronización**: Mirror local del repositorio Google Drive con actualización automática
+- **Sincronización**: copia local de la carpeta del depósito con actualización automática
 - **Privacidad**: Apropiado para entornos educativos
 - **Testing**: Suite completa de tests unitarios con Jest (ver sección Testing)
 - **Patrones**: IIFE, UMD exports, callback-based communication, delegation pattern
@@ -1042,10 +1053,10 @@ Aplicación completamente funcional con todas las características principales i
 ## Funcionalidades principales
 - Captura de imágenes desde:
     - Cámara web integrada
-    - Carpeta del sistema que el programa revisará periódicamente
+    - Carpeta del sistema que el programa vigila (por eventos, no consultándola cada cierto tiempo)
 - Asociación de imágenes a usuarios
 - Importación de listado de usuarios y otra información desde archivo XML
-- Importación de imágenes de los usuarios correspondientes a cursos anteriores desde un servidor externo.
+- Importación de imágenes de los usuarios correspondientes a cursos anteriores desde el depósito (una carpeta compartida, ver más abajo).
 
 ## Stack tecnológico
 - Electron
@@ -1070,7 +1081,7 @@ Aplicación completamente funcional con todas las características principales i
 - Al crear un proyecto, el usuario debe indicar la carpeta de trabajo y el archivo XML.
 - En dicha carpeta se creará una subcarpeta llamada 'ingest' y otra llamada 'imports'.
 - La carpeta de entrada ('ingest') se puede redirigir por proyecto a otra carpeta desde Proyecto > Configurar carpeta de entrada.
-- Al abrir el proyecto, se conecta con el servidor y descarga el listado de imágenes existentes de los usuarios actuales, y marcará en la lista su presencia con un símbolo. Mientras tanto descargará todas las imágenes en segundo plano.
+- Al abrir el proyecto, se lee la carpeta del depósito para saber qué usuarios tienen foto y marcarlo en la lista con un símbolo. Mientras tanto se copian las imágenes a la copia local, en segundo plano.
 - Al detectar una imagen nueva en la carpeta 'ingest' se moverá automáticamente a la carpeta 'imports'.
 - Cuando se capture desde la webcam, la imagen se almacenará en la carpeta 'ingest'.
 - Al pulsar sobre el botón 'Enlazar', se almacena la relación de la fotografía seleccionada con el usuario marcado en la lista.
@@ -1080,8 +1091,16 @@ Aplicación completamente funcional con todas las características principales i
 - La interfaz de usuario debe estar en español.
 - El nombre de la imagen capturada debe ser YYYYMMDDHHMMSS y en el caso de que en el mismo segundo se capturen 2 imágenes, que se le añada un ordinal.
 
-## Servidor externo
-- Protocolo: Debe ser compatible con distintas tecnologías. En primer lugar se desarrollará para Google Drive. El resto quedarán pendientes, pero tiene que estar previsto.
+## Depósito de imágenes (antes «servidor externo»)
+- Es **una carpeta del disco**, que se configura en Proyecto > Configurar
+  depósito de imágenes. Lo habitual es que sea una carpeta sincronizada por
+  Google Drive para escritorio, pero a la aplicación eso le da igual: no habla
+  con ninguna API, solo lee y escribe archivos
+- `repositoryMirror.js` mantiene una copia local para no depender de la
+  velocidad de la unidad sincronizada
+- El diseño original preveía varios protocolos con Google Drive API como
+  primero; se resolvió con la carpeta, que funciona con cualquier servicio que
+  sincronice archivos
 
 ## Formato de imágenes
 - Formatos aceptados: JPG
@@ -1089,18 +1108,20 @@ Aplicación completamente funcional con todas las características principales i
 - Tamaño máximo de archivo: 5MB
 
 ## Comportamiento adicional
-- Revisión de carpeta 'ingest': cada 1 segundo.
+- Carpeta de entrada: no se consulta cada cierto tiempo, se reacciona a los eventos del sistema de archivos (chokidar).
 - Al asociar imagen a usuario que ya tiene una: pedir confirmación.
 - Formatos de imagen aceptados desde carpeta externa: JPG
 
 ## Impresión de recibos
 - **Impresora recomendada**: Impresora térmica con ancho de rollo de 80mm
-- **Configuración**: Menú > Herramientas > Configurar Impresora
+- **Configuración**: Archivo > Preferencias... > Impresora de Recibos (no hay
+  menú Herramientas)
 - **Funcionalidades**:
   - Configuración de impresora térmica
   - Personalización del contenido del recibo (nombre del centro, precio, logotipo, texto del pie)
   - Impresión de recibo de prueba para verificar configuración
-  - Impresión automática tras marcar orla como pagada
+  - El recibo se imprime con el botón **Imp. Recibo**, no al marcar la orla
+    como pagada
   - Los recibos incluyen nombre del usuario y grupo
 - **Nota**: El diseño del recibo está optimizado para impresoras térmicas de 80mm de ancho
 - **Cómo se imprime** (`print-orla-receipt` en `miscHandlers.js`): con el
@@ -1145,8 +1166,10 @@ exportación nueva debe usarlo también. En `renderer.js`, el `showOpenDialog`
 que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
 
 ### 1. CSV para carnets
-- **Comando de menú**: Archivo > Exportar > Lista en CSV para carnets
+- **Comando de menú**: Archivo > Exportar > Archivo CSV para Carnets del grupo seleccionado
 - **Shortcut**: Ctrl+E
+- **Solo los usuarios con foto en el depósito**: los demás se cuentan como
+  ignorados en el resultado
 - **Nombre del archivo**: carnets.csv
 - **Campos**:
   - id: NIA para alumnos, DNI para docentes y no docentes
@@ -1167,16 +1190,19 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
   - fechaNacimiento
   - nombreApellidos: nombre + apellido1 + apellido2
 
-### 2. CSV Inventario por grupos
-- **Comando de menú**: Archivo > Exportar > CSV Inventario por grupos
-- **Archivos generados**:
-  - **Alumnado.csv**: NIA, Nombre, Apellido1, Apellido2, FechaNacimiento, Grupo
-  - **Personal.csv**: Documento, Nombre, Apellido1, Apellido2, FechaNacimiento
-  - **Grupos.csv**: Código, Nombre
+### 2. Archivos para Edu Inventory Manager
+- **Comando de menú**: Archivo > Exportar > Archivos para Edu Inventory Manager
+- **Archivos generados** (las cabeceras son literales, las lee otro programa):
+  - **Alumnado.csv**: `Codigo`, `Nombre`, `Apellido1`, `Apellido2`,
+    `Fecha Nacimiento`, `Grupo`
+  - **Personal.csv**: añade `Función`, `Teléfono 1`, `Teléfono 2` y `Email`
+  - **Grupos.csv**: `CódigoGrupo` y nombre, con **todos** los grupos del
+    proyecto, tengan usuarios o no
 
 ### 3. Imágenes capturadas como ID
 - **Comando de menú**: Archivo > Exportar > Imágenes capturadas como ID
-- **Formato**: `{NIA}.jpg` para alumnos, `{DNI}.jpg` para personal
+- **Formato**: `{NIA}.jpg` para alumnos, `{DNI}.jpg` para personal, **en una
+  subcarpeta por código de grupo**
 - **Opciones**: Copia original o redimensionamiento
 
 ### 3b. Imágenes del depósito como ID
@@ -1202,9 +1228,10 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
 - **Organización**: Carpetas por grupo
 - **Opciones**: Copia original o redimensionamiento
 
-### 5. Imágenes a repositorio
-- **Comando de menú**: Archivo > Exportar > Imágenes a repositorio
-- **Destino**: carpeta del depósito configurada en Proyecto > Configurar depósito
+### 5. Imágenes capturadas al depósito
+- **Comando de menú**: Archivo > Exportar > Imágenes capturadas al depósito
+- **Destino**: carpeta del depósito configurada en Proyecto > Configurar
+  depósito de imágenes
 - **Alcance**: lo pregunta `ExportManager.chooseExportScope()` antes de nada,
   con `ExportScopeModal`, y es común al CSV de carnets y a las cuatro
   exportaciones de fotos. `buildScopeOptions()` arma las opciones que en ese
@@ -1241,19 +1268,21 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
   - `clearCapturedImages(userIds)` acepta la lista de usuarios; sin ella limpia
     el proyecto entero, que es de lo que depende la restauración de una copia
 
-### 6. Orla PDF
-- **Comando de menú**: Archivo > Exportar > Orla PDF
+### 6. Orlas en PDF
+- **Comando de menú**: Archivo > Exportar > Orlas en PDF
 - **Formato**: Un PDF por grupo
-- **Layout**: Grid de 4 columnas
+- **Layout**: rejilla de 6 × 6 (36 fotos por página)
 - **Contenido**: Foto + nombre completo debajo
-- **Fuente de fotos**: Seleccionable (capturadas o repositorio)
-- **Calidad**: Configurable (0-100)
+- **Ámbito**: todos los grupos o uno solo, elegido en su propio diálogo
+- **Fuente de fotos**: Seleccionable (capturadas o depósito)
+- **Calidad**: 60, 80 (recomendada), 90 o 100
 
-### 7. Inventario de imágenes del repositorio
-- **Ubicación**: Parte del proceso de inventario
-- **Formato**: ZIP con límite de tamaño
-- **Contenido**: Imágenes del repositorio organizadas por grupo
-- **Opciones**: Compresión configurable
+### 7. Inventario de imágenes del depósito
+- **Ubicación**: parte de los archivos para Edu Inventory Manager
+- **Formato**: `imagenes.zip`, **plano, sin carpetas por grupo**; si se pasa
+  del límite de tamaño, se parte en `imagenes_2.zip`, `imagenes_3.zip`...
+- **Contenido**: las fotos del depósito, nombradas por identificador
+- **Opciones**: límite de tamaño por ZIP
 ## Manual de uso
 
 El manual que consulta el usuario (**Ayuda > Manual de uso**, `F1`) vive en
