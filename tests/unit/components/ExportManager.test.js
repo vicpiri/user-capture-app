@@ -7,6 +7,7 @@ const { ExportManager } = require('../../../src/renderer/components/ExportManage
 describe('ExportManager', () => {
   let manager;
   let mockExportOptionsModal;
+  let mockExportScopeModal;
   let mockConfirmModal;
   let mockShowProgressModal;
   let mockCloseProgressModal;
@@ -19,6 +20,12 @@ describe('ExportManager', () => {
     // Mock ExportOptionsModal
     mockExportOptionsModal = {
       show: jest.fn()
+    };
+
+    // Mock ExportScopeModal: answers with the list, as a person pressing
+    // Continuar without touching the radios would
+    mockExportScopeModal = {
+      show: jest.fn().mockResolvedValue('displayed')
     };
 
     // Mock ConfirmModal
@@ -45,6 +52,7 @@ describe('ExportManager', () => {
       getShowPublicationRequestsOnly: jest.fn(() => false),
       getGroupFilterLabel: jest.fn(() => 'Todos los grupos'),
       getSearchTerm: jest.fn(() => ''),
+      getGroupFilter: jest.fn(() => ''),
       getAllUsers: jest.fn(() => [])
     };
 
@@ -65,6 +73,7 @@ describe('ExportManager', () => {
     // Create manager instance
     manager = new ExportManager({
       exportOptionsModal: mockExportOptionsModal,
+      exportScopeModal: mockExportScopeModal,
       confirmModal: mockConfirmModal,
       showProgressModal: mockShowProgressModal,
       closeProgressModal: mockCloseProgressModal,
@@ -127,6 +136,113 @@ describe('ExportManager', () => {
       mockGetters.getCurrentUsers.mockReturnValue(users);
 
       expect(manager.getUsersToExport()).toBe(users);
+    });
+  });
+
+  describe('buildScopeOptions() and chooseExportScope()', () => {
+    const everyone = [
+      { id: 1, group_code: '1ESOA' },
+      { id: 2, group_code: '1ESOA' },
+      { id: 3, group_code: '2ESOB' },
+      { id: 4, group_code: '2ESOB' }
+    ];
+
+    const ids = (users) => users.map((user) => user.id);
+
+    test('offers a single scope when the list already is the whole project', () => {
+      mockGetters.getAllUsers.mockReturnValue(everyone);
+      mockGetters.getDisplayedUsers.mockReturnValue(everyone);
+
+      const scopes = manager.buildScopeOptions();
+
+      // "Todos los usuarios del proyecto" would be the same four people
+      expect(scopes).toHaveLength(1);
+      expect(scopes[0]).toMatchObject({ id: 'displayed', count: 4 });
+    });
+
+    test('offers the group and the project when a group filter narrows the list', () => {
+      mockGetters.getAllUsers.mockReturnValue(everyone);
+      mockGetters.getDisplayedUsers.mockReturnValue(everyone.slice(0, 2));
+      mockGetters.getGroupFilter.mockReturnValue('1ESOA');
+      mockGetters.getGroupFilterLabel.mockReturnValue('1ESOA - Primero A');
+
+      const scopes = manager.buildScopeOptions();
+
+      expect(scopes.map((scope) => scope.id)).toEqual(['displayed', 'project']);
+      // The group holds the same two the list shows, so it is not repeated
+      expect(scopes[0].label).toBe('1ESOA - Primero A');
+      expect(scopes[1].count).toBe(4);
+    });
+
+    test('offers the whole group when a search narrows it further', () => {
+      mockGetters.getAllUsers.mockReturnValue(everyone);
+      mockGetters.getDisplayedUsers.mockReturnValue([everyone[0]]);
+      mockGetters.getGroupFilter.mockReturnValue('1ESOA');
+      mockGetters.getGroupFilterLabel.mockReturnValue('1ESOA - Primero A');
+      mockGetters.getSearchTerm.mockReturnValue('garcia');
+
+      const scopes = manager.buildScopeOptions();
+
+      expect(scopes.map((scope) => scope.id)).toEqual(['displayed', 'group', 'project']);
+      expect(scopes[1]).toMatchObject({ label: 'Todo el grupo 1ESOA - Primero A', count: 2 });
+    });
+
+    test('puts the selection first, without losing the wider scopes', () => {
+      mockGetters.getAllUsers.mockReturnValue(everyone);
+      mockGetters.getDisplayedUsers.mockReturnValue(everyone);
+      mockGetters.getSelectionMode.mockReturnValue(true);
+      mockGetters.getSelectedUsers.mockReturnValue(new Set([1, 3]));
+
+      const scopes = manager.buildScopeOptions();
+
+      expect(scopes.map((scope) => scope.id)).toEqual(['selection', 'displayed']);
+      expect(ids(scopes[0].users)).toEqual([1, 3]);
+    });
+
+    test('does not ask when there is only one possible answer', async () => {
+      mockGetters.getAllUsers.mockReturnValue(everyone);
+      mockGetters.getDisplayedUsers.mockReturnValue(everyone);
+
+      const scope = await manager.chooseExportScope();
+
+      expect(mockExportScopeModal.show).not.toHaveBeenCalled();
+      expect(scope.id).toBe('displayed');
+    });
+
+    test('asks when the answers differ, and returns the users of the chosen one', async () => {
+      mockGetters.getAllUsers.mockReturnValue(everyone);
+      mockGetters.getDisplayedUsers.mockReturnValue(everyone.slice(0, 2));
+      mockGetters.getGroupFilter.mockReturnValue('1ESOA');
+      mockExportScopeModal.show.mockResolvedValue('project');
+
+      const scope = await manager.chooseExportScope();
+
+      expect(mockExportScopeModal.show).toHaveBeenCalledWith(
+        [
+          { id: 'displayed', label: 'Todos los grupos', count: 2 },
+          { id: 'project', label: 'Todos los usuarios del proyecto', count: 4 }
+        ],
+        'displayed'
+      );
+      expect(ids(scope.users)).toEqual([1, 2, 3, 4]);
+    });
+
+    test('gives up when the question is cancelled', async () => {
+      mockGetters.getAllUsers.mockReturnValue(everyone);
+      mockGetters.getDisplayedUsers.mockReturnValue(everyone.slice(0, 2));
+      mockGetters.getGroupFilter.mockReturnValue('1ESOA');
+      mockExportScopeModal.show.mockResolvedValue(null);
+
+      await expect(manager.chooseExportScope()).resolves.toBeNull();
+    });
+
+    test('says there is nobody to export instead of asking', async () => {
+      mockGetters.getAllUsers.mockReturnValue([]);
+      mockGetters.getDisplayedUsers.mockReturnValue([]);
+
+      await expect(manager.chooseExportScope()).resolves.toBeNull();
+      expect(mockExportScopeModal.show).not.toHaveBeenCalled();
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Aviso', expect.stringContaining('No hay usuarios'));
     });
   });
 

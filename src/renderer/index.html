@@ -349,6 +349,22 @@
   </div>
 
   <!-- Export Options Modal -->
+  <div id="export-scope-modal" class="modal">
+    <div class="modal-content">
+      <h2>Usuarios a exportar</h2>
+      <p class="export-scope-intro">Elige a quién incluye esta exportación:</p>
+
+      <div id="export-scope-options" class="inventory-radio-group">
+        <!-- Scopes will be populated here -->
+      </div>
+
+      <div class="modal-buttons">
+        <button id="export-scope-confirm-btn" class="btn btn-primary">Continuar</button>
+        <button id="export-scope-cancel-btn" data-modal-cancel class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="export-options-modal" class="modal">
     <div class="modal-content">
       <h2>Opciones de Exportación</h2>
@@ -810,6 +826,7 @@
   <script src="components/modals/AddTagModal.js"></script>
   <script src="components/modals/RestoreBackupModal.js"></script>
   <script src="components/modals/ReplacedArchiveModal.js"></script>
+  <script src="components/modals/ExportScopeModal.js"></script>
   <script src="components/modals/PreferencesModal.js"></script>
   <script src="components/modals/ProjectInfoModal.js"></script>
   <!-- Status Bar -->

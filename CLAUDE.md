@@ -67,6 +67,7 @@ user-capture-app/
 │   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
 │   │   │   │   ├── ProjectInfoModal.js      # Modal de información del proyecto
 │   │   │   │   ├── ReplacedArchiveModal.js  # Purgar las fotos reemplazadas del depósito
+│   │   │   │   ├── ExportScopeModal.js      # A qué usuarios alcanza una exportación
 │   │   │   │   ├── UpdateModal.js           # Modal de actualizaciones disponibles
 │   │   │   │   ├── WorkspacesModal.js       # Ventana Espacios de trabajo (aplicar, crear, gestionar)
 │   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
@@ -1187,13 +1188,24 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
 ### 5. Imágenes a repositorio
 - **Comando de menú**: Archivo > Exportar > Imágenes a repositorio
 - **Destino**: carpeta del depósito configurada en Proyecto > Configurar depósito
-- **Alcance** (`ExportManager.getUsersToExport()`, común a las exportaciones
-  de fotos y al CSV de carnets): los usuarios seleccionados si hay modo
-  selección activo; si no, `displayedUsers`, es decir **lo que se ve en la
-  lista**, con el filtro de grupo, la búsqueda y los filtros del menú Ver ya
-  aplicados. Antes tomaba `currentUsers` (grupo y búsqueda), así que con Ver >
-  Carnets solicitados o Publicaciones solicitadas se exportaba gente que la
-  pantalla no mostraba: el grupo entero o el proyecto entero
+- **Alcance**: lo pregunta `ExportManager.chooseExportScope()` antes de nada,
+  con `ExportScopeModal`, y es común al CSV de carnets y a las cuatro
+  exportaciones de fotos. `buildScopeOptions()` arma las opciones que en ese
+  momento significan algo distinto —selección, lo que muestra la lista (con la
+  etiqueta de lo que la filtra, `describeListLabel()`), el grupo entero y el
+  proyecto entero—, **descartando las que abarcan a las mismas personas**
+  (misma lista de ids). Si solo queda una, no se pregunta: sin selección ni
+  filtros las cuatro son el mismo conjunto y el diálogo solo costaría un clic
+  - Viene marcada `displayed`, que es lo que hacían todas antes de preguntar,
+    así que quien pulse Continuar obtiene lo de siempre. Si esa opción no está
+    (lista vacía bajo un filtro), se marca la primera: dejar nada marcado
+    convertía Continuar en un Cancelar silencioso
+  - Antes el alcance era implícito y tomaba `currentUsers` (grupo y búsqueda),
+    así que con Ver > Carnets solicitados o Publicaciones solicitadas se
+    exportaba gente que la pantalla no mostraba. `getUsersToExport()` conserva
+    esa regla implícita como respaldo, pero los flujos usan `scope.users`
+  - El CSV de inventario y la orla no pasan por aquí: ya tenían su propio
+    selector de ámbito en sus diálogos
 - **Formato**: `{NIA}.jpg` para alumnado y `{documento}.jpg` para el resto,
   siempre `.jpg` y en la raíz del depósito, **sobrescribiendo** lo que hubiera
 - **Opciones**: copia original o redimensionado (tamaño y peso máximo). El

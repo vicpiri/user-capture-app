@@ -102,6 +102,7 @@ let userImageModalInstance = null;
 let orlaExportModalInstance = null;
 let restoreBackupModalInstance = null;
 let replacedArchiveModalInstance = null;
+let exportScopeModalInstance = null;
 let preferencesModalInstance = null;
 let projectInfoModalInstance = null;
 
@@ -235,6 +236,9 @@ function initializeModals() {
 
   replacedArchiveModalInstance = new ReplacedArchiveModal();
   replacedArchiveModalInstance.init();
+
+  exportScopeModalInstance = new ExportScopeModal();
+  exportScopeModalInstance.init();
 
   preferencesModalInstance = new PreferencesModal();
   preferencesModalInstance.init();
@@ -543,6 +547,7 @@ function initializeCaptureHistoryManager() {
 function initializeExportManager() {
   exportManager = new ExportManager({
     exportOptionsModal: exportOptionsModalInstance,
+    exportScopeModal: exportScopeModalInstance,
     inventoryExportOptionsModal: inventoryExportOptionsModalInstance,
     confirmModal: confirmModalInstance,
     showProgressModal: showProgressModal,
@@ -555,10 +560,13 @@ function initializeExportManager() {
     getSelectedUsers: () => selectedUsers,
     getDisplayedUsers: () => displayedUsers,
     getCurrentUsers: () => currentUsers,
+    // Every user of the project, for the "todos los usuarios" scope
+    getAllUsers: () => allUsers,
     getShowDuplicatesOnly: () => showDuplicatesOnly,
     getShowCardPrintRequestsOnly: () => showCardPrintRequestsOnly,
     getShowPublicationRequestsOnly: () => showPublicationRequestsOnly,
     getCurrentFilters: getCurrentFilters,
+    getGroupFilter: () => groupFilter.value,
     // The label as it reads in the filter, so the dialog names the group the
     // same way the screen does
     getGroupFilterLabel: () => {

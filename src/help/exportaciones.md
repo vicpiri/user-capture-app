@@ -22,19 +22,20 @@ Si en la carpeta elegida ya hay un archivo con el mismo nombre, la exportación 
 
 ## Qué usuarios se exportan
 
-El CSV para carnets, **Imágenes capturadas como ID**, **Imágenes del depósito como ID**, **Imágenes capturadas como nombre y apellidos** e **Imágenes capturadas al depósito** deciden a quién incluir con esta regla, en este orden:
+El CSV para carnets, **Imágenes capturadas como ID**, **Imágenes del depósito como ID**, **Imágenes capturadas como nombre y apellidos** e **Imágenes capturadas al depósito** empiezan preguntando a quién incluyen, en la ventana **Usuarios a exportar**. Según cómo tengas la pantalla, te ofrece hasta cuatro respuestas, cada una con el número de usuarios que abarca:
 
-1. Si estás en modo selección y hay usuarios marcados, solo esos.
-2. Si no, **los usuarios que ves en la lista**: los que dejen el filtro de grupos, la búsqueda y los filtros del menú **Ver**.
+- **Los usuarios seleccionados**, si estás en modo selección y hay alguno marcado.
+- **Lo que muestra la lista**, que aparece con el nombre de lo que la está filtrando: el grupo elegido, la búsqueda escrita o el filtro del menú **Ver** que tengas activo. Es la opción marcada de entrada.
+- **Todo el grupo**, si la búsqueda o un filtro del menú **Ver** están dejando fuera a parte del grupo elegido.
+- **Todos los usuarios del proyecto**.
 
-Es decir, lo que ves es lo que se exporta:
+Solo aparecen las opciones que en ese momento significan algo distinto. Si no tienes selección ni filtros, las cuatro serían las mismas personas: entonces no se pregunta nada y la exportación sigue directa.
 
-- con **Ver > Asignaciones duplicadas**, los usuarios que comparten foto con otro, de todos los grupos;
-- con **Ver > Carnets solicitados** o **Ver > Publicaciones solicitadas**, los que tienen esa solicitud pendiente, de todos los grupos;
-- con texto en el buscador, los resultados de la búsqueda, de todos los grupos;
-- si no, el grupo elegido en el filtro de grupos, o todos si está en «Todos los grupos».
+> **Consejo:** si lo que quieres exportar es un grupo entero, lo más cómodo sigue siendo elegirlo en el filtro de grupos; la ventana te lo ofrecerá ya marcado.
 
-Si con la selección, la búsqueda y los filtros actuales no queda ningún usuario, la aplicación te avisa y no exporta nada.
+Si no hay ningún usuario que exportar, la aplicación te avisa y no exporta nada.
+
+Dos exportaciones no usan esta ventana porque tienen la suya: **Edu Inventory Manager** pregunta entre todos los usuarios y el grupo seleccionado, y las **orlas** preguntan entre todos los grupos y uno solo.
 
 Las demás exportaciones (inventario, orlas y listados de pagos) tienen su propio alcance, que se explica en cada apartado.
 
@@ -53,11 +54,12 @@ En las tres exportaciones de fotos capturadas, la ventana **Opciones de Exportac
 
 Genera `carnets.csv`, el listado que usa el programa de impresión de carnets.
 
-1. Elige a quién exportar (ver [Qué usuarios se exportan](#que-usuarios-se-exportan)). Lo habitual es elegir el grupo en el filtro de grupos.
+1. Elige el grupo en el filtro de grupos, si vas a exportar uno.
 2. Pulsa **Archivo > Exportar > Archivo CSV para Carnets del grupo seleccionado** o `Ctrl+E`.
-3. Elige la carpeta donde guardarlo.
-4. Si alguno de los usuarios exportados tenía una solicitud de carnet pendiente, la aplicación te pregunta si quieres marcarlos como impresos. Se explica en [Carnets y publicación oficial](carnets.md#marcar-los-carnets-como-impresos).
-5. Un mensaje final indica cuántos usuarios se han exportado y cuántos se han ignorado.
+3. Confirma a quién incluye en la ventana **Usuarios a exportar** (ver [Qué usuarios se exportan](#que-usuarios-se-exportan)).
+4. Elige la carpeta donde guardarlo.
+5. Si alguno de los usuarios exportados tenía una solicitud de carnet pendiente, la aplicación te pregunta si quieres marcarlos como impresos. Se explica en [Carnets y publicación oficial](carnets.md#marcar-los-carnets-como-impresos).
+6. Un mensaje final indica cuántos usuarios se han exportado y cuántos se han ignorado.
 
 > **Importante:** solo entran los usuarios que tienen foto en el depósito de imágenes, es decir, un archivo con su NIA o su DNI en la carpeta del depósito. Lo que cuenta es la foto del depósito, no la capturada: si acabas de hacer fotos nuevas, expórtalas antes al depósito. Los que no tienen foto allí aparecen como ignorados «sin imagen en el depósito».
 

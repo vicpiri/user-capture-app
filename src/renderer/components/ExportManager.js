@@ -23,6 +23,7 @@
     constructor(config = {}) {
       // Required dependencies
       this.exportOptionsModal = config.exportOptionsModal; // ExportOptionsModal instance
+      this.exportScopeModal = config.exportScopeModal; // ExportScopeModal instance
       this.inventoryExportOptionsModal = config.inventoryExportOptionsModal; // InventoryExportOptionsModal instance
       this.confirmModal = config.confirmModal; // ConfirmModal instance
       this.showProgressModal = config.showProgressModal; // Function to show progress
@@ -36,11 +37,13 @@
       this.getSelectedUsers = config.getSelectedUsers; // Function returning Set of selected user IDs
       this.getDisplayedUsers = config.getDisplayedUsers; // Function returning displayed users array
       this.getCurrentUsers = config.getCurrentUsers; // Function returning current users array
+      this.getAllUsers = config.getAllUsers || (() => []); // Function returning every user of the project
       this.getShowDuplicatesOnly = config.getShowDuplicatesOnly; // Function returning showDuplicatesOnly boolean
       this.getShowCardPrintRequestsOnly = config.getShowCardPrintRequestsOnly; // Function returning showCardPrintRequestsOnly boolean
       this.getShowPublicationRequestsOnly = config.getShowPublicationRequestsOnly; // Function returning showPublicationRequestsOnly boolean
       this.getCurrentFilters = config.getCurrentFilters; // Function returning current filters object
       this.getGroupFilterLabel = config.getGroupFilterLabel || (() => ''); // Function returning the selected group's label
+      this.getGroupFilter = config.getGroupFilter || (() => ''); // Function returning the selected group's code
       this.getSearchTerm = config.getSearchTerm || (() => ''); // Function returning the active search term
 
       // Required callbacks
@@ -69,6 +72,86 @@
       // Ver > Carnets solicitados on, the export covered people the screen was
       // not showing: the whole project, or the whole group.
       return Array.isArray(displayedUsers) ? displayedUsers : this.getCurrentUsers();
+    }
+
+    /**
+     * The scopes an export can cover, with the users in each
+     *
+     * Only the ones that mean something right now, and never two that hold the
+     * same people: with no filter on, "lo que muestra la lista" already is the
+     * whole project, and offering both would be asking a question with one
+     * answer written twice.
+     *
+     * @returns {Array<{id: string, label: string, users: Array, count: number}>}
+     */
+    buildScopeOptions() {
+      const scopes = [];
+
+      const add = (id, label, users) => {
+        if (!Array.isArray(users) || users.length === 0) {
+          return;
+        }
+
+        const key = users.map((user) => user.id).sort().join(',');
+
+        if (scopes.some((scope) => scope.key === key)) {
+          return;
+        }
+
+        scopes.push({ id, label, users, count: users.length, key });
+      };
+
+      const displayed = this.getDisplayedUsers();
+      const onScreen = Array.isArray(displayed) ? displayed : this.getCurrentUsers();
+      const selectedUsers = this.getSelectedUsers();
+      const everyone = this.getAllUsers();
+      const groupCode = this.getGroupFilter();
+
+      if (this.getSelectionMode() && selectedUsers && selectedUsers.size > 0) {
+        add('selection', `${selectedUsers.size} usuarios seleccionados`,
+          (onScreen || []).filter((user) => selectedUsers.has(user.id)));
+      }
+
+      add('displayed', this.describeListLabel(), onScreen);
+
+      if (groupCode) {
+        add('group', `Todo el grupo ${this.getGroupFilterLabel() || groupCode}`,
+          (everyone || []).filter((user) => user.group_code === groupCode));
+      }
+
+      add('project', 'Todos los usuarios del proyecto', everyone);
+
+      return scopes;
+    }
+
+    /**
+     * Ask which users the export covers
+     *
+     * Skipped when there is nothing to ask: with no selection and no filters
+     * every answer is the same list, and a dialog with a single option only
+     * costs a click.
+     *
+     * @returns {Promise<{id: string, label: string, users: Array}|null>} null
+     *   when cancelled or when there is nobody to export
+     */
+    async chooseExportScope() {
+      const scopes = this.buildScopeOptions();
+
+      if (scopes.length === 0) {
+        await this.ensureUsersToExport([]);
+        return null;
+      }
+
+      if (scopes.length === 1) {
+        return scopes[0];
+      }
+
+      const chosen = await this.exportScopeModal.show(
+        scopes.map(({ id, label, count }) => ({ id, label, count })),
+        'displayed'
+      );
+
+      return scopes.find((scope) => scope.id === chosen) || null;
     }
 
     /**
@@ -107,9 +190,10 @@
     async exportCSV() {
       if (!this.checkProjectOpen()) return;
 
-      // Get users to export
-      const usersToExport = this.getUsersToExport();
-      if (!(await this.ensureUsersToExport(usersToExport))) return;
+      // Who this export covers, asked when the answer is not obvious
+      const scope = await this.chooseExportScope();
+      if (!scope) return;
+      const usersToExport = scope.users;
 
       // Show folder picker
       const result = await this.showOpenDialog({
@@ -342,9 +426,10 @@
     async exportImagesByID() {
       if (!this.checkProjectOpen()) return;
 
-      // Get users to export
-      const usersToExport = this.getUsersToExport();
-      if (!(await this.ensureUsersToExport(usersToExport))) return;
+      // Who this export covers, asked when the answer is not obvious
+      const scope = await this.chooseExportScope();
+      if (!scope) return;
+      const usersToExport = scope.users;
 
       // Show folder picker
       const result = await this.showOpenDialog({
@@ -357,7 +442,7 @@
 
         // Show export options modal and wait for user choice
         const options = await this.exportOptionsModal.show(
-          this.describeExportScope(usersToExport, 'a la carpeta').rows
+          this.describeExportScope(usersToExport, 'a la carpeta', { scopeLabel: scope.label }).rows
         );
 
         if (!options) {
@@ -397,8 +482,9 @@
     async exportRepositoryImagesByID() {
       if (!this.checkProjectOpen()) return;
 
-      const usersToExport = this.getUsersToExport();
-      if (!(await this.ensureUsersToExport(usersToExport))) return;
+      const scope = await this.chooseExportScope();
+      if (!scope) return;
+      const usersToExport = scope.users;
 
       const count = await this.electronAPI.countRepositoryImages(usersToExport);
 
@@ -425,7 +511,7 @@
       const folderPath = result.filePaths[0];
 
       const options = await this.exportOptionsModal.show([
-        { label: 'Se exportará', value: this.describeScopeLabel() },
+        { label: 'Se exportará', value: scope.label },
         { label: 'Imágenes del depósito a exportar', value: String(count.withPhoto) },
         { label: 'Usuarios sin foto en el depósito', value: String(count.withoutPhoto) }
       ]);
@@ -491,9 +577,10 @@
     async exportImagesByName() {
       if (!this.checkProjectOpen()) return;
 
-      // Get users to export
-      const usersToExport = this.getUsersToExport();
-      if (!(await this.ensureUsersToExport(usersToExport))) return;
+      // Who this export covers, asked when the answer is not obvious
+      const scope = await this.chooseExportScope();
+      if (!scope) return;
+      const usersToExport = scope.users;
 
       // Show folder picker
       const result = await this.showOpenDialog({
@@ -506,7 +593,7 @@
 
         // Show export options modal and wait for user choice
         const options = await this.exportOptionsModal.show(
-          this.describeExportScope(usersToExport, 'a la carpeta').rows
+          this.describeExportScope(usersToExport, 'a la carpeta', { scopeLabel: scope.label }).rows
         );
 
         if (!options) {
@@ -541,14 +628,32 @@
      *
      * @returns {string}
      */
-    describeScopeLabel() {
+    describeScopeLabel(chosenLabel = null) {
+      if (chosenLabel) {
+        return chosenLabel;
+      }
+
       const selectionMode = this.getSelectionMode();
       const selectedUsers = this.getSelectedUsers();
-      const searchTerm = this.getSearchTerm();
 
       if (selectionMode && selectedUsers && selectedUsers.size > 0) {
         return `${selectedUsers.size} usuarios seleccionados`;
       }
+
+      return this.describeListLabel();
+    }
+
+    /**
+     * What left these users on the list, in words
+     *
+     * The selection is not part of it: it is a scope of its own, and naming it
+     * here would make the list scope describe a different set of people.
+     *
+     * @returns {string}
+     */
+    describeListLabel() {
+      const searchTerm = this.getSearchTerm();
+
       if (this.getShowDuplicatesOnly()) {
         return 'Usuarios con asignaciones duplicadas';
       }
@@ -583,7 +688,7 @@
      * @returns {{rows: Array<{label: string, value: string}>, note: string|null}}
      */
     describeExportScope(usersToExport, destination, options = {}) {
-      const scope = this.describeScopeLabel();
+      const scope = this.describeScopeLabel(options.scopeLabel);
 
       const withImage = usersToExport.filter(user => user.image_path);
 
@@ -617,9 +722,10 @@
     async exportToRepository() {
       if (!this.checkProjectOpen()) return;
 
-      // Get users to export
-      const usersToExport = this.getUsersToExport();
-      if (!(await this.ensureUsersToExport(usersToExport))) return;
+      // Who this export covers, asked when the answer is not obvious
+      const scope = await this.chooseExportScope();
+      if (!scope) return;
+      const usersToExport = scope.users;
 
       // What the repository holds for the photos about to be sent, read from
       // the repository rather than from what the list happens to know
@@ -635,8 +741,11 @@
       }
 
       // Show export options modal and wait for user choice
-      const scope = this.describeExportScope(usersToExport, 'al depósito', { repositoryCount });
-      const options = await this.exportOptionsModal.show(scope.rows, scope.note);
+      const summary = this.describeExportScope(usersToExport, 'al depósito', {
+        repositoryCount,
+        scopeLabel: scope.label
+      });
+      const options = await this.exportOptionsModal.show(summary.rows, summary.note);
 
       if (!options) {
         // User cancelled
