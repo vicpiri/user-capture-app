@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.12.0](https://github.com/vicpiri/user-capture-app/compare/v1.11.0...v1.12.0) (2026-09-16)
+
+### Features
+
+* ask which users an export covers ([5b21ed9](https://github.com/vicpiri/user-capture-app/commit/5b21ed9bd95b0f5577cdb9e7bc81daec71631e4c))
+* cut the project log when it reaches 5 MB ([44059cd](https://github.com/vicpiri/user-capture-app/commit/44059cd5f79a71dc86315090b6fe0fd1918ff7e9))
+* keep the thumbnail cache from growing without end ([7b93ced](https://github.com/vicpiri/user-capture-app/commit/7b93ced30f616f9e3c4f0a6c2758142b4090bd49))
+* purge the replaced photos kept in the repository ([ef8a4f6](https://github.com/vicpiri/user-capture-app/commit/ef8a4f632e7d02e2336e99ba17c7f02b80a403e1))
+* turn photos that arrive without the orientation tag ([cd500af](https://github.com/vicpiri/user-capture-app/commit/cd500afa0269588752ed3918add4e6a5b607cc67))
+
+### Bug Fixes
+
+* export what the list is showing, not the whole group ([b80c611](https://github.com/vicpiri/user-capture-app/commit/b80c611fd37b6a6b9a6ce9c0d55d4e6f8dcd344d))
+* print sharp receipts faster with the Windows text engine ([6118eeb](https://github.com/vicpiri/user-capture-app/commit/6118eebb7e9351dc73cea7194a2403e394d6d66c))
 ## [1.11.0](https://github.com/vicpiri/user-capture-app/compare/v1.10.1...v1.11.0) (2026-09-15)
 
 ### Features
