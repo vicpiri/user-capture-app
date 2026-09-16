@@ -107,6 +107,27 @@ Si en el depósito ya hay una foto con el mismo nombre, la nueva la sustituye, p
 - La carpeta solo se crea si hay alguna sustitución.
 - Las fotos de `Reemplazadas` no aparecen en la aplicación. Si necesitas recuperar una, cópiala a mano a la carpeta principal del depósito.
 
+## Purgar las fotos reemplazadas
+
+La carpeta `Reemplazadas` solo crece: nunca se borra nada por su cuenta, porque el depósito es compartido y lo que borra un equipo desaparece para todos. Cuando ocupa demasiado, se vacía a mano desde **Proyecto > Purgar fotos reemplazadas**.
+
+La ventana muestra cuántas exportaciones hay guardadas, cuántas fotos y cuánto ocupan, y ofrece cuatro cortes por antigüedad:
+
+| Corte | Qué borra |
+|---|---|
+| Más de un año | Las fotos guardadas hace más de un año. |
+| Más de seis meses | Añade las del último año que ya pasaron de seis meses. |
+| Más de tres meses | Añade las de los últimos seis meses que ya pasaron de tres. |
+| Todas las fotos reemplazadas | Vacía la carpeta entera. |
+
+Cada corte indica cuántas fotos y cuánto espacio se llevaría, así que puedes comparar antes de elegir. Los cortes que no borrarían nada aparecen apagados y no se pueden seleccionar. Al pulsar **Purgar** se pide confirmación, y al terminar se indica cuántas fotos se borraron.
+
+> **Importante:** Lo que se borra no se puede recuperar desde la aplicación. Si el depósito está en una unidad de Google Drive, puedes buscarlo en la papelera de Drive durante unos días; si es una carpeta de red normal, no.
+
+- Solo se borran las carpetas que creó la aplicación (las que tienen la forma `20260914103000_SECRETARIA`). Cualquier otra carpeta que hayas puesto ahí a mano se queda como está.
+- Si alguna carpeta no se puede borrar porque otro equipo la está usando, se avisa al terminar y puedes volver a intentarlo más tarde.
+- Cuando la carpeta acumula muchas fotos antiguas, la aplicación lo avisa al abrir el proyecto y ofrece abrir esta ventana. Si lo dejas para más tarde, no vuelve a avisar en un mes.
+
 ## Desvincular las fotos después de exportar
 
 Cuando termina una exportación en la que se envió al menos una foto, la aplicación pregunta si quieres desvincular las fotos de los usuarios exportados. Es útil para empezar una nueva ronda de fotos con las fichas vacías.

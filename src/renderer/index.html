@@ -606,6 +606,36 @@
     </div>
   </div>
 
+  <!-- Purge Replaced Photos Modal -->
+  <div id="replaced-archive-modal" class="modal">
+    <div class="modal-content">
+      <h2>Purgar fotos reemplazadas</h2>
+      <p class="replaced-archive-intro">
+        Cada vez que una exportación sustituye una foto del depósito, la anterior se guarda aquí.
+        Se puede borrar lo antiguo para recuperar espacio.
+      </p>
+
+      <div id="replaced-archive-summary" class="replaced-archive-summary">Calculando...</div>
+
+      <div id="replaced-archive-cuts" class="replaced-archive-cuts">
+        <!-- Cuts will be populated here -->
+      </div>
+
+      <p id="replaced-archive-empty" class="no-backups-message" style="display: none;">
+        No hay ninguna foto reemplazada guardada.
+      </p>
+
+      <p class="replaced-archive-warning">
+        El depósito es compartido: lo que se borre desaparece para todos los equipos.
+      </p>
+
+      <div class="modal-buttons">
+        <button id="purge-replaced-archive-btn" class="btn btn-warning" disabled>Purgar</button>
+        <button id="cancel-replaced-archive-btn" data-modal-cancel class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Restore Backup Modal -->
   <div id="restore-backup-modal" class="modal">
     <div class="modal-content">
@@ -779,6 +809,7 @@
   <script src="components/modals/InventoryExportOptionsModal.js"></script>
   <script src="components/modals/AddTagModal.js"></script>
   <script src="components/modals/RestoreBackupModal.js"></script>
+  <script src="components/modals/ReplacedArchiveModal.js"></script>
   <script src="components/modals/PreferencesModal.js"></script>
   <script src="components/modals/ProjectInfoModal.js"></script>
   <!-- Status Bar -->

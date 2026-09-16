@@ -294,6 +294,12 @@ class MenuBuilder {
         this.buildIncomingRotationMenu(),
         { type: 'separator' },
         {
+          label: 'Purgar fotos reemplazadas...',
+          click: () => {
+            this.mainWindow.webContents.send('menu-purge-replaced-archive');
+          }
+        },
+        {
           label: 'Restaurar enlaces de imágenes...',
           click: () => {
             this.mainWindow.webContents.send('menu-restore-image-links');

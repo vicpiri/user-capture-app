@@ -147,6 +147,30 @@ function saveUpdatePreferences(partial) {
 }
 
 /**
+ * When the purge of replaced photos was last offered
+ *
+ * Nothing is ever deleted on its own, so the only thing that keeps the folder
+ * from growing forever is remembering to purge it. The app offers, at most
+ * once a month.
+ *
+ * @returns {{ lastNotice: string|null }}
+ */
+function getReplacedArchiveNotice() {
+  const config = loadGlobalConfig();
+  return { lastNotice: null, ...(config.replacedArchive || {}) };
+}
+
+/**
+ * @param {string} lastNotice - ISO date of the offer just made
+ * @returns {boolean} Success status
+ */
+function saveReplacedArchiveNotice(lastNotice) {
+  const config = loadGlobalConfig();
+  config.replacedArchive = { ...(config.replacedArchive || {}), lastNotice };
+  return saveGlobalConfig(config);
+}
+
+/**
  * Folder the export dialogs open at
  *
  * The last folder anything was exported to. Exports tend to go to the same
@@ -218,6 +242,8 @@ module.exports = {
   saveDisplayPreferences,
   getUpdatePreferences,
   saveUpdatePreferences,
+  getReplacedArchiveNotice,
+  saveReplacedArchiveNotice,
   getLastExportFolder,
   getWorkspaceSettings,
   saveWorkspaceSettings,

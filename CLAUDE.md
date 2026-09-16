@@ -48,6 +48,7 @@ user-capture-app/
 │   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── receiptPrinter.js    # Impresión de recibos con el auxiliar de Windows (native/receipt-printer)
+│   │   ├── replacedArchive.js   # Carpeta Reemplazadas del depósito: leerla y purgarla
 │   │   ├── repositoryMirror.js  # Mirror local del repositorio Google Drive
 │   │   ├── updateManager.js     # Envoltorio de electron-updater (comprobar, descargar, instalar)
 │   │   ├── workspaces.js        # Espacios de trabajo: combinaciones guardadas de las opciones de Ver
@@ -65,6 +66,7 @@ user-capture-app/
 │   │   │   │   ├── NewProjectModal.js       # Modal de creación de proyectos
 │   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
 │   │   │   │   ├── ProjectInfoModal.js      # Modal de información del proyecto
+│   │   │   │   ├── ReplacedArchiveModal.js  # Purgar las fotos reemplazadas del depósito
 │   │   │   │   ├── UpdateModal.js           # Modal de actualizaciones disponibles
 │   │   │   │   ├── WorkspacesModal.js       # Ventana Espacios de trabajo (aplicar, crear, gestionar)
 │   │   │   │   └── UserImageModal.js        # Modal de vista previa de imágenes
@@ -308,6 +310,24 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
     todas sus URL. Se guarda en `localStorage`, que comparten todas las
     ventanas y que sobrevive a un Ctrl+R. En disco, la caché de miniaturas usa
     la fecha de modificación, que cambia al reescribir el archivo
+- **replacedArchive.js**: La carpeta `Reemplazadas` del depósito, donde cada
+  exportación deja las fotos que sustituyó (`<AAAAMMDDHHMMSS>_<equipo>/`, ver
+  exportHandlers). Solo crece, y como el depósito es compartido entre los
+  equipos del centro **no se borra nada por su cuenta**: Proyecto > Purgar
+  fotos reemplazadas abre `ReplacedArchiveModal`, que enseña los cortes por
+  antigüedad con lo que borraría cada uno, y la purga se pide a mano
+  - `scanReplacedArchive(ruta, { withSizes })`: los tamaños cuestan un `stat`
+    por foto, que sobre Drive es lo lento, así que el aviso de apertura pide
+    solo recuentos y la ventana pide también bytes
+  - `purgeReplacedRuns()` borra **únicamente** las carpetas cuyo nombre encaja
+    con el de una ejecución (`parseRunName()`); lo que alguien haya dejado ahí a
+    mano no se toca, y lo que no se pudo borrar se devuelve en `failed`
+  - `shouldNoticeArchive()` decide el aviso: más de `NOTICE_PHOTOS` fotos, algo
+    de más de seis meses (ofrecer una purga que no borraría nada es peor que
+    callarse) y como mucho una vez al mes (`config.json` bajo
+    `replacedArchive.lastNotice`, escrito **antes** de preguntar). Lo dispara
+    `offerReplacedArchivePurge()` en `main.js`, 30 s después de que el mirror
+    arranque, y si se acepta manda el mismo evento que el menú
 - **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado. El `app.log` del proyecto se

@@ -101,6 +101,7 @@ let addTagModalInstance = null;
 let userImageModalInstance = null;
 let orlaExportModalInstance = null;
 let restoreBackupModalInstance = null;
+let replacedArchiveModalInstance = null;
 let preferencesModalInstance = null;
 let projectInfoModalInstance = null;
 
@@ -231,6 +232,9 @@ function initializeModals() {
 
   restoreBackupModalInstance = new RestoreBackupModal();
   restoreBackupModalInstance.init();
+
+  replacedArchiveModalInstance = new ReplacedArchiveModal();
+  replacedArchiveModalInstance.init();
 
   preferencesModalInstance = new PreferencesModal();
   preferencesModalInstance.init();
@@ -1157,6 +1161,11 @@ function initializeEventListeners() {
   // Listen for restore image links menu event
   window.electronAPI.onMenuRestoreImageLinks(async () => {
     await handleRestoreImageLinks();
+  });
+
+  // Proyecto > Purgar fotos reemplazadas
+  window.electronAPI.onMenuPurgeReplacedArchive(async () => {
+    await handlePurgeReplacedArchive();
   });
 
   // Listen for preferences menu event
@@ -2290,6 +2299,66 @@ async function handleExportToRepository() {
 }
 
 // Restore image links from backup
+/**
+ * Proyecto > Purgar fotos reemplazadas
+ *
+ * The repository keeps every photo an export replaced, and nothing ever cleans
+ * that up on its own: the repository is shared by the whole centre, so the
+ * deletion is always asked for, with what it removes on screen first.
+ */
+async function handlePurgeReplacedArchive() {
+  if (!projectOpen) {
+    await showInfoModal('Aviso', 'Debes abrir un proyecto primero');
+    return;
+  }
+
+  const cut = await replacedArchiveModalInstance.show();
+
+  if (!cut) {
+    return;
+  }
+
+  const confirmed = await showConfirmationModal(
+    `¿Seguro que quieres borrar ${cut.photos} ${cut.photos === 1 ? 'foto' : 'fotos'} `
+    + `reemplazadas (${cut.label.toLowerCase()})?
+
+`
+    + 'El depósito es compartido: desaparecerán para todos los equipos.'
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  showProgressModal('Purgando fotos reemplazadas', 'Borrando del depósito...');
+
+  try {
+    const result = await window.electronAPI.purgeReplacedArchive(cut.before);
+
+    closeProgressModal();
+
+    if (!result.success) {
+      await showInfoModal('Error', 'No se pudieron borrar las fotos: ' + result.error);
+      return;
+    }
+
+    let message = `Se han borrado ${result.photos} ${result.photos === 1 ? 'foto' : 'fotos'} `
+      + `de ${result.runs} ${result.runs === 1 ? 'exportación' : 'exportaciones'}.`;
+
+    if (result.failed && result.failed.length > 0) {
+      message += `
+
+No se pudieron borrar ${result.failed.length} carpetas, `
+        + 'quizá porque otro equipo las está usando. Puedes volver a intentarlo más tarde.';
+    }
+
+    await showInfoModal('Purga completada', message);
+  } catch (error) {
+    closeProgressModal();
+    await showInfoModal('Error', 'No se pudieron borrar las fotos: ' + error.message);
+  }
+}
+
 async function handleRestoreImageLinks() {
   console.log('[Renderer] handleRestoreImageLinks called');
 

@@ -6,6 +6,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { getImageRepositoryPath, loadGlobalConfig } = require('../utils/config');
+const {
+  REPLACED_FOLDER,
+  scanReplacedArchive,
+  purgeReplacedRuns
+} = require('../replacedArchive');
 const { capitalizeWords } = require('../utils/formatting');
 
 // Loaded on first use rather than at startup. sharp is a native module built on
@@ -126,9 +131,9 @@ async function writeFileAtomically(destPath, buffer, options = {}) {
   }
 }
 
-// Replaced photos are kept in a subfolder of the repository. The mirror reads
-// the root only, so this never reaches the other instances' local copies.
-const REPLACED_FOLDER = 'Reemplazadas';
+// Replaced photos are kept in a subfolder of the repository (the mirror reads
+// the root only, so this never reaches the other instances' local copies).
+// Reading and purging that folder is in replacedArchive.js.
 
 /**
  * @param {Date} date
@@ -2161,6 +2166,64 @@ function registerExportHandlers(context) {
       return { success: true, fileName };
     } catch (error) {
       logger.error('Error exporting paid users CSV', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  /**
+   * What the folder of replaced photos holds, for the purge window. Sizes are
+   * asked for here: the window can afford the wait, and what it is really
+   * answering is how much space a purge would free.
+   */
+  ipcMain.handle('scan-replaced-archive', async () => {
+    try {
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+
+      if (!repositoryPath) {
+        return { success: false, error: 'No hay ningún depósito de imágenes configurado.' };
+      }
+
+      const scan = await scanReplacedArchive(repositoryPath, { withSizes: true });
+
+      return {
+        success: true,
+        folder: scan.folder,
+        photos: scan.photos,
+        bytes: scan.bytes,
+        strangers: scan.strangers,
+        // Dates travel as ISO strings: the renderer turns them back
+        runs: scan.runs.map((run) => ({
+          name: run.name,
+          date: run.date.toISOString(),
+          host: run.host,
+          photos: run.photos,
+          bytes: run.bytes
+        }))
+      };
+    } catch (error) {
+      logger.error('Error reading the replaced photos folder', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  /**
+   * Delete the runs older than `before` (an ISO date), or all of them without
+   * it. Only the app asks for this, and only after someone confirmed it.
+   */
+  ipcMain.handle('purge-replaced-archive', async (event, before = null) => {
+    try {
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+
+      if (!repositoryPath) {
+        return { success: false, error: 'No hay ningún depósito de imágenes configurado.' };
+      }
+
+      logger.section('PURGING REPLACED PHOTOS');
+      const removed = await purgeReplacedRuns(repositoryPath, { before, logger });
+
+      return { success: true, ...removed };
+    } catch (error) {
+      logger.error('Error purging the replaced photos folder', error);
       return { success: false, error: error.message };
     }
   });

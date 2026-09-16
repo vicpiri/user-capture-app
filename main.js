@@ -36,6 +36,8 @@ const {
   saveDisplayPreferences,
   getUpdatePreferences,
   saveUpdatePreferences,
+  getReplacedArchiveNotice,
+  saveReplacedArchiveNotice,
   getWorkspaceSettings,
   saveWorkspaceSettings
 } = require('./src/main/utils/config');
@@ -64,7 +66,8 @@ const { registerExportHandlers } = require('./src/main/ipc/exportHandlers');
 const { registerMiscHandlers } = require('./src/main/ipc/miscHandlers');
 const { registerUpdateHandlers } = require('./src/main/ipc/updateHandlers');
 const { registerHelpHandlers } = require('./src/main/ipc/helpHandlers');
-const { registerAppDialogHandlers, showAppMessage } = require('./src/main/appDialogs');
+const { registerAppDialogHandlers, showAppMessage, askAppQuestion } = require('./src/main/appDialogs');
+const { scanReplacedArchive, shouldNoticeArchive } = require('./src/main/replacedArchive');
 const { registerWorkspaceHandlers } = require('./src/main/ipc/workspaceHandlers');
 
 // Enable hot reload in development
@@ -845,6 +848,60 @@ async function reinitializeRepositoryMirror() {
   }
 }
 
+// Long enough after opening for the mirror's first sync to have the disk to
+// itself; the folder of replaced photos is not urgent
+const REPLACED_NOTICE_DELAY = 30000;
+
+/**
+ * Offer to purge the replaced photos when there are enough of them
+ *
+ * Nothing in the repository is ever deleted without being asked for: it is
+ * shared by the computers of the whole centre. But a folder nobody opens is a
+ * folder nobody purges, so once the pile is big and old the app says so and
+ * opens the purge window for whoever wants it.
+ *
+ * @param {string} repositoryPath - The repository as it was when the mirror started
+ */
+function offerReplacedArchivePurge(repositoryPath) {
+  setTimeout(async () => {
+    try {
+      const mainWindow = mainWindowManager.getWindow();
+
+      // The project may have been closed, or another one opened, by now
+      if (!mainWindow || mainWindow.isDestroyed() || currentRepositoryPath !== repositoryPath) {
+        return;
+      }
+
+      const scan = await scanReplacedArchive(repositoryPath);
+      const { lastNotice } = getReplacedArchiveNotice();
+
+      if (!shouldNoticeArchive({ runs: scan.runs, photos: scan.photos, lastNotice })) {
+        return;
+      }
+
+      // Written down before asking: an offer ignored is an offer made, and
+      // this must not come back at every opening
+      saveReplacedArchiveNotice(new Date().toISOString());
+      logger.info(`Replaced photos folder holds ${scan.photos} photos in ${scan.runs.length} runs`);
+
+      const answer = await askAppQuestion(mainWindow, {
+        title: 'Fotos reemplazadas',
+        message: `El depósito guarda ${scan.photos} fotos sustituidas por exportaciones anteriores.`,
+        detail: 'Puedes borrar las más antiguas para recuperar espacio. '
+          + 'Este aviso no volverá a aparecer en un mes.',
+        choices: ['Purgar ahora'],
+        cancel: 'Más tarde'
+      });
+
+      if (answer === 0 && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('menu-purge-replaced-archive');
+      }
+    } catch (error) {
+      logger.warning(`Could not check the replaced photos folder: ${error.message}`);
+    }
+  }, REPLACED_NOTICE_DELAY);
+}
+
 async function ensureRepositoryMirrorStarted() {
   // Only start if not already running and repository path is set
   if (repositoryMirror) {
@@ -882,6 +939,8 @@ async function ensureRepositoryMirrorStarted() {
       const initialized = await repositoryMirror.initialize();
       if (initialized) {
         logger.success('Repository mirror initialized');
+
+        offerReplacedArchivePurge(repositoryPath);
 
       // Listen to sync events
       repositoryMirror.on('sync-started', () => {

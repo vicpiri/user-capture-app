@@ -82,6 +82,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-restore-image-links', callback);
   },
 
+  onMenuPurgeReplacedArchive: (callback) => {
+    ipcRenderer.on('menu-purge-replaced-archive', callback);
+  },
+
   onMenuPreferences: (callback) => {
     ipcRenderer.on('menu-preferences', callback);
   },
@@ -187,6 +191,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportRepositoryImages: (folderPath, users, options) => ipcRenderer.invoke('export-repository-images', folderPath, users, options),
   countRepositoryImages: (users) => ipcRenderer.invoke('count-repository-images', users),
   exportToRepository: (users, options) => ipcRenderer.invoke('export-to-repository', users, options),
+  scanReplacedArchive: () => ipcRenderer.invoke('scan-replaced-archive'),
+  purgeReplacedArchive: (before) => ipcRenderer.invoke('purge-replaced-archive', before),
   exportOrlaPDF: (data) => ipcRenderer.invoke('export-orla-pdf', data),
   exportPaidUsersListPDF: (data) => ipcRenderer.invoke('export-paid-users-list-pdf', data),
   exportPaidUsersCSV: (data) => ipcRenderer.invoke('export-paid-users-csv', data),
