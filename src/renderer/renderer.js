@@ -552,7 +552,8 @@ function initializeExportManager() {
     getDisplayedUsers: () => displayedUsers,
     getCurrentUsers: () => currentUsers,
     getShowDuplicatesOnly: () => showDuplicatesOnly,
-    getAllUsers: () => allUsers,
+    getShowCardPrintRequestsOnly: () => showCardPrintRequestsOnly,
+    getShowPublicationRequestsOnly: () => showPublicationRequestsOnly,
     getCurrentFilters: getCurrentFilters,
     // The label as it reads in the filter, so the dialog names the group the
     // same way the screen does

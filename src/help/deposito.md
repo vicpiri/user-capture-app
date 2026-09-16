@@ -66,13 +66,11 @@ Para las demás exportaciones, ver [Exportaciones](exportaciones.md).
 La aplicación decide qué usuarios entran según lo que tengas en pantalla, por este orden:
 
 1. Si estás en [modo selección](usuarios.md#seleccionar-varios-usuarios) con usuarios marcados, solo los marcados.
-2. Si está activo **Ver > Asignaciones duplicadas**, todos los usuarios con foto duplicada.
-3. Si hay texto en el cuadro de búsqueda, los resultados de la búsqueda, de todos los grupos.
-4. Si no, el grupo elegido en el filtro, o todos los usuarios si está en «Todos los grupos».
+2. Si no, **los usuarios que se ven en la lista**: los que dejen el filtro de grupos, la búsqueda y los filtros del menú **Ver** (asignaciones duplicadas, carnets solicitados o publicaciones solicitadas).
 
 De esos, solo se envían los que tienen una foto capturada enlazada.
 
-<!-- REVISAR: con Ver > Carnets solicitados o Ver > Publicaciones solicitadas activos, la exportación no usa esa vista sino el grupo o la búsqueda que haya debajo (ExportManager.getUsersToExport solo contempla selección y duplicadas). Lo que se ve en pantalla y lo que se exporta no coinciden. -->
+Si en la lista no queda nadie, la exportación avisa con «No hay usuarios que exportar con la selección y los filtros actuales» y no exporta nada.
 
 ### El resumen previo
 

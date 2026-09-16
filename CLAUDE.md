@@ -1156,8 +1156,13 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
 ### 5. Imágenes a repositorio
 - **Comando de menú**: Archivo > Exportar > Imágenes a repositorio
 - **Destino**: carpeta del depósito configurada en Proyecto > Configurar depósito
-- **Alcance**: los usuarios seleccionados si hay modo selección activo; si no,
-  los que hay en pantalla con el filtro de grupo y la búsqueda aplicados
+- **Alcance** (`ExportManager.getUsersToExport()`, común a las exportaciones
+  de fotos y al CSV de carnets): los usuarios seleccionados si hay modo
+  selección activo; si no, `displayedUsers`, es decir **lo que se ve en la
+  lista**, con el filtro de grupo, la búsqueda y los filtros del menú Ver ya
+  aplicados. Antes tomaba `currentUsers` (grupo y búsqueda), así que con Ver >
+  Carnets solicitados o Publicaciones solicitadas se exportaba gente que la
+  pantalla no mostraba: el grupo entero o el proyecto entero
 - **Formato**: `{NIA}.jpg` para alumnado y `{documento}.jpg` para el resto,
   siempre `.jpg` y en la raíz del depósito, **sobrescribiendo** lo que hubiera
 - **Opciones**: copia original o redimensionado (tamaño y peso máximo). El

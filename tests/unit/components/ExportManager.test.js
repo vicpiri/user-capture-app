@@ -37,9 +37,14 @@ describe('ExportManager', () => {
       getProjectOpen: jest.fn(() => true),
       getSelectionMode: jest.fn(() => false),
       getSelectedUsers: jest.fn(() => new Set()),
-      getDisplayedUsers: jest.fn(() => []),
+      // Undefined until the list is first drawn; the tests that care set it
+      getDisplayedUsers: jest.fn(() => undefined),
       getCurrentUsers: jest.fn(() => []),
       getShowDuplicatesOnly: jest.fn(() => false),
+      getShowCardPrintRequestsOnly: jest.fn(() => false),
+      getShowPublicationRequestsOnly: jest.fn(() => false),
+      getGroupFilterLabel: jest.fn(() => 'Todos los grupos'),
+      getSearchTerm: jest.fn(() => ''),
       getAllUsers: jest.fn(() => [])
     };
 
@@ -98,43 +103,62 @@ describe('ExportManager', () => {
       expect(result.map(u => u.id)).toEqual([1, 2, 3]);
     });
 
-    test('should return current users when not in selection mode', () => {
+    test('should take the users on the list, whichever filter left them there', () => {
+      // With Ver > Carnets solicitados the list holds those users, from every
+      // group: exporting the group instead took people off the screen
+      const onScreen = [{ id: 7 }, { id: 9 }];
+      mockGetters.getDisplayedUsers.mockReturnValue(onScreen);
+      mockGetters.getCurrentUsers.mockReturnValue([{ id: 1 }, { id: 2 }, { id: 7 }, { id: 9 }]);
+      mockGetters.getShowCardPrintRequestsOnly.mockReturnValue(true);
+
+      expect(manager.getUsersToExport()).toBe(onScreen);
+    });
+
+    test('should export nobody when the list is empty', () => {
+      mockGetters.getDisplayedUsers.mockReturnValue([]);
+      mockGetters.getCurrentUsers.mockReturnValue([{ id: 1 }, { id: 2 }]);
+
+      expect(manager.getUsersToExport()).toEqual([]);
+    });
+
+    test('should fall back to the loaded users before the list is built', () => {
       const users = [{ id: 1 }, { id: 2 }];
+      mockGetters.getDisplayedUsers.mockReturnValue(undefined);
       mockGetters.getCurrentUsers.mockReturnValue(users);
 
-      const result = manager.getUsersToExport();
+      expect(manager.getUsersToExport()).toBe(users);
+    });
+  });
 
-      expect(result).toBe(users);
+  describe('describeScopeLabel()', () => {
+    test('names the filter of the Ver menu that is on', () => {
+      mockGetters.getShowCardPrintRequestsOnly.mockReturnValue(true);
+      expect(manager.describeScopeLabel()).toBe('Usuarios con carnet solicitado');
+
+      mockGetters.getShowCardPrintRequestsOnly.mockReturnValue(false);
+      mockGetters.getShowPublicationRequestsOnly.mockReturnValue(true);
+      expect(manager.describeScopeLabel()).toBe('Usuarios con publicación solicitada');
+
+      mockGetters.getShowPublicationRequestsOnly.mockReturnValue(false);
+      mockGetters.getShowDuplicatesOnly.mockReturnValue(true);
+      expect(manager.describeScopeLabel()).toBe('Usuarios con asignaciones duplicadas');
     });
 
-    test('should return duplicates when showDuplicatesOnly is true', () => {
-      mockGetters.getShowDuplicatesOnly.mockReturnValue(true);
-      mockGetters.getAllUsers.mockReturnValue([
-        { id: 1, image_path: '/path/img1.jpg' },
-        { id: 2, image_path: '/path/img1.jpg' }, // Duplicate
-        { id: 3, image_path: '/path/img2.jpg' },
-        { id: 4, image_path: '/path/img3.jpg' },
-        { id: 5, image_path: '/path/img3.jpg' }  // Duplicate
-      ]);
+    test('names the search or the group when no filter is on', () => {
+      mockGetters.getSearchTerm.mockReturnValue('garcia');
+      expect(manager.describeScopeLabel()).toContain('garcia');
 
-      const result = manager.getUsersToExport();
-
-      expect(result.length).toBe(4);
-      expect(result.map(u => u.id).sort()).toEqual([1, 2, 4, 5]);
+      mockGetters.getSearchTerm.mockReturnValue('');
+      mockGetters.getGroupFilterLabel.mockReturnValue('1ESOA - Primero A');
+      expect(manager.describeScopeLabel()).toBe('1ESOA - Primero A');
     });
 
-    test('should filter out users without images when finding duplicates', () => {
-      mockGetters.getShowDuplicatesOnly.mockReturnValue(true);
-      mockGetters.getAllUsers.mockReturnValue([
-        { id: 1, image_path: '/path/img1.jpg' },
-        { id: 2, image_path: '/path/img1.jpg' },
-        { id: 3, image_path: null }
-      ]);
+    test('the selection wins over every filter', () => {
+      mockGetters.getSelectionMode.mockReturnValue(true);
+      mockGetters.getSelectedUsers.mockReturnValue(new Set([1, 2]));
+      mockGetters.getShowCardPrintRequestsOnly.mockReturnValue(true);
 
-      const result = manager.getUsersToExport();
-
-      expect(result.length).toBe(2);
-      expect(result.every(u => u.image_path)).toBe(true);
+      expect(manager.describeScopeLabel()).toBe('2 usuarios seleccionados');
     });
   });
 

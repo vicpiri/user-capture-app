@@ -25,12 +25,16 @@ Si en la carpeta elegida ya hay un archivo con el mismo nombre, la exportación 
 El CSV para carnets, **Imágenes capturadas como ID**, **Imágenes del depósito como ID**, **Imágenes capturadas como nombre y apellidos** e **Imágenes capturadas al depósito** deciden a quién incluir con esta regla, en este orden:
 
 1. Si estás en modo selección y hay usuarios marcados, solo esos.
-2. Si no, y está activado **Ver > Asignaciones duplicadas**, todos los usuarios del proyecto que comparten foto con otro.
-3. Si no, los usuarios que carga la lista: los resultados de la búsqueda (de todos los grupos) si has escrito algo en el buscador; si no, los del grupo elegido en el filtro de grupos; y si no hay ningún grupo elegido, todos.
+2. Si no, **los usuarios que ves en la lista**: los que dejen el filtro de grupos, la búsqueda y los filtros del menú **Ver**.
+
+Es decir, lo que ves es lo que se exporta:
+
+- con **Ver > Asignaciones duplicadas**, los usuarios que comparten foto con otro, de todos los grupos;
+- con **Ver > Carnets solicitados** o **Ver > Publicaciones solicitadas**, los que tienen esa solicitud pendiente, de todos los grupos;
+- con texto en el buscador, los resultados de la búsqueda, de todos los grupos;
+- si no, el grupo elegido en el filtro de grupos, o todos si está en «Todos los grupos».
 
 Si con la selección, la búsqueda y los filtros actuales no queda ningún usuario, la aplicación te avisa y no exporta nada.
-
-> **Importante:** los filtros **Ver > Carnets solicitados** y **Ver > Publicaciones solicitadas** cambian lo que ves, pero no lo que se exporta. Si no hay selección, se exporta el grupo del filtro de grupos. Para exportar solo los usuarios de esos filtros, selecciónalos: con el filtro activo, pulsa con el botón derecho sobre un usuario, elige **Seleccionar** y marca la casilla de la cabecera de la tabla para seleccionar todos los que se ven. El modo selección se explica en [Lista de usuarios](usuarios.md).
 
 Las demás exportaciones (inventario, orlas y listados de pagos) tienen su propio alcance, que se explica en cada apartado.
 

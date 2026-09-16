@@ -37,7 +37,8 @@
       this.getDisplayedUsers = config.getDisplayedUsers; // Function returning displayed users array
       this.getCurrentUsers = config.getCurrentUsers; // Function returning current users array
       this.getShowDuplicatesOnly = config.getShowDuplicatesOnly; // Function returning showDuplicatesOnly boolean
-      this.getAllUsers = config.getAllUsers; // Function returning all users array
+      this.getShowCardPrintRequestsOnly = config.getShowCardPrintRequestsOnly; // Function returning showCardPrintRequestsOnly boolean
+      this.getShowPublicationRequestsOnly = config.getShowPublicationRequestsOnly; // Function returning showPublicationRequestsOnly boolean
       this.getCurrentFilters = config.getCurrentFilters; // Function returning current filters object
       this.getGroupFilterLabel = config.getGroupFilterLabel || (() => ''); // Function returning the selected group's label
       this.getSearchTerm = config.getSearchTerm || (() => ''); // Function returning the active search term
@@ -57,30 +58,17 @@
       const selectionMode = this.getSelectionMode();
       const selectedUsers = this.getSelectedUsers();
       const displayedUsers = this.getDisplayedUsers();
-      const currentUsers = this.getCurrentUsers();
-      const showDuplicatesOnly = this.getShowDuplicatesOnly();
-      const allUsers = this.getAllUsers();
 
-      // If in selection mode and there are selected users, export only those
+      // The selection wins: those are the users marked one by one
       if (selectionMode && selectedUsers && selectedUsers.size > 0) {
-        return displayedUsers.filter(user => selectedUsers.has(user.id));
+        return (displayedUsers || []).filter(user => selectedUsers.has(user.id));
       }
 
-      // Otherwise, use current view
-      let usersToExport = currentUsers;
-
-      // If showing duplicates only, get all duplicates from database
-      if (showDuplicatesOnly && allUsers) {
-        const imageCount = {};
-        allUsers.forEach(user => {
-          if (user.image_path) {
-            imageCount[user.image_path] = (imageCount[user.image_path] || 0) + 1;
-          }
-        });
-        usersToExport = allUsers.filter(user => user.image_path && imageCount[user.image_path] > 1);
-      }
-
-      return usersToExport;
+      // Whoever is on the list, which the group, the search and the filters of
+      // the Ver menu already decided. Taking the group instead meant that with
+      // Ver > Carnets solicitados on, the export covered people the screen was
+      // not showing: the whole project, or the whole group.
+      return Array.isArray(displayedUsers) ? displayedUsers : this.getCurrentUsers();
     }
 
     /**
@@ -564,6 +552,12 @@
       if (this.getShowDuplicatesOnly()) {
         return 'Usuarios con asignaciones duplicadas';
       }
+      if (this.getShowCardPrintRequestsOnly()) {
+        return 'Usuarios con carnet solicitado';
+      }
+      if (this.getShowPublicationRequestsOnly()) {
+        return 'Usuarios con publicación solicitada';
+      }
       if (searchTerm) {
         // A search ignores the group filter, so naming the group here would lie
         return `Búsqueda "${searchTerm}", en todos los grupos`;
@@ -574,9 +568,10 @@
     /**
      * Describe what an export is about to cover
      *
-     * getUsersToExport() silently follows the selection, the duplicates filter,
-     * the search box or the group filter, in that order. Which one applied is
-     * not obvious from the screen, so it is spelled out before confirming.
+     * getUsersToExport() silently follows the selection, the filters of the Ver
+     * menu, the search box or the group filter, in that order. Which one
+     * applied is not obvious from the screen, so it is spelled out before
+     * confirming.
      *
      * @param {Array} usersToExport
      * @param {string} destination - Where the images are going, for the wording

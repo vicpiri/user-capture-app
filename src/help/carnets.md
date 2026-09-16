@@ -35,7 +35,7 @@ Los carnets se marcan como impresos al exportar el CSV para carnets, que es el a
 
 Solo se marcan los usuarios que han entrado en el CSV. La aplicación no tiene otra forma de marcar un carnet como impreso.
 
-> **Consejo:** para imprimir exactamente los carnets pedidos, activa **Ver > Carnets solicitados**, pulsa con el botón derecho sobre un usuario, elige **Seleccionar**, marca la casilla de la cabecera para seleccionarlos todos y pulsa `Ctrl+E`. Sin la selección, el CSV incluiría el grupo del filtro de grupos en lugar de los usuarios con solicitud.
+> **Consejo:** para imprimir exactamente los carnets pedidos, activa **Ver > Carnets solicitados** y pulsa `Ctrl+E`: el CSV incluye a los usuarios que se ven en pantalla, es decir, los que tienen solicitud, de todos los grupos.
 
 ## Consultar los últimos carnets impresos
 
