@@ -9,6 +9,7 @@ El panel de la derecha muestra en grande las fotos capturadas del proyecto, es d
 - Pasa de una foto a otra con las flechas del propio visor o con las teclas `Flecha izquierda` y `Flecha derecha`. Desde la última se vuelve a la primera.
 - Cuando llega una foto nueva, el visor salta a ella.
 - Si la foto tiene etiquetas, aparecen debajo del visor (ver [Etiquetas de imágenes](enlazar.md#etiquetas-de-imagenes)).
+- Si una foto se ve tumbada, gírala con los botones de arriba a la derecha del visor. Ver [Fotos que llegan giradas](captura.md#fotos-que-llegan-giradas).
 - Con **Ver > Historial de capturas** tienes al lado del visor una tira de miniaturas: al hacer clic en una, el visor salta a esa foto. Ver [Captura e importación de fotos](captura.md).
 
 El visor muestra todas las fotos de `imports`, estén enlazadas o no: enlazar una foto no la quita del visor.

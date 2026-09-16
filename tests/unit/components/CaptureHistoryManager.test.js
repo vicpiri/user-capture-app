@@ -202,6 +202,61 @@ describe('CaptureHistoryManager', () => {
     });
   });
 
+  describe('refreshThumbnail()', () => {
+    // A photo that is turned keeps its name, and render() reuses the
+    // thumbnail it already has for that path: the strip kept the old picture
+    beforeEach(() => {
+      manager.setVisible(true);
+      manager.render(IMAGES, 0);
+    });
+
+    const imageOf = (index) => items()[index].querySelector('img');
+    const versionOf = (url) => new URL(url).searchParams.get('v');
+
+    test('loads a thumbnail already on screen again, with its new version', () => {
+      mockObserver.callback([{ isIntersecting: true, target: items()[0] }]);
+      const before = imageOf(0).src;
+      const version = imageUrl.bumpVersion(IMAGES[0]);
+
+      manager.refreshThumbnail(IMAGES[0]);
+
+      expect(imageOf(0).src).not.toBe(before);
+      expect(versionOf(imageOf(0).src)).toBe(String(version));
+      expect(imageOf(0).classList.contains('loaded')).toBe(false);
+    });
+
+    test('leaves the other thumbnails alone', () => {
+      mockObserver.callback([{ isIntersecting: true, target: items()[1] }]);
+      const other = imageOf(1).src;
+
+      manager.refreshThumbnail(IMAGES[0]);
+
+      expect(imageOf(1).src).toBe(other);
+    });
+
+    test('updates one that has not loaded yet without loading it', () => {
+      const version = imageUrl.bumpVersion(IMAGES[2]);
+
+      manager.refreshThumbnail(IMAGES[2]);
+
+      expect(imageOf(2).src).toBe('');
+      expect(versionOf(imageOf(2).dataset.src)).toBe(String(version));
+    });
+
+    test('matches the path whatever its case', () => {
+      mockObserver.callback([{ isIntersecting: true, target: items()[0] }]);
+      const version = imageUrl.bumpVersion(IMAGES[0]);
+
+      manager.refreshThumbnail(IMAGES[0].toLowerCase());
+
+      expect(versionOf(imageOf(0).src)).toBe(String(version));
+    });
+
+    test('ignores a photo that is not in the strip', () => {
+      expect(() => manager.refreshThumbnail('D:/otra/foto.jpg')).not.toThrow();
+    });
+  });
+
   describe('capture time', () => {
     beforeEach(() => {
       manager.setVisible(true);

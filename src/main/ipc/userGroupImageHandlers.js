@@ -6,7 +6,8 @@ const fs = require('fs');
 const path = require('path');
 const { formatTimestamp } = require('../utils/formatting');
 const { getImageRepositoryPath } = require('../utils/config');
-const { getActiveIngestPath } = require('../ingestFolder');
+const { getActiveIngestPath, markWebcamCapture, getIncomingRotation } = require('../ingestFolder');
+const { rotateImageFile } = require('../imageOrientation');
 
 /**
  * Register user, group, and image-related IPC handlers
@@ -419,6 +420,49 @@ function registerUserGroupImageHandlers(context) {
     }
   });
 
+  // The automatic rotation of the project, for the notice over the viewer
+  ipcMain.handle('get-incoming-rotation', async () => ({
+    degrees: state.dbManager ? (state.incomingRotation ?? await getIncomingRotation(state.dbManager)) : 0
+  }));
+
+  // Turn a captured photo a quarter turn, by its EXIF orientation. Only the
+  // photos of the project's imports folder, which are the captured ones.
+  ipcMain.handle('rotate-captured-image', async (event, imagePath, degrees) => {
+    try {
+      if (!state.projectPath) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+      if (![90, -90, 180].includes(degrees)) {
+        throw new Error(`Giro no válido: ${degrees}`);
+      }
+      const importsPath = path.join(state.projectPath, 'imports');
+      const resolved = path.resolve(importsPath, String(imagePath || ''));
+      const relative = path.relative(importsPath, resolved);
+      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error('Solo se pueden girar las fotos capturadas del proyecto');
+      }
+      if (!fs.existsSync(resolved)) {
+        throw new Error('La foto ya no está en la carpeta imports');
+      }
+
+      const orientation = await rotateImageFile(resolved, degrees);
+      logger.info(`Captured image turned ${degrees}°: ${path.basename(resolved)} (EXIF orientation ${orientation})`);
+
+      // Every view of the photo has to load it again: the name is the same
+      const windows = [mainWindow ? mainWindow() : null, imageGridWindow ? imageGridWindow() : null];
+      windows.forEach((win) => {
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('captured-image-rotated', { imagePath: resolved, orientation });
+        }
+      });
+
+      return { success: true, orientation };
+    } catch (error) {
+      logger.error('Error rotating captured image:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Save captured image
   ipcMain.handle('save-captured-image', async (event, imageData) => {
     try {
@@ -442,6 +486,9 @@ function registerUserGroupImageHandlers(context) {
       // Convert base64 to buffer and save
       const base64Data = imageData.replace(/^data:image\/jpeg;base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
+      // Already turned with the camera window's button: the project's
+      // automatic rotation must not turn it again
+      markWebcamCapture(state, filePath);
       fs.writeFileSync(filePath, buffer);
 
       return { success: true, filename };

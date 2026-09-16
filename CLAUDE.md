@@ -44,6 +44,7 @@ user-capture-app/
 │   │   ├── googleDriveManager.js # Integración con Google Drive API
 │   │   ├── helpContent.js       # Lectura, conversión y búsqueda del manual (Markdown)
 │   │   ├── imageManager.js      # Procesamiento y gestión de imágenes
+│   │   ├── imageOrientation.js  # Leer y cambiar la orientación EXIF de un JPEG sin recomprimir
 │   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── receiptPrinter.js    # Impresión de recibos con el auxiliar de Windows (native/receipt-printer)
@@ -276,10 +277,37 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
     el vigilante mueve todo lo nuevo, un nivel de subcarpetas incluido
   - Las imágenes que ya estaban en la carpeta al empezar a vigilarla no se
     importan; solo las que llegan después
+  - **Giro de las fotos entrantes** (Proyecto > Girar las fotos entrantes):
+    para cámaras que no anotan la orientación. `project_settings` bajo
+    `incomingRotation` (90, 180 o 270; sin clave, no se gira), cargado en
+    `state.incomingRotation` al arrancar el vigilante, que es por donde pasan
+    las tres aperturas; un cambio desde el menú vale para la foto siguiente
+    - `FolderWatcher` acepta `processImport(destino, origen)`, que corre con
+      la foto ya en `imports` y antes de anunciarla; ahí se aplica el giro
+      (`applyIncomingRotation`). Si falla, la foto se importa como vino
+    - Las capturas de la webcam se escriben en la carpeta de entrada, pero ya
+      vienen giradas con el botón de la ventana de cámara: `save-captured-image`
+      las marca con `markWebcamCapture()` y el giro las deja pasar
   - `folderWatcher` mueve con copia y borrado cuando el `rename` falla con
     `EXDEV` (otra unidad o recurso de red), y aplica los patrones de archivos
     ocultos a la ruta relativa a la carpeta vigilada: sobre la ruta completa,
     una carpeta bajo un directorio que empiece por punto ignoraba todo
+- **imageOrientation.js**: Gira las fotos cambiando la etiqueta de orientación
+  EXIF, nunca los píxeles: no se recomprime nada y los datos de imagen quedan
+  byte a byte. Si la foto no tiene EXIF, se añade un segmento mínimo; si lo
+  tiene sin orientación, se añade una copia del primer directorio con la
+  etiqueta al final de los datos EXIF (así ningún desplazamiento cambia).
+  Todo lo demás ya respeta la etiqueta: Chromium en el visor, `sharp().rotate()`
+  en miniaturas, exportaciones y orla, y las exportaciones escriben la foto
+  derecha. `rotateImageFile()` escribe con nombre temporal y renombra
+  - El giro manual es `rotate-captured-image` (solo fotos de `imports`), que
+    avisa a la ventana principal y al cuadro de capturadas con
+    `captured-image-rotated`
+  - **La foto conserva su nombre al girarla**, y las URL `app-img://` se sirven
+    con caché: `imageUrl.bumpVersion(ruta)` le da una versión que se añade a
+    todas sus URL. Se guarda en `localStorage`, que comparten todas las
+    ventanas y que sobrevive a un Ctrl+R. En disco, la caché de miniaturas usa
+    la fecha de modificación, que cambia al reescribir el archivo
 - **repositoryMirror.js**: Sincronización y mirror local del repositorio Google Drive
 - **xmlParser.js**: Parseo de XML de usuarios con fast-xml-parser
 - **logger.js**: Sistema de logging centralizado

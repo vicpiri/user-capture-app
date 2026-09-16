@@ -125,6 +125,28 @@ describe('ImageGridManager', () => {
     });
   });
 
+  describe('refreshCurrentImage()', () => {
+    const { imageUrl } = require('../../../src/renderer/utils/imageUrl');
+
+    test('loads the photo on show again, with its new version after a turn', async () => {
+      mockGetImages.mockResolvedValue({ success: true, images: ['/path/girada.jpg'] });
+      await manager.loadImages();
+      mockOnImageChange.mockClear();
+      const version = imageUrl.bumpVersion('/path/girada.jpg');
+
+      manager.refreshCurrentImage();
+
+      expect(new URL(mockImage.src).searchParams.get('v')).toBe(String(version));
+      // Only the image: nothing else about the viewer changes
+      expect(mockOnImageChange).not.toHaveBeenCalled();
+    });
+
+    test('does nothing with no photo on show', () => {
+      manager.refreshCurrentImage();
+      expect(mockImage.src).toBe('');
+    });
+  });
+
   describe('showPreview()', () => {
     beforeEach(async () => {
       mockGetImages.mockResolvedValue({

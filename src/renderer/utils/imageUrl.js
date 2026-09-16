@@ -23,6 +23,45 @@
   const INDICATOR_SIZE = 128;
   const GRID_SIZE = 384;
 
+  // A captured photo keeps its name when it is turned, so its URL has to
+  // change for the views to load it again: each turned photo gets a version.
+  // Kept in localStorage, which every window of the app shares, so it
+  // survives a reload while the page's image cache still holds the old one.
+  const VERSIONS_KEY = 'edu-user-capture:image-versions';
+  const MAX_VERSIONS = 500;
+  const BACKSLASH = String.fromCharCode(92);
+  let versions = null;
+
+  function pathKey(filePath) {
+    return String(filePath).split(BACKSLASH).join('/').toLowerCase();
+  }
+
+  function storage() {
+    try {
+      return typeof localStorage !== 'undefined' ? localStorage : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function loadVersions() {
+    if (!versions) {
+      try {
+        versions = JSON.parse((storage() && storage().getItem(VERSIONS_KEY)) || '{}') || {};
+      } catch (error) {
+        versions = {};
+      }
+    }
+    return versions;
+  }
+
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    // Another window turned a photo
+    window.addEventListener('storage', (event) => {
+      if (event.key === VERSIONS_KEY) versions = null;
+    });
+  }
+
   /**
    * @param {string} filePath - Absolute path of the image
    * @param {Object} [options]
@@ -43,8 +82,11 @@
       params.set('size', String(options.size));
     }
 
-    if (options.version !== undefined && options.version !== null) {
-      params.set('v', String(options.version));
+    const version = options.version !== undefined && options.version !== null
+      ? options.version
+      : loadVersions()[pathKey(filePath)];
+    if (version !== undefined && version !== null) {
+      params.set('v', String(version));
     }
 
     return `${SCHEME}://img/?${params.toString()}`;
@@ -74,6 +116,30 @@
      */
     original(filePath, version) {
       return buildImageUrl(filePath, { version });
+    },
+
+    /**
+     * A photo changed without changing its name (it was turned): its URLs
+     * change from now on, in every window, so the views load it again
+     * @param {string} filePath
+     * @returns {number} the new version
+     */
+    bumpVersion(filePath) {
+      versions = null; // another window may have written since
+      const all = loadVersions();
+      all[pathKey(filePath)] = Date.now();
+      const keys = Object.keys(all);
+      if (keys.length > MAX_VERSIONS) {
+        keys.sort((a, b) => all[a] - all[b])
+          .slice(0, keys.length - MAX_VERSIONS)
+          .forEach((key) => { delete all[key]; });
+      }
+      try {
+        if (storage()) storage().setItem(VERSIONS_KEY, JSON.stringify(all));
+      } catch (error) {
+        // Full or unavailable: the version still holds in this window
+      }
+      return all[pathKey(filePath)];
     }
   };
 

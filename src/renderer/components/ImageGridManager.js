@@ -101,6 +101,15 @@
     }
 
     /**
+     * Load the photo on show again, as after turning it: its URL changed
+     */
+    refreshCurrentImage() {
+      if (this.isActive && this.currentImage && this.images.length > 0) {
+        this.currentImage.src = imageUrl.original(this.images[this.currentIndex]);
+      }
+    }
+
+    /**
      * Navigate to next or previous image
      * @param {number} direction - 1 for next, -1 for previous
      */

@@ -35,6 +35,8 @@ let showCaptureHistory = false;  // Show/hide the capture history strip beside t
 let showThumbnailGrid = false;
 let thumbnailGridSource = 'captured';
 let thumbnailGridManager = null;
+// Proyecto > Girar las fotos entrantes, for the notice over the viewer
+let incomingRotation = 0;
 let isLoadingRepositoryPhotos = false;  // Track if repository photos are being loaded
 let isLoadingRepositoryIndicators = false;  // Track if repository indicators are being loaded
 let repositorySyncCompleted = false;  // Track if initial repository sync has completed
@@ -115,6 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Ver > Vista de miniaturas
   initializeThumbnailGrid();
+
+  // The viewer's rotate buttons and Proyecto > Girar las fotos entrantes
+  initializeImageRotation();
 
   // Initialize image grid manager
   initializeImageGridManager();
@@ -411,6 +416,80 @@ function ensureRepositoryDataForGrid() {
   return true;
 }
 
+// ============================================================================
+// Turning captured photos
+// ============================================================================
+
+const INCOMING_ROTATION_LABELS = { 90: '90° a la derecha', 180: '180°', 270: '90° a la izquierda' };
+
+function initializeImageRotation() {
+  const buttons = [
+    [document.getElementById('rotate-image-left'), -90],
+    [document.getElementById('rotate-image-right'), 90]
+  ];
+  buttons.forEach(([button, degrees]) => {
+    if (button) {
+      button.addEventListener('click', () => rotateCurrentImage(degrees, buttons.map(([b]) => b)));
+    }
+  });
+
+  window.electronAPI.onIncomingRotationChanged((degrees) => {
+    incomingRotation = degrees || 0;
+    updateIncomingRotationBadge();
+  });
+
+  window.electronAPI.onCapturedImageRotated(({ imagePath }) => applyImageRotation(imagePath));
+}
+
+/**
+ * Turn the photo on show in the viewer
+ * @param {number} degrees - 90 to the right, -90 to the left
+ * @param {HTMLElement[]} buttons - kept disabled until it is done
+ */
+async function rotateCurrentImage(degrees, buttons) {
+  const imagePath = imageGridManager ? imageGridManager.getCurrentImagePath() : null;
+  if (!imagePath) return;
+
+  buttons.forEach((button) => { if (button) button.disabled = true; });
+  try {
+    const result = await window.electronAPI.rotateCapturedImage(imagePath, degrees);
+    if (!result.success) {
+      showInfoModal('No se pudo girar la foto', result.error);
+    }
+    // The views are refreshed by 'captured-image-rotated', sent to every window
+  } finally {
+    buttons.forEach((button) => { if (button) button.disabled = false; });
+  }
+}
+
+/**
+ * A photo was turned: every view of it loads it again
+ * @param {string} imagePath
+ */
+function applyImageRotation(imagePath) {
+  imageUrl.bumpVersion(imagePath);
+
+  if (imageGridManager) {
+    imageGridManager.refreshCurrentImage();
+  }
+  if (captureHistoryManager) {
+    captureHistoryManager.refreshThumbnail(imagePath);
+  }
+  // The list's and the grid's thumbnails of whoever has it linked
+  if (projectOpen) {
+    displayUsers(currentUsers, allUsers);
+  }
+}
+
+function updateIncomingRotationBadge() {
+  const badge = document.getElementById('incoming-rotation-badge');
+  if (!badge) return;
+  const label = INCOMING_ROTATION_LABELS[incomingRotation];
+  badge.hidden = !(projectOpen && label);
+  badge.textContent = label ? `Fotos entrantes giradas ${label}` : '';
+  badge.title = 'Las fotos que lleguen a la carpeta de entrada se giran solas. Se cambia en Proyecto > Girar las fotos entrantes.';
+}
+
 // Initialize image grid manager
 function initializeImageGridManager() {
   imageGridManager = new ImageGridManager({
@@ -659,6 +738,7 @@ function initializeMenuEventManager() {
     setProjectOpen: (value) => {
       projectOpen = value;
       applyUsersViewMode();
+      updateIncomingRotationBadge();
     },
 
     // State getters
@@ -766,6 +846,7 @@ function initializeProjectManager() {
     setProjectOpen: (value) => {
       projectOpen = value;
       applyUsersViewMode();
+      updateIncomingRotationBadge();
     },
     setCurrentUsers: (users) => { currentUsers = users; },
     setAllUsers: (users) => { allUsers = users; },

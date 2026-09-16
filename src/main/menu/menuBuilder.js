@@ -25,6 +25,8 @@ class MenuBuilder {
     this.showCaptureHistory = context.showCaptureHistory;
     this.showThumbnailGrid = context.showThumbnailGrid;
     this.recentProjects = context.recentProjects;
+    // null without a project, when the choice is not available
+    this.incomingRotation = context.incomingRotation ?? null;
     this.workspaces = context.workspaces || [];
     this.activeWorkspaceId = context.activeWorkspaceId || null;
 
@@ -289,6 +291,7 @@ class MenuBuilder {
             this.callbacks.configureIngestFolder();
           }
         },
+        this.buildIncomingRotationMenu(),
         { type: 'separator' },
         {
           label: 'Restaurar enlaces de imágenes...',
@@ -351,6 +354,33 @@ class MenuBuilder {
           }
         }
       ]
+    };
+  }
+
+  /**
+   * Proyecto > Girar las fotos entrantes: for a camera that does not record
+   * how it was held. Only with a project open, since it is kept in it.
+   */
+  buildIncomingRotationMenu() {
+    const choices = [
+      [0, 'No girarlas'],
+      [90, '90° a la derecha'],
+      [180, '180°'],
+      [270, '90° a la izquierda']
+    ];
+    const enabled = this.incomingRotation !== null;
+    return {
+      label: 'Girar las fotos entrantes',
+      enabled,
+      submenu: choices.map(([degrees, label]) => ({
+        label,
+        type: 'radio',
+        enabled,
+        checked: (this.incomingRotation || 0) === degrees,
+        click: () => {
+          this.callbacks.setIncomingRotation(degrees);
+        }
+      }))
     };
   }
 

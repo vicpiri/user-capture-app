@@ -18,9 +18,15 @@ const fs = require('fs');
 const path = require('path');
 const FolderWatcher = require('./folderWatcher');
 const { getImageRepositoryPath } = require('./utils/config');
+const { rotateImageFile } = require('./imageOrientation');
 
 const INGEST_SETTING = 'ingestPath';
 const DEFAULT_INGEST_FOLDER = 'ingest';
+
+// Proyecto > Girar las fotos entrantes: for a camera that does not record
+// how it was held, every photo of the session needs the same quarter turn
+const INCOMING_ROTATION_SETTING = 'incomingRotation';
+const INCOMING_ROTATIONS = [0, 90, 180, 270];
 
 /**
  * @param {string} projectPath
@@ -179,6 +185,77 @@ function validateIngestPath(candidate, { projectPath, repositoryPath = null, mir
 }
 
 /**
+ * The clockwise turn given to every photo that reaches the ingest folder
+ * @param {Object} dbManager
+ * @returns {Promise<number>} 0, 90, 180 or 270
+ */
+async function getIncomingRotation(dbManager) {
+  if (!dbManager) {
+    return 0;
+  }
+  try {
+    const degrees = Number(await dbManager.getProjectSetting(INCOMING_ROTATION_SETTING));
+    return INCOMING_ROTATIONS.includes(degrees) ? degrees : 0;
+  } catch (error) {
+    console.error('Error getting incoming rotation:', error);
+    return 0;
+  }
+}
+
+/**
+ * @param {Object} dbManager
+ * @param {number} degrees - 0, 90, 180 or 270; 0 stops turning them
+ */
+async function setIncomingRotation(dbManager, degrees) {
+  if (!INCOMING_ROTATIONS.includes(degrees)) {
+    throw new Error(`Invalid rotation: ${degrees}`);
+  }
+  if (degrees) {
+    await dbManager.setProjectSetting(INCOMING_ROTATION_SETTING, String(degrees));
+  } else {
+    await dbManager.deleteProjectSetting(INCOMING_ROTATION_SETTING);
+  }
+}
+
+// Webcam captures are written into the ingest folder like any other photo,
+// but come already turned by the camera window's own button: they are marked
+// so the automatic rotation leaves them alone
+function captureKey(filePath) {
+  return path.resolve(filePath).toLowerCase();
+}
+
+/**
+ * Keep the automatic rotation off a photo the webcam is about to write
+ * @param {Object} state
+ * @param {string} filePath - where it will be written, in the ingest folder
+ */
+function markWebcamCapture(state, filePath) {
+  if (!state.webcamCaptures) {
+    state.webcamCaptures = new Set();
+  }
+  state.webcamCaptures.add(captureKey(filePath));
+}
+
+/**
+ * Give a newly imported photo the project's automatic rotation
+ * @param {Object} state
+ * @param {Object} logger
+ * @param {string} destination - the photo, now in imports
+ * @param {string} source - where it arrived, in the ingest folder
+ */
+async function applyIncomingRotation(state, logger, destination, source) {
+  if (state.webcamCaptures && state.webcamCaptures.delete(captureKey(source))) {
+    return;
+  }
+  const degrees = state.incomingRotation || 0;
+  if (!degrees) {
+    return;
+  }
+  const orientation = await rotateImageFile(destination, degrees);
+  logger.info(`Incoming image turned ${degrees}°: ${path.basename(destination)} (EXIF orientation ${orientation})`);
+}
+
+/**
  * Create and start the watcher for the open project
  *
  * Leaves it in state.folderWatcher. Any previous watcher must have been
@@ -203,7 +280,17 @@ async function startIngestWatcher({ state, logger, getMainWindow }) {
     fs.mkdirSync(watch.path, { recursive: true });
   }
 
-  const watcher = new FolderWatcher(watch.path, path.join(state.projectPath, 'imports'));
+  // Read here, where every opening of a project passes, and kept in the state
+  // so a change from the menu applies to the very next photo
+  state.incomingRotation = await getIncomingRotation(state.dbManager);
+  if (state.incomingRotation) {
+    logger.info(`Photos reaching the ingest folder are turned ${state.incomingRotation}°`);
+  }
+  getMainWindow()?.webContents.send('incoming-rotation-changed', state.incomingRotation);
+
+  const watcher = new FolderWatcher(watch.path, path.join(state.projectPath, 'imports'), {
+    processImport: (destination, source) => applyIncomingRotation(state, logger, destination, source)
+  });
   watcher.on('image-detecting', (filename) => {
     logger.info(`Image being processed: ${filename}`);
     getMainWindow()?.webContents.send('image-detecting', filename);
@@ -342,6 +429,11 @@ async function configureIngestFolder({ state, logger, getMainWindow, mirrorPath 
 
 module.exports = {
   INGEST_SETTING,
+  INCOMING_ROTATIONS,
+  getIncomingRotation,
+  setIncomingRotation,
+  markWebcamCapture,
+  applyIncomingRotation,
   getDefaultIngestPath,
   getActiveIngestPath,
   getConfiguredIngestPath,

@@ -43,8 +43,13 @@ const {
   resolveWatchPath,
   validateIngestPath,
   startIngestWatcher,
-  configureIngestFolder
+  configureIngestFolder,
+  getIncomingRotation,
+  setIncomingRotation,
+  markWebcamCapture
 } = require('../../../src/main/ingestFolder');
+const { readOrientation } = require('../../../src/main/imageOrientation');
+const sharp = require('sharp');
 
 const logger = {
   info: jest.fn(),
@@ -457,6 +462,96 @@ describe('Ingest folder', () => {
         expect(result).toEqual({ success: true, changed: false });
         expect(state.folderWatcher).toBe(previousWatcher);
       });
+    });
+  });
+
+  describe('automatic rotation of incoming photos', () => {
+    // A landscape JPEG without EXIF, like the camera that does not record how
+    // it was held
+    const jpeg = () => sharp({ create: { width: 40, height: 20, channels: 3, background: { r: 200, g: 30, b: 30 } } }).jpeg().toBuffer();
+    const ingest = () => getDefaultIngestPath(projectPath);
+    const imported = (name) => path.join(projectPath, 'imports', name);
+
+    const drop = async (name, content) => {
+      const added = waitForImage(state.folderWatcher);
+      fs.writeFileSync(path.join(ingest(), name), content);
+      return added;
+    };
+
+    test('is stored in the project, off by default', async () => {
+      await expect(getIncomingRotation(state.dbManager)).resolves.toBe(0);
+
+      await setIncomingRotation(state.dbManager, 90);
+      await expect(getIncomingRotation(state.dbManager)).resolves.toBe(90);
+
+      await setIncomingRotation(state.dbManager, 0);
+      await expect(getIncomingRotation(state.dbManager)).resolves.toBe(0);
+    });
+
+    test('only takes quarter turns', async () => {
+      await expect(setIncomingRotation(state.dbManager, 45)).rejects.toThrow(/Invalid/);
+    });
+
+    test('is loaded when the watcher starts, and the window is told', async () => {
+      await setIncomingRotation(state.dbManager, 270);
+
+      await startIngestWatcher({ state, logger, getMainWindow });
+
+      expect(state.incomingRotation).toBe(270);
+      expect(mainWindow.webContents.send).toHaveBeenCalledWith('incoming-rotation-changed', 270);
+    });
+
+    test('turns a photo that reaches the ingest folder, without touching its image', async () => {
+      await startIngestWatcher({ state, logger, getMainWindow });
+      state.incomingRotation = 90;
+      const original = await jpeg();
+
+      const name = await drop('camara.jpg', original);
+
+      const turned = fs.readFileSync(imported(name));
+      expect(readOrientation(turned)).toBe(6);
+      expect((await sharp(turned).metadata()).orientation).toBe(6);
+    });
+
+    test('applies a change from the menu to the very next photo', async () => {
+      await startIngestWatcher({ state, logger, getMainWindow });
+      state.incomingRotation = 270;
+
+      const name = await drop('camara.jpg', await jpeg());
+
+      expect(readOrientation(fs.readFileSync(imported(name)))).toBe(8);
+    });
+
+    test('leaves the photos alone when it is off', async () => {
+      await startIngestWatcher({ state, logger, getMainWindow });
+      const original = await jpeg();
+
+      const name = await drop('camara.jpg', original);
+
+      expect(fs.readFileSync(imported(name)).equals(original)).toBe(true);
+    });
+
+    test('leaves the webcam captures alone, which come already turned', async () => {
+      await startIngestWatcher({ state, logger, getMainWindow });
+      state.incomingRotation = 90;
+      const file = path.join(ingest(), '20260915120000.jpg');
+      markWebcamCapture(state, file);
+
+      const name = await drop('20260915120000.jpg', await jpeg());
+
+      expect(readOrientation(fs.readFileSync(imported(name)))).toBe(1);
+      expect(state.webcamCaptures.size).toBe(0);
+    });
+
+    test('still imports a photo it cannot turn', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      await startIngestWatcher({ state, logger, getMainWindow });
+      state.incomingRotation = 90;
+
+      const name = await drop('rota.jpg', 'no es un JPEG');
+
+      expect(fs.readFileSync(imported(name), 'utf8')).toBe('no es un JPEG');
+      console.error.mockRestore();
     });
   });
 

@@ -97,4 +97,67 @@ describe('imageUrl', () => {
       expect(imageUrl.GRID_SIZE).toBeGreaterThanOrEqual(300);
     });
   });
+
+  describe('versions of turned photos', () => {
+    // A photo turned keeps its name: its URLs must change so the views load it again
+    let n = 0;
+    const photo = () => `D:/Proyecto/imports/2026091512000${++n}.jpg`;
+
+    test('a photo nobody turned has no version', () => {
+      expect(paramOf(imageUrl.thumbnail(photo(), 128), 'v')).toBeNull();
+    });
+
+    test('after being turned its URLs carry a version, thumbnails and original alike', () => {
+      const file = photo();
+      const version = imageUrl.bumpVersion(file);
+
+      expect(paramOf(imageUrl.thumbnail(file, 128), 'v')).toBe(String(version));
+      expect(paramOf(imageUrl.original(file), 'v')).toBe(String(version));
+    });
+
+    test('a second turn gives a new version', () => {
+      const file = photo();
+      const now = jest.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(2000);
+      const first = imageUrl.bumpVersion(file);
+      const second = imageUrl.bumpVersion(file);
+      now.mockRestore();
+
+      expect(second).not.toBe(first);
+      expect(paramOf(imageUrl.original(file), 'v')).toBe(String(second));
+    });
+
+    test('matches the path whatever its case or slashes', () => {
+      const version = imageUrl.bumpVersion(['D:', 'Proyecto', 'imports', 'MAYUSCULAS.JPG'].join(String.fromCharCode(92)));
+      expect(paramOf(imageUrl.original('d:/proyecto/imports/mayusculas.jpg'), 'v')).toBe(String(version));
+    });
+
+    test('an explicit version wins, as the repository ones', () => {
+      const file = photo();
+      imageUrl.bumpVersion(file);
+      expect(paramOf(imageUrl.thumbnail(file, 128, 7), 'v')).toBe('7');
+    });
+
+    test('survives a reload of the page', () => {
+      const file = photo();
+      const version = imageUrl.bumpVersion(file);
+
+      jest.isolateModules(() => {
+        const reloaded = require('../../../src/renderer/utils/imageUrl').imageUrl;
+        expect(paramOf(reloaded.original(file), 'v')).toBe(String(version));
+      });
+    });
+
+    test('picks up a photo turned in another window', () => {
+      const file = photo();
+      imageUrl.original(file); // reads what is stored now
+      const key = 'edu-user-capture:image-versions';
+      const stored = JSON.parse(localStorage.getItem(key) || '{}');
+      stored[file.split(String.fromCharCode(92)).join('/').toLowerCase()] = 123;
+      localStorage.setItem(key, JSON.stringify(stored));
+
+      window.dispatchEvent(new StorageEvent('storage', { key }));
+
+      expect(paramOf(imageUrl.original(file), 'v')).toBe('123');
+    });
+  });
 });

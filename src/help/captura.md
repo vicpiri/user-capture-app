@@ -104,6 +104,33 @@ Si al abrir el proyecto la carpeta de entrada no está disponible (un disco desc
 
 Cuando la carpeta vuelva a estar disponible, cierra el proyecto con **Archivo > Cerrar Proyecto** y vuelve a abrirlo.
 
+## Fotos que llegan giradas
+
+Las cámaras suelen anotar en cada foto cómo estaban colocadas, y la aplicación usa esa anotación para mostrarla derecha. Algunas cámaras no la anotan, o anotan siempre «normal»: sus fotos verticales llegan tumbadas, y como la cámara hace lo mismo con todas, **todas las fotos de esa sesión llegan giradas igual**.
+
+### Girar todas las fotos de una sesión
+
+1. Elige **Proyecto > Girar las fotos entrantes** y el giro que necesitan: **90° a la derecha**, **180°** o **90° a la izquierda**.
+2. Desde ese momento, cada foto que llega a la carpeta de entrada se gira sola al pasar a `imports`. Las que ya estaban no cambian; si alguna llegó antes de activarlo, gírala a mano (ver más abajo).
+3. Mientras está activo, encima del visor aparece el aviso amarillo **Fotos entrantes giradas…**, para que no se quede puesto por olvido.
+4. Al terminar la sesión, vuelve a **Proyecto > Girar las fotos entrantes > No girarlas**.
+
+- Se guarda en el proyecto: sigue activo aunque cierres y vuelvas a abrir la aplicación, hasta que lo desactives. Cada proyecto tiene el suyo.
+- Se aplica a las fotos de la cámara externa o de otros programas que las dejan en la carpeta de entrada, y a las que arrastras a la ventana, que también pasan por ella.
+- No se aplica a las fotos de la webcam de la aplicación, que se giran con su propio botón (ver [Hacer fotos con la webcam](captura.md#hacer-fotos-con-la-webcam)), ni a las de **Importar imágenes con ID**, que no pasan por la carpeta de entrada.
+
+### Girar una foto ya importada
+
+Encima del visor, arriba a la derecha, hay dos botones: **Girar la foto 90° a la izquierda** y **Girar la foto 90° a la derecha**. Giran la foto que se está viendo; púlsalos las veces que haga falta.
+
+La foto se ve girada al momento en el visor, en el historial de capturas, en la lista, en la vista de miniaturas y en el cuadro de imágenes capturadas.
+
+> **Consejo:** si la foto ya se exportó al depósito antes de girarla, vuelve a exportarla para que el depósito tenga la versión derecha.
+
+### Qué se cambia en la foto
+
+La foto no se vuelve a comprimir: solo se cambia la anotación de cómo va girada, así que no pierde calidad. La aplicación la respeta en todas partes, y las exportaciones, la copia al depósito y las orlas sacan la foto ya derecha, de modo que los programas que las reciban no necesitan entender esa anotación.
+
 ## Arrastrar fotos a la ventana
 
 1. Con el proyecto abierto, selecciona una o varias fotos JPG en el Explorador de archivos.

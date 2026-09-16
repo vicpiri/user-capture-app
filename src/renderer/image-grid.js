@@ -34,6 +34,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     displayGrid();
   });
 
+  // A photo was turned: its thumbnail loads again with the new version
+  window.electronAPI.onCapturedImageRotated(({ imagePath }) => {
+    imageUrl.bumpVersion(imagePath);
+    displayGrid();
+  });
+
   // A photo was linked, unlinked or restored in the main window
   window.electronAPI.onCapturedImagesChanged(async () => {
     await loadUsers();

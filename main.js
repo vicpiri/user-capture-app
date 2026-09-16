@@ -15,7 +15,8 @@ const DatabaseManager = require('./src/main/database');
 const {
   startIngestWatcher,
   configureIngestFolder,
-  getActiveIngestPath
+  getActiveIngestPath,
+  setIncomingRotation
 } = require('./src/main/ingestFolder');
 const ImageManager = require('./src/main/imageManager');
 const RepositoryMirror = require('./src/main/repositoryMirror');
@@ -156,6 +157,10 @@ const sharedState = {
   set availableCameras(value) { availableCameras = value; },
   get selectedCameraId() { return selectedCameraId; },
   set selectedCameraId(value) { selectedCameraId = value; },
+  // Proyecto > Girar las fotos entrantes, loaded with the project
+  incomingRotation: 0,
+  // Webcam captures waiting to reach imports, kept off the automatic rotation
+  webcamCaptures: new Set(),
   invalidateRepositoryCache: () => repositoryCacheManager.invalidateCache()
 };
 
@@ -350,6 +355,7 @@ function createMenu() {
     showCaptureHistory,
     showThumbnailGrid,
     recentProjects,
+    incomingRotation: projectPath ? sharedState.incomingRotation : null,
     workspaces: workspaceStore.visible(),
     activeWorkspaceId: workspaceStore.matching(getCurrentView()),
 
@@ -366,6 +372,21 @@ function createMenu() {
         return await setImageRepositoryPath(dbManager, path);
       },
       reinitializeRepositoryMirror,
+      setIncomingRotation: async (degrees) => {
+        if (!dbManager) {
+          warnNoProject();
+          return;
+        }
+        try {
+          await setIncomingRotation(dbManager, degrees);
+          sharedState.incomingRotation = degrees;
+          logger.info(`[Menu] Photos reaching the ingest folder turned ${degrees}°`);
+          mainWindowManager.getWindow()?.webContents.send('incoming-rotation-changed', degrees);
+        } catch (error) {
+          logger.error('Error saving incoming rotation', error);
+        }
+        createMenu();
+      },
       configureIngestFolder: async () => {
         try {
           const result = await configureIngestFolder(getIngestContext());
@@ -775,6 +796,8 @@ async function closeCurrentProject() {
     await folderWatcher.stop();
     folderWatcher = null;
   }
+  sharedState.incomingRotation = 0;
+  sharedState.webcamCaptures.clear();
 
   if (repositoryMirror) {
     await repositoryMirror.stopWatch();

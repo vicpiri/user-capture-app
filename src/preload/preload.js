@@ -266,6 +266,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Version
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+  // Turning captured photos (Proyecto > Girar las fotos entrantes, and the
+  // viewer's buttons)
+  rotateCapturedImage: (imagePath, degrees) => ipcRenderer.invoke('rotate-captured-image', imagePath, degrees),
+  getIncomingRotation: () => ipcRenderer.invoke('get-incoming-rotation'),
+  onIncomingRotationChanged: (callback) => {
+    ipcRenderer.on('incoming-rotation-changed', (event, degrees) => callback(degrees));
+  },
+  onCapturedImageRotated: (callback) => {
+    ipcRenderer.on('captured-image-rotated', (event, data) => callback(data));
+  },
+
   // Ver > Vista de miniaturas
   onMenuToggleThumbnailGrid: (callback) => {
     ipcRenderer.on('menu-toggle-thumbnail-grid', (event, enabled) => callback(enabled));

@@ -16,10 +16,20 @@ const IGNORE_RE = [
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 class FolderWatcher extends EventEmitter {
-  constructor(ingestPath, importsPath) {
+  /**
+   * @param {string} ingestPath
+   * @param {string} importsPath
+   * @param {Object} [options]
+   * @param {Function} [options.processImport] - (destination, source) =>
+   *   Promise, run on every photo once it is in imports and before it is
+   *   announced; the project's automatic rotation goes here. A failure is only
+   *   logged: the photo stays imported as it came.
+   */
+  constructor(ingestPath, importsPath, options = {}) {
     super();
     this.ingestPath = ingestPath;
     this.importsPath = importsPath;
+    this.processImport = options.processImport || null;
     this.watcher = null;
     this.isProcessing = new Set();
     this.pendingTimers = new Set();
@@ -133,6 +143,14 @@ class FolderWatcher extends EventEmitter {
       this.moveFile(filePath, finalDestination);
 
       console.log('Image moved to imports:', path.basename(finalDestination));
+
+      if (this.processImport) {
+        try {
+          await this.processImport(finalDestination, filePath);
+        } catch (error) {
+          console.error('Could not process the imported image:', finalDestination, error);
+        }
+      }
 
       // Emit event
       this.emit('image-added', path.basename(finalDestination));

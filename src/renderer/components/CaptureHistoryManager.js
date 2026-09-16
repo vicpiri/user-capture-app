@@ -191,6 +191,34 @@
     }
 
     /**
+     * Load a photo's thumbnail again, after it was turned
+     *
+     * render() reuses the thumbnail it already has for a path, and a photo
+     * that is turned keeps its own, so the strip would go on showing the
+     * picture from before.
+     *
+     * @param {string} imagePath
+     */
+    refreshThumbnail(imagePath) {
+      if (!imageUrlUtil) return;
+      const key = String(imagePath).toLowerCase();
+      const found = Array.from(this.itemsByPath.entries())
+        .find(([candidate]) => String(candidate).toLowerCase() === key);
+      if (!found) return;
+
+      const img = found[1].querySelector('img');
+      if (!img) return;
+
+      const src = imageUrlUtil.thumbnail(found[0], this.thumbnailSize);
+      img.dataset.src = src;
+      // Only if it is already on screen; the rest load when they scroll in
+      if (img.src) {
+        img.classList.remove('loaded');
+        img.src = src;
+      }
+    }
+
+    /**
      * Build a thumbnail, with its image left unloaded
      * @param {string} imagePath
      * @returns {HTMLElement}
