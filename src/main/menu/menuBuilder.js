@@ -57,6 +57,9 @@ class MenuBuilder {
 
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
+    // On Windows that puts the menu on every window, including those meant
+    // to have none
+    this.callbacks?.onApplicationMenuSet?.();
   }
 
   /**
@@ -532,6 +535,13 @@ class MenuBuilder {
           accelerator: 'CmdOrCtrl+Shift+G',
           click: () => {
             this.callbacks.openRepositoryGridWindow();
+          }
+        },
+        {
+          label: 'Visor en ventana aparte',
+          accelerator: 'CmdOrCtrl+Shift+F',
+          click: () => {
+            this.callbacks.openViewerMirrorWindow();
           }
         },
         {

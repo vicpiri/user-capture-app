@@ -362,6 +362,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('help-navigate', (event, target) => callback(target));
   },
 
+  // Ver > Visor en ventana aparte. The main window reports what its viewer
+  // shows; the mirror window receives it
+  setViewerImage: (image) => ipcRenderer.send('viewer-image-changed', image),
+  getViewerMirrorImage: () => ipcRenderer.invoke('get-viewer-mirror-image'),
+  onViewerMirrorImage: (callback) => {
+    ipcRenderer.on('viewer-mirror-image', (event, image) => callback(image));
+  },
+  setViewerMirrorFullScreen: (mode) => ipcRenderer.send('viewer-mirror-set-fullscreen', mode),
+
   // Ingest folder
   onIngestFolderChanged: (callback) => {
     ipcRenderer.on('ingest-folder-changed', callback);

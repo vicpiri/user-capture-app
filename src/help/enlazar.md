@@ -14,6 +14,16 @@ El panel de la derecha muestra en grande las fotos capturadas del proyecto, es d
 
 El visor muestra todas las fotos de `imports`, estén enlazadas o no: enlazar una foto no la quita del visor.
 
+### Ver el visor en otro monitor
+
+**Ver > Visor en ventana aparte** (`Ctrl+Shift+F`) abre una ventana que muestra siempre la misma foto que el visor de la ventana principal. Arrástrala a otro monitor, por ejemplo uno orientado hacia la persona fotografiada, para que vea su foto mientras trabajas.
+
+- Cambia sola cuando pasas de una foto a otra, cuando llega una foto nueva o cuando giras la que se ve. No tiene botones: todo se hace desde la ventana principal.
+- Haz doble clic en ella o pulsa `F11` para verla a pantalla completa en su monitor; `Esc` o `F11` la devuelven a su tamaño.
+- Al cerrarla recuerda dónde estaba, y la siguiente vez se abre en el mismo monitor, también a pantalla completa si lo estaba. Si ese monitor ya no está conectado, se abre en el principal.
+- No necesita un proyecto abierto. Si el visor no muestra ninguna foto, la ventana dice «No hay ninguna foto en el visor».
+- Se cierra sola al cerrar la aplicación.
+
 <!-- REVISAR: el visor no tiene contador de fotos (CLAUDE.md lo menciona en ImageGridManager, "contador, botones"); no se documenta. -->
 
 ## Enlazar una foto a un usuario

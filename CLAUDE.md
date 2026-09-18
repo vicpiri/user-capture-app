@@ -37,7 +37,8 @@ user-capture-app/
 │   │   │   ├── helpWindow.js           # Ventana del manual de uso
 │   │   │   ├── imageGridWindow.js      # Grid de imágenes capturadas
 │   │   │   ├── mainWindow.js           # Ventana principal
-│   │   │   └── repositoryGridWindow.js # Grid de imágenes del repositorio
+│   │   │   ├── repositoryGridWindow.js # Grid de imágenes del repositorio
+│   │   │   └── viewerMirrorWindow.js   # Ver > Visor en ventana aparte (otro monitor)
 │   │   ├── appDialogs.js        # Avisos y preguntas del proceso principal, con los modales propios
 │   │   ├── database.js          # Gestión de base de datos SQLite
 │   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
@@ -104,7 +105,9 @@ user-capture-app/
 │   │   ├── repository-grid.html # HTML del grid del repositorio
 │   │   ├── repository-grid.js   # Lógica del grid del repositorio
 │   │   ├── help.html            # HTML de la ventana del manual
-│   │   └── help.js              # Arranque de la ventana del manual
+│   │   ├── help.js              # Arranque de la ventana del manual
+│   │   ├── viewer-mirror.html   # Ventana que repite el visor
+│   │   └── viewer-mirror.js     # Recibe la foto del visor y la pinta
 │   └── shared/        # Código compartido (tipos, constantes, utilidades)
 ├── native/
 │   └── receipt-printer/ # Auxiliar en C# que imprime los recibos con el motor de texto de Windows
@@ -226,6 +229,26 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
 - **printedCardsWindow.js**: Últimos carnets impresos
 - **helpWindow.js**: Manual de uso. Si ya está abierta, `open({ target })` solo
   la lleva a la página pedida
+- **viewerMirrorWindow.js**: Ver > Visor en ventana aparte (`Ctrl+Shift+F`), la
+  misma foto que el visor principal, para llevarla a otro monitor. No necesita
+  proyecto
+  - El renderer principal manda `viewer-image-changed` con `{ path, url }` en
+    `publishViewerImage()` (cambio de foto, lista vacía, giro y arranque); el
+    gestor guarda la última y la reenvía como `viewer-mirror-image`, y una
+    ventana recién abierta la pide con `get-viewer-mirror-image`. **La URL va
+    ya construida** con la versión de una foto girada, para no depender de que
+    `localStorage` haya llegado a la otra ventana
+  - Doble clic o `F11` alternan pantalla completa (`viewer-mirror-set-fullscreen`
+    desde el proceso principal), `Esc` sale
+  - Recuerda posición y pantalla completa en `config.json` bajo `viewerMirror`,
+    solo si cae en un monitor conectado (`isOnScreen()`). Se guarda el área de
+    contenido y la ventana va sin menú (`removeMenu()`): con escalado
+    fraccionario (225 %) los límites de la ventana, o ocultar el menú después
+    de colocarla, la hacían crecer unos píxeles en cada apertura
+  - `Menu.setApplicationMenu()` vuelve a poner el menú en todas las ventanas en
+    Windows, así que `MenuBuilder.build()` avisa con `onApplicationMenuSet` y
+    `main.js` se lo vuelve a quitar (`viewerMirrorWindowManager.removeMenu()`);
+    sin eso la barra reaparecía al maximizar y restaurar
 
 #### Cómo añadir una ventana nueva
 

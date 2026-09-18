@@ -44,6 +44,7 @@ El resto de exportaciones no tienen atajo. Consulta [Exportaciones](exportacione
 |---|---|---|
 | `Ctrl+G` | Abrir el cuadro de imágenes capturadas | **Ver > Cuadro de imágenes capturadas** |
 | `Ctrl+Shift+G` | Abrir el cuadro de imágenes del depósito | **Ver > Cuadro de imágenes en depósito** |
+| `Ctrl+Shift+F` | Abrir la ventana que repite el visor, para llevarla a otro monitor | **Ver > Visor en ventana aparte** |
 | `Ctrl+Shift+T` | Ver el listado de imágenes con etiquetas | **Ver > Listado de imágenes con etiquetas** |
 | `Ctrl+Shift+D` | Volver a leer las imágenes del depósito | **Ver > Actualizar imágenes del depósito** |
 | `Ctrl+M` | Cambiar entre la tabla de usuarios y la vista de miniaturas | **Ver > Vista de miniaturas** |

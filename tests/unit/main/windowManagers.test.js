@@ -22,6 +22,7 @@ jest.mock('electron', () => ({
       show: jest.fn(),
       focus: jest.fn(),
       setMenuBarVisibility: jest.fn(),
+      removeMenu: jest.fn(),
       isDestroyed: jest.fn(function () {
         return this.destroyed;
       }),
@@ -35,7 +36,7 @@ jest.mock('electron', () => ({
       on: jest.fn((event, cb) => {
         (listeners[event] = listeners[event] || []).push(cb);
       }),
-      webContents: { openDevTools: jest.fn() }
+      webContents: { openDevTools: jest.fn(), send: jest.fn() }
     };
     mockWindows.push(win);
     return win;
@@ -49,12 +50,14 @@ const CameraWindowManager = require('../../../src/main/window/cameraWindow');
 const ImageGridWindowManager = require('../../../src/main/window/imageGridWindow');
 const RepositoryGridWindowManager = require('../../../src/main/window/repositoryGridWindow');
 const PrintedCardsWindowManager = require('../../../src/main/window/printedCardsWindow');
+const ViewerMirrorWindowManager = require('../../../src/main/window/viewerMirrorWindow');
 
 const MANAGERS = [
   ['CameraWindowManager', CameraWindowManager],
   ['ImageGridWindowManager', ImageGridWindowManager],
   ['RepositoryGridWindowManager', RepositoryGridWindowManager],
-  ['PrintedCardsWindowManager', PrintedCardsWindowManager]
+  ['PrintedCardsWindowManager', PrintedCardsWindowManager],
+  ['ViewerMirrorWindowManager', ViewerMirrorWindowManager]
 ];
 
 describe('window managers', () => {
@@ -181,6 +184,83 @@ describe('window managers', () => {
 
       expect(mockWindows).toHaveLength(2);
       expect(manager.getWindow()).toBe(mockWindows[1]);
+    });
+  });
+
+  describe('ViewerMirrorWindowManager', () => {
+    const IMAGE = { path: 'C:/p/imports/20260918101010.jpg', url: 'app-img://image?path=x' };
+
+    test('should keep the viewer photo before the window exists', () => {
+      const manager = new ViewerMirrorWindowManager();
+      manager.setImage(IMAGE);
+
+      expect(manager.getImage()).toEqual(IMAGE);
+    });
+
+    test('should pass each change of photo to the open window', () => {
+      const manager = new ViewerMirrorWindowManager();
+      manager.open();
+      manager.setImage(IMAGE);
+      manager.setImage(null);
+
+      const { send } = manager.getWindow().webContents;
+      expect(send).toHaveBeenNthCalledWith(1, 'viewer-mirror-image', IMAGE);
+      expect(send).toHaveBeenNthCalledWith(2, 'viewer-mirror-image', null);
+      expect(manager.getImage()).toBeNull();
+    });
+
+    test('should take the menu off again, as rebuilding the app menu puts it back', () => {
+      const manager = new ViewerMirrorWindowManager();
+      expect(() => manager.removeMenu()).not.toThrow();
+
+      manager.open();
+      const win = manager.getWindow();
+      win.removeMenu.mockClear();
+      manager.removeMenu();
+      expect(win.removeMenu).toHaveBeenCalledTimes(1);
+
+      win.destroyed = true;
+      manager.removeMenu();
+      expect(win.removeMenu).toHaveBeenCalledTimes(1);
+    });
+
+    test('should treat an image without path or URL as none', () => {
+      const manager = new ViewerMirrorWindowManager();
+      manager.setImage({ path: IMAGE.path });
+
+      expect(manager.getImage()).toBeNull();
+    });
+
+    test('should not send to a destroyed window', () => {
+      const manager = new ViewerMirrorWindowManager();
+      manager.open();
+      const win = manager.getWindow();
+      win.destroyed = true;
+
+      expect(() => manager.setImage(IMAGE)).not.toThrow();
+      expect(win.webContents.send).not.toHaveBeenCalled();
+    });
+
+    describe('isOnScreen()', () => {
+      const primary = { workArea: { x: 0, y: 0, width: 1920, height: 1040 } };
+      const second = { workArea: { x: 1920, y: 0, width: 1920, height: 1040 } };
+
+      test('should accept bounds on the second monitor while it is connected', () => {
+        const bounds = { x: 2000, y: 100, width: 900, height: 700 };
+
+        expect(ViewerMirrorWindowManager.isOnScreen(bounds, [primary, second])).toBe(true);
+        expect(ViewerMirrorWindowManager.isOnScreen(bounds, [primary])).toBe(false);
+      });
+
+      test('should reject a window whose title bar is out of reach', () => {
+        expect(ViewerMirrorWindowManager.isOnScreen({ x: 100, y: -300, width: 900, height: 700 }, [primary])).toBe(false);
+        expect(ViewerMirrorWindowManager.isOnScreen({ x: 1880, y: 100, width: 900, height: 700 }, [primary])).toBe(false);
+      });
+
+      test('should reject missing or malformed bounds', () => {
+        expect(ViewerMirrorWindowManager.isOnScreen(null, [primary])).toBe(false);
+        expect(ViewerMirrorWindowManager.isOnScreen({ x: 1, y: 1 }, [primary])).toBe(false);
+      });
     });
   });
 });

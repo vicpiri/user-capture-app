@@ -125,6 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize image grid manager
   initializeImageGridManager();
+  // After a reload the viewer starts empty, whatever the mirror was showing
+  publishViewerImage();
 
   // Initialize capture history strip
   initializeCaptureHistoryManager();
@@ -479,6 +481,7 @@ function applyImageRotation(imagePath) {
 
   if (imageGridManager) {
     imageGridManager.refreshCurrentImage();
+    publishViewerImage();
   }
   if (captureHistoryManager) {
     captureHistoryManager.refreshThumbnail(imagePath);
@@ -498,6 +501,18 @@ function updateIncomingRotationBadge() {
   badge.title = 'Las fotos que lleguen a la carpeta de entrada se giran solas. Se cambia en Proyecto > Girar las fotos entrantes.';
 }
 
+/**
+ * Tell Ver > Visor en ventana aparte what the viewer shows. The URL goes
+ * built, with the version a turned photo carries, so the other window loads
+ * exactly what this one does
+ */
+function publishViewerImage() {
+  const imagePath = imageGridManager && imageGridManager.isPreviewActive()
+    ? imageGridManager.getCurrentImagePath()
+    : null;
+  window.electronAPI.setViewerImage(imagePath ? { path: imagePath, url: imageUrl.original(imagePath) } : null);
+}
+
 // Initialize image grid manager
 function initializeImageGridManager() {
   imageGridManager = new ImageGridManager({
@@ -505,6 +520,7 @@ function initializeImageGridManager() {
     currentImage: currentImage,
     getImages: () => window.electronAPI.getImages(),
     onImageChange: async (imagePath) => {
+      publishViewerImage();
       // Load and display tags for current image
       await loadImageTags();
       // Update link button state
@@ -515,6 +531,10 @@ function initializeImageGridManager() {
       }
     },
     onImagesLoaded: (images, currentIndex) => {
+      // An emptied list reports no image change, and the viewer is left blank
+      if (images.length === 0) {
+        publishViewerImage();
+      }
       if (captureHistoryManager) {
         captureHistoryManager.render(images, currentIndex);
       }

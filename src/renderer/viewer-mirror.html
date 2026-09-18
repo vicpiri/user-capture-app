@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: app-img:;">
+  <title>Visor</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background-color: #000000;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .viewer {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Chromium turns the photo by its EXIF orientation, as in the main viewer */
+    #mirror-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .empty {
+      color: #8a8f9a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 18px;
+      text-align: center;
+      padding: 0 24px;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="viewer" title="Doble clic o F11: pantalla completa">
+    <img id="mirror-image" alt="" hidden>
+    <div id="mirror-empty" class="empty">No hay ninguna foto en el visor</div>
+  </div>
+
+  <script src="viewer-mirror.js"></script>
+</body>
+</html>

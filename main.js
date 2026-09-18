@@ -27,6 +27,7 @@ const ImageGridWindowManager = require('./src/main/window/imageGridWindow');
 const RepositoryGridWindowManager = require('./src/main/window/repositoryGridWindow');
 const PrintedCardsWindowManager = require('./src/main/window/printedCardsWindow');
 const HelpWindowManager = require('./src/main/window/helpWindow');
+const ViewerMirrorWindowManager = require('./src/main/window/viewerMirrorWindow');
 const { getLogger } = require('./src/main/logger');
 const {
   loadGlobalConfig,
@@ -90,6 +91,7 @@ const imageGridWindowManager = new ImageGridWindowManager();
 const repositoryGridWindowManager = new RepositoryGridWindowManager();
 const printedCardsWindowManager = new PrintedCardsWindowManager();
 const helpWindowManager = new HelpWindowManager();
+const viewerMirrorWindowManager = new ViewerMirrorWindowManager();
 
 // Every window other than the main one. Register new secondary windows here:
 // closing the main window closes everything in this list, and any window left
@@ -100,7 +102,8 @@ const secondaryWindowManagers = [
   imageGridWindowManager,
   repositoryGridWindowManager,
   printedCardsWindowManager,
-  helpWindowManager
+  helpWindowManager,
+  viewerMirrorWindowManager
 ];
 
 let dbManager;
@@ -559,6 +562,9 @@ function createMenu() {
       openRepositoryGridWindow,
       openPrintedCardsWindow,
       openHelpWindow,
+      openViewerMirrorWindow,
+      // Setting the application menu puts it back on the viewer mirror too
+      onApplicationMenuSet: () => viewerMirrorWindowManager.removeMenu(),
       openPOC: () => {
         const { shell } = require('electron');
         const pocPath = path.join(__dirname, 'src', 'renderer', '_poc', 'poc-test.html');
@@ -726,6 +732,27 @@ function openPrintedCardsWindow() {
 
   const isDev = process.argv.includes('--dev');
   printedCardsWindowManager.open({ isDev });
+}
+
+// Ver > Visor en ventana aparte. Needs no project: without one it says the
+// viewer is empty. It opens where it was last left, if that display is still
+// connected, so it goes back to the second monitor by itself
+function openViewerMirrorWindow() {
+  const { screen } = require('electron');
+  const isDev = process.argv.includes('--dev');
+  const saved = loadGlobalConfig().viewerMirror || {};
+  const onScreen = ViewerMirrorWindowManager.isOnScreen(saved.bounds, screen.getAllDisplays());
+
+  viewerMirrorWindowManager.open({
+    isDev,
+    bounds: onScreen ? saved.bounds : null,
+    fullScreen: onScreen && saved.fullScreen === true,
+    onPlacementChange: (placement) => {
+      const config = loadGlobalConfig();
+      config.viewerMirror = placement;
+      saveGlobalConfig(config);
+    }
+  });
 }
 
 function openImageGridWindow() {
@@ -1166,6 +1193,17 @@ function registerIPCHandlers() {
   registerHelpHandlers(context);
   registerAppDialogHandlers();
   registerWorkspaceHandlers(context);
+
+  // Ver > Visor en ventana aparte
+  ipcMain.on('viewer-image-changed', (event, image) => {
+    viewerMirrorWindowManager.setImage(image);
+  });
+  ipcMain.handle('get-viewer-mirror-image', () => viewerMirrorWindowManager.getImage());
+  ipcMain.on('viewer-mirror-set-fullscreen', (event, mode) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return;
+    win.setFullScreen(mode === 'toggle' ? !win.isFullScreen() : Boolean(mode));
+  });
 
   // Capturadas | Depósito above the thumbnails
   ipcMain.handle('set-thumbnail-grid-source', async (event, source) => {
