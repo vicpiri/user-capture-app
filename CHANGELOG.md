@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.13.0](https://github.com/vicpiri/user-capture-app/compare/v1.12.0...v1.13.0) (2026-09-18)
+
+### Features
+
+* mirror the photo viewer in a separate window ([ced65db](https://github.com/vicpiri/user-capture-app/commit/ced65db30b8862701fd5c8becee1368461a9b178))
 ## [1.12.0](https://github.com/vicpiri/user-capture-app/compare/v1.11.0...v1.12.0) (2026-09-16)
 
 ### Features
