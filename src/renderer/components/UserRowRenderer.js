@@ -40,6 +40,9 @@ class UserRowRenderer {
       selectedUsers: config.selectedUsers ?? new Set(),
       cardPrintRequests: config.cardPrintRequests ?? new Set(),
       publicationRequests: config.publicationRequests ?? new Set(),
+      // Requests made before the project's course started
+      cardPrintPreviousCourse: config.cardPrintPreviousCourse ?? new Set(),
+      publicationPreviousCourse: config.publicationPreviousCourse ?? new Set(),
       repositoryVersion: config.repositoryVersion ?? 0
     };
 
@@ -202,7 +205,10 @@ class UserRowRenderer {
 
     // Check if this user has a pending card print request
     if (this.config.cardPrintRequests.has(userId)) {
-      return `<svg class="card-print-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Carnet solicitado">
+      const previous = this.config.cardPrintPreviousCourse.has(userId);
+      const title = previous ? 'Carnet solicitado el curso anterior' : 'Carnet solicitado';
+      return `<svg class="card-print-indicator${previous ? ' previous-course' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <title>${title}</title>
         <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
         <line x1="1" y1="10" x2="23" y2="10"></line>
       </svg>`;
@@ -225,7 +231,10 @@ class UserRowRenderer {
 
     // Check if this user has a pending publication request
     if (this.config.publicationRequests.has(userId)) {
-      return `<svg class="publication-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Publicación solicitada">
+      const previous = this.config.publicationPreviousCourse.has(userId);
+      const title = previous ? 'Publicación solicitada el curso anterior' : 'Publicación solicitada';
+      return `<svg class="publication-indicator${previous ? ' previous-course' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <title>${title}</title>
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="17 8 12 3 7 8"></polyline>
         <line x1="12" y1="3" x2="12" y2="15"></line>

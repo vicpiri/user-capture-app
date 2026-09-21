@@ -422,6 +422,75 @@ describe('ProjectManager', () => {
       expect(confirmMessage).toContain('1 usuario(s) sin imagen serán eliminados permanentemente');
     });
 
+    describe('an XML from another course', () => {
+      const confirmMessageFor = async (academicYear) => {
+        mockConfig.getProjectOpen.mockReturnValue(true);
+        mockElectronAPI.showOpenDialog.mockResolvedValue({
+          canceled: false,
+          filePaths: ['/path/to/new.xml']
+        });
+        mockElectronAPI.updateXML.mockResolvedValue({
+          success: true,
+          changes: { toAdd: 0, toUpdate: 3, toDelete: 0, toDeleteWithImage: 0, toDeleteWithoutImage: 0 },
+          groups: [],
+          newUsersMap: {},
+          deletedUsers: [],
+          currentUsers: [],
+          academicYear
+        });
+        mockConfig.onShowConfirmModal.mockResolvedValue(false);
+
+        const promise = manager.handleUpdateXML();
+        await jest.runAllTimersAsync();
+        await promise;
+
+        return mockConfig.onShowConfirmModal.mock.calls[0][0];
+      };
+
+      test('should warn that the project is for a different course', async () => {
+        const message = await confirmMessageFor({ current: 2025, incoming: 2026 });
+
+        expect(message).toContain('Este XML es del curso 2026-2027 y el proyecto es del curso 2025-2026');
+        expect(message).toContain('crear un proyecto nuevo');
+      });
+
+      test('should not warn when the course is the same', async () => {
+        const message = await confirmMessageFor({ current: 2026, incoming: 2026 });
+
+        expect(message).not.toContain('curso');
+      });
+
+      test('should not warn when the project never recorded its course', async () => {
+        const message = await confirmMessageFor({ current: null, incoming: 2026 });
+
+        expect(message).not.toContain('curso');
+      });
+
+      test('should hand the XML course over when applying', async () => {
+        mockConfig.getProjectOpen.mockReturnValue(true);
+        mockElectronAPI.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/path/to/new.xml'] });
+        mockElectronAPI.updateXML.mockResolvedValue({
+          success: true,
+          changes: { toAdd: 0, toUpdate: 0, toDelete: 0, toDeleteWithImage: 0, toDeleteWithoutImage: 0 },
+          groups: [],
+          newUsersMap: {},
+          deletedUsers: [],
+          currentUsers: [],
+          academicYear: { current: 2025, incoming: 2026 }
+        });
+        mockConfig.onShowConfirmModal.mockResolvedValue(true);
+        mockElectronAPI.confirmUpdateXML.mockResolvedValue({ success: false, error: 'x' });
+
+        const promise = manager.handleUpdateXML();
+        await jest.runAllTimersAsync();
+        await promise;
+
+        expect(mockElectronAPI.confirmUpdateXML).toHaveBeenCalledWith(
+          expect.objectContaining({ academicYear: 2026 })
+        );
+      });
+    });
+
     test('should not apply changes if user cancels confirmation', async () => {
       mockConfig.getProjectOpen.mockReturnValue(true);
       mockElectronAPI.showOpenDialog.mockResolvedValue({
@@ -478,7 +547,7 @@ describe('ProjectManager', () => {
         'Actualizando XML',
         'Aplicando cambios...'
       );
-      expect(mockElectronAPI.confirmUpdateXML).toHaveBeenCalledWith(updateData);
+      expect(mockElectronAPI.confirmUpdateXML).toHaveBeenCalledWith({ ...updateData, academicYear: null });
       expect(mockConfig.onCloseProgressModal).toHaveBeenCalled();
     });
 

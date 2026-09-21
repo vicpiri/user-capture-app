@@ -15,12 +15,12 @@ La aplicación lleva la cuenta de qué carnets hay que imprimir y qué fotos hay
 3. Pulsa con el botón derecho sobre cualquiera de los usuarios y elige **Solicitar impresión de carnet**.
 4. Un mensaje indica cuántos archivos se han generado en la carpeta `To-Print-ID` y cuántos usuarios se han omitido por no tener imagen en el depósito.
 
-Por cada usuario, la aplicación crea en la carpeta `To-Print-ID` del depósito un archivo vacío cuyo nombre es su NIA o su DNI, sin extensión. Si la carpeta no existe, la crea. Volver a solicitar el carnet de alguien que ya lo tiene pedido no duplica nada.
+Por cada usuario, la aplicación crea en la carpeta `To-Print-ID` del depósito un archivo vacío cuyo nombre es su NIA o su DNI, sin extensión. Si la carpeta no existe, la crea. Volver a solicitar el carnet de alguien que ya lo tiene pedido no duplica nada: la solicitud pasa a tener la fecha de hoy.
 
 ## Ver los carnets pendientes
 
 - En la lista, los usuarios con carnet pendiente muestran un icono de tarjeta junto a sus demás indicadores.
-- Encima de la lista aparece un contador con el número de **carnets pendientes**. Al pulsarlo se activa o se desactiva el filtro.
+- Encima de la lista aparece un contador con el número de **carnets pendientes** de usuarios del proyecto. Al pulsarlo se activa o se desactiva el filtro.
 - **Ver > Carnets solicitados** muestra solo a los usuarios con carnet pendiente, de todos los grupos, sin tener en cuenta el filtro de grupos ni la búsqueda.
 
 Solo puede estar activo uno de estos tres filtros a la vez: **Asignaciones duplicadas**, **Carnets solicitados** y **Publicaciones solicitadas**. Al activar uno, los otros se desactivan.
@@ -56,15 +56,26 @@ Sirve para pedir que la foto de una persona se publique en el sistema oficial de
 3. Pulsa con el botón derecho sobre cualquiera de los usuarios y elige **Solicitar publicación oficial**.
 4. Un mensaje indica cuántas imágenes se han copiado en la carpeta `To-Publish` y cuántos usuarios se han omitido por no tener imagen en el depósito.
 
-Por cada usuario, la aplicación copia su foto del depósito a la carpeta `To-Publish` del depósito, con el nombre `NIA.jpg` o `DNI.jpg`. Si la carpeta no existe, la crea.
+Por cada usuario, la aplicación copia su foto del depósito a la carpeta `To-Publish` del depósito, con el nombre `NIA.jpg` o `DNI.jpg`. Si la carpeta no existe, la crea. Si ya había una solicitud, se sustituye por la foto actual con la fecha de hoy.
 
 - En la lista, los usuarios con publicación pendiente muestran un icono de flecha hacia arriba.
-- Encima de la lista aparece un contador con el número de **fotos pendientes**. Al pulsarlo se activa o se desactiva el filtro.
+- Encima de la lista aparece un contador con el número de **fotos pendientes** de usuarios del proyecto. Al pulsarlo se activa o se desactiva el filtro.
 - **Ver > Publicaciones solicitadas** muestra solo a los usuarios con publicación pendiente, de todos los grupos.
 
 > **Importante:** en `To-Publish` queda la foto tal como estaba en el depósito en el momento de la solicitud. Si después exportas una foto nueva al depósito, la copia de `To-Publish` no se actualiza: vuelve a solicitar la publicación para sustituirla.
 
 La aplicación no marca las publicaciones como hechas: la solicitud desaparece cuando alguien retira la foto de `To-Publish` fuera de la aplicación.
+
+## Solicitudes de otros proyectos y del curso anterior
+
+El depósito suele ser el mismo de un curso a otro, y sus carpetas `To-Print-ID` y `To-Publish` conservan lo que quedó pendiente. Por eso:
+
+- **Las solicitudes de personas que no están en el proyecto no se cuentan ni se muestran.** Son, por ejemplo, las de alumnado que ya no está en el centro, o las de quien se borró del proyecto al actualizar el XML. Sus archivos siguen en el depósito; la aplicación no los borra porque otro proyecto puede necesitarlos.
+- **Las solicitudes hechas antes de empezar el curso del proyecto se muestran con el icono en gris y con trazo discontinuo.** Al pasar el ratón por encima dice «Carnet solicitado el curso anterior» o «Publicación solicitada el curso anterior». Siguen pendientes y se imprimen o se publican como las demás; el aviso sirve para que decidas si todavía hacen falta.
+
+El curso del proyecto es el que indica el XML (un XML del curso 2026 es del curso 2026-2027, que empieza el 1 de septiembre de 2026). En un proyecto creado con una versión anterior, que no lo tiene guardado, se usa el curso en marcha según la fecha de hoy hasta que actualices su XML.
+
+> **Consejo:** si una solicitud del curso anterior todavía hace falta, vuelve a pedirla: pasa a tener la fecha de hoy y deja de aparecer en gris.
 
 ## Qué pasa si otra persona borra o mueve los archivos
 

@@ -42,9 +42,9 @@ describe('XML update', () => {
   let db;
   let state;
 
-  const writeXml = (body) => {
+  const writeXml = (body, attributes = '') => {
     const xmlPath = path.join(projectPath, `centro-${testId}.xml`);
-    fs.writeFileSync(xmlPath, `<centro>${body}</centro>`, 'utf8');
+    fs.writeFileSync(xmlPath, `<centro${attributes}>${body}</centro>`, 'utf8');
     return xmlPath;
   };
 
@@ -63,7 +63,8 @@ describe('XML update', () => {
       newUsersMap: analysis.newUsersMap,
       deletedUsers: analysis.deletedUsers,
       currentUsers: analysis.currentUsers,
-      xmlPath: analysis.xmlPath
+      xmlPath: analysis.xmlPath,
+      academicYear: analysis.academicYear?.incoming ?? null
     });
 
   const usersInDb = async () => {
@@ -263,6 +264,46 @@ describe('XML update', () => {
       await apply(await analyse(xmlPath));
 
       await expect(recorded()).resolves.toBe(xmlPath);
+    });
+  });
+
+  describe('the course', () => {
+    const roll = (course) => writeXml(
+      `${groupsXml}<alumnos>${studentXml(1001)}${studentXml(1002, '1ESOA', 'LUIS')}</alumnos>` +
+      `<docentes>${teacherXml('D100')}</docentes>`,
+      course ? ` curso="${course}"` : ''
+    );
+    const recorded = () => db.getProjectSetting('academicYear');
+
+    test('should report the project course and the XML one before applying', async () => {
+      await db.setProjectSetting('academicYear', '2025');
+
+      const analysis = await analyse(roll('2026'));
+
+      expect(analysis.academicYear).toEqual({ current: 2025, incoming: 2026 });
+      await expect(recorded()).resolves.toBe('2025');
+    });
+
+    test('should report no project course for a project that never recorded one', async () => {
+      const analysis = await analyse(roll('2026'));
+
+      expect(analysis.academicYear).toEqual({ current: null, incoming: 2026 });
+    });
+
+    test('should record the XML course once the changes are applied', async () => {
+      await db.setProjectSetting('academicYear', '2025');
+
+      await apply(await analyse(roll('2026')));
+
+      await expect(recorded()).resolves.toBe('2026');
+    });
+
+    test('should keep the project course when the XML does not give one', async () => {
+      await db.setProjectSetting('academicYear', '2025');
+
+      await apply(await analyse(roll(null)));
+
+      await expect(recorded()).resolves.toBe('2025');
     });
   });
 

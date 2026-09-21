@@ -9,6 +9,7 @@ const DatabaseManager = require('../database');
 const XMLParser = require('../xmlParser');
 const ImageManager = require('../imageManager');
 const { startIngestWatcher } = require('../ingestFolder');
+const { parseAcademicYear } = require('../academicYear');
 
 /**
  * Identifier as the XML update compares it
@@ -150,6 +151,11 @@ function registerProjectHandlers(context) {
       // Remembered so the project information can report where the users came
       // from; nothing else recorded it
       await state.dbManager.setProjectSetting('xmlFilePath', xmlPath);
+
+      // Card print and publication requests are dated against it
+      if (users.academicYear) {
+        await state.dbManager.setProjectSetting('academicYear', String(users.academicYear));
+      }
 
       // Progress: 60%
       getMainWindow()?.webContents.send('progress', {
@@ -553,7 +559,13 @@ function registerProjectHandlers(context) {
         deletedUsers: changes.toDelete,
         currentUsers: currentUsers, // Pass current users to avoid reloading
         // Handed back on confirmation, which is when it becomes the project's XML
-        xmlPath
+        xmlPath,
+        // An XML from another course usually means the new course's roll
+        // applied over last year's project, which a new project should get
+        academicYear: {
+          current: parseAcademicYear(await state.dbManager.getProjectSetting('academicYear')),
+          incoming: newData.academicYear
+        }
       };
     } catch (error) {
       logger.error('Error analyzing XML update', error);
@@ -568,7 +580,7 @@ function registerProjectHandlers(context) {
         throw new Error('No hay ningún proyecto abierto');
       }
 
-      const { groups, newUsersMap, deletedUsers, currentUsers, xmlPath } = data;
+      const { groups, newUsersMap, deletedUsers, currentUsers, xmlPath, academicYear } = data;
 
       logger.section('APPLYING XML UPDATE');
 
@@ -732,6 +744,12 @@ function registerProjectHandlers(context) {
       // analysis showed a file that was missing, unreadable or never applied.
       if (xmlPath) {
         await state.dbManager.setProjectSetting('xmlFilePath', xmlPath);
+      }
+
+      // The course follows the roll. An XML without one leaves it as it was.
+      const incomingYear = parseAcademicYear(academicYear);
+      if (incomingYear) {
+        await state.dbManager.setProjectSetting('academicYear', String(incomingYear));
       }
 
       // Generate updated import report

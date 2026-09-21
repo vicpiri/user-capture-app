@@ -233,7 +233,17 @@
 
       // Show confirmation dialog with summary
       const changes = updateResult.changes;
-      let message = 'Se han detectado los siguientes cambios:\n\n';
+      let message = '';
+
+      // Updating last year's project with the new course's roll works, but
+      // everyone who left goes to Eliminados or is deleted: warn first
+      const { current, incoming } = updateResult.academicYear || {};
+      if (current && incoming && current !== incoming) {
+        message += `⚠ Este XML es del curso ${incoming}-${incoming + 1} y el proyecto es del curso ${current}-${current + 1}.\n`;
+        message += 'Para empezar un curso nuevo, lo habitual es crear un proyecto nuevo con su XML.\n\n';
+      }
+
+      message += 'Se han detectado los siguientes cambios:\n\n';
       message += `Usuarios nuevos: ${changes.toAdd}\n`;
       message += `Usuarios actualizados: ${changes.toUpdate}\n`;
       message += `Usuarios eliminados: ${changes.toDelete}\n\n`;
@@ -259,7 +269,8 @@
           newUsersMap: updateResult.newUsersMap,
           deletedUsers: updateResult.deletedUsers,
           currentUsers: updateResult.currentUsers,
-          xmlPath: updateResult.xmlPath
+          xmlPath: updateResult.xmlPath,
+          academicYear: updateResult.academicYear?.incoming ?? null
         });
 
         // Wait a moment to show 100% progress

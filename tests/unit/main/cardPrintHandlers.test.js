@@ -214,6 +214,122 @@ describe('card print and publication requests', () => {
     });
   });
 
+  describe('requests the open project cannot act on', () => {
+    // The repository is shared and outlives each course's project
+    const leftBehind = (folderName, fileName) => {
+      fs.mkdirSync(folder(folderName), { recursive: true });
+      fs.writeFileSync(path.join(folder(folderName), fileName), '');
+    };
+
+    test('should not report card requests for people outside the project', async () => {
+      addRepositoryPhoto('1001');
+      await call('request-card-print', [idOf('1001')]);
+      leftBehind('To-Print-ID', '9999');
+
+      const result = await call('get-card-print-requests');
+
+      expect(result.userIds).toEqual(['1001']);
+      expect(result.otherCount).toBe(1);
+    });
+
+    test('should not take a student document for a staff request', async () => {
+      // Students are requested by NIA; a file named like some student's
+      // document is not that student's request
+      await db.importUsers({
+        groups: [],
+        students: [{ first_name: 'EVA', last_name1: 'SOLER', last_name2: '', nia: '1003', group_code: '1ESOA', document: 'X55', birth_date: '2008-03-03' }],
+        teachers: [],
+        nonTeachingStaff: []
+      });
+      leftBehind('To-Print-ID', 'X55');
+
+      const result = await call('get-card-print-requests');
+
+      expect(result.userIds).toEqual([]);
+      expect(result.otherCount).toBe(1);
+    });
+
+    test('should not report publications for people outside the project', async () => {
+      addRepositoryPhoto('D100');
+      await call('request-publication', [staffId('D100')]);
+      leftBehind('To-Publish', '9999.jpg');
+
+      const result = await call('get-publication-requests');
+
+      expect(result.userIds).toEqual(['D100']);
+      expect(result.otherCount).toBe(1);
+    });
+  });
+
+  describe('requests from before the course started', () => {
+    test('should mark them when they predate the project course', async () => {
+      // A course that has not started yet: everything made so far predates it
+      await db.setProjectSetting('academicYear', '2999');
+      addRepositoryPhoto('1001');
+      await call('request-card-print', [idOf('1001')]);
+
+      const result = await call('get-card-print-requests');
+
+      expect(result.userIds).toEqual(['1001']);
+      expect(result.previousCourseIds).toEqual(['1001']);
+    });
+
+    test('should not mark the ones made during the course', async () => {
+      await db.setProjectSetting('academicYear', '2000');
+      addRepositoryPhoto('1001');
+      await call('request-card-print', [idOf('1001')]);
+
+      const result = await call('get-card-print-requests');
+
+      expect(result.previousCourseIds).toEqual([]);
+    });
+
+    test('should use the running course for a project that never recorded one', async () => {
+      addRepositoryPhoto('1001');
+      await call('request-card-print', [idOf('1001')]);
+
+      const result = await call('get-card-print-requests');
+
+      expect(result.previousCourseIds).toEqual([]);
+    });
+
+    test('should mark publications too', async () => {
+      await db.setProjectSetting('academicYear', '2999');
+      addRepositoryPhoto('1001');
+      await call('request-publication', [idOf('1001')]);
+
+      const result = await call('get-publication-requests');
+
+      expect(result.previousCourseIds).toEqual(['1001']);
+    });
+  });
+
+  describe('the date a request carries', () => {
+    const LONG_AGO = new Date(2020, 0, 1);
+    const isRecent = (filePath) => Date.now() - fs.statSync(filePath).mtimeMs < 60 * 1000;
+
+    test('should move to now when a card is requested again', async () => {
+      addRepositoryPhoto('1001');
+      await call('request-card-print', [idOf('1001')]);
+      const request = path.join(folder('To-Print-ID'), '1001');
+      fs.utimesSync(request, LONG_AGO, LONG_AGO);
+
+      await call('request-card-print', [idOf('1001')]);
+
+      expect(isRecent(request)).toBe(true);
+    });
+
+    test('should be when a publication was requested, not when the photo was taken', async () => {
+      addRepositoryPhoto('1001');
+      const photo = path.join(repositoryPath, '1001.jpg');
+      fs.utimesSync(photo, LONG_AGO, LONG_AGO);
+
+      await call('request-publication', [idOf('1001')]);
+
+      expect(isRecent(path.join(folder('To-Publish'), '1001.jpg'))).toBe(true);
+    });
+  });
+
   describe('check-card-print-requests', () => {
     test('should say which of the given users have a request pending', async () => {
       addRepositoryPhoto('1001');

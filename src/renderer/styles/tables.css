@@ -236,6 +236,13 @@
   cursor: help;
 }
 
+/* Left over from the previous course: still pending, but worth a look */
+.user-table td .card-print-indicator.previous-course,
+.user-table td .publication-indicator.previous-course {
+  color: #9ca3af;
+  stroke-dasharray: 3 2;
+}
+
 /* Orla paid indicator */
 .user-table td .orla-paid-indicator {
   width: 18px;

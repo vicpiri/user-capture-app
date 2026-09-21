@@ -35,6 +35,7 @@ Al importar se aplican estas reglas:
 - El alumnado sin grupo va al grupo **⚠ Sin grupo**.
 - Si un mismo NIA o documento aparece varias veces, la persona se importa una sola vez, dando prioridad a la aparición que tiene grupo.
 - Si el archivo está dañado, incompleto o vacío, la aplicación lo rechaza con un mensaje de error y no importa nada.
+- Del propio centro se guarda el **curso**, que el XML indica con el año en que empieza. Sirve para distinguir las solicitudes de carnet y de publicación del curso anterior (ver [Carnets y publicación oficial](carnets.md#solicitudes-de-otros-proyectos-y-del-curso-anterior)).
 
 ## El informe de importación
 
@@ -100,6 +101,8 @@ Cuando recibas un XML más reciente (altas, bajas o cambios de grupo durante el 
    - **Usuarios nuevos**: personas que no estaban en el proyecto.
    - **Usuarios actualizados**: personas que siguen en el XML. Se cuentan todas, aunque sus datos no hayan cambiado.
    - **Usuarios eliminados**: personas del proyecto que ya no están en el XML, indicando cuántas tienen imagen y cuántas no.
+
+   Si el XML es de un curso distinto del proyecto, el mensaje empieza con un aviso. Para empezar un curso nuevo lo habitual es crear un proyecto nuevo con su XML: al actualizar, quien no esté en el XML nuevo pasa a Eliminados o se borra.
 4. Pulsa **Sí** para aplicar los cambios, o **No** para dejar el proyecto como estaba.
 5. Al terminar verás el resumen: usuarios añadidos, actualizados, movidos a Eliminados y eliminados permanentemente.
 

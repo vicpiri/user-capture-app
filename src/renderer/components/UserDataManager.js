@@ -246,7 +246,10 @@
           this.onUpdateCardPrintRequests(new Set(result.userIds));
 
           // Update UserRowRenderer config
-          this.onUpdateUserRowRenderer({ cardPrintRequests: new Set(result.userIds) });
+          this.onUpdateUserRowRenderer({
+            cardPrintRequests: new Set(result.userIds),
+            cardPrintPreviousCourse: new Set(result.previousCourseIds || [])
+          });
 
           // Refresh display to show indicators
           if (refreshDisplay) {
@@ -275,7 +278,10 @@
           this.onUpdatePublicationRequests(new Set(result.userIds));
 
           // Update UserRowRenderer config
-          this.onUpdateUserRowRenderer({ publicationRequests: new Set(result.userIds) });
+          this.onUpdateUserRowRenderer({
+            publicationRequests: new Set(result.userIds),
+            publicationPreviousCourse: new Set(result.previousCourseIds || [])
+          });
 
           // Refresh display to show indicators
           if (refreshDisplay) {

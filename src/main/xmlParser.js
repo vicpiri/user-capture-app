@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { XMLParser, XMLValidator } = require('fast-xml-parser');
+const { parseAcademicYear } = require('./academicYear');
 
 class XMLUserParser {
   constructor(xmlPath) {
@@ -34,7 +35,9 @@ class XMLUserParser {
         groups: [],
         students: [],
         teachers: [],
-        nonTeachingStaff: []
+        nonTeachingStaff: [],
+        // Year the course starts, from <centro curso="2026">; null if absent
+        academicYear: null
       };
 
       // NOTE: XML tags are in Spanish as per source file specification
@@ -52,6 +55,8 @@ class XMLUserParser {
       if (!centro || typeof centro !== 'object') {
         throw new Error('El archivo XML no contiene ningún grupo ni usuario');
       }
+
+      result.academicYear = parseAcademicYear(centro['@_curso']);
 
       // Parse groups (grupos)
       if (centro.grupos && centro.grupos.grupo) {

@@ -164,6 +164,24 @@ describe('create-project handler', () => {
     expect(fs.existsSync(path.join(newPath, 'data', 'users.db'))).toBe(true);
   });
 
+  test('should record the course the XML is for', async () => {
+    const newPath = path.join(workPath, 'nuevo');
+    fs.mkdirSync(newPath);
+
+    await create(newPath, writeXml(XML.replace('<centro>', '<centro curso="2026">')));
+
+    await expect(state.dbManager.getProjectSetting('academicYear')).resolves.toBe('2026');
+  });
+
+  test('should record no course when the XML does not give one', async () => {
+    const newPath = path.join(workPath, 'nuevo');
+    fs.mkdirSync(newPath);
+
+    await create(newPath, writeXml(XML));
+
+    await expect(state.dbManager.getProjectSetting('academicYear')).resolves.toBeNull();
+  });
+
   test('should leave the open project alone when the XML cannot be read', async () => {
     const newPath = path.join(workPath, 'nuevo');
     fs.mkdirSync(newPath);

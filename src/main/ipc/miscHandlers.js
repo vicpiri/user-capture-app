@@ -7,6 +7,7 @@ const { getActiveIngestPath, getConfiguredIngestPath } = require('../ingestFolde
 const { getLastExportFolder, setLastExportFolder, getUpdatePreferences, saveUpdatePreferences } = require('../utils/config');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
+const { parseAcademicYear, academicYearOn, academicYearStart, requestTime } = require('../academicYear');
 
 // Card print requests cache, remembered per repository: opening another project
 // points at a different folder, and its requests must not be reported against
@@ -30,6 +31,99 @@ function isListingCacheValid(cache, cachedAt, cachedKey, repositoryPath, ttl) {
     cachedKey === repositoryPath &&
     Boolean(cachedAt) &&
     (Date.now() - cachedAt) < ttl;
+}
+
+/**
+ * Pending requests in one of the repository's request folders
+ * @param {string} folderPath - To-Print-ID or To-Publish
+ * @param {string} [extension] - Stripped from the file names to get the identifier
+ * @returns {Promise<Array<{id: string, requestedAt: number}>>} empty when the folder does not exist
+ */
+async function listRequestFolder(folderPath, extension = '') {
+  const fs = require('fs').promises;
+
+  try {
+    await fs.access(folderPath);
+  } catch {
+    return [];
+  }
+
+  const entries = [];
+  for (const file of await fs.readdir(folderPath)) {
+    let stats;
+    try {
+      stats = await fs.stat(path.join(folderPath, file));
+    } catch {
+      // Removed between the listing and now, from this or another computer
+      continue;
+    }
+
+    // Subfolders are not requests
+    if (!stats.isFile()) {
+      continue;
+    }
+
+    const id = extension && file.toLowerCase().endsWith(extension)
+      ? file.slice(0, -extension.length)
+      : file;
+    entries.push({ id, requestedAt: requestTime(stats) });
+  }
+
+  return entries;
+}
+
+/**
+ * The part of a request listing that concerns the open project
+ *
+ * The repository is shared between projects and carries over from one course
+ * to the next, so its request folders hold requests for people this project
+ * does not have. Counting those made the badge promise requests its filter
+ * then could not show.
+ *
+ * @param {Object} dbManager
+ * @param {Array<{id: string, requestedAt: number}>} entries
+ * @returns {Promise<{userIds: string[], previousCourseIds: string[], otherCount: number}>}
+ *   previousCourseIds: the project's requests made before its course started.
+ *   otherCount: requests for identifiers that are not in the project.
+ */
+async function projectRequests(dbManager, entries) {
+  const matched = await dbManager.getUsersByIdentifiers(entries.map(entry => entry.id));
+
+  // A request is named after the NIA for students and the document for staff
+  const ownIds = new Set();
+  matched.forEach(user => {
+    const id = user.type === 'student' ? user.nia : user.document;
+    if (id) {
+      ownIds.add(id);
+    }
+  });
+
+  const year = parseAcademicYear(await dbManager.getProjectSetting('academicYear')) ??
+    academicYearOn(new Date());
+  const courseStart = academicYearStart(year).getTime();
+
+  const own = entries.filter(entry => ownIds.has(entry.id));
+
+  return {
+    userIds: own.map(entry => entry.id),
+    previousCourseIds: own.filter(entry => entry.requestedAt < courseStart).map(entry => entry.id),
+    otherCount: entries.length - own.length
+  };
+}
+
+/**
+ * Stamp a request with the time it was made. Requesting again rewrites the
+ * same file, and a copy keeps the photo's date, so neither would say when.
+ * @param {string} filePath
+ * @param {Object} logger
+ */
+async function stampRequest(filePath, logger) {
+  try {
+    const now = new Date();
+    await require('fs').promises.utimes(filePath, now, now);
+  } catch (error) {
+    logger.warning(`Could not date the request ${filePath}: ${error.message}`);
+  }
 }
 
 /**
@@ -416,54 +510,20 @@ function registerMiscHandlers(context) {
         return { success: false, error: 'No hay proyecto abierto' };
       }
 
-      const fs = require('fs').promises;
       const repositoryPath = await getImageRepositoryPath(dbManager);
-      const now = Date.now();
 
-      // Check cache validity
       if (isListingCacheValid(cardPrintRequestsCache, cardPrintRequestsCacheTime, cardPrintRequestsCacheKey, repositoryPath, CARD_PRINT_CACHE_TTL)) {
         logger.info('[CardPrint] Using cached card print requests');
-        return { success: true, userIds: cardPrintRequestsCache };
+      } else {
+        cardPrintRequestsCache = repositoryPath
+          ? await listRequestFolder(path.join(repositoryPath, 'To-Print-ID'))
+          : [];
+        cardPrintRequestsCacheTime = Date.now();
+        cardPrintRequestsCacheKey = repositoryPath;
+        logger.info(`[CardPrint] Scanned ${cardPrintRequestsCache.length} card print requests (cached for ${CARD_PRINT_CACHE_TTL}ms)`);
       }
 
-      cardPrintRequestsCacheKey = repositoryPath;
-
-      if (!repositoryPath) {
-        cardPrintRequestsCache = [];
-        cardPrintRequestsCacheTime = now;
-        return { success: true, userIds: [] };
-      }
-
-      // Check if 'To-Print-ID' folder exists
-      const toPrintIdFolder = path.join(repositoryPath, 'To-Print-ID');
-      try {
-        await fs.access(toPrintIdFolder);
-      } catch {
-        // Folder doesn't exist, cache empty result
-        cardPrintRequestsCache = [];
-        cardPrintRequestsCacheTime = now;
-        return { success: true, userIds: [] };
-      }
-
-      // Read all files in the folder
-      const files = await fs.readdir(toPrintIdFolder);
-
-      // Filter out directories, only keep files (which are user IDs)
-      const userIds = [];
-      for (const file of files) {
-        const filePath = path.join(toPrintIdFolder, file);
-        const stats = await fs.stat(filePath);
-        if (stats.isFile()) {
-          userIds.push(file);
-        }
-      }
-
-      // Update cache
-      cardPrintRequestsCache = userIds;
-      cardPrintRequestsCacheTime = now;
-
-      logger.info(`[CardPrint] Scanned ${userIds.length} card print requests (cached for ${CARD_PRINT_CACHE_TTL}ms)`);
-      return { success: true, userIds };
+      return { success: true, ...(await projectRequests(dbManager, cardPrintRequestsCache)) };
     } catch (error) {
       logger.error('Error getting card print requests:', error);
       return { success: false, error: error.message };
@@ -533,6 +593,7 @@ function registerMiscHandlers(context) {
         // Create empty file with user ID as filename
         const filePath = path.join(toPrintIdFolder, userId);
         await fs.writeFile(filePath, '', 'utf8');
+        await stampRequest(filePath, logger);
         count++;
         logger.info(`Created card print request for user ${user.id}: ${filePath}`);
       }
@@ -569,56 +630,20 @@ function registerMiscHandlers(context) {
         return { success: false, error: 'No hay proyecto abierto' };
       }
 
-      const fs = require('fs').promises;
       const repositoryPath = await getImageRepositoryPath(dbManager);
-      const now = Date.now();
 
-      // Check cache validity
       if (isListingCacheValid(publicationRequestsCache, publicationRequestsCacheTime, publicationRequestsCacheKey, repositoryPath, PUBLICATION_CACHE_TTL)) {
         logger.info('[Publication] Using cached publication requests');
-        return { success: true, userIds: publicationRequestsCache };
+      } else {
+        publicationRequestsCache = repositoryPath
+          ? await listRequestFolder(path.join(repositoryPath, 'To-Publish'), '.jpg')
+          : [];
+        publicationRequestsCacheTime = Date.now();
+        publicationRequestsCacheKey = repositoryPath;
+        logger.info(`[Publication] Scanned ${publicationRequestsCache.length} publication requests (cached for ${PUBLICATION_CACHE_TTL}ms)`);
       }
 
-      publicationRequestsCacheKey = repositoryPath;
-
-      if (!repositoryPath) {
-        publicationRequestsCache = [];
-        publicationRequestsCacheTime = now;
-        return { success: true, userIds: [] };
-      }
-
-      // Check if 'To-Publish' folder exists
-      const toPublishFolder = path.join(repositoryPath, 'To-Publish');
-      try {
-        await fs.access(toPublishFolder);
-      } catch {
-        // Folder doesn't exist, cache empty result
-        publicationRequestsCache = [];
-        publicationRequestsCacheTime = now;
-        return { success: true, userIds: [] };
-      }
-
-      // Read all files in the folder
-      const files = await fs.readdir(toPublishFolder);
-
-      // Filter out directories, only keep files (which are user IDs)
-      const userIds = [];
-      for (const file of files) {
-        const filePath = path.join(toPublishFolder, file);
-        const stats = await fs.stat(filePath);
-        if (stats.isFile()) {
-          // Remove .jpg extension if present
-          const userId = file.replace(/\.jpg$/i, '');
-          userIds.push(userId);
-        }
-      }
-
-      // Update cache
-      publicationRequestsCache = userIds;
-      publicationRequestsCacheTime = now;
-
-      logger.info(`[Publication] Scanned ${userIds.length} publication requests (cached for ${PUBLICATION_CACHE_TTL}ms)`);
-      return { success: true, userIds };
+      return { success: true, ...(await projectRequests(dbManager, publicationRequestsCache)) };
     } catch (error) {
       logger.error('Error getting publication requests:', error);
       return { success: false, error: error.message };
@@ -688,6 +713,7 @@ function registerMiscHandlers(context) {
         // Copy image to To-Publish folder with user ID as filename
         const destPath = path.join(toPublishFolder, `${userId}.jpg`);
         await fs.copyFile(repositoryImagePath, destPath);
+        await stampRequest(destPath, logger);
         count++;
         logger.info(`Created publication request for user ${user.id}: ${destPath}`);
       }

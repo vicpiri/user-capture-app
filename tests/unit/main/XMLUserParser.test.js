@@ -256,6 +256,29 @@ describe('XMLUserParser', () => {
     });
   });
 
+  describe('the course', () => {
+    test('should read the year it starts from the centro element', async () => {
+      const result = await parseXml(
+        '<centro codigo="46016397" curso="2026" fechaExportacion="18/09/2026 18:27:34">' +
+        '<alumnos><alumno nombre="ANA" NIA="1"/></alumnos></centro>'
+      );
+
+      expect(result.academicYear).toBe(2026);
+    });
+
+    test('should leave it empty when the file does not say', async () => {
+      const result = await parseXml('<centro><alumnos><alumno nombre="ANA" NIA="1"/></alumnos></centro>');
+
+      expect(result.academicYear).toBeNull();
+    });
+
+    test('should leave it empty rather than guess from a value it does not understand', async () => {
+      const result = await parseXml('<centro curso="2026/27"><alumnos><alumno nombre="ANA" NIA="1"/></alumnos></centro>');
+
+      expect(result.academicYear).toBeNull();
+    });
+  });
+
   describe('a complete file', () => {
     test('should keep the four collections apart', async () => {
       const result = await parseXml(`

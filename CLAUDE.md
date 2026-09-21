@@ -39,6 +39,7 @@ user-capture-app/
 │   │   │   ├── mainWindow.js           # Ventana principal
 │   │   │   ├── repositoryGridWindow.js # Grid de imágenes del repositorio
 │   │   │   └── viewerMirrorWindow.js   # Ver > Visor en ventana aparte (otro monitor)
+│   │   ├── academicYear.js      # Curso académico del proyecto y fecha de las solicitudes
 │   │   ├── appDialogs.js        # Avisos y preguntas del proceso principal, con los modales propios
 │   │   ├── database.js          # Gestión de base de datos SQLite
 │   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
@@ -960,6 +961,25 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
   - **Marcado automático como impresos**: Al exportar CSV para carnets, si algún usuario exportado tiene solicitud pendiente, se pregunta al usuario si desea marcarlos como impresos (mueve archivos de `To-Print-ID` a `Printed-ID`)
 - **Optimización**: Usa caché con TTL para minimizar operaciones de filesystem
 - **Uso**: Ideal para gestionar impresión de carnets en lotes
+- **Solicitudes que el proyecto no puede atender**: el depósito es compartido y
+  pasa de un curso a otro, así que `To-Print-ID` y `To-Publish` guardan
+  solicitudes de gente que no está en el proyecto. `get-card-print-requests` y
+  `get-publication-requests` cachean el listado de la carpeta (identificador y
+  fecha) y en cada llamada lo filtran con `projectRequests()`: devuelven solo
+  los `userIds` del proyecto (NIA para alumnado, documento para el resto), y
+  así el contador coincide con lo que enseña el filtro. **No se borra nada**:
+  otro proyecto puede necesitarlas
+  - `previousCourseIds`: las del proyecto hechas antes del 1 de septiembre de
+    su curso, que se pintan en gris con trazo discontinuo. El curso sale de
+    `<centro curso="2026">` (año en que empieza: 2026-2027), guardado en
+    `project_settings` bajo `academicYear` al crear el proyecto y al aplicar
+    una actualización del XML; sin él, el curso en marcha según la fecha
+  - La fecha de una solicitud es `requestTime()`: la mayor entre modificación y
+    creación. Pedir de nuevo la sella con `utimes` (`stampRequest()`), porque
+    reescribir un archivo vacío no garantiza cambiarla y `copyFile` conserva la
+    de la foto. El error posible solo hace pasar por actual una antigua
+  - Actualizar el XML con uno de otro curso avisa en la confirmación: suele ser
+    el XML del curso nuevo aplicado sobre el proyecto del anterior
 
 #### Sistema de Petición de Publicación Oficial (v1.4.0)
 - **Funcionalidad**: Sistema para solicitar publicación oficial de fotografías

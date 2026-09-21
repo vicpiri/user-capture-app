@@ -249,6 +249,41 @@ describe('UserRowRenderer', () => {
     });
   });
 
+  describe('request indicators', () => {
+    test('should mark a card request left over from the previous course', () => {
+      renderer.updateConfig({
+        cardPrintRequests: new Set(['12345']),
+        cardPrintPreviousCourse: new Set(['12345'])
+      });
+
+      const indicator = renderer.createRow(mockUser).querySelector('.card-print-indicator');
+
+      expect(indicator.classList.contains('previous-course')).toBe(true);
+      expect(indicator.querySelector('title').textContent).toBe('Carnet solicitado el curso anterior');
+    });
+
+    test('should show a request of this course as before', () => {
+      renderer.updateConfig({ cardPrintRequests: new Set(['12345']) });
+
+      const indicator = renderer.createRow(mockUser).querySelector('.card-print-indicator');
+
+      expect(indicator.classList.contains('previous-course')).toBe(false);
+      expect(indicator.querySelector('title').textContent).toBe('Carnet solicitado');
+    });
+
+    test('should mark a publication left over from the previous course', () => {
+      renderer.updateConfig({
+        publicationRequests: new Set(['12345']),
+        publicationPreviousCourse: new Set(['12345'])
+      });
+
+      const indicator = renderer.createRow(mockUser).querySelector('.publication-indicator');
+
+      expect(indicator.classList.contains('previous-course')).toBe(true);
+      expect(indicator.querySelector('title').textContent).toBe('Publicación solicitada el curso anterior');
+    });
+  });
+
   describe('Event Listeners', () => {
     test('should call onUserSelect when row is clicked', () => {
       const row = renderer.createRow(mockUser);
