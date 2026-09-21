@@ -578,7 +578,8 @@ function createMenu() {
 }
 
 // did-finish-load fires on every navigation, including a renderer reload, but
-// the recent project must only be opened on the first one
+// the recent project must only be opened on the first one, whether or not
+// there was one to open
 let hasAutoOpenedRecentProject = false;
 
 function createWindow() {
@@ -587,6 +588,9 @@ function createWindow() {
 
   // Wait for renderer to be ready before sending events
   mainWindow.webContents.on('did-finish-load', () => {
+    const isFirstLoad = !hasAutoOpenedRecentProject;
+    hasAutoOpenedRecentProject = true;
+
     // Send initial display preferences to renderer
     mainWindowManager.sendInitialPreferences({
       showDuplicatesOnly,
@@ -601,10 +605,16 @@ function createWindow() {
       thumbnailGridSource
     });
 
-    // Auto-open most recent project if available
-    // Repository mirror will be started after project opens (if preferences enabled)
-    if (!hasAutoOpenedRecentProject && recentProjects && recentProjects.length > 0) {
-      hasAutoOpenedRecentProject = true;
+    // A reload (Ctrl+R) starts the renderer from scratch, and it only learns
+    // that a project is open from this message. Without it the list stayed
+    // empty and every action asked to open a project that was already open.
+    if (projectPath && dbManager) {
+      logger.info('[RELOAD] Renderer reloaded with a project open, telling it again');
+      mainWindow.webContents.send('project-opened', { success: true });
+    } else if (isFirstLoad && recentProjects && recentProjects.length > 0) {
+      // Auto-open most recent project if available. Only on the first load:
+      // a reload after closing the project must not open it again.
+      // Repository mirror will be started after project opens (if preferences enabled)
       const mostRecentProjectPath = recentProjects[0];
       logger.info(`[STARTUP] Auto-opening most recent project: ${mostRecentProjectPath}`);
 
