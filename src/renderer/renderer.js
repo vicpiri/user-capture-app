@@ -102,6 +102,7 @@ let userImageModalInstance = null;
 let orlaExportModalInstance = null;
 let restoreBackupModalInstance = null;
 let replacedArchiveModalInstance = null;
+let pendingRequestsModalInstance = null;
 let exportScopeModalInstance = null;
 let preferencesModalInstance = null;
 let projectInfoModalInstance = null;
@@ -238,6 +239,9 @@ function initializeModals() {
 
   replacedArchiveModalInstance = new ReplacedArchiveModal();
   replacedArchiveModalInstance.init();
+
+  pendingRequestsModalInstance = new PendingRequestsModal();
+  pendingRequestsModalInstance.init();
 
   exportScopeModalInstance = new ExportScopeModal();
   exportScopeModalInstance.init();
@@ -1194,6 +1198,11 @@ function initializeEventListeners() {
   // Proyecto > Purgar fotos reemplazadas
   window.electronAPI.onMenuPurgeReplacedArchive(async () => {
     await handlePurgeReplacedArchive();
+  });
+
+  // Proyecto > Revisar solicitudes pendientes
+  window.electronAPI.onMenuReviewPendingRequests(async () => {
+    await handleReviewPendingRequests();
   });
 
   // Listen for preferences menu event
@@ -2384,6 +2393,72 @@ No se pudieron borrar ${result.failed.length} carpetas, `
   } catch (error) {
     closeProgressModal();
     await showInfoModal('Error', 'No se pudieron borrar las fotos: ' + error.message);
+  }
+}
+
+/**
+ * Proyecto > Revisar solicitudes pendientes
+ *
+ * The repository's request folders keep what other projects and past courses
+ * left pending. Nothing archives those on its own: another project using the
+ * same repository may still need them, so the user picks them one by one.
+ */
+async function handleReviewPendingRequests() {
+  if (!projectOpen) {
+    await showInfoModal('Aviso', 'Debes abrir un proyecto primero');
+    return;
+  }
+
+  const chosen = await pendingRequestsModalInstance.show();
+
+  if (!chosen) {
+    return;
+  }
+
+  const count = chosen.cards.length + chosen.publications.length;
+  const confirmed = await showConfirmationModal(
+    `¿Archivar ${count} ${count === 1 ? 'solicitud' : 'solicitudes'}?
+
+`
+    + 'Se moverán a la subcarpeta Archivadas y dejarán de estar pendientes para todos los equipos. '
+    + 'No se borra nada: se pueden devolver a su carpeta a mano.'
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const result = await window.electronAPI.archivePendingRequests(chosen);
+
+    if (!result.success) {
+      await showInfoModal('Error', 'No se pudieron archivar las solicitudes: ' + result.error);
+      return;
+    }
+
+    const moved = result.cards.moved + result.publications.moved;
+    const failed = result.cards.failed.length + result.publications.failed.length;
+
+    let message = `Se han archivado ${moved} ${moved === 1 ? 'solicitud' : 'solicitudes'}.`;
+    if (failed > 0) {
+      message += `
+
+No se pudieron archivar ${failed}: quizá otro equipo ya las había movido o las está usando.`;
+    }
+
+    await showInfoModal('Solicitudes archivadas', message);
+  } catch (error) {
+    await showInfoModal('Error', 'No se pudieron archivar las solicitudes: ' + error.message);
+    return;
+  }
+
+  // The badges and row icons
+  if (userDataManager) {
+    await Promise.all([
+      userDataManager.loadCardPrintRequests({ refreshDisplay: false }),
+      userDataManager.loadPublicationRequests({ refreshDisplay: false })
+    ]);
+    userDataManager.updateRepositoryDataInDisplay();
   }
 }
 

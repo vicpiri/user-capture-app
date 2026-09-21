@@ -7,7 +7,7 @@ const { getActiveIngestPath, getConfiguredIngestPath } = require('../ingestFolde
 const { getLastExportFolder, setLastExportFolder, getUpdatePreferences, saveUpdatePreferences } = require('../utils/config');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
-const { parseAcademicYear, academicYearOn, academicYearStart, requestTime } = require('../academicYear');
+const { listRequestFolder, projectRequests, reviewRequests, archiveRequests, stampRequest } = require('../pendingRequests');
 
 // Card print requests cache, remembered per repository: opening another project
 // points at a different folder, and its requests must not be reported against
@@ -31,99 +31,6 @@ function isListingCacheValid(cache, cachedAt, cachedKey, repositoryPath, ttl) {
     cachedKey === repositoryPath &&
     Boolean(cachedAt) &&
     (Date.now() - cachedAt) < ttl;
-}
-
-/**
- * Pending requests in one of the repository's request folders
- * @param {string} folderPath - To-Print-ID or To-Publish
- * @param {string} [extension] - Stripped from the file names to get the identifier
- * @returns {Promise<Array<{id: string, requestedAt: number}>>} empty when the folder does not exist
- */
-async function listRequestFolder(folderPath, extension = '') {
-  const fs = require('fs').promises;
-
-  try {
-    await fs.access(folderPath);
-  } catch {
-    return [];
-  }
-
-  const entries = [];
-  for (const file of await fs.readdir(folderPath)) {
-    let stats;
-    try {
-      stats = await fs.stat(path.join(folderPath, file));
-    } catch {
-      // Removed between the listing and now, from this or another computer
-      continue;
-    }
-
-    // Subfolders are not requests
-    if (!stats.isFile()) {
-      continue;
-    }
-
-    const id = extension && file.toLowerCase().endsWith(extension)
-      ? file.slice(0, -extension.length)
-      : file;
-    entries.push({ id, requestedAt: requestTime(stats) });
-  }
-
-  return entries;
-}
-
-/**
- * The part of a request listing that concerns the open project
- *
- * The repository is shared between projects and carries over from one course
- * to the next, so its request folders hold requests for people this project
- * does not have. Counting those made the badge promise requests its filter
- * then could not show.
- *
- * @param {Object} dbManager
- * @param {Array<{id: string, requestedAt: number}>} entries
- * @returns {Promise<{userIds: string[], previousCourseIds: string[], otherCount: number}>}
- *   previousCourseIds: the project's requests made before its course started.
- *   otherCount: requests for identifiers that are not in the project.
- */
-async function projectRequests(dbManager, entries) {
-  const matched = await dbManager.getUsersByIdentifiers(entries.map(entry => entry.id));
-
-  // A request is named after the NIA for students and the document for staff
-  const ownIds = new Set();
-  matched.forEach(user => {
-    const id = user.type === 'student' ? user.nia : user.document;
-    if (id) {
-      ownIds.add(id);
-    }
-  });
-
-  const year = parseAcademicYear(await dbManager.getProjectSetting('academicYear')) ??
-    academicYearOn(new Date());
-  const courseStart = academicYearStart(year).getTime();
-
-  const own = entries.filter(entry => ownIds.has(entry.id));
-
-  return {
-    userIds: own.map(entry => entry.id),
-    previousCourseIds: own.filter(entry => entry.requestedAt < courseStart).map(entry => entry.id),
-    otherCount: entries.length - own.length
-  };
-}
-
-/**
- * Stamp a request with the time it was made. Requesting again rewrites the
- * same file, and a copy keeps the photo's date, so neither would say when.
- * @param {string} filePath
- * @param {Object} logger
- */
-async function stampRequest(filePath, logger) {
-  try {
-    const now = new Date();
-    await require('fs').promises.utimes(filePath, now, now);
-  } catch (error) {
-    logger.warning(`Could not date the request ${filePath}: ${error.message}`);
-  }
 }
 
 /**
@@ -646,6 +553,61 @@ function registerMiscHandlers(context) {
       return { success: true, ...(await projectRequests(dbManager, publicationRequestsCache)) };
     } catch (error) {
       logger.error('Error getting publication requests:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Proyecto > Revisar solicitudes pendientes: the requests nobody in the
+  // project will act on, and the project's own from before its course
+  ipcMain.handle('review-pending-requests', async () => {
+    try {
+      const { projectPath, dbManager } = state;
+
+      if (!projectPath || !dbManager) {
+        return { success: false, error: 'No hay proyecto abierto' };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado la ruta del depósito de imágenes' };
+      }
+
+      return { success: true, ...(await reviewRequests(dbManager, repositoryPath)) };
+    } catch (error) {
+      logger.error('Error reviewing pending requests:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Move the chosen requests into each folder's Archivadas subfolder
+  ipcMain.handle('archive-pending-requests', async (event, selection = {}) => {
+    try {
+      const { projectPath, dbManager } = state;
+
+      if (!projectPath || !dbManager) {
+        return { success: false, error: 'No hay proyecto abierto' };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado la ruta del depósito de imágenes' };
+      }
+
+      const cards = await archiveRequests(repositoryPath, 'cards', selection.cards);
+      const publications = await archiveRequests(repositoryPath, 'publications', selection.publications);
+
+      cardPrintRequestsCache = null;
+      cardPrintRequestsCacheTime = null;
+      publicationRequestsCache = null;
+      publicationRequestsCacheTime = null;
+
+      logger.info(`[Requests] Archived ${cards.moved} card and ${publications.moved} publication requests`, {
+        failed: [...cards.failed, ...publications.failed]
+      });
+
+      return { success: true, cards, publications };
+    } catch (error) {
+      logger.error('Error archiving pending requests:', error);
       return { success: false, error: error.message };
     }
   });

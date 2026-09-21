@@ -272,7 +272,7 @@
   <div id="confirm-modal" class="modal">
     <div class="modal-content">
       <h2>Confirmar</h2>
-      <p id="confirm-message"></p>
+      <p id="confirm-message" style="white-space: pre-line;"></p>
       <div class="modal-buttons">
         <button id="confirm-yes-btn" class="btn btn-primary">Sí</button>
         <button id="confirm-no-btn" data-modal-cancel class="btn btn-secondary">No</button>
@@ -652,6 +652,38 @@
     </div>
   </div>
 
+  <!-- Review Pending Requests Modal -->
+  <div id="pending-requests-modal" class="modal">
+    <div class="modal-content pending-requests-content">
+      <h2>Revisar solicitudes pendientes</h2>
+      <p class="replaced-archive-intro">
+        Solicitudes de carnet y de publicación que este proyecto no atenderá, o que se pidieron antes de
+        empezar su curso. Archivarlas las quita de las pendientes sin borrarlas: se mueven a la subcarpeta
+        <code>Archivadas</code> de su carpeta.
+      </p>
+
+      <div id="pending-requests-summary" class="replaced-archive-summary">Leyendo el depósito...</div>
+
+      <div id="pending-requests-kind" class="pending-requests-kind" role="group" aria-label="Tipo de solicitud" hidden>
+        <button type="button" data-kind="cards" class="thumbnail-source-btn">Carnets</button>
+        <button type="button" data-kind="publications" class="thumbnail-source-btn">Publicaciones</button>
+      </div>
+
+      <div id="pending-requests-lists" class="pending-requests-lists">
+        <!-- Sections will be populated here -->
+      </div>
+
+      <p class="replaced-archive-warning">
+        El depósito es compartido: lo que se archive deja de estar pendiente para todos los equipos.
+      </p>
+
+      <div class="modal-buttons">
+        <button id="archive-pending-requests-btn" class="btn btn-warning" disabled>Archivar</button>
+        <button id="cancel-pending-requests-btn" data-modal-cancel class="btn btn-secondary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Restore Backup Modal -->
   <div id="restore-backup-modal" class="modal">
     <div class="modal-content">
@@ -839,6 +871,7 @@
   <script src="components/modals/AddTagModal.js"></script>
   <script src="components/modals/RestoreBackupModal.js"></script>
   <script src="components/modals/ReplacedArchiveModal.js"></script>
+  <script src="components/modals/PendingRequestsModal.js"></script>
   <script src="components/modals/ExportScopeModal.js"></script>
   <script src="components/modals/PreferencesModal.js"></script>
   <script src="components/modals/ProjectInfoModal.js"></script>

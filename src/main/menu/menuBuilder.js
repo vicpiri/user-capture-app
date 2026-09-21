@@ -297,6 +297,12 @@ class MenuBuilder {
         this.buildIncomingRotationMenu(),
         { type: 'separator' },
         {
+          label: 'Revisar solicitudes pendientes...',
+          click: () => {
+            this.mainWindow.webContents.send('menu-review-pending-requests');
+          }
+        },
+        {
           label: 'Purgar fotos reemplazadas...',
           click: () => {
             this.mainWindow.webContents.send('menu-purge-replaced-archive');

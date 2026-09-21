@@ -48,6 +48,7 @@ user-capture-app/
 │   │   ├── imageOrientation.js  # Leer y cambiar la orientación EXIF de un JPEG sin recomprimir
 │   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
+│   │   ├── pendingRequests.js   # Solicitudes de carnet y publicación: listar, revisar y archivar
 │   │   ├── receiptPrinter.js    # Impresión de recibos con el auxiliar de Windows (native/receipt-printer)
 │   │   ├── replacedArchive.js   # Carpeta Reemplazadas del depósito: leerla y purgarla
 │   │   ├── repositoryMirror.js  # Copia local de la carpeta del depósito
@@ -68,6 +69,7 @@ user-capture-app/
 │   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
 │   │   │   │   ├── ProjectInfoModal.js      # Modal de información del proyecto
 │   │   │   │   ├── ReplacedArchiveModal.js  # Purgar las fotos reemplazadas del depósito
+│   │   │   │   ├── PendingRequestsModal.js  # Revisar y archivar solicitudes huérfanas o del curso anterior
 │   │   │   │   ├── ExportScopeModal.js      # A qué usuarios alcanza una exportación
 │   │   │   │   ├── UpdateModal.js           # Modal de actualizaciones disponibles
 │   │   │   │   ├── WorkspacesModal.js       # Ventana Espacios de trabajo (aplicar, crear, gestionar)
@@ -980,6 +982,13 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
     de la foto. El error posible solo hace pasar por actual una antigua
   - Actualizar el XML con uno de otro curso avisa en la confirmación: suele ser
     el XML del curso nuevo aplicado sobre el proyecto del anterior
+  - **Proyecto > Revisar solicitudes pendientes** (`PendingRequestsModal`,
+    `review-pending-requests`) lista las de fuera del proyecto y las del curso
+    anterior, y archiva las marcadas (`archive-pending-requests`) moviéndolas a
+    la subcarpeta `Archivadas` de su carpeta, que el listado ignora porque solo
+    lee archivos. Nada se marca solo ni se borra. `archiveRequests()` solo
+    acepta nombres de archivo sueltos de la carpeta de solicitudes
+  - Todo esto vive en `pendingRequests.js`; `miscHandlers.js` solo lo llama
 
 #### Sistema de Petición de Publicación Oficial (v1.4.0)
 - **Funcionalidad**: Sistema para solicitar publicación oficial de fotografías

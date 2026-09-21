@@ -77,6 +77,25 @@ El curso del proyecto es el que indica el XML (un XML del curso 2026 es del curs
 
 > **Consejo:** si una solicitud del curso anterior todavía hace falta, vuelve a pedirla: pasa a tener la fecha de hoy y deja de aparecer en gris.
 
+## Revisar y archivar solicitudes pendientes
+
+**Proyecto > Revisar solicitudes pendientes** abre una ventana con las solicitudes que conviene revisar, separadas en **Carnets** y **Publicaciones**:
+
+- **De personas que no están en el proyecto**: se muestra su NIA o DNI y la fecha de la solicitud.
+- **Del curso anterior**: solicitudes de usuarios del proyecto hechas antes de empezar su curso, con el nombre, el grupo y la fecha.
+
+Arriba se indica el curso del proyecto y la fecha desde la que se cuenta. Las más antiguas aparecen primero.
+
+Para archivarlas:
+
+1. Marca las solicitudes que ya no hacen falta. La casilla de cada apartado las marca todas. No hay ninguna marcada al abrir la ventana.
+2. Puedes cambiar entre **Carnets** y **Publicaciones** sin perder lo marcado.
+3. Pulsa **Archivar** y confirma.
+
+Las solicitudes archivadas se mueven a la subcarpeta `Archivadas` de su carpeta (`To-Print-ID/Archivadas` o `To-Publish/Archivadas`) y dejan de contar como pendientes para todos los equipos. No se borra nada: para recuperar una, devuelve el archivo a mano a su carpeta.
+
+> **Importante:** el depósito es compartido. Una solicitud de alguien que no está en tu proyecto puede ser de otro proyecto que use el mismo depósito, por ejemplo el de otro equipo. Antes de archivarla, asegúrate de que nadie la necesita.
+
 ## Qué pasa si otra persona borra o mueve los archivos
 
 Los archivos de estas carpetas son el único registro de las solicitudes; la aplicación no guarda ninguna otra copia. Por eso:

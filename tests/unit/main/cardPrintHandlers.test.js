@@ -261,6 +261,39 @@ describe('card print and publication requests', () => {
     });
   });
 
+  describe('review-pending-requests and archive-pending-requests', () => {
+    test('should refuse to run without a repository', async () => {
+      await db.setProjectSetting('imageRepositoryPath', '');
+
+      const result = await call('review-pending-requests');
+
+      expect(result.success).toBe(false);
+    });
+
+    test('should stop counting an archived request straight away', async () => {
+      // The listing is cached for half a minute; archiving must not wait for it
+      addRepositoryPhoto('1001');
+      await call('request-card-print', [idOf('1001')]);
+      expect((await call('get-card-print-requests')).userIds).toEqual(['1001']);
+
+      const result = await call('archive-pending-requests', { cards: ['1001'], publications: [] });
+
+      expect(result.success).toBe(true);
+      expect(result.cards.moved).toBe(1);
+      expect((await call('get-card-print-requests')).userIds).toEqual([]);
+    });
+
+    test('should list what the review found', async () => {
+      fs.mkdirSync(folder('To-Print-ID'), { recursive: true });
+      fs.writeFileSync(path.join(folder('To-Print-ID'), '9999'), '');
+
+      const result = await call('review-pending-requests');
+
+      expect(result.success).toBe(true);
+      expect(result.cards.others.map(entry => entry.id)).toEqual(['9999']);
+    });
+  });
+
   describe('requests from before the course started', () => {
     test('should mark them when they predate the project course', async () => {
       // A course that has not started yet: everything made so far predates it

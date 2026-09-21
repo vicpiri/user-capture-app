@@ -58,6 +58,12 @@
   background-color: #f59e0b;
 }
 
+.btn-warning:disabled {
+  background-color: #5a4a30;
+  color: #908070;
+  cursor: not-allowed;
+}
+
 /* Button Sizes */
 .btn-small {
   padding: 6px 12px;

@@ -85,6 +85,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMenuPurgeReplacedArchive: (callback) => {
     ipcRenderer.on('menu-purge-replaced-archive', callback);
   },
+  onMenuReviewPendingRequests: (callback) => {
+    ipcRenderer.on('menu-review-pending-requests', callback);
+  },
 
   onMenuPreferences: (callback) => {
     ipcRenderer.on('menu-preferences', callback);
@@ -265,6 +268,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Publication requests
   requestPublication: (userIds) => ipcRenderer.invoke('request-publication', userIds),
   getPublicationRequests: () => ipcRenderer.invoke('get-publication-requests'),
+  reviewPendingRequests: () => ipcRenderer.invoke('review-pending-requests'),
+  archivePendingRequests: (selection) => ipcRenderer.invoke('archive-pending-requests', selection),
 
   // Filter toggle methods (for badge clicks)
   toggleDuplicatesFilter: (enabled) => ipcRenderer.send('menu-toggle-duplicates-from-renderer', enabled),
