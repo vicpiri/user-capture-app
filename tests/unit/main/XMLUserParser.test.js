@@ -77,7 +77,28 @@ describe('XMLUserParser', () => {
     });
 
     test('should reject an empty centro rather than report a school with nobody in it', async () => {
-      await expect(parseXml('<centro></centro>')).rejects.toThrow(/ningún grupo ni usuario/);
+      await expect(parseXml('<centro></centro>')).rejects.toThrow(/ningún usuario/);
+    });
+
+    test('should reject a centro with its attributes but nothing inside', async () => {
+      // A real export always carries attributes on the root, so the element
+      // itself is never empty: the check has to be on who was read
+      const xml = '<centro codigo="46016397" denominacion="IES PRUEBA" curso="2026" version="1.0"></centro>';
+
+      await expect(parseXml(xml)).rejects.toThrow(/ningún usuario/);
+    });
+
+    test('should reject a file with groups but no users', async () => {
+      // Applied as an update, it would delete everyone in the project
+      const xml = '<centro codigo="1"><grupos><grupo codigo="1ESOA" nombre="Primero ESO A"/></grupos></centro>';
+
+      await expect(parseXml(xml)).rejects.toThrow(/ningún usuario/);
+    });
+
+    test('should accept a file with only staff', async () => {
+      const result = await parseXml('<centro codigo="1"><docentes><docente nombre="MARIA" documento="D1"/></docentes></centro>');
+
+      expect(result.teachers).toHaveLength(1);
     });
   });
 
@@ -89,6 +110,7 @@ describe('XMLUserParser', () => {
             <grupo codigo="1ESOA" nombre="Primero ESO A"/>
             <grupo codigo="2BACB" nombre="Segundo Bachillerato B"/>
           </grupos>
+          <alumnos><alumno nombre="ANA" NIA="1" grupo="1ESOA"/></alumnos>
         </centro>
       `);
 
@@ -101,7 +123,8 @@ describe('XMLUserParser', () => {
     test('should handle a single group not being an array', async () => {
       // fast-xml-parser collapses a lone element into an object
       const result = await parseXml(
-        '<centro><grupos><grupo codigo="1ESOA" nombre="Primero ESO A"/></grupos></centro>'
+        '<centro><grupos><grupo codigo="1ESOA" nombre="Primero ESO A"/></grupos>' +
+        '<alumnos><alumno nombre="ANA" NIA="1" grupo="1ESOA"/></alumnos></centro>'
       );
 
       expect(result.groups).toHaveLength(1);
@@ -116,6 +139,7 @@ describe('XMLUserParser', () => {
             <grupo codigo="2ESOB"/>
             <grupo nombre="Sin codigo"/>
           </grupos>
+          <alumnos><alumno nombre="ANA" NIA="1" grupo="1ESOA"/></alumnos>
         </centro>
       `);
 

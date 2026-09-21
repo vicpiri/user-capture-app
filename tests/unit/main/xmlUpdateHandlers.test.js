@@ -215,11 +215,23 @@ describe('XML update', () => {
       expect(result.deletedUsers.map(u => u.document)).not.toContain('D100');
     });
 
+    test('should refuse an XML with nobody in it instead of deleting everyone', async () => {
+      const xmlPath = path.join(projectPath, `vacio-${testId}.xml`);
+      fs.writeFileSync(xmlPath, `<centro codigo="46016397" curso="2026">${groupsXml}</centro>`, 'utf8');
+
+      const result = await analyse(xmlPath);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/ningún usuario/);
+      expect(await db.getUsers({})).toHaveLength(3);
+    });
+
     test('should separate deletions that would lose a photo', async () => {
       const [ana] = await db.getUsers({});
       await db.linkImageToUser(ana.id, 'foto.jpg');
 
-      const xmlPath = writeXml(`${groupsXml}<alumnos></alumnos>`);
+      // Everyone replaced by a newcomer: a roll with nobody in it is refused
+      const xmlPath = writeXml(`${groupsXml}<alumnos>${studentXml(3001)}</alumnos>`);
 
       const result = await analyse(xmlPath);
 

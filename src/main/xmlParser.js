@@ -2,6 +2,8 @@ const fs = require('fs');
 const { XMLParser, XMLValidator } = require('fast-xml-parser');
 const { parseAcademicYear } = require('./academicYear');
 
+const NO_USERS = 'El archivo XML no contiene ningún usuario (alumnos, docentes ni no docentes)';
+
 class XMLUserParser {
   constructor(xmlPath) {
     this.xmlPath = xmlPath;
@@ -50,10 +52,8 @@ class XMLUserParser {
 
       const centro = jsonData.centro;
 
-      // A centro with nothing in it is almost always a wrong or truncated file,
-      // and accepting it would let an update empty the whole project
       if (!centro || typeof centro !== 'object') {
-        throw new Error('El archivo XML no contiene ningún grupo ni usuario');
+        throw new Error(NO_USERS);
       }
 
       result.academicYear = parseAcademicYear(centro['@_curso']);
@@ -76,6 +76,15 @@ class XMLUserParser {
       // Parse non-teaching staff (no_docentes)
       if (centro.no_docentes && centro.no_docentes.no_docente) {
         result.nonTeachingStaff = this.parseNonTeachingStaff(centro.no_docentes.no_docente);
+      }
+
+      // A roll with nobody in it is almost always a wrong or cut-down export,
+      // and accepting it would let an update empty the whole project. Checked
+      // on what was read, not on the element: a real <centro> always carries
+      // attributes (codigo, curso...), so it is never empty as an element.
+      const totalUsers = result.students.length + result.teachers.length + result.nonTeachingStaff.length;
+      if (totalUsers === 0) {
+        throw new Error(NO_USERS);
       }
 
       return result;

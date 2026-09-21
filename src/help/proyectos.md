@@ -34,7 +34,7 @@ Al importar se aplican estas reglas:
 - Los docentes van al grupo **Docentes** y los no docentes al grupo **No Docentes**.
 - El alumnado sin grupo va al grupo **⚠ Sin grupo**.
 - Si un mismo NIA o documento aparece varias veces, la persona se importa una sola vez, dando prioridad a la aparición que tiene grupo.
-- Si el archivo está dañado, incompleto o vacío, la aplicación lo rechaza con un mensaje de error y no importa nada.
+- Si el archivo está dañado, incompleto o no contiene ningún usuario (aunque tenga grupos), la aplicación lo rechaza con un mensaje de error y no importa nada. Al actualizar el XML, así se evita que un archivo equivocado deje el proyecto vacío.
 - Del propio centro se guarda el **curso**, que el XML indica con el año en que empieza. Sirve para distinguir las solicitudes de carnet y de publicación del curso anterior (ver [Carnets y publicación oficial](carnets.md#solicitudes-de-otros-proyectos-y-del-curso-anterior)).
 
 ## El informe de importación
