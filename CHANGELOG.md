@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.14.0](https://github.com/vicpiri/user-capture-app/compare/v1.13.0...v1.14.0) (2026-09-21)
+
+### Features
+
+* review and archive pending card and publication requests ([2fbdfe8](https://github.com/vicpiri/user-capture-app/commit/2fbdfe8505303d1d398807b5b68a4f61548c27b5))
+* tell apart card and publication requests the project cannot act on ([ec88091](https://github.com/vicpiri/user-capture-app/commit/ec8809169271393205b1e9a5dfa271992270dec6))
+
+### Bug Fixes
+
+* keep the open project after reloading the window ([854447a](https://github.com/vicpiri/user-capture-app/commit/854447aae7dd7efbc4dd2ff3cf22d5686aeb30fc))
+* reject an XML with no users even when its root has attributes ([9d4e841](https://github.com/vicpiri/user-capture-app/commit/9d4e841c1e73dbe84a18c33c7b10660be23271d7))
 ## [1.13.0](https://github.com/vicpiri/user-capture-app/compare/v1.12.0...v1.13.0) (2026-09-18)
 
 ### Features
