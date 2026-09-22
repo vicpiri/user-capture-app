@@ -1288,6 +1288,31 @@ function countImageUsage(users) {
   return imageCount;
 }
 
+/**
+ * Tell the history strip which captures are linked, and to whom
+ *
+ * Built from every user of the project, not the filtered list: a photo is
+ * linked whether or not its owner is on screen.
+ *
+ * @param {Array} users
+ */
+function updateCaptureHistoryLinks(users) {
+  if (!captureHistoryManager) return;
+
+  const linksByPath = new Map();
+  users.forEach(user => {
+    if (!user.image_path) return;
+    const surnames = [user.last_name1, user.last_name2].filter(Boolean).join(' ');
+    const name = surnames ? `${surnames}, ${user.first_name || ''}`.trim() : (user.first_name || '');
+    if (!linksByPath.has(user.image_path)) {
+      linksByPath.set(user.image_path, []);
+    }
+    linksByPath.get(user.image_path).push(name);
+  });
+
+  captureHistoryManager.setLinks(linksByPath);
+}
+
 async function displayUsers(users, allUsers = null) {
   // If checking for duplicates, we need to count against all users in database
   const usersForCounting = allUsers || users;
@@ -1326,6 +1351,8 @@ async function displayUsers(users, allUsers = null) {
 
   // Store imageCount globally for row rendering
   window._imageCountCache = imageCount;
+
+  updateCaptureHistoryLinks(usersForCounting);
 
   // Once for the whole batch rather than once per row
   syncUserRowRendererConfig();
@@ -1799,6 +1826,7 @@ async function applyCapturedImageChange(userId, imagePath) {
   }
 
   window._imageCountCache = countImageUsage(allUsers);
+  updateCaptureHistoryLinks(allUsers);
 
   const affectedPaths = new Set([previousPath, imagePath].filter(Boolean));
   const affectedIds = new Set([userId]);

@@ -637,6 +637,12 @@ historial de capturas del proyecto
   cada miniatura, para localizar la sesión en la que se hizo un enlace erróneo
 - Carga diferida de las miniaturas con IntersectionObserver
 - Se activa y desactiva desde Ver > Historial de capturas (preferencia persistente)
+- Marca las fotos enlazadas (atenuadas, con ✓ verde) y las enlazadas a varios
+  usuarios (borde y círculo rojos con el número), con los nombres en el
+  tooltip. `setLinks(ruta → nombres)` sustituye el conjunto entero y se llama
+  desde `displayUsers()` y `applyCapturedImageChange()` con `allUsers`, no
+  con la lista filtrada: una foto está enlazada aunque su dueño no se vea. Las
+  rutas se comparan sin distinguir mayúsculas ni el sentido de las barras
 
 **Cuidado con la clase `visible`**: `utilities.css` declara una utilidad global
 `.visible { display: block !important }`. Cualquier componente que use ese

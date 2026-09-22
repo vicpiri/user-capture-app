@@ -164,7 +164,9 @@ Actívalo o desactívalo con **Ver > Historial de capturas**. La aplicación rec
 - **Encabezados de fecha**: cada vez que cambia el día aparece un encabezado con la fecha, por ejemplo `14/09/2026`.
 - **Hora bajo cada miniatura**: la hora de llegada de la foto, por ejemplo `10:35:12`.
 - **Sin fecha en el nombre**: las fotos cuyo nombre no sigue el formato de fecha y hora, como las traídas con la importación de imágenes con ID, se agrupan bajo este encabezado y muestran el nombre del archivo en lugar de la hora.
-- Al pasar el ratón por una miniatura verás el nombre completo del archivo.
+- **Fotos ya enlazadas**: se ven atenuadas y llevan un círculo verde con ✓ en la esquina, para que destaquen las que quedan por enlazar. La que muestra el visor y la que tiene el ratón encima se ven siempre enteras.
+- **Fotos enlazadas a varios usuarios**: llevan un borde y un círculo rojos con el número de usuarios, como las asignaciones duplicadas de la lista. Casi siempre es un enlace equivocado.
+- Al pasar el ratón por una miniatura verás el nombre completo del archivo y, si está enlazada, a quién.
 
 La fecha y la hora se leen del nombre del archivo, que es el único registro de cuándo llegó cada foto.
 

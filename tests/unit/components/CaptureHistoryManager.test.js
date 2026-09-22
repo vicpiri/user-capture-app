@@ -343,6 +343,71 @@ describe('CaptureHistoryManager', () => {
     });
   });
 
+  describe('linked photos', () => {
+    const badge = (item) => item.querySelector('.capture-history-badge');
+
+    beforeEach(() => {
+      manager.setVisible(true);
+      manager.render(IMAGES, 0);
+    });
+
+    test('should leave unlinked photos unmarked', () => {
+      manager.setLinks(new Map());
+
+      items().forEach((item) => {
+        expect(item.classList.contains('is-linked')).toBe(false);
+        expect(item.classList.contains('is-shared')).toBe(false);
+        expect(badge(item)).toBeNull();
+      });
+    });
+
+    test('should mark a photo linked to one user with a check and their name', () => {
+      manager.setLinks(new Map([[IMAGES[1], ['García López, Ana']]]));
+
+      const item = items()[1];
+      expect(item.classList.contains('is-linked')).toBe(true);
+      expect(item.classList.contains('is-shared')).toBe(false);
+      expect(badge(item).textContent).toBe('\u2713');
+      expect(item.title).toBe('20260101120002.jpg\n01/01/2026 12:00:02\nEnlazada a García López, Ana');
+      expect(items()[0].classList.contains('is-linked')).toBe(false);
+    });
+
+    test('should mark a photo linked to several users in red, with how many and who', () => {
+      manager.setLinks({ [IMAGES[2]]: ['Abad, Luis', 'Ruiz, Eva'] });
+
+      const item = items()[2];
+      expect(item.classList.contains('is-shared')).toBe(true);
+      expect(item.classList.contains('is-linked')).toBe(false);
+      expect(badge(item).textContent).toBe('2');
+      expect(item.title).toBe('20260101120001.jpg\n01/01/2026 12:00:01\nEnlazada a 2 usuarios:\n- Abad, Luis\n- Ruiz, Eva');
+    });
+
+    test('should find the photo whatever the slashes or case of the stored path', () => {
+      manager.setLinks(new Map([['d:/proyecto/IMPORTS/20260101120003.JPG', ['Abad, Luis']]]));
+
+      expect(items()[0].classList.contains('is-linked')).toBe(true);
+    });
+
+    test('should drop the mark when the photo is unlinked', () => {
+      manager.setLinks(new Map([[IMAGES[0], ['Abad, Luis']]]));
+      manager.setLinks(new Map());
+
+      const item = items()[0];
+      expect(item.classList.contains('is-linked')).toBe(false);
+      expect(badge(item)).toBeNull();
+      expect(item.title).toBe('20260101120003.jpg\n01/01/2026 12:00:03');
+    });
+
+    test('should mark a capture that arrives after the links were set', () => {
+      const newCapture = 'D:\\Proyecto\\imports\\20260101120004.jpg';
+      manager.setLinks(new Map([[newCapture, ['Abad, Luis']]]));
+
+      manager.render([newCapture, ...IMAGES], 0);
+
+      expect(items()[0].classList.contains('is-linked')).toBe(true);
+    });
+  });
+
   describe('selection', () => {
     beforeEach(() => {
       manager.setVisible(true);

@@ -507,6 +507,56 @@
   opacity: 1;
 }
 
+.capture-history-item {
+  position: relative;
+}
+
+/* Already linked: dimmed, so the photos still waiting stand out. The one on
+   show and the one under the pointer are seen in full */
+.capture-history-item.is-linked .capture-history-thumb {
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+
+.capture-history-item.is-linked.current .capture-history-thumb,
+.capture-history-item.is-linked:hover .capture-history-thumb {
+  opacity: 1;
+}
+
+/* Check for a linked photo, count for one linked to several users. Outside
+   the thumbnail, so the dimming does not fade it */
+.capture-history-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background-color: #22c55e;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+/* Same red as the duplicates of the user list: most likely a wrong link */
+.capture-history-item.is-shared .capture-history-badge {
+  background-color: #ef4444;
+}
+
+.capture-history-item.is-shared {
+  border-color: #ef4444;
+}
+
+.capture-history-item.is-shared.current {
+  border-color: #4a9eff;
+}
+
 /* Image Container */
 .image-container {
   flex: 1;

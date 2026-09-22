@@ -10,6 +10,11 @@
  * only prepends one node, and re-creating the whole strip would ask the main
  * process for every thumbnail again.
  *
+ * Photos already linked to someone are dimmed and carry a check, so the ones
+ * still waiting stand out; a photo linked to several users is marked in red
+ * with how many, like the duplicates of the user list, since that is most
+ * likely a wrong link. Who has it goes in the tooltip.
+ *
  * @module components/CaptureHistoryManager
  */
 
@@ -34,6 +39,16 @@
    */
   function fileNameOf(imagePath) {
     return String(imagePath).split(/[\\/]/).pop() || '';
+  }
+
+  /**
+   * Key a path is looked up by, so a link stored with other slashes or
+   * another case still finds its thumbnail
+   * @param {string} imagePath
+   * @returns {string}
+   */
+  function pathKey(imagePath) {
+    return String(imagePath).replace(/\\/g, '/').toLowerCase();
   }
 
   /**
@@ -86,6 +101,8 @@
       this.observer = null;
       // Path -> thumbnail element, so a re-render can reuse what is on screen
       this.itemsByPath = new Map();
+      // pathKey() -> names of the users the photo is linked to
+      this.links = new Map();
     }
 
     /**
@@ -219,6 +236,66 @@
     }
 
     /**
+     * Say which photos are linked, and to whom
+     *
+     * Replaces the whole set: it is cheap to build from the user list, and
+     * patching link by link would leave stale marks behind whenever a change
+     * arrives through a full reload instead.
+     *
+     * @param {Map<string, string[]>|Object<string, string[]>} linksByPath -
+     *   Image path -> names of the users linked to it
+     */
+    setLinks(linksByPath) {
+      const entries = linksByPath instanceof Map
+        ? Array.from(linksByPath.entries())
+        : Object.entries(linksByPath || {});
+
+      this.links = new Map();
+      entries.forEach(([imagePath, names]) => {
+        if (imagePath && Array.isArray(names) && names.length > 0) {
+          this.links.set(pathKey(imagePath), names);
+        }
+      });
+
+      this.itemsByPath.forEach((item, imagePath) => this.applyLinkState(item, imagePath));
+    }
+
+    /**
+     * Mark a thumbnail as free, linked or shared, and say who has it
+     * @param {HTMLElement} item
+     * @param {string} imagePath
+     * @private
+     */
+    applyLinkState(item, imagePath) {
+      const names = this.links.get(pathKey(imagePath)) || [];
+      const shared = names.length > 1;
+
+      item.classList.toggle('is-linked', names.length === 1);
+      item.classList.toggle('is-shared', shared);
+
+      let badge = item.querySelector('.capture-history-badge');
+      if (names.length === 0) {
+        if (badge) badge.remove();
+      } else {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'capture-history-badge';
+          badge.setAttribute('aria-hidden', 'true');
+          item.appendChild(badge);
+        }
+        badge.textContent = shared ? String(names.length) : '✓';
+      }
+
+      let linkLine = '';
+      if (names.length === 1) {
+        linkLine = `\nEnlazada a ${names[0]}`;
+      } else if (shared) {
+        linkLine = `\nEnlazada a ${names.length} usuarios:\n${names.map(name => `- ${name}`).join('\n')}`;
+      }
+      item.title = item.dataset.baseTitle + linkLine;
+    }
+
+    /**
      * Build a thumbnail, with its image left unloaded
      * @param {string} imagePath
      * @returns {HTMLElement}
@@ -233,7 +310,7 @@
       item.className = 'capture-history-item';
       item.dataset.path = imagePath;
       // The name is what identifies a capture when a wrong link is chased down
-      item.title = capture
+      item.dataset.baseTitle = capture
         ? `${fileName}\n${capture.dayLabel} ${capture.time}`
         : fileName;
 
@@ -261,6 +338,8 @@
       item.addEventListener('click', () => {
         this.onSelect(Number(item.dataset.index));
       });
+
+      this.applyLinkState(item, imagePath);
 
       if (this.observer) {
         this.observer.observe(item);
@@ -356,6 +435,7 @@
       }
 
       this.itemsByPath.clear();
+      this.links = new Map();
       this.images = [];
       this.currentIndex = -1;
 
