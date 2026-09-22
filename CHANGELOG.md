@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.16.0](https://github.com/vicpiri/user-capture-app/compare/v1.15.0...v1.16.0) (2026-09-22)
+
+### Features
+
+* mark linked and shared photos in the capture history strip ([35e6118](https://github.com/vicpiri/user-capture-app/commit/35e611845ac20d5066fa1315805973f8ca63e890))
+
+### Bug Fixes
+
+* sort people alphabetically ignoring accents, case and punctuation ([a189b93](https://github.com/vicpiri/user-capture-app/commit/a189b93e16279aa9129b9c4ead7324df3eca9d4f))
 ## [1.15.0](https://github.com/vicpiri/user-capture-app/compare/v1.14.0...v1.15.0) (2026-09-22)
 
 ### Features
