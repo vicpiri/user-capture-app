@@ -29,6 +29,7 @@ user-capture-app/
 │   │   ├── utils/               # Utilidades y helpers
 │   │   │   ├── config.js               # Configuración y preferencias
 │   │   │   ├── formatting.js           # Formateo de fechas y nombres
+│   │   │   ├── nameOrder.js            # Orden alfabético de personas (apellidos y nombre)
 │   │   │   ├── recentProjects.js       # Gestión de proyectos recientes
 │   │   │   ├── repositoryCache.js      # Caché de existencia de archivos
 │   │   │   └── version.js              # Gestión de versión y modo DEV
@@ -293,6 +294,11 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
     exportaciones. `getLastExportFolder()` sube a la carpeta existente más
     cercana si ya no está
 - **formatting.js**: Formateo de fechas (ISO a español) y nombres de archivo
+- **nameOrder.js**: Orden alfabético de personas, común a la lista y a las
+  exportaciones: primer apellido, segundo y nombre, comparados con
+  `Intl.Collator('es')` sin tildes, mayúsculas, espacios ni guiones, y con la
+  `ñ` como letra propia. `getUsers()` ordena en JavaScript: el `ORDER BY` de
+  SQLite compara bytes y mandaba «Álvarez» detrás de «Zapata»
 - **recentProjects.js**: Gestión de lista de proyectos recientes
 - **repositoryCache.js**: Caché con TTL para verificación de existencia de archivos
 - **version.js**: Gestión de versión de la aplicación con detección de modo DEV

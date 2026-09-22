@@ -12,6 +12,7 @@ const {
   purgeReplacedRuns
 } = require('../replacedArchive');
 const { capitalizeWords } = require('../utils/formatting');
+const { compareUsersByName } = require('../utils/nameOrder');
 
 // Loaded on first use rather than at startup. sharp is a native module built on
 // libvips and archiver drags in a stream toolchain, but neither is needed until
@@ -1794,28 +1795,7 @@ function registerExportHandlers(context) {
         let currentY = titleY;
         let count = 0;
 
-        // Sort users alphabetically by last_name1, then last_name2, then first_name
-        users.sort((a, b) => {
-          const lastName1A = (a.last_name1 || '').toLowerCase();
-          const lastName1B = (b.last_name1 || '').toLowerCase();
-          const lastName2A = (a.last_name2 || '').toLowerCase();
-          const lastName2B = (b.last_name2 || '').toLowerCase();
-          const firstNameA = (a.first_name || '').toLowerCase();
-          const firstNameB = (b.first_name || '').toLowerCase();
-
-          // Compare by last_name1 first
-          if (lastName1A !== lastName1B) {
-            return lastName1A.localeCompare(lastName1B);
-          }
-
-          // If last_name1 is the same, compare by last_name2
-          if (lastName2A !== lastName2B) {
-            return lastName2A.localeCompare(lastName2B);
-          }
-
-          // If both last names are the same, compare by first_name
-          return firstNameA.localeCompare(firstNameB);
-        });
+        users.sort(compareUsersByName);
 
         // Process each user
         for (const user of users) {
@@ -2010,19 +1990,7 @@ function registerExportHandlers(context) {
         const groupCode = groupCodes[groupIndex];
         const users = usersByGroup[groupCode];
 
-        // Sort users alphabetically by last_name1, then last_name2, then first_name
-        users.sort((a, b) => {
-          const lastNameA1 = (a.last_name1 || '').toLowerCase();
-          const lastNameB1 = (b.last_name1 || '').toLowerCase();
-          const lastNameA2 = (a.last_name2 || '').toLowerCase();
-          const lastNameB2 = (b.last_name2 || '').toLowerCase();
-          const firstNameA = (a.first_name || '').toLowerCase();
-          const firstNameB = (b.first_name || '').toLowerCase();
-
-          if (lastNameA1 !== lastNameB1) return lastNameA1.localeCompare(lastNameB1);
-          if (lastNameA2 !== lastNameB2) return lastNameA2.localeCompare(lastNameB2);
-          return firstNameA.localeCompare(firstNameB);
-        });
+        users.sort(compareUsersByName);
 
         totalUsers += users.length;
 
@@ -2116,17 +2084,7 @@ function registerExportHandlers(context) {
         const groupB = (b.group_code || '').toLowerCase();
 
         if (groupA !== groupB) return groupA.localeCompare(groupB);
-
-        const lastNameA1 = (a.last_name1 || '').toLowerCase();
-        const lastNameB1 = (b.last_name1 || '').toLowerCase();
-        const lastNameA2 = (a.last_name2 || '').toLowerCase();
-        const lastNameB2 = (b.last_name2 || '').toLowerCase();
-        const firstNameA = (a.first_name || '').toLowerCase();
-        const firstNameB = (b.first_name || '').toLowerCase();
-
-        if (lastNameA1 !== lastNameB1) return lastNameA1.localeCompare(lastNameB1);
-        if (lastNameA2 !== lastNameB2) return lastNameA2.localeCompare(lastNameB2);
-        return firstNameA.localeCompare(firstNameB);
+        return compareUsersByName(a, b);
       });
 
       // Build CSV content

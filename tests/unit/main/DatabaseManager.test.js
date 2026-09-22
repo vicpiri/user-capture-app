@@ -97,11 +97,11 @@ describe('DatabaseManager', () => {
       expect(indexes).toContain('idx_users_document');
     });
 
-    test('should index the order the user list is read in', async () => {
+    test('should drop the name index, since users are sorted in JavaScript', async () => {
       const indexes = (await query("SELECT name FROM sqlite_master WHERE type = 'index'"))
         .map(row => row.name);
 
-      expect(indexes).toContain('idx_users_name');
+      expect(indexes).not.toContain('idx_users_name');
     });
 
     test('should drop the index that could never serve a search', async () => {
@@ -163,7 +163,36 @@ describe('DatabaseManager', () => {
     test('should keep the usual order', async () => {
       const users = await db.getUsers({ search: 'a' });
 
-      expect(users.map(u => u.last_name1)).toEqual([...users.map(u => u.last_name1)].sort());
+      expect(users.map(u => u.first_name)).toEqual(['ANA', 'José', 'MARIA']);
+    });
+  });
+
+  describe('getUsers() order', () => {
+    test('should sort by surnames and name, ignoring accents, case and spaces', async () => {
+      const person = (nia, first_name, last_name1, last_name2) =>
+        ({ first_name, last_name1, last_name2, nia, document: '', group_code: '1ESO', birth_date: '2010-01-01' });
+
+      await db.importUsers({
+        groups: [{ code: '1ESO', name: 'Primero ESO' }],
+        students: [
+          person('1', 'Ana', 'Zapata', ''),
+          person('2', 'Luis', 'Álvarez', 'Ruiz'),
+          person('3', 'Eva', 'alvarez', 'Pérez'),
+          person('4', 'Sara', 'Muñoz', ''),
+          person('5', 'Pablo', 'Munuera', ''),
+          person('6', 'Marta', 'de la Fuente', ''),
+          person('7', 'Íker', 'Delgado', ''),
+          person('8', 'Carla', 'Álvarez', 'Ruiz')
+        ],
+        teachers: [],
+        nonTeachingStaff: []
+      });
+
+      const users = await db.getUsers();
+
+      expect(users.map(u => u.first_name)).toEqual(
+        ['Eva', 'Carla', 'Luis', 'Marta', 'Íker', 'Pablo', 'Sara', 'Ana']
+      );
     });
   });
 

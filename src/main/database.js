@@ -4,6 +4,7 @@ const sqlite3 = process.argv.includes('--dev')
   ? require('sqlite3').verbose()
   : require('sqlite3');
 const path = require('path');
+const { compareUsersByName } = require('./utils/nameOrder');
 
 /**
  * Lowercase and without accents, so "José" and "jose" compare equal
@@ -129,9 +130,9 @@ class DatabaseManager {
         // Staff are looked up by document as often as students are by NIA
         this.db.run('CREATE INDEX IF NOT EXISTS idx_users_document ON users(document)');
 
-        // Matches the ORDER BY every user listing uses, so the rows come back
-        // already sorted instead of being sorted on each load
-        this.db.run('CREATE INDEX IF NOT EXISTS idx_users_name ON users(last_name1, last_name2, first_name)');
+        // Replaced: it served an ORDER BY on the names, but SQLite compares
+        // bytes, so users are now sorted in JavaScript (utils/nameOrder.js)
+        this.db.run('DROP INDEX IF EXISTS idx_users_name');
 
         // Replaced: it was meant for search, but searches use LIKE '%term%',
         // which no index can serve, so it only cost time on every insert
@@ -400,11 +401,13 @@ class DatabaseManager {
         params.push(filters.type);
       }
 
-      query += ' ORDER BY last_name1, last_name2, first_name';
-
       this.db.all(query, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(filters.search ? rows.filter(matchesSearch(filters.search)) : rows);
+        if (err) {
+          reject(err);
+          return;
+        }
+        const users = filters.search ? rows.filter(matchesSearch(filters.search)) : rows;
+        resolve(users.sort(compareUsersByName));
       });
     });
   }
