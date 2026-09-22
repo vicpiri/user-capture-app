@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.15.0](https://github.com/vicpiri/user-capture-app/compare/v1.14.0...v1.15.0) (2026-09-22)
+
+### Features
+
+* add photos by group window with a coverage heat map ([87a0cb9](https://github.com/vicpiri/user-capture-app/commit/87a0cb9271aa79dd9e2a5795d08ce1523a090767))
 ## [1.14.0](https://github.com/vicpiri/user-capture-app/compare/v1.13.0...v1.14.0) (2026-09-21)
 
 ### Features
