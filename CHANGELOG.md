@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.17.0](https://github.com/vicpiri/user-capture-app/compare/v1.16.0...v1.17.0) (2026-09-22)
+
+### Features
+
+* show repository photo coverage in the photos by group window ([66c2407](https://github.com/vicpiri/user-capture-app/commit/66c2407cf16945ac115e9b0b119a142928364de5))
 ## [1.16.0](https://github.com/vicpiri/user-capture-app/compare/v1.15.0...v1.16.0) (2026-09-22)
 
 ### Features
