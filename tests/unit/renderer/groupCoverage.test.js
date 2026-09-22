@@ -9,7 +9,8 @@ const {
   coveragePercent,
   heatHue,
   sortGroups,
-  summarize
+  summarize,
+  describeTotals
 } = require('../../../src/renderer/group-coverage');
 
 const group = (code, total, withImage) => ({
@@ -68,5 +69,13 @@ describe('group photo coverage', () => {
       total: 30,
       withImage: 14
     });
+  });
+
+  test('should say which photos the header counts', () => {
+    const groups = [group('A', 10, 10), group('B', 10, 0)];
+
+    expect(describeTotals(groups, 'captured')).toBe(
+      '1 de 2 grupos completos · 10 de 20 usuarios con foto enlazada (50 %) · 1 sin ninguna foto');
+    expect(describeTotals(groups, 'repository')).toContain('10 de 20 usuarios con foto en el depósito');
   });
 });

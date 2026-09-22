@@ -560,6 +560,7 @@ function createMenu() {
         if (repositoryGridWindow) {
           repositoryGridWindow.webContents.send('repository-changed', { type: 'manual-refresh' });
         }
+        notifyGroupCoverageRepositoryChanged();
       },
       openImageGridWindow,
       openRepositoryGridWindow,
@@ -748,6 +749,14 @@ function openPrintedCardsWindow() {
   printedCardsWindowManager.open({ isDev });
 }
 
+// The photos by group window counts repository photos too, when showing them
+function notifyGroupCoverageRepositoryChanged() {
+  const win = groupCoverageWindowManager.getWindow();
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('repository-changed');
+  }
+}
+
 // Ver > Fotografías por grupo
 function openGroupCoverageWindow() {
   if (!dbManager) {
@@ -901,6 +910,8 @@ async function reinitializeRepositoryMirror() {
   if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
     repositoryGridWindow.webContents.send('repository-changed');
   }
+
+  notifyGroupCoverageRepositoryChanged();
 }
 
 // Long enough after opening for the mirror's first sync to have the disk to
@@ -1025,6 +1036,7 @@ async function ensureRepositoryMirrorStarted() {
             mainWindow.webContents.send('repository-changed');
             mainWindow.webContents.send('sync-completed', result);
           }
+          notifyGroupCoverageRepositoryChanged();
           // Send completion event to repository grid window
           const repositoryGridWindow = repositoryGridWindowManager.getWindow();
           if (repositoryGridWindow && !repositoryGridWindow.isDestroyed()) {
@@ -1065,6 +1077,8 @@ async function ensureRepositoryMirrorStarted() {
           logger.info('Notifying repository grid window about repository change');
           repositoryGridWindow.webContents.send('repository-changed', data);
         }
+
+        notifyGroupCoverageRepositoryChanged();
 
         // The watcher will automatically trigger a debounced sync
       });

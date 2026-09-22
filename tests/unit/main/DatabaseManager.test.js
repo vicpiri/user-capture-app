@@ -376,6 +376,16 @@ describe('DatabaseManager', () => {
 
       expect(group.withImage).toBe(0);
     });
+
+    test('should count with the check it is given instead of the linked photo', async () => {
+      await importUsers([student(6401), student(6402)]);
+      const users = await db.getUsers({});
+      await db.linkImageToUser(users[0].id, 'photo0.jpg');
+
+      const [group] = await db.getGroupPhotoCoverage((user) => user.nia === '6402');
+
+      expect(group).toMatchObject({ total: 2, withImage: 1, withoutImage: 1 });
+    });
   });
 
   describe('clearCapturedImages()', () => {

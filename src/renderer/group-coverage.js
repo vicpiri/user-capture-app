@@ -1,8 +1,9 @@
 /**
  * Photos by group window - Renderer Process
- * Ver > Fotografías por grupo: how many users of each group have a captured
- * photo linked, coloured red (none) through yellow to green (complete), to
- * spot at a glance which groups are still to be photographed.
+ * Ver > Fotografías por grupo: how many users of each group have a photo,
+ * coloured red (none) through yellow to green (complete), to spot at a glance
+ * which groups are still to be photographed. The photos counted are either
+ * the captured ones linked in the project or those in the repository.
  */
 
 (function(global) {
@@ -69,7 +70,27 @@
     }, { groups: 0, complete: 0, empty: 0, total: 0, withImage: 0 });
   }
 
-  const helpers = { coverageRatio, coveragePercent, heatHue, sortGroups, summarize };
+  const SOURCES = {
+    captured: { noun: 'foto enlazada' },
+    repository: { noun: 'foto en el depósito' }
+  };
+
+  /**
+   * Header line under the title
+   * @param {Array} groups
+   * @param {'captured'|'repository'} source
+   * @returns {string}
+   */
+  function describeTotals(groups, source) {
+    const totals = summarize(groups);
+    const percent = totals.total ? coveragePercent(totals.withImage / totals.total) : 0;
+    const noun = (SOURCES[source] || SOURCES.captured).noun;
+    return `${totals.complete} de ${totals.groups} grupos completos · ` +
+      `${totals.withImage} de ${totals.total} usuarios con ${noun} (${percent} %)` +
+      (totals.empty ? ` · ${totals.empty} sin ninguna foto` : '');
+  }
+
+  const helpers = { coverageRatio, coveragePercent, heatHue, sortGroups, summarize, describeTotals };
 
   // Under Jest only the helpers are wanted; the page itself needs its DOM
   if (typeof module !== 'undefined' && module.exports) {
@@ -84,13 +105,17 @@
   const tableWrapperEl = document.getElementById('table-wrapper');
   const tableBodyEl = document.getElementById('table-body');
   const subtitleEl = document.getElementById('subtitle');
+  const sourceSelect = document.getElementById('source-select');
   const orderSelect = document.getElementById('order-select');
   const hideCompleteCheck = document.getElementById('hide-complete');
   const allHiddenEl = document.getElementById('all-hidden');
 
   const PREFS_KEY = 'groupCoverage.view';
+  // Repository changes arrive one per file while a sync copies them
+  const REPOSITORY_RELOAD_DELAY_MS = 500;
   let groups = [];
-  let loading = false;
+  let requestSeq = 0;
+  let repositoryReloadTimer = null;
 
   function readPrefs() {
     try {
@@ -103,6 +128,7 @@
   function savePrefs() {
     try {
       localStorage.setItem(PREFS_KEY, JSON.stringify({
+        source: sourceSelect.value,
         order: orderSelect.value,
         hideComplete: hideCompleteCheck.checked
       }));
@@ -113,17 +139,29 @@
 
   async function init() {
     const prefs = readPrefs();
+    if (SOURCES[prefs.source]) {
+      sourceSelect.value = prefs.source;
+    }
     if (prefs.order === 'code' || prefs.order === 'progress') {
       orderSelect.value = prefs.order;
     }
     hideCompleteCheck.checked = prefs.hideComplete === true;
 
+    sourceSelect.addEventListener('change', () => { savePrefs(); load(); });
     orderSelect.addEventListener('change', () => { savePrefs(); render(); });
     hideCompleteCheck.addEventListener('change', () => { savePrefs(); render(); });
 
-    // Links made in the main window arrive here; anything else (an XML
-    // update, say) is picked up when the window comes back to the front
-    window.electronAPI.onCapturedImagesChanged(() => load({ quiet: true }));
+    // Links made in the main window and repository changes arrive here;
+    // anything else (an XML update, say) is picked up when the window comes
+    // back to the front
+    window.electronAPI.onCapturedImagesChanged(() => {
+      if (sourceSelect.value === 'captured') load({ quiet: true });
+    });
+    window.electronAPI.onRepositoryChanged(() => {
+      if (sourceSelect.value !== 'repository') return;
+      clearTimeout(repositoryReloadTimer);
+      repositoryReloadTimer = setTimeout(() => load({ quiet: true }), REPOSITORY_RELOAD_DELAY_MS);
+    });
     window.addEventListener('focus', () => load({ quiet: true }));
 
     await load();
@@ -134,11 +172,14 @@
    * @param {boolean} [options.quiet] - keep the table on screen while reloading
    */
   async function load({ quiet = false } = {}) {
-    if (loading) return;
-    loading = true;
+    // Only the latest request is shown: switching the source while the other
+    // one is still counting must not end with the old figures on screen
+    const seq = ++requestSeq;
+    const source = sourceSelect.value;
     try {
       if (!quiet) showState('loading');
-      const result = await window.electronAPI.getGroupPhotoCoverage();
+      const result = await window.electronAPI.getGroupPhotoCoverage(source);
+      if (seq !== requestSeq) return;
       if (!result.success) {
         showError(result.error || 'Error desconocido al cargar los grupos');
         return;
@@ -146,20 +187,14 @@
       groups = result.groups || [];
       render();
     } catch (error) {
+      if (seq !== requestSeq) return;
       console.error('Error loading group photo coverage:', error);
       showError('Error al cargar los grupos: ' + error.message);
-    } finally {
-      loading = false;
     }
   }
 
   function render() {
-    const totals = summarize(groups);
-    const percent = totals.total ? coveragePercent(totals.withImage / totals.total) : 0;
-    subtitleEl.textContent =
-      `${totals.complete} de ${totals.groups} grupos completos · ` +
-      `${totals.withImage} de ${totals.total} usuarios con foto (${percent} %)` +
-      (totals.empty ? ` · ${totals.empty} sin ninguna foto` : '');
+    subtitleEl.textContent = describeTotals(groups, sourceSelect.value);
 
     if (groups.length === 0) {
       showState('empty');
@@ -227,6 +262,8 @@
   }
 
   function showError(message) {
+    // The totals on show would be those of the other source
+    subtitleEl.textContent = '';
     errorMessageEl.textContent = message;
     showState('error');
   }

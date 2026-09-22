@@ -233,11 +233,21 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
 - **repositoryGridWindow.js**: Visualización en grid de imágenes del repositorio
 - **printedCardsWindow.js**: Últimos carnets impresos
 - **groupCoverageWindow.js**: Ver > Fotografías por grupo (`Ctrl+Shift+E`).
-  Por grupo, usuarios con foto capturada enlazada y sin ella, coloreados de
-  rojo (ninguna) a verde (completo) pasando por amarillo
-  - Datos de `getGroupPhotoCoverage()` en `database.js` (handler
-    `get-group-photo-coverage`): agrupa por el `group_code` de los usuarios,
-    así que no salen grupos vacíos, y deja fuera `ELIMINADOS`
+  Por grupo, usuarios con foto y sin ella, coloreados de rojo (ninguna) a
+  verde (completo) pasando por amarillo. El selector **Fotografías** elige qué
+  foto cuenta: la capturada enlazada o la del depósito
+  - Datos de `getGroupPhotoCoverage(hasPhoto)` en `database.js` (handler
+    `get-group-photo-coverage`, con `source` `captured` o `repository`):
+    agrupa por el `group_code` de los usuarios, así que no salen grupos
+    vacíos, y deja fuera `ELIMINADOS`. Sin `hasPhoto` cuenta `image_path`
+  - Con el depósito, el handler busca `{NIA|documento}.jpg/.jpeg` con
+    `findUserRepositoryImage()` de las exportaciones, en el índice de la copia
+    local si ya ha cargado y si no leyendo la carpeta. Sin depósito
+    configurado, o si la carpeta no existe, devuelve el error y la ventana lo
+    muestra
+  - `main.js` le manda `repository-changed` (`notifyGroupCoverageRepositoryChanged()`)
+    en los mismos casos que a la ventana principal; con la fuente del depósito
+    recarga agrupando los avisos en 500 ms, porque llegan uno por archivo
   - Se refresca con `captured-images-changed`, que ahora se envía también a
     esta ventana (contexto `groupCoverageWindow`), al aplicar una
     actualización del XML (`confirm-update-xml`, también si falla a medias) y

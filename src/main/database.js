@@ -713,27 +713,28 @@ class DatabaseManager {
   }
 
   /**
-   * How many users of each group have a captured photo linked
+   * How many users of each group have a photo
    *
    * Groups by the users' group_code rather than by the groups table, so a
    * group with nobody in it does not show up as missing photos and a code
    * with no row in groups is still counted. The deleted users' group is left
    * out: nobody is going to photograph them.
    *
+   * @param {Function} [hasPhoto] - (user) => boolean, given type, nia,
+   *   document and image_path. By default, whether a captured photo is linked;
+   *   the repository count passes its own
    * @returns {Promise<Array<{code: string, name: string, total: number, withImage: number, withoutImage: number}>>}
    */
-  async getGroupPhotoCoverage() {
+  async getGroupPhotoCoverage(hasPhoto = (user) => Boolean(user.image_path)) {
     const rows = await new Promise((resolve, reject) => {
       this.db.all(`
         SELECT
           COALESCE(u.group_code, '') AS code,
           g.name AS name,
-          COUNT(*) AS total,
-          SUM(CASE WHEN u.image_path IS NOT NULL AND u.image_path != '' THEN 1 ELSE 0 END) AS withImage
+          u.type, u.nia, u.document, u.image_path
         FROM users u
         LEFT JOIN groups g ON u.group_code = g.code
         WHERE COALESCE(u.group_code, '') != 'ELIMINADOS'
-        GROUP BY COALESCE(u.group_code, '')
         ORDER BY code
       `, [], (err, result) => {
         if (err) reject(err);
@@ -741,12 +742,20 @@ class DatabaseManager {
       });
     });
 
-    return rows.map((row) => ({
-      code: row.code,
-      name: row.name || row.code || 'Sin grupo',
-      total: row.total,
-      withImage: row.withImage || 0,
-      withoutImage: row.total - (row.withImage || 0)
+    const groups = new Map();
+    for (const row of rows) {
+      let group = groups.get(row.code);
+      if (!group) {
+        group = { code: row.code, name: row.name || row.code || 'Sin grupo', total: 0, withImage: 0 };
+        groups.set(row.code, group);
+      }
+      group.total += 1;
+      if (hasPhoto(row)) group.withImage += 1;
+    }
+
+    return Array.from(groups.values(), (group) => ({
+      ...group,
+      withoutImage: group.total - group.withImage
     }));
   }
 

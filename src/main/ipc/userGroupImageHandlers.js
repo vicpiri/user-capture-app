@@ -8,6 +8,7 @@ const { formatTimestamp } = require('../utils/formatting');
 const { getImageRepositoryPath } = require('../utils/config');
 const { getActiveIngestPath, markWebcamCapture, getIncomingRotation } = require('../ingestFolder');
 const { rotateImageFile } = require('../imageOrientation');
+const { readRepositoryFilenames, findUserRepositoryImage } = require('./exportHandlers');
 
 /**
  * Register user, group, and image-related IPC handlers
@@ -20,6 +21,22 @@ const { rotateImageFile } = require('../imageOrientation');
  */
 function registerUserGroupImageHandlers(context) {
   const { mainWindow, logger, state, repositoryCacheManager, repositoryMirror, imageGridWindow, groupCoverageWindow } = context;
+
+  /**
+   * Lower-cased filenames in the repository. The mirror's index answers
+   * without touching the synced drive, which the photos by group window asks
+   * every time it comes to the front; until the index has loaded, the folder
+   * itself is read, so a project opened a moment ago does not count zero.
+   * @param {string} repositoryPath
+   * @returns {Promise<Set<string>>}
+   */
+  const readRepositoryFileList = async (repositoryPath) => {
+    const mirror = repositoryMirror ? repositoryMirror() : null;
+    if (mirror && mirror.mirrorIndex && mirror.mirrorIndex.size > 0) {
+      return new Set(mirror.getAllFiles());
+    }
+    return readRepositoryFilenames(repositoryPath, logger);
+  };
 
   // The captured images grid lists who has which photo, and the photos by
   // group window counts them, and neither has any other way to learn that a
@@ -135,13 +152,31 @@ function registerUserGroupImageHandlers(context) {
     }
   });
 
-  // Ver > Fotografías por grupo: linked photos and missing ones in each group
-  ipcMain.handle('get-group-photo-coverage', async () => {
+  // Ver > Fotografías por grupo: users with a photo and without one in each
+  // group, counting either the linked captured photos or the repository ones
+  ipcMain.handle('get-group-photo-coverage', async (event, source = 'captured') => {
     try {
       if (!state.dbManager) {
         throw new Error('No hay ningún proyecto abierto');
       }
-      const groups = await state.dbManager.getGroupPhotoCoverage();
+
+      if (source !== 'repository') {
+        const groups = await state.dbManager.getGroupPhotoCoverage();
+        return { success: true, groups };
+      }
+
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+      if (!repositoryPath) {
+        return { success: false, error: 'No se ha configurado el depósito de imágenes. Configúralo en Proyecto > Configurar depósito de imágenes' };
+      }
+      if (!fs.existsSync(repositoryPath)) {
+        return { success: false, error: `La carpeta del depósito no está disponible: ${repositoryPath}` };
+      }
+
+      const repositoryFiles = await readRepositoryFileList(repositoryPath);
+      const groups = await state.dbManager.getGroupPhotoCoverage(
+        (user) => findUserRepositoryImage(user, repositoryFiles) !== null
+      );
       return { success: true, groups };
     } catch (error) {
       console.error('Error getting group photo coverage:', error);
