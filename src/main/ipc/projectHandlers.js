@@ -49,8 +49,19 @@ function registerProjectHandlers(context) {
     addRecentProject,
     updateWindowTitle,
     closeCurrentProject,
-    ensureRepositoryMirrorStarted
+    ensureRepositoryMirrorStarted,
+    groupCoverageWindow
   } = context;
+
+  // Ver > Fotografías por grupo counts users per group, and an XML update
+  // adds, removes and moves users between groups. The window reloads its
+  // counts on this message, the same one a new link sends it.
+  const notifyGroupCoverage = () => {
+    const win = groupCoverageWindow ? groupCoverageWindow() : null;
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('captured-images-changed');
+    }
+  };
 
   const ingestContext = { state, logger, getMainWindow };
 
@@ -739,6 +750,7 @@ function registerProjectHandlers(context) {
 
       logger.section('XML UPDATE COMPLETED');
       logger.success('XML update completed successfully');
+      notifyGroupCoverage();
 
       // Only now is this the file the users came from. Recording it on
       // analysis showed a file that was missing, unreadable or never applied.
@@ -806,6 +818,8 @@ function registerProjectHandlers(context) {
       };
     } catch (error) {
       logger.error('Error applying XML update', error);
+      // It may have stopped halfway, with some users already changed
+      notifyGroupCoverage();
       return { success: false, error: error.message };
     }
   });

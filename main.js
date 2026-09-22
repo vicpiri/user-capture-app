@@ -26,6 +26,7 @@ const CameraWindowManager = require('./src/main/window/cameraWindow');
 const ImageGridWindowManager = require('./src/main/window/imageGridWindow');
 const RepositoryGridWindowManager = require('./src/main/window/repositoryGridWindow');
 const PrintedCardsWindowManager = require('./src/main/window/printedCardsWindow');
+const GroupCoverageWindowManager = require('./src/main/window/groupCoverageWindow');
 const HelpWindowManager = require('./src/main/window/helpWindow');
 const ViewerMirrorWindowManager = require('./src/main/window/viewerMirrorWindow');
 const { getLogger } = require('./src/main/logger');
@@ -90,6 +91,7 @@ const cameraWindowManager = new CameraWindowManager();
 const imageGridWindowManager = new ImageGridWindowManager();
 const repositoryGridWindowManager = new RepositoryGridWindowManager();
 const printedCardsWindowManager = new PrintedCardsWindowManager();
+const groupCoverageWindowManager = new GroupCoverageWindowManager();
 const helpWindowManager = new HelpWindowManager();
 const viewerMirrorWindowManager = new ViewerMirrorWindowManager();
 
@@ -102,6 +104,7 @@ const secondaryWindowManagers = [
   imageGridWindowManager,
   repositoryGridWindowManager,
   printedCardsWindowManager,
+  groupCoverageWindowManager,
   helpWindowManager,
   viewerMirrorWindowManager
 ];
@@ -561,6 +564,7 @@ function createMenu() {
       openImageGridWindow,
       openRepositoryGridWindow,
       openPrintedCardsWindow,
+      openGroupCoverageWindow,
       openHelpWindow,
       openViewerMirrorWindow,
       // Setting the application menu puts it back on the viewer mirror too
@@ -744,6 +748,17 @@ function openPrintedCardsWindow() {
   printedCardsWindowManager.open({ isDev });
 }
 
+// Ver > Fotografías por grupo
+function openGroupCoverageWindow() {
+  if (!dbManager) {
+    warnNoProject();
+    return;
+  }
+
+  const isDev = process.argv.includes('--dev');
+  groupCoverageWindowManager.open({ isDev });
+}
+
 // Ver > Visor en ventana aparte. Needs no project: without one it says the
 // viewer is empty. It opens where it was last left, if that display is still
 // connected, so it goes back to the second monitor by itself
@@ -854,6 +869,9 @@ async function closeCurrentProject() {
   imageManager = null;
   projectPath = null;
   currentRepositoryPath = null;
+
+  // Its counts belong to the project that is going away
+  groupCoverageWindowManager.close();
 }
 
 // Repository mirror management
@@ -1176,6 +1194,7 @@ function registerIPCHandlers() {
     repositoryCacheManager,
     repositoryMirror: () => repositoryMirror,
     imageGridWindow: () => imageGridWindowManager.getWindow(),
+    groupCoverageWindow: () => groupCoverageWindowManager.getWindow(),
     repositoryGridWindow: () => repositoryGridWindowManager.getWindow(),
     createMenu,
     addRecentProject,

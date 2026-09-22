@@ -288,6 +288,67 @@ describe('DatabaseManager', () => {
     });
   });
 
+  describe('getGroupPhotoCoverage()', () => {
+    const setGroup = (userId, groupCode) => new Promise((resolve, reject) => {
+      db.db.run(
+        'UPDATE users SET group_code = ? WHERE id = ?',
+        [groupCode, userId],
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
+
+    test('should count linked and missing photos per group', async () => {
+      await importUsers([student(6001), student(6002), student(6003)]);
+      const users = await db.getUsers({});
+      await db.linkImageToUser(users[0].id, 'photo0.jpg');
+
+      const coverage = await db.getGroupPhotoCoverage();
+
+      expect(coverage).toEqual([
+        { code: '1ESO', name: 'Primero ESO', total: 3, withImage: 1, withoutImage: 2 }
+      ]);
+    });
+
+    test('should leave out groups with nobody in them', async () => {
+      await importUsers([]);
+
+      expect(await db.getGroupPhotoCoverage()).toEqual([]);
+    });
+
+    test('should leave out the deleted users group', async () => {
+      await importUsers([student(6101), student(6102)]);
+      const users = await db.getUsers({});
+      await setGroup(users[0].id, 'ELIMINADOS');
+
+      const coverage = await db.getGroupPhotoCoverage();
+
+      expect(coverage.map((group) => group.code)).toEqual(['1ESO']);
+      expect(coverage[0].total).toBe(1);
+    });
+
+    test('should still count a group code missing from the groups table', async () => {
+      await importUsers([student(6201)]);
+      const users = await db.getUsers({});
+      await setGroup(users[0].id, 'HUERFANO');
+
+      const coverage = await db.getGroupPhotoCoverage();
+
+      expect(coverage).toEqual([
+        { code: 'HUERFANO', name: 'HUERFANO', total: 1, withImage: 0, withoutImage: 1 }
+      ]);
+    });
+
+    test('should not count an empty image_path as a linked photo', async () => {
+      await importUsers([student(6301)]);
+      const users = await db.getUsers({});
+      await db.linkImageToUser(users[0].id, '');
+
+      const [group] = await db.getGroupPhotoCoverage();
+
+      expect(group.withImage).toBe(0);
+    });
+  });
+
   describe('clearCapturedImages()', () => {
     const linkAll = async () => {
       const users = await db.getUsers({});

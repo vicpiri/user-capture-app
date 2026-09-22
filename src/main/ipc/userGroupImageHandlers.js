@@ -19,15 +19,18 @@ const { rotateImageFile } = require('../imageOrientation');
  * @param {Object} context.repositoryMirror - Repository mirror instance
  */
 function registerUserGroupImageHandlers(context) {
-  const { mainWindow, logger, state, repositoryCacheManager, repositoryMirror, imageGridWindow } = context;
+  const { mainWindow, logger, state, repositoryCacheManager, repositoryMirror, imageGridWindow, groupCoverageWindow } = context;
 
-  // The captured images grid lists who has which photo and has no other way
-  // to learn that a link changed: it only loaded on opening
+  // The captured images grid lists who has which photo, and the photos by
+  // group window counts them, and neither has any other way to learn that a
+  // link changed: they only loaded on opening
   const notifyCapturedImagesChanged = () => {
-    const grid = imageGridWindow ? imageGridWindow() : null;
-    if (grid && !grid.isDestroyed()) {
-      grid.webContents.send('captured-images-changed');
-    }
+    [imageGridWindow, groupCoverageWindow].forEach((getWindow) => {
+      const win = getWindow ? getWindow() : null;
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('captured-images-changed');
+      }
+    });
   };
 
   // Get all users
@@ -128,6 +131,20 @@ function registerUserGroupImageHandlers(context) {
       return { success: true, groups };
     } catch (error) {
       console.error('Error getting groups:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Ver > Fotografías por grupo: linked photos and missing ones in each group
+  ipcMain.handle('get-group-photo-coverage', async () => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+      const groups = await state.dbManager.getGroupPhotoCoverage();
+      return { success: true, groups };
+    } catch (error) {
+      console.error('Error getting group photo coverage:', error);
       return { success: false, error: error.message };
     }
   });

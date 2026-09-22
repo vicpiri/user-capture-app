@@ -35,6 +35,12 @@ const logger = {
 
 const DELETED_GROUP = { code: 'ELIMINADOS', name: '⚠ Eliminados' };
 
+// Ver > Fotografías por grupo, open while the XML is updated
+const coverageWindow = {
+  isDestroyed: () => false,
+  webContents: { send: jest.fn() }
+};
+
 describe('XML update', () => {
   const fixturesPath = path.join(os.tmpdir(), 'edu-capture-xmlupdate-tests');
   let testId = 0;
@@ -92,6 +98,7 @@ describe('XML update', () => {
       updateWindowTitle: jest.fn(),
       closeCurrentProject: jest.fn(),
       ensureRepositoryMirrorStarted: jest.fn(),
+      groupCoverageWindow: () => coverageWindow,
       ensureDeletedGroup: async () => {
         const groups = await state.dbManager.getGroups();
         if (!groups.find(g => g.code === DELETED_GROUP.code)) {
@@ -470,6 +477,32 @@ describe('XML update', () => {
 
       const codes = (await db.getGroups()).map(g => g.code);
       expect(codes).toContain('2ESOB');
+    });
+  });
+
+  describe('the photos by group window', () => {
+    const rosterXml = () => writeXml(
+      `${groupsXml}<alumnos>${studentXml(1001)}${studentXml(1003, '2ESOB', 'NUEVA')}</alumnos>` +
+      `<docentes>${teacherXml('D100')}</docentes>`
+    );
+
+    test('should be told to reload once the changes are applied', async () => {
+      const analysis = await analyse(rosterXml());
+      expect(coverageWindow.webContents.send).not.toHaveBeenCalled();
+
+      await apply(analysis);
+
+      expect(coverageWindow.webContents.send).toHaveBeenCalledWith('captured-images-changed');
+    });
+
+    test('should be told to reload when applying fails halfway', async () => {
+      const analysis = await analyse(rosterXml());
+      jest.spyOn(db, 'importUsers').mockRejectedValueOnce(new Error('disk full'));
+
+      const result = await apply(analysis);
+
+      expect(result.success).toBe(false);
+      expect(coverageWindow.webContents.send).toHaveBeenCalledWith('captured-images-changed');
     });
   });
 });

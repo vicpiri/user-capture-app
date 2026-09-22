@@ -73,6 +73,21 @@ Pese al nombre, **no se borra ningún archivo**: solo se deshace el enlace. La f
 
 Para quitar de golpe las fotos de muchos usuarios después de enviarlas al depósito, ver [Desvincular las fotos después de exportar](deposito.md#desvincular-las-fotos-despues-de-exportar).
 
+## Fotografías por grupo
+
+**Ver > Fotografías por grupo** (`Ctrl+Shift+E`) abre una ventana con un listado de los grupos del proyecto. En cada uno ves cuántos usuarios tiene, cuántos tienen ya una foto enlazada y cuántos no tienen ninguna. Sirve para comprobar de un vistazo si queda algún grupo por fotografiar.
+
+Cada fila lleva un color según lo avanzado que está el grupo: **rojo** si nadie tiene foto, **amarillo** a mitad de camino y **verde** cuando el grupo está completo. La barra de la derecha muestra el mismo avance en porcentaje; solo marca `100 %` cuando no falta nadie.
+
+Arriba se resume el proyecto entero: cuántos grupos están completos, cuántos usuarios tienen foto y cuántos grupos no tienen ninguna.
+
+- **Orden**: **Por grupo** sigue el código del grupo; **Menos avanzados primero** pone arriba los que más foto les falta.
+- **Ocultar grupos completos** deja solo los que tienen trabajo pendiente.
+
+La ventana se actualiza sola cada vez que enlazas o quitas una foto y al actualizar el archivo XML, así que puedes dejarla abierta, por ejemplo en otro monitor, mientras trabajas. Solo cuenta las fotos capturadas y enlazadas en este proyecto, no las del depósito. Los usuarios del grupo **Eliminados** no aparecen.
+
+> **Consejo:** Al cerrar el proyecto la ventana se cierra también, porque sus datos son los de ese proyecto.
+
 ## Cuadro de imágenes capturadas
 
 **Ver > Cuadro de imágenes capturadas** (`Ctrl+G`) abre una ventana con una ficha por cada usuario del grupo elegido: su foto capturada, o una silueta si no tiene, y debajo el nombre, los apellidos y el NIA o el DNI. En la cabecera ves cuántos usuarios hay y cuántos tienen imagen. Sirve para repasar de un vistazo qué fotos faltan en una clase o si alguna está mal enlazada.

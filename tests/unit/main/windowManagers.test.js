@@ -51,13 +51,15 @@ const ImageGridWindowManager = require('../../../src/main/window/imageGridWindow
 const RepositoryGridWindowManager = require('../../../src/main/window/repositoryGridWindow');
 const PrintedCardsWindowManager = require('../../../src/main/window/printedCardsWindow');
 const ViewerMirrorWindowManager = require('../../../src/main/window/viewerMirrorWindow');
+const GroupCoverageWindowManager = require('../../../src/main/window/groupCoverageWindow');
 
 const MANAGERS = [
   ['CameraWindowManager', CameraWindowManager],
   ['ImageGridWindowManager', ImageGridWindowManager],
   ['RepositoryGridWindowManager', RepositoryGridWindowManager],
   ['PrintedCardsWindowManager', PrintedCardsWindowManager],
-  ['ViewerMirrorWindowManager', ViewerMirrorWindowManager]
+  ['ViewerMirrorWindowManager', ViewerMirrorWindowManager],
+  ['GroupCoverageWindowManager', GroupCoverageWindowManager]
 ];
 
 describe('window managers', () => {

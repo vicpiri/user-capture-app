@@ -709,6 +709,44 @@ class DatabaseManager {
     };
   }
 
+  /**
+   * How many users of each group have a captured photo linked
+   *
+   * Groups by the users' group_code rather than by the groups table, so a
+   * group with nobody in it does not show up as missing photos and a code
+   * with no row in groups is still counted. The deleted users' group is left
+   * out: nobody is going to photograph them.
+   *
+   * @returns {Promise<Array<{code: string, name: string, total: number, withImage: number, withoutImage: number}>>}
+   */
+  async getGroupPhotoCoverage() {
+    const rows = await new Promise((resolve, reject) => {
+      this.db.all(`
+        SELECT
+          COALESCE(u.group_code, '') AS code,
+          g.name AS name,
+          COUNT(*) AS total,
+          SUM(CASE WHEN u.image_path IS NOT NULL AND u.image_path != '' THEN 1 ELSE 0 END) AS withImage
+        FROM users u
+        LEFT JOIN groups g ON u.group_code = g.code
+        WHERE COALESCE(u.group_code, '') != 'ELIMINADOS'
+        GROUP BY COALESCE(u.group_code, '')
+        ORDER BY code
+      `, [], (err, result) => {
+        if (err) reject(err);
+        else resolve(result || []);
+      });
+    });
+
+    return rows.map((row) => ({
+      code: row.code,
+      name: row.name || row.code || 'Sin grupo',
+      total: row.total,
+      withImage: row.withImage || 0,
+      withoutImage: row.total - (row.withImage || 0)
+    }));
+  }
+
   // Project settings methods
   async getProjectSetting(key) {
     return new Promise((resolve, reject) => {

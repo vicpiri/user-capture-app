@@ -35,6 +35,7 @@ user-capture-app/
 │   │   ├── window/              # Gestión de ventanas
 │   │   │   ├── cameraWindow.js         # Ventana de captura de cámara
 │   │   │   ├── helpWindow.js           # Ventana del manual de uso
+│   │   │   ├── groupCoverageWindow.js  # Ver > Fotografías por grupo (avance por grupo)
 │   │   │   ├── imageGridWindow.js      # Grid de imágenes capturadas
 │   │   │   ├── mainWindow.js           # Ventana principal
 │   │   │   ├── repositoryGridWindow.js # Grid de imágenes del repositorio
@@ -230,6 +231,19 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
 - **imageGridWindow.js**: Visualización en grid de imágenes capturadas
 - **repositoryGridWindow.js**: Visualización en grid de imágenes del repositorio
 - **printedCardsWindow.js**: Últimos carnets impresos
+- **groupCoverageWindow.js**: Ver > Fotografías por grupo (`Ctrl+Shift+E`).
+  Por grupo, usuarios con foto capturada enlazada y sin ella, coloreados de
+  rojo (ninguna) a verde (completo) pasando por amarillo
+  - Datos de `getGroupPhotoCoverage()` en `database.js` (handler
+    `get-group-photo-coverage`): agrupa por el `group_code` de los usuarios,
+    así que no salen grupos vacíos, y deja fuera `ELIMINADOS`
+  - Se refresca con `captured-images-changed`, que ahora se envía también a
+    esta ventana (contexto `groupCoverageWindow`), al aplicar una
+    actualización del XML (`confirm-update-xml`, también si falla a medias) y
+    al recuperar el foco
+  - `closeCurrentProject()` la cierra: sus cifras son del proyecto
+  - Las funciones puras de `group-coverage.js` se exportan para los tests
+    (`tests/unit/renderer/groupCoverage.test.js`)
 - **helpWindow.js**: Manual de uso. Si ya está abierta, `open({ target })` solo
   la lleva a la página pedida
 - **viewerMirrorWindow.js**: Ver > Visor en ventana aparte (`Ctrl+Shift+F`), la

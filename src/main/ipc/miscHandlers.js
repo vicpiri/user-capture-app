@@ -55,7 +55,7 @@ function receiptPriceOrDefault(value) {
  * @param {Function} context.createMenu - Create menu function
  */
 function registerMiscHandlers(context) {
-  const { mainWindow: getMainWindow, logger, state, imageGridWindow, repositoryGridWindow, createMenu, reinitializeRepositoryMirror, repositoryMirror: getRepositoryMirror, thumbnailService } = context;
+  const { mainWindow: getMainWindow, logger, state, imageGridWindow, groupCoverageWindow, repositoryGridWindow, createMenu, reinitializeRepositoryMirror, repositoryMirror: getRepositoryMirror, thumbnailService } = context;
 
   // ============================================================================
   // Dialog Handlers
@@ -1369,6 +1369,7 @@ function registerMiscHandlers(context) {
 
       const result = await state.dbManager.clearCapturedImages(userIds);
       imageGridWindow?.()?.webContents.send('captured-images-changed');
+      groupCoverageWindow?.()?.webContents.send('captured-images-changed');
       logger.info(
         `Cleared ${result.cleared} captured image links` +
         (Array.isArray(userIds) ? ` (restricted to ${userIds.length} users)` : ' (whole project)')
@@ -1392,6 +1393,7 @@ function registerMiscHandlers(context) {
 
       const result = await state.dbManager.restoreUserImageRelationships(backupDate);
       imageGridWindow?.()?.webContents.send('captured-images-changed');
+      groupCoverageWindow?.()?.webContents.send('captured-images-changed');
       logger.info(`[IPC] Restored ${result.restored} image relationships from backup ${backupDate}`);
 
       return { success: true, ...result };

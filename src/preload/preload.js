@@ -265,6 +265,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPrintedCards: () => ipcRenderer.invoke('get-printed-cards'),
   clearPrintedCards: () => ipcRenderer.invoke('clear-printed-cards'),
 
+  // Ver > Fotografías por grupo
+  getGroupPhotoCoverage: () => ipcRenderer.invoke('get-group-photo-coverage'),
+
   // Publication requests
   requestPublication: (userIds) => ipcRenderer.invoke('request-publication', userIds),
   getPublicationRequests: () => ipcRenderer.invoke('get-publication-requests'),

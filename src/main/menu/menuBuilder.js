@@ -557,6 +557,13 @@ class MenuBuilder {
             this.mainWindow.webContents.send('menu-show-tagged-images');
           }
         },
+        {
+          label: 'Fotografías por grupo',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => {
+            this.callbacks.openGroupCoverageWindow();
+          }
+        },
         { type: 'separator' },
         {
           label: 'Últimos carnets impresos',
