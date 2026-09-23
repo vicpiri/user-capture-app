@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.18.0](https://github.com/vicpiri/user-capture-app/compare/v1.17.0...v1.18.0) (2026-09-23)
+
+### Features
+
+* export PDF reports of users without a photo and photos by group ([f04dc32](https://github.com/vicpiri/user-capture-app/commit/f04dc32e36a347abffb919fadab2adb797845e34))
 ## [1.17.0](https://github.com/vicpiri/user-capture-app/compare/v1.16.0...v1.17.0) (2026-09-22)
 
 ### Features
