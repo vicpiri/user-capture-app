@@ -89,6 +89,8 @@ La ventana se actualiza sola cada vez que enlazas o quitas una foto, cuando camb
 
 > **Consejo:** Al cerrar el proyecto la ventana se cierra también, porque sus datos son los de ese proyecto.
 
+Para imprimir estas cifras o para tener la lista de quién falta en cada grupo, usa las exportaciones en PDF: ver [Exportar las fotografías por grupo](exportaciones.md#exportar-las-fotografias-por-grupo) y [Exportar los listados de usuarios sin foto](exportaciones.md#exportar-los-listados-de-usuarios-sin-foto).
+
 ## Cuadro de imágenes capturadas
 
 **Ver > Cuadro de imágenes capturadas** (`Ctrl+G`) abre una ventana con una ficha por cada usuario del grupo elegido: su foto capturada, o una silueta si no tiene, y debajo el nombre, los apellidos y el NIA o el DNI. En la cabecera ves cuántos usuarios hay y cuántos tienen imagen. Sirve para repasar de un vistazo qué fotos faltan en una clase o si alguna está mal enlazada.

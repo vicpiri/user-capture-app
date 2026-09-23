@@ -1305,6 +1305,134 @@ describe('ExportManager', () => {
     });
   });
 
+  describe('exportMissingPhotosPDF()', () => {
+    const USERS = [
+      { id: 1, nia: '1001', type: 'student', image_path: null },
+      { id: 2, nia: '1002', type: 'student', image_path: '/img2.jpg' },
+      { id: 3, nia: '1003', type: 'student', image_path: null }
+    ];
+
+    beforeEach(() => {
+      mockGetters.getCurrentUsers.mockReturnValue(USERS);
+      mockGetters.getAllUsers.mockReturnValue(USERS);
+      mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/export/path'] });
+      mockElectronAPI.exportMissingPhotosPDF = jest.fn().mockResolvedValue({
+        success: true, fileName: 'Usuarios_sin_foto_capturada.pdf', total: 3, missing: 2, groups: 1
+      });
+    });
+
+    test('should not export when project is closed', async () => {
+      mockGetters.getProjectOpen.mockReturnValue(false);
+
+      await manager.exportMissingPhotosPDF('captured');
+
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+      expect(mockElectronAPI.exportMissingPhotosPDF).not.toHaveBeenCalled();
+    });
+
+    test('should send the scope users and label for the captured list', async () => {
+      await manager.exportMissingPhotosPDF('captured');
+
+      expect(mockElectronAPI.exportMissingPhotosPDF).toHaveBeenCalledWith({
+        exportPath: '/export/path',
+        users: USERS,
+        source: 'captured',
+        scopeLabel: expect.any(String)
+      });
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Exportación completada', expect.stringContaining('2 de 3'));
+    });
+
+    test('should not ask for a folder when everyone has a captured photo', async () => {
+      const withPhotos = USERS.map((user) => ({ ...user, image_path: '/x.jpg' }));
+      mockGetters.getCurrentUsers.mockReturnValue(withPhotos);
+      mockGetters.getAllUsers.mockReturnValue(withPhotos);
+
+      await manager.exportMissingPhotosPDF('captured');
+
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Aviso', expect.stringContaining('No hay usuarios sin foto capturada'));
+    });
+
+    test('should ask the repository, not the list, who lacks a repository photo', async () => {
+      mockElectronAPI.countRepositoryImages.mockResolvedValue({ success: true, withPhoto: 3, withoutPhoto: 0 });
+
+      await manager.exportMissingPhotosPDF('repository');
+
+      expect(mockElectronAPI.countRepositoryImages).toHaveBeenCalledWith(USERS);
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Aviso', expect.stringContaining('sin foto en el depósito'));
+    });
+
+    test('should report an unreachable repository before asking for a folder', async () => {
+      mockElectronAPI.countRepositoryImages.mockResolvedValue({ success: false, error: 'No se ha configurado el depósito' });
+
+      await manager.exportMissingPhotosPDF('repository');
+
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Error', 'No se ha configurado el depósito');
+    });
+
+    test('should export the repository list when someone is missing', async () => {
+      mockElectronAPI.countRepositoryImages.mockResolvedValue({ success: true, withPhoto: 1, withoutPhoto: 2 });
+
+      await manager.exportMissingPhotosPDF('repository');
+
+      expect(mockElectronAPI.exportMissingPhotosPDF).toHaveBeenCalledWith(expect.objectContaining({ source: 'repository' }));
+      expect(mockCloseProgressModal).toHaveBeenCalled();
+    });
+
+    test('should do nothing when the folder dialog is cancelled', async () => {
+      mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+
+      await manager.exportMissingPhotosPDF('captured');
+
+      expect(mockElectronAPI.exportMissingPhotosPDF).not.toHaveBeenCalled();
+    });
+
+    test('should show the error of a failed export', async () => {
+      mockElectronAPI.exportMissingPhotosPDF.mockResolvedValue({ success: false, error: 'disco lleno' });
+
+      await manager.exportMissingPhotosPDF('captured');
+
+      expect(mockCloseProgressModal).toHaveBeenCalled();
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Error', expect.stringContaining('disco lleno'));
+    });
+  });
+
+  describe('exportGroupCoveragePDF()', () => {
+    beforeEach(() => {
+      mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/export/path'] });
+      mockElectronAPI.exportGroupCoveragePDF = jest.fn().mockResolvedValue({
+        success: true, fileName: 'Fotografias_por_grupo.pdf', includesRepository: true, repositoryNote: ''
+      });
+    });
+
+    test('should not export when project is closed', async () => {
+      mockGetters.getProjectOpen.mockReturnValue(false);
+
+      await manager.exportGroupCoveragePDF();
+
+      expect(mockShowOpenDialog).not.toHaveBeenCalled();
+    });
+
+    test('should export to the chosen folder', async () => {
+      await manager.exportGroupCoveragePDF();
+
+      expect(mockElectronAPI.exportGroupCoveragePDF).toHaveBeenCalledWith({ exportPath: '/export/path' });
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Exportación completada', 'Se ha generado Fotografias_por_grupo.pdf.');
+    });
+
+    test('should say why the repository is left out', async () => {
+      mockElectronAPI.exportGroupCoveragePDF.mockResolvedValue({
+        success: true, fileName: 'Fotografias_por_grupo.pdf', includesRepository: false, repositoryNote: 'no se ha configurado.'
+      });
+
+      await manager.exportGroupCoveragePDF();
+
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Exportación completada', expect.stringContaining('No incluye el depósito: no se ha configurado.'));
+    });
+  });
+
   describe('convertOptionsToAPI()', () => {
     test('should convert copy mode', () => {
       const options = {

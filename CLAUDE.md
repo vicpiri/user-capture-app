@@ -51,6 +51,7 @@ user-capture-app/
 │   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
 │   │   ├── pendingRequests.js   # Solicitudes de carnet y publicación: listar, revisar y archivar
+│   │   ├── photoReports.js      # PDF de usuarios sin foto y de fotografías por grupo
 │   │   ├── receiptPrinter.js    # Impresión de recibos con el auxiliar de Windows (native/receipt-printer)
 │   │   ├── replacedArchive.js   # Carpeta Reemplazadas del depósito: leerla y purgarla
 │   │   ├── repositoryMirror.js  # Copia local de la carpeta del depósito
@@ -203,7 +204,7 @@ una release en borrador o sin `latest.yml` no llega a nadie.
 El proceso principal ha sido refactorizado en módulos organizados por responsabilidad:
 
 ### Manejadores IPC (ipc/)
-- **exportHandlers.js**: Gestiona las exportaciones (13 manejadores)
+- **exportHandlers.js**: Gestiona las exportaciones (15 manejadores)
   - `export-csv`: CSV para carnets. **Solo los usuarios con foto en el
     depósito**; el resto se cuentan como ignorados
   - `export-inventory-csv`: 3 CSVs separados (Alumnado.csv, Personal.csv, Grupos.csv)
@@ -216,6 +217,8 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
   - `export-to-repository`: Exporta las fotos capturadas a la carpeta del depósito
   - `export-orla-pdf`: Genera PDF de orlas con una rejilla de 6 × 6 por página
   - `export-paid-users-list-pdf` y `export-paid-users-csv`: listados de pagos
+  - `export-missing-photos-pdf` y `export-group-coverage-pdf`: listados de
+    quién no tiene foto y estadísticas por grupo (ver `photoReports.js`)
   - `scan-replaced-archive` y `purge-replaced-archive`: la carpeta
     `Reemplazadas` (ver `replacedArchive.js`)
 - **miscHandlers.js**: Diálogos del sistema, etiquetas de imágenes, y utilidades generales
@@ -1364,6 +1367,36 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
 - **Ámbito**: todos los grupos o uno solo, elegido en su propio diálogo
 - **Fuente de fotos**: Seleccionable (capturadas o depósito)
 - **Calidad**: 60, 80 (recomendada), 90 o 100
+
+### 6b. Listados en PDF de usuarios sin foto
+- **Comandos de menú**: Archivo > Exportar > Listado en PDF de usuarios sin
+  foto en el depósito / sin foto capturada
+- **Alcance**: `chooseExportScope()`, como las exportaciones de fotos
+- **Quién falta**: en el depósito, `findUserRepositoryImage()` sobre el
+  listado de la carpeta (lo mismo que las exportaciones); capturada, sin
+  `image_path`. `ExportManager.exportMissingPhotosPDF(source)` lo comprueba
+  antes de pedir carpeta (con `count-repository-images` para el depósito) y,
+  si no falta nadie, avisa sin generar nada; el handler tampoco escribe el
+  archivo en ese caso (`fileName: null`)
+- **Formato**: `Usuarios_sin_foto_en_deposito.pdf` /
+  `Usuarios_sin_foto_capturada.pdf`. Primera página con un resumen por grupo;
+  después una página nueva por grupo con alguien pendiente (para entregar a
+  cada tutor), personas por `compareUsersByName` con su NIA o documento. Se
+  deja fuera `ELIMINADOS`, como en la ventana de Fotografías por grupo
+
+### 6c. Fotografías por grupo en PDF
+- **Comando de menú**: Archivo > Exportar > Fotografías por grupo en PDF
+- **Alcance**: el proyecto entero, sin preguntar, como la ventana
+- **Datos**: `getGroupPhotoCoverage()` dos veces, capturadas y depósito. Si el
+  depósito no está configurado o no está disponible, sale solo con las
+  capturadas y el PDF y el aviso final dicen por qué
+- **Formato**: `Fotografias_por_grupo.pdf`, tabla con barra de porcentaje en
+  los colores de la ventana. `photoReports.js` importa las reglas de
+  `renderer/group-coverage.js` (`coverageRatio`, `coveragePercent`,
+  `heatHue`, `sortGroups`, `summarize`) para que papel y pantalla coincidan
+- Los dos PDF comparten `ReportWriter`: logo del centro, nombre del proyecto
+  arriba, tablas que siguen en otra página repitiendo la cabecera y pie con
+  fecha de generación y «Página n de m» (`bufferPages`)
 
 ### 7. Inventario de imágenes del depósito
 - **Ubicación**: parte de los archivos para Edu Inventory Manager

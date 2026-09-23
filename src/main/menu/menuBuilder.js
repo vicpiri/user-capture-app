@@ -176,6 +176,25 @@ class MenuBuilder {
               click: () => {
                 this.mainWindow.webContents.send('menu-export-paid-users-csv');
               }
+            },
+            { type: 'separator' },
+            {
+              label: 'Listado en PDF de usuarios sin foto en el depósito',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-missing-repository-photos-pdf');
+              }
+            },
+            {
+              label: 'Listado en PDF de usuarios sin foto capturada',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-missing-captured-photos-pdf');
+              }
+            },
+            {
+              label: 'Fotografías por grupo en PDF',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-group-coverage-pdf');
+              }
             }
           ]
         },

@@ -13,6 +13,7 @@ const {
 } = require('../replacedArchive');
 const { capitalizeWords } = require('../utils/formatting');
 const { compareUsersByName } = require('../utils/nameOrder');
+const { groupMissingPhotos, writeMissingPhotosPdf, writeGroupCoveragePdf } = require('../photoReports');
 
 // Loaded on first use rather than at startup. sharp is a native module built on
 // libvips and archiver drags in a stream toolchain, but neither is needed until
@@ -2067,6 +2068,112 @@ function registerExportHandlers(context) {
       return { success: true, fileName };
     } catch (error) {
       logger.error('Error exporting paid users list PDF', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Users without a photo, as a PDF with a page per group: without a captured
+  // photo linked, or without a photo in the repository
+  ipcMain.handle('export-missing-photos-pdf', async (event, { exportPath, users, source, scopeLabel }) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+      if (!Array.isArray(users) || users.length === 0) {
+        return { success: false, error: NO_USERS_TO_EXPORT };
+      }
+
+      let hasPhoto = (user) => Boolean(user.image_path);
+      let fileName = 'Usuarios_sin_foto_capturada.pdf';
+
+      if (source === 'repository') {
+        const repositoryPath = await getImageRepositoryPath(state.dbManager);
+        if (!repositoryPath) {
+          return { success: false, error: 'No se ha configurado el depósito de imágenes. Por favor, configúralo en Proyecto > Configurar depósito de imágenes' };
+        }
+        if (!fs.existsSync(repositoryPath)) {
+          return { success: false, error: `La carpeta del depósito no existe: ${repositoryPath}` };
+        }
+        const repositoryFiles = await readRepositoryFilenames(repositoryPath, logger);
+        hasPhoto = (user) => findUserRepositoryImage(user, repositoryFiles) !== null;
+        fileName = 'Usuarios_sin_foto_en_deposito.pdf';
+      }
+
+      const groupNames = new Map((await state.dbManager.getGroups()).map((group) => [group.code, group.name]));
+      const groups = groupMissingPhotos(users, hasPhoto, groupNames);
+      const total = groups.reduce((sum, group) => sum + group.total, 0);
+      const missing = groups.reduce((sum, group) => sum + group.withoutImage, 0);
+
+      logger.info(`[export-missing-photos-pdf] ${source}: ${missing} of ${total} users without a photo`);
+
+      // Nothing to hand anyone: say so instead of writing an empty list
+      if (missing === 0) {
+        return { success: true, fileName: null, total, missing };
+      }
+
+      await writeMissingPhotosPdf(path.join(exportPath, fileName), {
+        source,
+        groups,
+        scopeLabel,
+        projectName: state.projectPath ? path.basename(state.projectPath) : '',
+        drawLogo: (doc) => addLogoToPDFPage(doc, logger)
+      });
+
+      logger.success(`[export-missing-photos-pdf] Generated ${fileName}`);
+      return {
+        success: true,
+        fileName,
+        total,
+        missing,
+        groups: groups.filter((group) => group.withoutImage > 0).length
+      };
+    } catch (error) {
+      logger.error('Error exporting the missing photos PDF', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Ver > Fotografías por grupo on paper, with the captured photos and, when
+  // it can be read, the repository side by side
+  ipcMain.handle('export-group-coverage-pdf', async (event, { exportPath }) => {
+    try {
+      if (!state.dbManager) {
+        throw new Error('No hay ningún proyecto abierto');
+      }
+
+      const captured = await state.dbManager.getGroupPhotoCoverage();
+      if (captured.length === 0) {
+        return { success: false, error: 'El proyecto no tiene usuarios' };
+      }
+
+      // Without the repository the captured figures are still worth having
+      let repository = null;
+      let repositoryNote = '';
+      const repositoryPath = await getImageRepositoryPath(state.dbManager);
+      if (!repositoryPath) {
+        repositoryNote = 'no se ha configurado.';
+      } else if (!fs.existsSync(repositoryPath)) {
+        repositoryNote = `la carpeta no está disponible (${repositoryPath}).`;
+      } else {
+        const repositoryFiles = await readRepositoryFilenames(repositoryPath, logger);
+        repository = await state.dbManager.getGroupPhotoCoverage(
+          (user) => findUserRepositoryImage(user, repositoryFiles) !== null
+        );
+      }
+
+      const fileName = 'Fotografias_por_grupo.pdf';
+      await writeGroupCoveragePdf(path.join(exportPath, fileName), {
+        captured,
+        repository,
+        repositoryNote,
+        projectName: state.projectPath ? path.basename(state.projectPath) : '',
+        drawLogo: (doc) => addLogoToPDFPage(doc, logger)
+      });
+
+      logger.success(`[export-group-coverage-pdf] Generated ${fileName}`);
+      return { success: true, fileName, includesRepository: repository !== null, repositoryNote };
+    } catch (error) {
+      logger.error('Error exporting the photos by group PDF', error);
       return { success: false, error: error.message };
     }
   });

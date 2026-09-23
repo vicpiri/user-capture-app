@@ -53,6 +53,9 @@
       this.onExportOrlaPDF = config.onExportOrlaPDF || (() => {});
       this.onExportPaidOrlaPDF = config.onExportPaidOrlaPDF || (() => {});
       this.onExportPaidUsersCSV = config.onExportPaidUsersCSV || (() => {});
+      this.onExportMissingRepositoryPhotosPDF = config.onExportMissingRepositoryPhotosPDF || (() => {});
+      this.onExportMissingCapturedPhotosPDF = config.onExportMissingCapturedPhotosPDF || (() => {});
+      this.onExportGroupCoveragePDF = config.onExportGroupCoveragePDF || (() => {});
       this.onUpdateXML = config.onUpdateXML || (() => {});
       this.onShowProjectInfo = config.onShowProjectInfo || (() => {});
       this.onAddImageTag = config.onAddImageTag || (() => {});
@@ -354,6 +357,18 @@
 
       this.electronAPI.onMenuExportPaidUsersCSV(() => {
         this.onExportPaidUsersCSV();
+      });
+
+      this.electronAPI.onMenuExportMissingRepositoryPhotosPDF(() => {
+        this.onExportMissingRepositoryPhotosPDF();
+      });
+
+      this.electronAPI.onMenuExportMissingCapturedPhotosPDF(() => {
+        this.onExportMissingCapturedPhotosPDF();
+      });
+
+      this.electronAPI.onMenuExportGroupCoveragePDF(() => {
+        this.onExportGroupCoveragePDF();
       });
     }
 

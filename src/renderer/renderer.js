@@ -800,6 +800,9 @@ function initializeMenuEventManager() {
     onExportOrlaPDF: handleExportOrlaPDF,
     onExportPaidOrlaPDF: handleExportPaidOrlaPDF,
     onExportPaidUsersCSV: handleExportPaidUsersCSV,
+    onExportMissingRepositoryPhotosPDF: handleExportMissingRepositoryPhotosPDF,
+    onExportMissingCapturedPhotosPDF: handleExportMissingCapturedPhotosPDF,
+    onExportGroupCoveragePDF: handleExportGroupCoveragePDF,
     onUpdateXML: handleUpdateXML,
     onShowProjectInfo: handleShowProjectInfo,
     onAddImageTag: handleAddImageTag,
@@ -2360,6 +2363,24 @@ async function handleExportImagesName() {
 async function handleExportToRepository() {
   if (exportManager) {
     await exportManager.exportToRepository();
+  }
+}
+
+async function handleExportMissingRepositoryPhotosPDF() {
+  if (exportManager) {
+    await exportManager.exportMissingPhotosPDF('repository');
+  }
+}
+
+async function handleExportMissingCapturedPhotosPDF() {
+  if (exportManager) {
+    await exportManager.exportMissingPhotosPDF('captured');
+  }
+}
+
+async function handleExportGroupCoveragePDF() {
+  if (exportManager) {
+    await exportManager.exportGroupCoveragePDF();
   }
 }
 

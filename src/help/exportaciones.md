@@ -1,6 +1,6 @@
 # Exportaciones
 
-Desde **Archivo > Exportar** sacas de la aplicación los datos y las fotos del proyecto: listados CSV para otros programas, carpetas de fotos, orlas en PDF y listados de pagos. Todas las exportaciones necesitan un proyecto abierto y te piden la carpeta donde guardar el resultado.
+Desde **Archivo > Exportar** sacas de la aplicación los datos y las fotos del proyecto: listados CSV para otros programas, carpetas de fotos, orlas en PDF, listados de pagos y listados de quién no tiene foto. Todas las exportaciones necesitan un proyecto abierto y te piden la carpeta donde guardar el resultado.
 
 El cuadro para elegir la carpeta se abre en la última carpeta a la que exportaste, sea cual sea la exportación, para que no tengas que buscarla cada vez. Si esa carpeta ya no existe, se abre en la carpeta más cercana por encima de ella. La aplicación lo recuerda aunque la cierres.
 
@@ -17,12 +17,15 @@ El cuadro para elegir la carpeta se abre en la última carpeta a la que exportas
 | **Orlas en PDF** | Un PDF de orla por grupo |
 | **Listado de alumnos pagados en PDF** | El archivo `Alumnos_Pagados.pdf` |
 | **Listado de alumnos pagados en CSV** | El archivo `Alumnos_Pagados.csv` |
+| **Listado en PDF de usuarios sin foto en el depósito** | El archivo `Usuarios_sin_foto_en_deposito.pdf` |
+| **Listado en PDF de usuarios sin foto capturada** | El archivo `Usuarios_sin_foto_capturada.pdf` |
+| **Fotografías por grupo en PDF** | El archivo `Fotografias_por_grupo.pdf` |
 
 Si en la carpeta elegida ya hay un archivo con el mismo nombre, la exportación lo sustituye.
 
 ## Qué usuarios se exportan
 
-El CSV para carnets, **Imágenes capturadas como ID**, **Imágenes del depósito como ID**, **Imágenes capturadas como nombre y apellidos** e **Imágenes capturadas al depósito** empiezan preguntando a quién incluyen, en la ventana **Usuarios a exportar**. Según cómo tengas la pantalla, te ofrece hasta cuatro respuestas, cada una con el número de usuarios que abarca:
+El CSV para carnets, **Imágenes capturadas como ID**, **Imágenes del depósito como ID**, **Imágenes capturadas como nombre y apellidos**, **Imágenes capturadas al depósito** y los dos listados en PDF de usuarios sin foto empiezan preguntando a quién incluyen, en la ventana **Usuarios a exportar**. Según cómo tengas la pantalla, te ofrece hasta cuatro respuestas, cada una con el número de usuarios que abarca:
 
 - **Los usuarios seleccionados**, si estás en modo selección y hay alguno marcado.
 - **Lo que muestra la lista**, que aparece con el nombre de lo que la está filtrando: el grupo elegido, la búsqueda escrita o el filtro del menú **Ver** que tengas activo. Es la opción marcada de entrada.
@@ -37,7 +40,7 @@ Si no hay ningún usuario que exportar, la aplicación te avisa y no exporta nad
 
 Dos exportaciones no usan esta ventana porque tienen la suya: **Edu Inventory Manager** pregunta entre todos los usuarios y el grupo seleccionado, y las **orlas** preguntan entre todos los grupos y uno solo.
 
-Las demás exportaciones (inventario, orlas y listados de pagos) tienen su propio alcance, que se explica en cada apartado.
+Las demás exportaciones (inventario, orlas, listados de pagos y **Fotografías por grupo en PDF**) tienen su propio alcance, que se explica en cada apartado.
 
 ## Copiar el original o redimensionar
 
@@ -166,3 +169,20 @@ Estas exportaciones trabajan sobre todo el proyecto y no tienen en cuenta la bú
 
 - **Orlas en PDF** genera un PDF por grupo con la foto y el nombre de cada persona. Ver [Exportar las orlas en PDF](orlas.md#exportar-las-orlas-en-pdf).
 - **Listado de alumnos pagados en PDF** y **Listado de alumnos pagados en CSV** generan la lista de quienes han pagado la orla. Ver [Exportar el listado de alumnos pagados](orlas.md#exportar-el-listado-de-alumnos-pagados).
+
+## Exportar los listados de usuarios sin foto
+
+Sirven para saber a quién le falta todavía la foto y poder avisarle, por ejemplo entregando a cada tutor la lista de su grupo:
+
+- **Archivo > Exportar > Listado en PDF de usuarios sin foto en el depósito** busca a cada usuario en el depósito de imágenes por su NIA o su DNI, como hacen las exportaciones. Hace falta tener configurado el depósito en **Proyecto > Configurar depósito de imágenes**.
+- **Archivo > Exportar > Listado en PDF de usuarios sin foto capturada** lista a quienes no tienen una foto capturada enlazada en este proyecto.
+
+Los dos empiezan preguntando a quién incluyen (ver [Qué usuarios se exportan](#que-usuarios-se-exportan)). La primera página resume cuántos usuarios hay en cada grupo y cuántos no tienen foto. Después, cada grupo con alguien pendiente empieza en una página nueva, con sus usuarios ordenados por apellidos y su NIA o DNI. Los usuarios del grupo **Eliminados** no aparecen.
+
+Si todos los usuarios tienen foto, la aplicación te lo dice y no genera ningún archivo.
+
+## Exportar las fotografías por grupo
+
+**Archivo > Exportar > Fotografías por grupo en PDF** pone en papel lo mismo que la ventana [Fotografías por grupo](enlazar.md#fotografias-por-grupo): una tabla con todos los grupos del proyecto, cuántos usuarios tiene cada uno y cuántos tienen foto capturada y foto en el depósito, con el porcentaje coloreado de rojo a verde y los totales al final.
+
+Siempre abarca el proyecto entero, sin tener en cuenta la búsqueda, los filtros ni la selección. Si el depósito no está configurado o su carpeta no está disponible, el PDF sale solo con las fotos capturadas y te avisa de por qué.

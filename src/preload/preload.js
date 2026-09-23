@@ -185,6 +185,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-export-paid-users-csv', callback);
   },
 
+  onMenuExportMissingRepositoryPhotosPDF: (callback) => {
+    ipcRenderer.on('menu-export-missing-repository-photos-pdf', callback);
+  },
+
+  onMenuExportMissingCapturedPhotosPDF: (callback) => {
+    ipcRenderer.on('menu-export-missing-captured-photos-pdf', callback);
+  },
+
+  onMenuExportGroupCoveragePDF: (callback) => {
+    ipcRenderer.on('menu-export-group-coverage-pdf', callback);
+  },
+
   importImagesWithId: (folderPath) => ipcRenderer.invoke('import-images-with-id', folderPath),
   exportCSV: (folderPath, users) => ipcRenderer.invoke('export-csv', folderPath, users),
   exportInventoryCSV: (folderPath, users) => ipcRenderer.invoke('export-inventory-csv', folderPath, users),
@@ -201,6 +213,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportOrlaPDF: (data) => ipcRenderer.invoke('export-orla-pdf', data),
   exportPaidUsersListPDF: (data) => ipcRenderer.invoke('export-paid-users-list-pdf', data),
   exportPaidUsersCSV: (data) => ipcRenderer.invoke('export-paid-users-csv', data),
+  exportMissingPhotosPDF: (data) => ipcRenderer.invoke('export-missing-photos-pdf', data),
+  exportGroupCoveragePDF: (data) => ipcRenderer.invoke('export-group-coverage-pdf', data),
 
   unlinkImageFromUser: (userId) => ipcRenderer.invoke('unlink-image-user', userId),
 

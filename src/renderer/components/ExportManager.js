@@ -866,6 +866,102 @@
     }
 
     /**
+     * PDF with the users of the chosen scope who have no photo, a page per
+     * group so each one can be handed to its tutor
+     * @param {'captured'|'repository'} source - no captured photo linked, or
+     *   no photo in the repository
+     */
+    async exportMissingPhotosPDF(source) {
+      if (!this.checkProjectOpen()) return;
+
+      const scope = await this.chooseExportScope();
+      if (!scope) return;
+      const users = scope.users;
+      const noun = source === 'repository' ? 'foto en el depósito' : 'foto capturada';
+
+      // Checked before the folder is asked for, so a list with nobody on it
+      // or an unreachable repository do not cost a trip through the dialog
+      let missing;
+      if (source === 'repository') {
+        const count = await this.electronAPI.countRepositoryImages(users);
+        if (!count || !count.success) {
+          await this.showInfoModal('Error', (count && count.error) || 'No se pudo consultar el depósito de imágenes.');
+          return;
+        }
+        missing = count.withoutPhoto;
+      } else {
+        missing = users.filter((user) => !user.image_path).length;
+      }
+
+      if (missing === 0) {
+        await this.showInfoModal('Aviso', `No hay usuarios sin ${noun} (${scope.label}).`);
+        return;
+      }
+
+      const result = await this.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Seleccionar carpeta para guardar el listado',
+        buttonLabel: 'Exportar'
+      });
+      if (!result || result.canceled || !result.filePaths || result.filePaths.length === 0) return;
+
+      this.showProgressModal('Exportando listado en PDF', 'Generando el listado...');
+      const exportResult = await this.electronAPI.exportMissingPhotosPDF({
+        exportPath: result.filePaths[0],
+        users,
+        source,
+        scopeLabel: scope.label
+      });
+      this.closeProgressModal();
+
+      if (!exportResult || !exportResult.success) {
+        await this.showInfoModal('Error', 'Error al exportar el listado: ' + ((exportResult && exportResult.error) || 'error desconocido'));
+        return;
+      }
+
+      if (!exportResult.fileName) {
+        await this.showInfoModal('Aviso', `No hay usuarios sin ${noun} (${scope.label}).`);
+        return;
+      }
+
+      await this.showInfoModal(
+        'Exportación completada',
+        `Se ha generado ${exportResult.fileName} con ${exportResult.missing} de ${exportResult.total} usuarios sin ${noun}, ` +
+        `en ${exportResult.groups} ${exportResult.groups === 1 ? 'grupo' : 'grupos'}.`
+      );
+    }
+
+    /**
+     * PDF with the photos by group statistics, captured and in the
+     * repository, for the whole project like the window it copies
+     */
+    async exportGroupCoveragePDF() {
+      if (!this.checkProjectOpen()) return;
+
+      const result = await this.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Seleccionar carpeta para guardar las estadísticas',
+        buttonLabel: 'Exportar'
+      });
+      if (!result || result.canceled || !result.filePaths || result.filePaths.length === 0) return;
+
+      this.showProgressModal('Exportando estadísticas en PDF', 'Contando las fotografías de cada grupo...');
+      const exportResult = await this.electronAPI.exportGroupCoveragePDF({ exportPath: result.filePaths[0] });
+      this.closeProgressModal();
+
+      if (!exportResult || !exportResult.success) {
+        await this.showInfoModal('Error', 'Error al exportar las estadísticas: ' + ((exportResult && exportResult.error) || 'error desconocido'));
+        return;
+      }
+
+      const lines = [`Se ha generado ${exportResult.fileName}.`];
+      if (!exportResult.includesRepository) {
+        lines.push('', `No incluye el depósito: ${exportResult.repositoryNote}`);
+      }
+      await this.showInfoModal('Exportación completada', lines.join('\n'));
+    }
+
+    /**
      * Convert modal options format to API format
      * @param {object} options - Options from ExportOptionsModal
      * @returns {object} Options in API format
