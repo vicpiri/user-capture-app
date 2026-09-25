@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.19.0](https://github.com/vicpiri/user-capture-app/compare/v1.18.0...v1.19.0) (2026-09-25)
+
+### Features
+
+* add an Orla menu and a preference to turn the graduation orla service off ([eaa640e](https://github.com/vicpiri/user-capture-app/commit/eaa640e65f1fac05fa76602346584d022e890b43))
+* rename Archivo > Exportar > Orlas en PDF to "Listado en PDF con fotografías por grupo", with files named `Listado_fotos_{grupo}.pdf`, and group the Exportar menu; the paid users lists move to the Orla menu ([0db63b1](https://github.com/vicpiri/user-capture-app/commit/0db63b1))
+
+### Bug Fixes
+
+* keep A4 size on every page of the orla PDF ([636ca3a](https://github.com/vicpiri/user-capture-app/commit/636ca3a7baf223b6da51268014be3d1bca3d7b5e))
 ## [1.18.0](https://github.com/vicpiri/user-capture-app/compare/v1.17.0...v1.18.0) (2026-09-23)
 
 ### Features
