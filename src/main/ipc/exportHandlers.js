@@ -1810,7 +1810,11 @@ function registerExportHandlers(context) {
 
             if (spaceAvailable < spaceNeeded) {
               // Not enough space, create new page
+              // addPage() replaces the document options instead of merging them:
+              // without size and layout, PDFKit falls back to Letter
               doc.addPage({
+                size: 'A4',
+                layout: 'portrait',
                 margins: { top: topMarginFullPage, bottom: topMarginFullPage, left: 20, right: 20 }
               });
               // Add logo to new page (aligned with first column of photos)
