@@ -34,6 +34,10 @@ describe('MenuEventManager', () => {
       onMenuExportPhotoRosterPDF: jest.fn(),
       onMenuExportPaidOrlaPDF: jest.fn(),
       onMenuExportPaidUsersCSV: jest.fn(),
+      onMenuOrlaPay: jest.fn(),
+      onMenuOrlaPrintReceipt: jest.fn(),
+      onMenuOrlaSettings: jest.fn(),
+      onOrlaServiceChanged: jest.fn(),
       onMenuExportMissingRepositoryPhotosPDF: jest.fn(),
       onMenuExportMissingCapturedPhotosPDF: jest.fn(),
       onMenuExportGroupCoveragePDF: jest.fn(),
@@ -549,6 +553,47 @@ describe('MenuEventManager', () => {
       handler();
 
       expect(mockConfig.onShowTaggedImages).toHaveBeenCalled();
+    });
+  });
+
+  describe('Orla menu', () => {
+    beforeEach(() => {
+      mockConfig.onOrlaPay = jest.fn();
+      mockConfig.onOrlaPrintReceipt = jest.fn();
+      mockConfig.onOrlaSettings = jest.fn();
+      mockConfig.setOrlaEnabled = jest.fn();
+      manager = new MenuEventManager(mockConfig);
+      manager.init();
+    });
+
+    test.each([
+      ['onMenuOrlaPay', 'onOrlaPay'],
+      ['onMenuOrlaPrintReceipt', 'onOrlaPrintReceipt'],
+      ['onMenuOrlaSettings', 'onOrlaSettings']
+    ])('%s should call %s', (event, callback) => {
+      mockElectronAPI[event].mock.calls[0][0]();
+
+      expect(mockConfig[callback]).toHaveBeenCalled();
+    });
+
+    test('should follow the service being turned on and off', () => {
+      const handler = mockElectronAPI.onOrlaServiceChanged.mock.calls[0][0];
+
+      handler(false);
+      expect(mockConfig.setOrlaEnabled).toHaveBeenLastCalledWith(false);
+
+      handler(true);
+      expect(mockConfig.setOrlaEnabled).toHaveBeenLastCalledWith(true);
+    });
+
+    test('should take the service from the initial preferences, on when missing', () => {
+      const handler = mockElectronAPI.onInitialDisplayPreferences.mock.calls[0][0];
+
+      handler({ orlaEnabled: false });
+      expect(mockConfig.setOrlaEnabled).toHaveBeenLastCalledWith(false);
+
+      handler({});
+      expect(mockConfig.setOrlaEnabled).toHaveBeenLastCalledWith(true);
     });
   });
 

@@ -31,6 +31,7 @@ let showCapturedPhotos = true;
 let showRepositoryPhotos = false;  // Default to false to avoid blocking on Google Drive
 let showRepositoryIndicators = false;  // Default to false to avoid blocking on Google Drive
 let showAdditionalActions = true;  // Show/hide additional actions section and related indicators
+let orlaEnabled = true;  // Preferencias > Orla de graduación
 let showCaptureHistory = false;  // Show/hide the capture history strip beside the viewer
 // Ver > Vista de miniaturas, and whose photos it shows: 'captured' or 'repository'
 let showThumbnailGrid = false;
@@ -708,6 +709,7 @@ function initializeSelectionModeManager() {
     onRequestPublication: handleRequestPublication,
     onUnpayOrla: handleUnpayOrla,
     onUnprintReceipt: handleUnprintReceipt,
+    getOrlaEnabled: () => orlaEnabled,
     selectedUserInfo: selectedUserInfo,
     tableHeader: document.querySelector('.user-table thead tr')
   });
@@ -784,6 +786,7 @@ function initializeMenuEventManager() {
     setShowRepositoryPhotos: (value) => { showRepositoryPhotos = value; },
     setShowRepositoryIndicators: (value) => { showRepositoryIndicators = value; },
     setShowAdditionalActions: (value) => { showAdditionalActions = value; },
+    setOrlaEnabled: (value) => { orlaEnabled = value; },
     setShowCaptureHistory: (value) => { showCaptureHistory = value; },
     setIsLoadingRepositoryPhotos: (value) => { isLoadingRepositoryPhotos = value; },
     setIsLoadingRepositoryIndicators: (value) => { isLoadingRepositoryIndicators = value; },
@@ -816,6 +819,9 @@ function initializeMenuEventManager() {
     onExportPhotoRosterPDF: handleExportPhotoRosterPDF,
     onExportPaidOrlaPDF: handleExportPaidOrlaPDF,
     onExportPaidUsersCSV: handleExportPaidUsersCSV,
+    onOrlaPay: handlePayOrla,
+    onOrlaPrintReceipt: handlePrintReceipt,
+    onOrlaSettings: () => handlePreferences('orla'),
     onExportMissingRepositoryPhotosPDF: handleExportMissingRepositoryPhotosPDF,
     onExportMissingCapturedPhotosPDF: handleExportMissingCapturedPhotosPDF,
     onExportGroupCoveragePDF: handleExportGroupCoveragePDF,
@@ -2593,8 +2599,8 @@ async function handleRestoreImageLinks() {
   }
 }
 
-// Handle preferences
-async function handlePreferences() {
+// Handle preferences. category opens the window on that panel
+async function handlePreferences(category) {
   console.log('[Renderer] handlePreferences called');
 
   try {
@@ -2607,7 +2613,7 @@ async function handlePreferences() {
     }
 
     // Show preferences modal
-    const newPreferences = await preferencesModalInstance.show(prefsResult.preferences);
+    const newPreferences = await preferencesModalInstance.show(prefsResult.preferences, { category });
 
     if (!newPreferences) {
       // User cancelled
@@ -2620,7 +2626,8 @@ async function handlePreferences() {
 
     if (saveResult.success) {
       // Nothing to apply here: receipts and PDFs read these settings each time
-      // they are produced, and the display options belong to the Ver menu
+      // they are produced, the display options belong to the Ver menu, and the
+      // main process shows or hides the orla service itself
       await showInfoModal('Preferencias guardadas', 'Las preferencias se han guardado correctamente.');
     } else {
       await showInfoModal('Error', 'Error al guardar preferencias: ' + saveResult.error);

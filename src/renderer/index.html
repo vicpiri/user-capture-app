@@ -187,7 +187,7 @@
 
       <!-- Additional Actions -->
       <div class="additional-actions">
-        <h3>Acciones Adicionales</h3>
+        <h3>Pagos de la orla</h3>
         <div class="additional-actions-buttons">
           <button id="pay-orla-btn" class="btn btn-warning">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -717,7 +717,7 @@
         <!-- Sidebar Navigation -->
         <div class="preferences-sidebar">
           <div class="preferences-category active" data-category="institution">Datos de la Institución</div>
-          <div class="preferences-category" data-category="receipt-printer">Impresora de Recibos</div>
+          <div class="preferences-category" data-category="orla">Orla de graduación</div>
           <div class="preferences-category" data-category="updates">Actualizaciones</div>
           <div class="preferences-category" data-category="maintenance">Mantenimiento</div>
         </div>
@@ -745,9 +745,22 @@
             </div>
           </div>
 
-          <!-- Receipt Printer Category -->
-          <div class="preferences-panel" data-panel="receipt-printer">
-            <h3>Configuración de Impresora de Recibos</h3>
+          <!-- Graduation orla: the switch of the service, the receipt printer
+               and the receipt content -->
+          <div class="preferences-panel" data-panel="orla">
+            <h3>Orla de graduación</h3>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="pref-orla-enabled" checked>
+                Gestionar la orla de graduación
+              </label>
+              <small class="form-help">Muestra el menú Orla, los botones de pago bajo el visor y los iconos de orla pagada y recibo impreso. Desactívalo si el centro no ofrece este servicio; los pagos ya registrados se conservan.</small>
+            </div>
+
+            <hr style="margin: 24px 0; border: none; border-top: 1px solid #3a3f4e;">
+
+            <h4 style="margin: 20px 0 16px 0; color: #e0e0e0; font-size: 16px; font-weight: 600;">Impresora de recibos</h4>
 
             <div id="pref-printer-config-content">
               <div class="form-group">

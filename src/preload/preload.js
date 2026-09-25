@@ -185,6 +185,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-export-paid-users-csv', callback);
   },
 
+  // Orla menu
+  onMenuOrlaPay: (callback) => {
+    ipcRenderer.on('menu-orla-pay', callback);
+  },
+
+  onMenuOrlaPrintReceipt: (callback) => {
+    ipcRenderer.on('menu-orla-print-receipt', callback);
+  },
+
+  onMenuOrlaSettings: (callback) => {
+    ipcRenderer.on('menu-orla-settings', callback);
+  },
+
+  // Preferencias > Orla de graduación turned on or off
+  onOrlaServiceChanged: (callback) => {
+    ipcRenderer.on('orla-service-changed', (event, enabled) => callback(enabled));
+  },
+
   onMenuExportMissingRepositoryPhotosPDF: (callback) => {
     ipcRenderer.on('menu-export-missing-repository-photos-pdf', callback);
   },

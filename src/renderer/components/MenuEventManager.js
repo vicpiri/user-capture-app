@@ -26,6 +26,7 @@
       this.setShowRepositoryPhotos = config.setShowRepositoryPhotos || ((value) => {});
       this.setShowRepositoryIndicators = config.setShowRepositoryIndicators || ((value) => {});
       this.setShowAdditionalActions = config.setShowAdditionalActions || ((value) => {});
+      this.setOrlaEnabled = config.setOrlaEnabled || ((value) => {});
       this.setShowCaptureHistory = config.setShowCaptureHistory || ((value) => {});
       this.setIsLoadingRepositoryPhotos = config.setIsLoadingRepositoryPhotos || ((value) => {});
       this.setIsLoadingRepositoryIndicators = config.setIsLoadingRepositoryIndicators || ((value) => {});
@@ -53,6 +54,9 @@
       this.onExportPhotoRosterPDF = config.onExportPhotoRosterPDF || (() => {});
       this.onExportPaidOrlaPDF = config.onExportPaidOrlaPDF || (() => {});
       this.onExportPaidUsersCSV = config.onExportPaidUsersCSV || (() => {});
+      this.onOrlaPay = config.onOrlaPay || (() => {});
+      this.onOrlaPrintReceipt = config.onOrlaPrintReceipt || (() => {});
+      this.onOrlaSettings = config.onOrlaSettings || (() => {});
       this.onExportMissingRepositoryPhotosPDF = config.onExportMissingRepositoryPhotosPDF || (() => {});
       this.onExportMissingCapturedPhotosPDF = config.onExportMissingCapturedPhotosPDF || (() => {});
       this.onExportGroupCoveragePDF = config.onExportGroupCoveragePDF || (() => {});
@@ -94,6 +98,7 @@
       this.setupActionListeners();
       this.setupDisplayToggles();
       this.setupExportListeners();
+      this.setupOrlaListeners();
       this.setupImageTagListeners();
       this.setupUIToggles();
 
@@ -114,6 +119,7 @@
         this.setShowRepositoryPhotos(prefs.showRepositoryPhotos);
         this.setShowRepositoryIndicators(prefs.showRepositoryIndicators);
         this.setShowAdditionalActions(prefs.showAdditionalActions);
+        this.setOrlaEnabled(prefs.orlaEnabled !== false);
 
         // Update photos column visibility based on preferences
         this.onUpdatePhotosColumnVisibility();
@@ -369,6 +375,29 @@
 
       this.electronAPI.onMenuExportGroupCoveragePDF(() => {
         this.onExportGroupCoveragePDF();
+      });
+    }
+
+    /**
+     * Setup the Orla menu listeners and the switch of the service. The panel
+     * and the icons follow Ver > Pagos de la orla, which the main process
+     * already sends turned off with the service off
+     */
+    setupOrlaListeners() {
+      this.electronAPI.onMenuOrlaPay(() => {
+        this.onOrlaPay();
+      });
+
+      this.electronAPI.onMenuOrlaPrintReceipt(() => {
+        this.onOrlaPrintReceipt();
+      });
+
+      this.electronAPI.onMenuOrlaSettings(() => {
+        this.onOrlaSettings();
+      });
+
+      this.electronAPI.onOrlaServiceChanged((enabled) => {
+        this.setOrlaEnabled(enabled);
       });
     }
 

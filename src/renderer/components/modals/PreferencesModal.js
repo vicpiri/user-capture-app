@@ -2,9 +2,11 @@
  * PreferencesModal - Modal for global application preferences
  *
  * Features:
- * - Display preferences (thumbnails, repository photos, indicators)
- * - Backup management preferences
- * - Returns true if saved, false if cancelled
+ * - Institution data, used by the receipts and the PDFs
+ * - Graduation orla: the switch of the service, the receipt printer and the
+ *   receipt content
+ * - Update checks and thumbnail cache
+ * - Resolves with the new preferences, or null if cancelled
  */
 
 (function(global) {
@@ -25,6 +27,7 @@
       this.receiptSubtitleInput = document.getElementById('pref-receipt-subtitle');
       this.receiptPriceInput = document.getElementById('pref-receipt-price');
       this.autoCheckUpdatesInput = document.getElementById('pref-auto-check-updates');
+      this.orlaEnabledInput = document.getElementById('pref-orla-enabled');
       this.receiptFooterInput = document.getElementById('pref-receipt-footer');
       this.printerSelect = document.getElementById('pref-printer-select');
       this.printerInfo = document.getElementById('pref-printer-info');
@@ -119,14 +122,18 @@
      * Handle category click for navigation
      */
     async handleCategoryClick(event) {
-      const clickedCategory = event.currentTarget;
-      const categoryName = clickedCategory.dataset.category;
+      await this.selectCategory(event.currentTarget.dataset.category);
+    }
 
-      console.log('[PreferencesModal] Category clicked:', categoryName);
-
+    /**
+     * Show one panel of the window
+     * @param {string} categoryName - data-category of the sidebar entry
+     */
+    async selectCategory(categoryName) {
       // Update active category
-      this.categories.forEach(cat => cat.classList.remove('active'));
-      clickedCategory.classList.add('active');
+      this.categories.forEach(cat => {
+        cat.classList.toggle('active', cat.dataset.category === categoryName);
+      });
 
       // Update active panel
       this.panels.forEach(panel => {
@@ -137,8 +144,8 @@
         }
       });
 
-      // Load printer configuration when switching to receipt-printer panel
-      if (categoryName === 'receipt-printer') {
+      // Load printer configuration when switching to the orla panel
+      if (categoryName === 'orla') {
         await this.loadPrinterConfiguration();
       }
     }
@@ -146,13 +153,20 @@
     /**
      * Show modal with current preferences
      * @param {Object} currentPreferences - Current preference values
+     * @param {Object} [options]
+     * @param {string} [options.category] - panel to open on (Orla > Configuración de la orla)
      * @returns {Promise<Object|null>} New preferences or null if cancelled
      */
-    async show(currentPreferences = {}) {
+    async show(currentPreferences = {}, { category } = {}) {
       console.log('[PreferencesModal] show() called with:', currentPreferences);
 
       // Load current preferences into form
       this.loadPreferences(currentPreferences);
+
+      // Not awaited: the printers are listed while the window is already open
+      if (category) {
+        this.selectCategory(category);
+      }
 
       // Show the modal
       this.open();
@@ -240,6 +254,9 @@
       if (this.autoCheckUpdatesInput) {
         this.autoCheckUpdatesInput.checked = preferences.autoCheckUpdates !== false;
       }
+      if (this.orlaEnabledInput) {
+        this.orlaEnabledInput.checked = preferences.orlaEnabled !== false;
+      }
       if (this.receiptFooterInput) {
         this.receiptFooterInput.value = preferences.receiptFooter || '';
       }
@@ -258,7 +275,8 @@
           ? parseFloat(this.receiptPriceInput.value)
           : 18,
         receiptFooter: this.receiptFooterInput?.value?.trim() || '',
-        autoCheckUpdates: this.autoCheckUpdatesInput ? this.autoCheckUpdatesInput.checked : true
+        autoCheckUpdates: this.autoCheckUpdatesInput ? this.autoCheckUpdatesInput.checked : true,
+        orlaEnabled: this.orlaEnabledInput ? this.orlaEnabledInput.checked : true
       };
     }
 

@@ -48,6 +48,6 @@ La carpeta de entrada puede estar en otro sitio si la rediriges. Consulta [Redir
 - [Depósito de imágenes](deposito.md): la carpeta con las fotos oficiales del centro.
 - [Exportaciones](exportaciones.md): CSV, fotos y envío al depósito.
 - [Carnets y publicación oficial](carnets.md): solicitudes de impresión de carnets y de publicación de fotos.
-- [Orlas, pagos y recibos](orlas.md): pagos de la orla de graduación y recibos.
+- [Orla de graduación](orlas.md): pagos de la orla de graduación y recibos.
 - [Preferencias y actualizaciones](preferencias.md): datos del centro, impresora de recibos y nuevas versiones.
 - [Atajos de teclado](atajos.md): todas las combinaciones de teclas.

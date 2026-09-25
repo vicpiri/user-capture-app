@@ -147,6 +147,20 @@ function saveUpdatePreferences(partial) {
 }
 
 /**
+ * Whether the graduation orla service is on (Preferencias > Orla de graduación)
+ *
+ * The orla is a paid service not every school offers. Off, the Orla menu, the
+ * payment buttons and the paid and printed icons are hidden; nothing recorded
+ * is deleted. On unless turned off, which is how it was before it could be.
+ *
+ * @param {Object} [config] - an already loaded config, to avoid reading it again
+ * @returns {boolean}
+ */
+function isOrlaServiceEnabled(config = loadGlobalConfig()) {
+  return config.orla?.enabled !== false;
+}
+
+/**
  * When the purge of replaced photos was last offered
  *
  * Nothing is ever deleted on its own, so the only thing that keeps the folder
@@ -242,6 +256,7 @@ module.exports = {
   saveDisplayPreferences,
   getUpdatePreferences,
   saveUpdatePreferences,
+  isOrlaServiceEnabled,
   getReplacedArchiveNotice,
   saveReplacedArchiveNotice,
   getLastExportFolder,

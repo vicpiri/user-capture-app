@@ -343,6 +343,34 @@ describe('SelectionModeManager', () => {
 
       expect(existingMenu.remove).toHaveBeenCalled();
     });
+
+    describe('payment options of the orla', () => {
+      const paid = { id: 1, orla_paid: 1, receipt_printed: 0 };
+      const printed = { id: 1, orla_paid: 1, receipt_printed: 1 };
+
+      const menuText = (user) => {
+        manager.showContextMenu(mockEvent, user);
+        return document.body.appendChild.mock.calls[0][0].textContent;
+      };
+
+      test('should offer to undo a payment or a receipt with the service on', () => {
+        expect(menuText(paid)).toContain('Desmarcar orla pagada');
+        document.body.appendChild.mockClear();
+        expect(menuText(printed)).toContain('Desmarcar recibo impreso');
+      });
+
+      test('should leave them out with the service off', () => {
+        manager = new SelectionModeManager({
+          ...mockCallbacks,
+          ...mockDOM,
+          getOrlaEnabled: () => false
+        });
+
+        expect(menuText(paid)).not.toContain('Desmarcar orla pagada');
+        document.body.appendChild.mockClear();
+        expect(menuText(printed)).not.toContain('Desmarcar recibo impreso');
+      });
+    });
   });
 
   describe('clear()', () => {

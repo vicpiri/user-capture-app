@@ -4,7 +4,7 @@
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
 const { getActiveIngestPath, getConfiguredIngestPath } = require('../ingestFolder');
-const { getLastExportFolder, setLastExportFolder, getUpdatePreferences, saveUpdatePreferences } = require('../utils/config');
+const { getLastExportFolder, setLastExportFolder, getUpdatePreferences, saveUpdatePreferences, isOrlaServiceEnabled } = require('../utils/config');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
 const { listRequestFolder, projectRequests, reviewRequests, archiveRequests, stampRequest } = require('../pendingRequests');
@@ -1496,7 +1496,8 @@ function registerMiscHandlers(context) {
   // Preferences Handlers
   // ============================================================================
 
-  // The preferences window owns the institution and receipt data only. The
+  // The preferences window owns the institution and receipt data, and the
+  // switch of the orla service, only. The
   // display options live in the Ver menu and are saved from there
   // (saveDisplayPreferences); this pair must not read or write them, or saving
   // the window turns them off.
@@ -1517,6 +1518,7 @@ function registerMiscHandlers(context) {
           receiptSubtitle: receiptConfig.subtitle || '',
           receiptPrice: receiptPriceOrDefault(receiptConfig.price),
           receiptFooter: receiptConfig.footerText || '',
+          orlaEnabled: isOrlaServiceEnabled(config),
           // Stored with the rest of the update checker's state, which reads it
           autoCheckUpdates: getUpdatePreferences().autoCheck !== false
         }
@@ -1531,6 +1533,7 @@ function registerMiscHandlers(context) {
   ipcMain.handle('save-preferences', async (event, preferences) => {
     try {
       const config = loadGlobalConfig();
+      const wasOrlaEnabled = isOrlaServiceEnabled(config);
 
       // Update preferences
       config.centerName = preferences.centerName || '';
@@ -1543,6 +1546,10 @@ function registerMiscHandlers(context) {
         footerText: preferences.receiptFooter || ''
       };
 
+      if (typeof preferences.orlaEnabled === 'boolean') {
+        config.orla = { ...(config.orla || {}), enabled: preferences.orlaEnabled };
+      }
+
       let success = saveGlobalConfig(config);
 
       // After the rest: saveUpdatePreferences reads the file just written
@@ -1552,6 +1559,13 @@ function registerMiscHandlers(context) {
 
       if (success) {
         logger.info('Preferences saved successfully');
+
+        // The menu and the main window show the service or hide it
+        const isOrlaEnabled = isOrlaServiceEnabled(config);
+        if (isOrlaEnabled !== wasOrlaEnabled && context.onOrlaServiceChanged) {
+          context.onOrlaServiceChanged(isOrlaEnabled);
+        }
+
         return { success: true };
       } else {
         throw new Error('Failed to save preferences');

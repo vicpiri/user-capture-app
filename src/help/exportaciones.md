@@ -1,6 +1,6 @@
 # Exportaciones
 
-Desde **Archivo > Exportar** sacas de la aplicación los datos y las fotos del proyecto: listados CSV para otros programas, carpetas de fotos, listados en PDF con las fotos de cada grupo o con quién no tiene foto, y listados de pagos de la orla. Todas las exportaciones necesitan un proyecto abierto y te piden la carpeta donde guardar el resultado.
+Desde **Archivo > Exportar** sacas de la aplicación los datos y las fotos del proyecto: listados CSV para otros programas, carpetas de fotos y listados en PDF con las fotos de cada grupo o con quién no tiene foto. Todas las exportaciones necesitan un proyecto abierto y te piden la carpeta donde guardar el resultado.
 
 El cuadro para elegir la carpeta se abre en la última carpeta a la que exportaste, sea cual sea la exportación, para que no tengas que buscarla cada vez. Si esa carpeta ya no existe, se abre en la carpeta más cercana por encima de ella. La aplicación lo recuerda aunque la cierres.
 
@@ -18,8 +18,8 @@ El cuadro para elegir la carpeta se abre en la última carpeta a la que exportas
 | **Listado en PDF de usuarios sin foto en el depósito** | El archivo `Usuarios_sin_foto_en_deposito.pdf` |
 | **Listado en PDF de usuarios sin foto capturada** | El archivo `Usuarios_sin_foto_capturada.pdf` |
 | **Fotografías por grupo en PDF** | El archivo `Fotografias_por_grupo.pdf` |
-| **Listado de alumnos pagados en PDF** | El archivo `Alumnos_Pagados.pdf` |
-| **Listado de alumnos pagados en CSV** | El archivo `Alumnos_Pagados.csv` |
+
+Los listados de quienes han pagado la orla de graduación están en el menú **Orla** (ver [Orla de graduación](orlas.md#el-menu-orla)).
 
 Si en la carpeta elegida ya hay un archivo con el mismo nombre, la exportación lo sustituye.
 
@@ -40,7 +40,7 @@ Si no hay ningún usuario que exportar, la aplicación te avisa y no exporta nad
 
 Dos exportaciones no usan esta ventana porque tienen la suya: **Edu Inventory Manager** pregunta entre todos los usuarios y el grupo seleccionado, y el **Listado en PDF con fotografías por grupo** pregunta entre todos los grupos y uno solo.
 
-Las demás exportaciones (inventario, listado con fotografías, listados de pagos y **Fotografías por grupo en PDF**) tienen su propio alcance, que se explica en cada apartado.
+Las demás exportaciones (inventario, listado con fotografías y **Fotografías por grupo en PDF**) tienen su propio alcance, que se explica en cada apartado.
 
 ## Copiar el original o redimensionar
 
@@ -165,7 +165,7 @@ Las fotos también se reparten en una subcarpeta por grupo, y al terminar se mue
 
 ## Exportar el listado con fotografías por grupo
 
-Sirve para que el equipo directivo y el profesorado pongan cara a cada nombre: un PDF por grupo con la foto y el nombre de todas sus personas. No es la orla de graduación, que se explica en [Orlas, pagos y recibos](orlas.md).
+Sirve para que el equipo directivo y el profesorado pongan cara a cada nombre: un PDF por grupo con la foto y el nombre de todas sus personas. No es la orla de graduación, que se explica en [Orla de graduación](orlas.md).
 
 1. Pulsa **Archivo > Exportar > Listado en PDF con fotografías por grupo**.
 2. En la ventana **Listado en PDF con fotografías por grupo**, elige:
@@ -187,10 +187,6 @@ Así es cada listado:
 - Debajo de cada foto aparece «Apellido1 Apellido2, Nombre» en letra pequeña. Los nombres que no caben se cortan con puntos suspensivos.
 - Quien no tiene foto aparece con un recuadro gris y una silueta.
 - Si has elegido un logotipo en las preferencias, aparece arriba a la izquierda de cada página. Ver [Preferencias y actualizaciones](preferencias.md).
-
-## Exportar los listados de pagos de la orla
-
-**Listado de alumnos pagados en PDF** y **Listado de alumnos pagados en CSV** generan la lista de quienes han pagado la orla de graduación. Trabajan sobre todo el proyecto, sin tener en cuenta la búsqueda, el filtro de grupos ni la selección de la lista. Ver [Exportar el listado de alumnos pagados](orlas.md#exportar-el-listado-de-alumnos-pagados).
 
 ## Exportar los listados de usuarios sin foto
 

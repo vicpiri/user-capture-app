@@ -25,7 +25,7 @@
     ['showCapturedPhotos', 'Fotografías capturadas'],
     ['showRepositoryPhotos', 'Fotografías del depósito'],
     ['showRepositoryIndicators', 'Indicadores del depósito'],
-    ['showAdditionalActions', 'Acciones adicionales'],
+    ['showAdditionalActions', 'Pagos de la orla'],
     ['showCaptureHistory', 'Historial de capturas'],
     ['showThumbnailGrid', 'Vista de miniaturas']
   ];

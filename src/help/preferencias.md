@@ -5,7 +5,7 @@ Aquí se explica cómo ajustar los datos del centro, la impresora de recibos y l
 ## Abrir las preferencias
 
 1. Pulsa **Archivo > Preferencias...** o `Ctrl+,`.
-2. Elige una categoría a la izquierda: **Datos de la Institución**, **Impresora de Recibos** o **Actualizaciones**.
+2. Elige una categoría a la izquierda: **Datos de la Institución**, **Orla de graduación**, **Actualizaciones** o **Mantenimiento**.
 3. Haz los cambios y pulsa **Guardar**. **Cancelar**, o la **×** de la esquina, cierra la ventana sin guardar.
 
 Los cambios se aplican en cuanto guardas, sin reiniciar: los recibos y los PDF leen estos datos cada vez que se generan. Guardar no cambia las casillas del menú **Ver**, que se explican más abajo.
@@ -19,9 +19,9 @@ Las preferencias se guardan en este equipo y valen para todos los proyectos que 
 
 > **Importante:** la aplicación guarda dónde está el archivo del logotipo, no una copia. Si lo mueves, lo renombras o lo borras, el logotipo deja de aparecer. Guárdalo en una carpeta fija.
 
-## Impresora de recibos
+## Orla de graduación
 
-La categoría **Impresora de Recibos** sirve para elegir la impresora térmica, imprimir un recibo de prueba y escribir el subtítulo, el precio y el pie de los recibos de la orla. Todo ello se explica en [Configurar la impresora de recibos](orlas.md#configurar-la-impresora-de-recibos), [Personalizar el contenido del recibo](orlas.md#personalizar-el-contenido-del-recibo) e [Imprimir un recibo de prueba](orlas.md#imprimir-un-recibo-de-prueba).
+La categoría **Orla de graduación** sirve para activar o desactivar el servicio de la orla con **Gestionar la orla de graduación**, elegir la impresora térmica, imprimir un recibo de prueba y escribir el subtítulo, el precio y el pie de los recibos. También se abre desde **Orla > Configuración de la orla...**. Todo ello se explica en [Activar o desactivar la orla de graduación](orlas.md#activar-o-desactivar-la-orla-de-graduacion), [Configurar la impresora de recibos](orlas.md#configurar-la-impresora-de-recibos), [Personalizar el contenido del recibo](orlas.md#personalizar-el-contenido-del-recibo) e [Imprimir un recibo de prueba](orlas.md#imprimir-un-recibo-de-prueba).
 
 ## Mantenimiento
 
@@ -43,7 +43,7 @@ Estas casillas del menú **Ver** cambian lo que muestra la lista de usuarios:
 | **Fotografías capturadas** | Muestra en cada fila la miniatura de la foto capturada |
 | **Fotografías del depósito** | Muestra en cada fila la miniatura de la foto del depósito |
 | **Indicadores de foto en el depósito** | Marca a los usuarios que tienen foto en el depósito |
-| **Acciones adicionales** | Muestra la sección **Acciones Adicionales** (**Pagar Orla** e **Imp. Recibo**) y los iconos de orla pagada y recibo impreso. Ver [Orlas, pagos y recibos](orlas.md) |
+| **Pagos de la orla** | Muestra la sección **Pagos de la orla** (**Pagar Orla** e **Imp. Recibo**) y los iconos de orla pagada y recibo impreso. Solo aparece con el servicio de la orla activado. Ver [Orla de graduación](orlas.md) |
 | **Historial de capturas** | Muestra, junto al visor de fotos, la tira de miniaturas con las capturas del proyecto |
 | **Vista de miniaturas** | Cambia la tabla de usuarios por una cuadrícula con la foto de cada uno. Ver [Vista de miniaturas](usuarios.md#vista-de-miniaturas) |
 

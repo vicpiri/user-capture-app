@@ -22,6 +22,8 @@ class MenuBuilder {
     this.showRepositoryPhotos = context.showRepositoryPhotos;
     this.showRepositoryIndicators = context.showRepositoryIndicators;
     this.showAdditionalActions = context.showAdditionalActions;
+    // Preferencias > Orla de graduación; off, there is no Orla menu
+    this.orlaEnabled = context.orlaEnabled !== false;
     this.showCaptureHistory = context.showCaptureHistory;
     this.showThumbnailGrid = context.showThumbnailGrid;
     this.recentProjects = context.recentProjects;
@@ -47,6 +49,7 @@ class MenuBuilder {
       this.buildProjectMenu(),
       this.buildCameraMenu(),
       this.buildViewMenu(),
+      ...(this.orlaEnabled ? [this.buildOrlaMenu()] : []),
       this.buildHelpMenu()
     ];
 
@@ -183,19 +186,6 @@ class MenuBuilder {
               label: 'Fotografías por grupo en PDF',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-group-coverage-pdf');
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Listado de alumnos pagados en PDF',
-              click: () => {
-                this.mainWindow.webContents.send('menu-export-paid-orla-pdf');
-              }
-            },
-            {
-              label: 'Listado de alumnos pagados en CSV',
-              click: () => {
-                this.mainWindow.webContents.send('menu-export-paid-users-csv');
               }
             }
           ]
@@ -525,8 +515,10 @@ class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'Acciones adicionales',
+          label: 'Pagos de la orla',
           type: 'checkbox',
+          // Hidden, not just unchecked, with the orla service off
+          visible: this.orlaEnabled,
           checked: this.showAdditionalActions,
           click: (menuItem) => {
             this.callbacks.toggleAdditionalActions(menuItem.checked);
@@ -590,6 +582,51 @@ class MenuBuilder {
           label: 'Últimos carnets impresos',
           click: () => {
             this.callbacks.openPrintedCardsWindow();
+          }
+        }
+      ]
+    };
+  }
+
+  /**
+   * Build Orla menu: the graduation orla service, which people pay for. The
+   * photo roster PDF under Exportar is an administrative document, not this.
+   * Only with the service on (Preferencias > Orla de graduación)
+   */
+  buildOrlaMenu() {
+    return {
+      label: 'Orla',
+      submenu: [
+        {
+          label: 'Registrar el pago del usuario seleccionado',
+          click: () => {
+            this.mainWindow.webContents.send('menu-orla-pay');
+          }
+        },
+        {
+          label: 'Imprimir el recibo del usuario seleccionado',
+          click: () => {
+            this.mainWindow.webContents.send('menu-orla-print-receipt');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Listado de alumnos pagados en PDF',
+          click: () => {
+            this.mainWindow.webContents.send('menu-export-paid-orla-pdf');
+          }
+        },
+        {
+          label: 'Listado de alumnos pagados en CSV',
+          click: () => {
+            this.mainWindow.webContents.send('menu-export-paid-users-csv');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Configuración de la orla...',
+          click: () => {
+            this.mainWindow.webContents.send('menu-orla-settings');
           }
         }
       ]

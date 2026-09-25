@@ -219,6 +219,7 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
   - `export-photo-roster-pdf`: listado con fotografías por grupo, un PDF por
     grupo con una rejilla de 6 × 6 por página (no es la orla de graduación)
   - `export-paid-users-list-pdf` y `export-paid-users-csv`: listados de pagos
+    de la orla de graduación (menú **Orla**)
   - `export-missing-photos-pdf` y `export-group-coverage-pdf`: listados de
     quién no tiene foto y estadísticas por grupo (ver `photoReports.js`)
   - `scan-replaced-archive` y `purge-replaced-archive`: la carpeta
@@ -429,7 +430,7 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
     la consola y el log sigue creciendo: mejor eso que perder lo que dice
 - **workspaces.js**: Espacios de trabajo del menú **Ver**. Cada uno guarda las
   seis opciones de fotos y paneles (`VIEW_KEYS`: fotografías capturadas y del
-  depósito, indicadores, acciones adicionales, historial de capturas y vista
+  depósito, indicadores, pagos de la orla, historial de capturas y vista
   de miniaturas); los filtros no, ni la fuente de las miniaturas. `WorkspaceStore` con almacenamiento inyectado; en la aplicación,
   `config.json` bajo `workspaces` (`custom`, `hiddenBuiltIns`)
   - Predefinidos: Captura, Revisión y Carnets. No se cambian ni se borran,
@@ -1206,10 +1207,38 @@ Aplicación completamente funcional con todas las características principales i
 - Al asociar imagen a usuario que ya tiene una: pedir confirmación.
 - Formatos de imagen aceptados desde carpeta externa: JPG
 
+## Orla de graduación
+Dos cosas distintas que se llamaban igual. **«Orla» es solo el servicio de
+pago**: la orla de fin de estudios que el alumnado compra, de la que hoy se
+registra el pago y se imprime el recibo, y que crecerá (orla en PSD, rama
+`feat/orla-psd`). El PDF con las fotos de cada grupo para identificar a la
+gente es el **listado con fotografías por grupo** (Exportación 6), y en el
+código es `photoRoster`, nunca `orla`.
+
+- **Menú Orla**, entre Ver y Ayuda: registrar el pago y imprimir el recibo del
+  usuario seleccionado (los mismos manejadores que los botones), los dos
+  listados de pagos y **Configuración de la orla...**, que abre Preferencias en
+  la categoría **Orla de graduación** (`PreferencesModal.show(prefs, { category })`).
+  Lo nuevo de la orla va aquí, no en Archivo > Exportar
+- **Interruptor**: Preferencias > Orla de graduación > *Gestionar la orla de
+  graduación*, en `config.json` bajo `orla.enabled` (`isOrlaServiceEnabled()`,
+  activado si falta). Apagado: sin menú Orla, sin **Ver > Pagos de la orla**,
+  sin panel ni iconos de pagado e impreso, sin las opciones de deshacer del
+  botón derecho y sin arrancar el auxiliar de recibos. **No borra nada**
+  - `save-preferences` avisa con `context.onOrlaServiceChanged` solo si
+    cambia; `main.js` (`setOrlaEnabled()`) reconstruye el menú y manda
+    `orla-service-changed` y el valor efectivo del panel
+  - **Ver > Pagos de la orla** (antes *Acciones adicionales*) sigue siendo
+    `showAdditionalActions`, que forma parte de los espacios de trabajo
+    (Carnets lo activa); por eso no se quitó. Lo que llega al renderer es
+    `additionalActionsShown()` = opción y servicio, así que el renderer no
+    necesita saber del interruptor para el panel y los iconos; solo el menú
+    del botón derecho lo consulta (`getOrlaEnabled` de `SelectionModeManager`)
+
 ## Impresión de recibos
 - **Impresora recomendada**: Impresora térmica con ancho de rollo de 80mm
-- **Configuración**: Archivo > Preferencias... > Impresora de Recibos (no hay
-  menú Herramientas)
+- **Configuración**: Orla > Configuración de la orla..., o Archivo >
+  Preferencias... > Orla de graduación
 - **Funcionalidades**:
   - Configuración de impresora térmica
   - Personalización del contenido del recibo (nombre del centro, precio, logotipo, texto del pie)

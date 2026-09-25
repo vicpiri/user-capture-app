@@ -31,6 +31,8 @@
       this.onRequestPublication = config.onRequestPublication || (() => {}); // Called when requesting publication
       this.onUnpayOrla = config.onUnpayOrla || (() => {}); // Called when unpaying orla from context menu
       this.onUnprintReceipt = config.onUnprintReceipt || (() => {}); // Called when unprinting receipt from context menu
+      // Preferencias > Orla de graduación; off, the payment options are left out
+      this.getOrlaEnabled = config.getOrlaEnabled || (() => true);
 
       // DOM elements
       this.selectedUserInfo = config.selectedUserInfo; // Element to display selection info
@@ -88,15 +90,17 @@
         });
         menu.appendChild(selectOption);
 
+        const orlaEnabled = this.getOrlaEnabled();
+
         // Add separator if there are payment/printing options
-        if (user.orla_paid === 1 || user.receipt_printed === 1) {
+        if (orlaEnabled && (user.orla_paid === 1 || user.receipt_printed === 1)) {
           const separator = document.createElement('div');
           separator.className = 'context-menu-separator';
           menu.appendChild(separator);
         }
 
         // Option: Desmarcar recibo impreso (only if printed)
-        if (user.receipt_printed === 1) {
+        if (orlaEnabled && user.receipt_printed === 1) {
           const unprintOption = document.createElement('div');
           unprintOption.className = 'context-menu-item';
           unprintOption.textContent = 'Desmarcar recibo impreso';
@@ -110,7 +114,7 @@
         }
 
         // Option: Desmarcar orla pagada (only if paid AND receipt is not printed)
-        if (user.orla_paid === 1 && user.receipt_printed !== 1) {
+        if (orlaEnabled && user.orla_paid === 1 && user.receipt_printed !== 1) {
           const unpayOption = document.createElement('div');
           unpayOption.className = 'context-menu-item';
           unpayOption.textContent = 'Desmarcar orla pagada';

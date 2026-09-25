@@ -81,7 +81,7 @@ En la columna FOTOS cada usuario puede mostrar estos elementos, de izquierda a d
 
 - La miniatura del depósito y el círculo verde solo aparecen si activas sus opciones en el menú **Ver** (ver [Mostrar u ocultar fotos e indicadores](usuarios.md#mostrar-u-ocultar-fotos-e-indicadores)). Mientras la aplicación consulta el depósito, en su lugar gira un pequeño círculo de carga.
 - Las solicitudes de carnet y de publicación se explican en [Carnets y publicación oficial](carnets.md).
-- Los iconos de orla y recibo solo aparecen con **Ver > Acciones adicionales** activado. Ver [Orlas, pagos y recibos](orlas.md).
+- Los iconos de orla y recibo solo aparecen con **Ver > Pagos de la orla** activado. Ver [Orla de graduación](orlas.md).
 
 ## Mostrar u ocultar fotos e indicadores
 
@@ -92,7 +92,7 @@ Estas opciones del menú **Ver** se activan y desactivan con un clic:
 | **Ver > Fotografías capturadas** | La miniatura de la foto capturada, o la silueta gris si no hay. | Activada |
 | **Ver > Fotografías del depósito** | La miniatura de la foto del depósito. | Desactivada |
 | **Ver > Indicadores de foto en el depósito** | El círculo verde cuando el usuario tiene foto en el depósito. | Desactivada |
-| **Ver > Acciones adicionales** | Los botones de pago de orla bajo el visor y los iconos de orla pagada y recibo impreso. | Activada |
+| **Ver > Pagos de la orla** | Los botones de pago de orla bajo el visor y los iconos de orla pagada y recibo impreso. Solo aparece con el servicio de la orla activado. | Activada |
 
 Si desactivas las tres primeras, la columna FOTOS desaparece de la tabla. La aplicación recuerda estas opciones para la próxima vez.
 
@@ -117,7 +117,7 @@ La aplicación recuerda si usabas la vista de miniaturas y qué fotos mostraba. 
 
 ## Espacios de trabajo
 
-Un espacio de trabajo guarda una combinación de las opciones de visualización del menú **Ver**: **Fotografías capturadas**, **Fotografías del depósito**, **Indicadores de foto en el depósito**, **Acciones adicionales**, **Historial de capturas** y **Vista de miniaturas**. La elección entre **Capturadas** y **Depósito** de la vista de miniaturas no forma parte del espacio. Así cambias de una fase del trabajo a otra de una vez, en lugar de activar y desactivar las opciones una a una.
+Un espacio de trabajo guarda una combinación de las opciones de visualización del menú **Ver**: **Fotografías capturadas**, **Fotografías del depósito**, **Indicadores de foto en el depósito**, **Pagos de la orla**, **Historial de capturas** y **Vista de miniaturas**. La elección entre **Capturadas** y **Depósito** de la vista de miniaturas no forma parte del espacio. Así cambias de una fase del trabajo a otra de una vez, en lugar de activar y desactivar las opciones una a una.
 
 Los filtros del menú **Ver** (**Asignaciones duplicadas**, **Carnets solicitados** y **Publicaciones solicitadas**) no forman parte de los espacios: al cambiar de espacio siguen como estaban.
 
@@ -209,8 +209,8 @@ Fuera del modo selección:
 | Opción | Cuándo aparece | Qué hace |
 |---|---|---|
 | **Seleccionar** | Siempre | Activa el modo selección con ese usuario marcado. |
-| **Desmarcar recibo impreso** | Si el recibo de la orla del usuario está marcado como impreso | Quita la marca de recibo impreso, tras pedir confirmación. |
-| **Desmarcar orla pagada** | Si la orla está pagada y el recibo no está impreso | Quita la marca de orla pagada, tras pedir confirmación. |
+| **Desmarcar recibo impreso** | Si el recibo de la orla del usuario está marcado como impreso y el servicio de la orla está activado | Quita la marca de recibo impreso, tras pedir confirmación. |
+| **Desmarcar orla pagada** | Si la orla está pagada, el recibo no está impreso y el servicio de la orla está activado | Quita la marca de orla pagada, tras pedir confirmación. |
 
 En modo selección las opciones actúan sobre **todos los usuarios marcados**, no solo sobre la fila en la que haces clic:
 

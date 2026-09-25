@@ -38,6 +38,7 @@ const {
   saveDisplayPreferences,
   getUpdatePreferences,
   saveUpdatePreferences,
+  isOrlaServiceEnabled,
   getReplacedArchiveNotice,
   saveReplacedArchiveNotice,
   getWorkspaceSettings,
@@ -125,6 +126,9 @@ let showCapturedPhotos = true;
 let showRepositoryPhotos = false;
 let showRepositoryIndicators = false;
 let showAdditionalActions = true;
+// Preferencias > Orla de graduación. Off, it hides what Ver > Pagos de la orla
+// would show, whatever that option says
+let orlaEnabled = true;
 let showCaptureHistory = false;
 // Thumbnails of every user instead of the table, of the captured photos or of
 // the repository ones
@@ -267,10 +271,31 @@ async function setShowRepositoryIndicators(checked) {
   mainWindowManager.getWindow()?.webContents.send('menu-toggle-repository-indicators', showRepositoryIndicators);
 }
 
+/**
+ * Whether the payment buttons and icons are on screen: the Ver option, saved
+ * and part of the workspaces as it is, only counts with the orla service on
+ */
+function additionalActionsShown() {
+  return showAdditionalActions && orlaEnabled;
+}
+
 function setShowAdditionalActions(checked) {
   showAdditionalActions = checked;
   persistDisplayPreferences();
-  mainWindowManager.getWindow()?.webContents.send('menu-toggle-additional-actions', showAdditionalActions);
+  mainWindowManager.getWindow()?.webContents.send('menu-toggle-additional-actions', additionalActionsShown());
+}
+
+/**
+ * The orla service was turned on or off in the preferences
+ * @param {boolean} enabled
+ */
+function setOrlaEnabled(enabled) {
+  orlaEnabled = enabled;
+  logger.info(`[Orla] Service ${enabled ? 'enabled' : 'disabled'}`);
+  createMenu();
+  const mainWindow = mainWindowManager.getWindow();
+  mainWindow?.webContents.send('orla-service-changed', orlaEnabled);
+  mainWindow?.webContents.send('menu-toggle-additional-actions', additionalActionsShown());
 }
 
 function setShowCaptureHistory(checked) {
@@ -361,6 +386,7 @@ function createMenu() {
     showRepositoryPhotos,
     showRepositoryIndicators,
     showAdditionalActions,
+    orlaEnabled,
     showCaptureHistory,
     showThumbnailGrid,
     recentProjects,
@@ -604,7 +630,8 @@ function createWindow() {
       showCapturedPhotos,
       showRepositoryPhotos,
       showRepositoryIndicators,
-      showAdditionalActions,
+      showAdditionalActions: additionalActionsShown(),
+      orlaEnabled,
       showCaptureHistory,
       showThumbnailGrid,
       thumbnailGridSource
@@ -655,9 +682,10 @@ function createWindow() {
       updateManager.scheduleStartupCheck();
     }
 
-    // With a receipt printer configured, the helper is started ahead of the
+    // With the orla service on and a receipt printer configured, the helper is
+    // started ahead of the
     // first receipt, once the window and the project are done starting
-    if (loadGlobalConfig().printer) {
+    if (orlaEnabled && loadGlobalConfig().printer) {
       setTimeout(() => receiptPrinter.warmUp(), 5000);
     }
   });
@@ -1224,7 +1252,8 @@ function registerIPCHandlers() {
     thumbnailService: () => thumbnailService,
     getCurrentView,
     applyWorkspace,
-    refreshWorkspaces
+    refreshWorkspaces,
+    onOrlaServiceChanged: setOrlaEnabled
   };
 
   // Register all handler modules
@@ -1293,6 +1322,7 @@ app.whenReady().then(() => {
   showRepositoryPhotos = config.showRepositoryPhotos ?? false;
   showRepositoryIndicators = config.showRepositoryIndicators ?? false;
   showAdditionalActions = config.showAdditionalActions ?? true;
+  orlaEnabled = isOrlaServiceEnabled(config);
   showCaptureHistory = config.showCaptureHistory ?? false;
   showThumbnailGrid = config.showThumbnailGrid ?? false;
   thumbnailGridSource = config.thumbnailGridSource === 'repository' ? 'repository' : 'captured';

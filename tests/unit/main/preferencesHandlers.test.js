@@ -6,6 +6,9 @@
  * writing them from values it no longer sent, which turned them off. Saving
  * must now leave every setting it does not own as it was.
  *
+ * It also holds the switch of the graduation orla service, which the menu and
+ * the main window follow as soon as it changes.
+ *
  * @jest-environment node
  */
 
@@ -51,8 +54,11 @@ describe('preferences handlers', () => {
     receiptSubtitle: 'Orla 2025-2026',
     receiptPrice: 20,
     receiptFooter: 'Gracias',
+    orlaEnabled: true,
     autoCheckUpdates: true
   };
+
+  const onOrlaServiceChanged = jest.fn();
 
   // The Ver options, set to the opposite of every default
   const DISPLAY = {
@@ -79,7 +85,8 @@ describe('preferences handlers', () => {
       imageGridWindow: () => null,
       repositoryGridWindow: () => null,
       createMenu: jest.fn(),
-      reinitializeRepositoryMirror: jest.fn()
+      reinitializeRepositoryMirror: jest.fn(),
+      onOrlaServiceChanged
     });
   });
 
@@ -221,8 +228,49 @@ describe('preferences handlers', () => {
         receiptSubtitle: '',
         receiptPrice: 18,
         receiptFooter: '',
+        orlaEnabled: true,
         autoCheckUpdates: true
       });
+    });
+  });
+
+  describe('orla service', () => {
+    test('should be on until it is turned off', async () => {
+      expect((await call('get-preferences')).preferences.orlaEnabled).toBe(true);
+    });
+
+    test('should turn it off, keep it off and say so once', async () => {
+      await call('save-preferences', { ...FORM, orlaEnabled: false });
+
+      expect(loadGlobalConfig().orla).toEqual({ enabled: false });
+      expect((await call('get-preferences')).preferences.orlaEnabled).toBe(false);
+      expect(onOrlaServiceChanged).toHaveBeenCalledTimes(1);
+      expect(onOrlaServiceChanged).toHaveBeenCalledWith(false);
+    });
+
+    test('should turn it back on', async () => {
+      await call('save-preferences', { ...FORM, orlaEnabled: false });
+
+      await call('save-preferences', { ...FORM, orlaEnabled: true });
+
+      expect(loadGlobalConfig().orla.enabled).toBe(true);
+      expect(onOrlaServiceChanged).toHaveBeenLastCalledWith(true);
+    });
+
+    test('should not announce a change when saving leaves it as it was', async () => {
+      await call('save-preferences', FORM);
+
+      expect(onOrlaServiceChanged).not.toHaveBeenCalled();
+    });
+
+    test('should leave it alone when the window does not send it', async () => {
+      const { orlaEnabled, ...withoutIt } = FORM;
+      saveGlobalConfig({ orla: { enabled: false } });
+
+      await call('save-preferences', withoutIt);
+
+      expect(loadGlobalConfig().orla.enabled).toBe(false);
+      expect(onOrlaServiceChanged).not.toHaveBeenCalled();
     });
   });
 });
