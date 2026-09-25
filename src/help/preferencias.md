@@ -15,7 +15,7 @@ Las preferencias se guardan en este equipo y valen para todos los proyectos que 
 ## Datos de la institución
 
 - **Nombre del centro**: aparece en la cabecera de los recibos de la orla. Si lo dejas vacío, el recibo muestra un nombre de centro por defecto, así que conviene rellenarlo.
-- **Logotipo**: pulsa **Seleccionar** y elige una imagen PNG o JPG. La **✕** que aparece a su lado lo quita. El logotipo sale en los recibos, en las orlas en PDF y en el listado de alumnos pagados en PDF.
+- **Logotipo**: pulsa **Seleccionar** y elige una imagen PNG o JPG. La **✕** que aparece a su lado lo quita. El logotipo sale en los recibos, en el listado en PDF con fotografías por grupo y en el listado de alumnos pagados en PDF.
 
 > **Importante:** la aplicación guarda dónde está el archivo del logotipo, no una copia. Si lo mueves, lo renombras o lo borras, el logotipo deja de aparecer. Guárdalo en una carpeta fija.
 

@@ -1,10 +1,10 @@
 /**
- * Orla Export Modal
+ * Photo Roster Modal
  *
- * Modal for configuring orla (class photo grid) PDF export options.
- * Allows user to choose between captured photos or repository photos.
+ * Options of the photo roster PDF (everyone in a group with their photo):
+ * which groups, captured or repository photos, and JPEG quality.
  *
- * @module components/modals/OrlaExportModal
+ * @module components/modals/PhotoRosterModal
  */
 
 (function(global) {
@@ -13,9 +13,9 @@
   // Import BaseModal if in browser environment
   const BaseModal = global.BaseModal;
 
-  class OrlaExportModal extends BaseModal {
+  class PhotoRosterModal extends BaseModal {
     constructor() {
-      super('orla-export-modal');
+      super('photo-roster-modal');
 
       // Group scope radio buttons
       this.allGroupsRadio = null;
@@ -48,27 +48,27 @@
       super.init();
 
       // Get group scope radio buttons
-      this.allGroupsRadio = document.getElementById('orla-export-all-groups');
-      this.singleGroupRadio = document.getElementById('orla-export-single-group');
-      this.groupSelect = document.getElementById('orla-export-group-select');
+      this.allGroupsRadio = document.getElementById('photo-roster-all-groups');
+      this.singleGroupRadio = document.getElementById('photo-roster-single-group');
+      this.groupSelect = document.getElementById('photo-roster-group-select');
 
       // Get photo source radio buttons
-      this.capturedRadio = document.getElementById('orla-export-captured');
-      this.repositoryRadio = document.getElementById('orla-export-repository');
+      this.capturedRadio = document.getElementById('photo-roster-captured');
+      this.repositoryRadio = document.getElementById('photo-roster-repository');
 
       // Get quality select
-      this.qualitySelect = document.getElementById('orla-export-quality');
+      this.qualitySelect = document.getElementById('photo-roster-quality');
 
-      this.errorEl = document.getElementById('orla-export-error');
+      this.errorEl = document.getElementById('photo-roster-error');
 
       // Get buttons
-      this.confirmBtn = document.getElementById('orla-export-confirm');
-      this.cancelBtn = document.getElementById('orla-export-cancel');
+      this.confirmBtn = document.getElementById('photo-roster-confirm');
+      this.cancelBtn = document.getElementById('photo-roster-cancel');
 
       if (!this.allGroupsRadio || !this.singleGroupRadio || !this.groupSelect ||
           !this.capturedRadio || !this.repositoryRadio || !this.qualitySelect ||
           !this.confirmBtn || !this.cancelBtn) {
-        console.error('[OrlaExportModal] Required elements not found');
+        console.error('[PhotoRosterModal] Required elements not found');
         return;
       }
 
@@ -202,8 +202,8 @@
 
   // Export (for tests and browser)
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { OrlaExportModal };
+    module.exports = { PhotoRosterModal };
   } else if (typeof window !== 'undefined') {
-    global.OrlaExportModal = OrlaExportModal;
+    global.PhotoRosterModal = PhotoRosterModal;
   }
 })(typeof window !== 'undefined' ? window : global);

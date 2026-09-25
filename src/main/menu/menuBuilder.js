@@ -134,6 +134,7 @@ class MenuBuilder {
                 this.mainWindow.webContents.send('menu-export-inventory-csv');
               }
             },
+            { type: 'separator' },
             {
               label: 'Imágenes capturadas como ID',
               click: () => {
@@ -159,25 +160,13 @@ class MenuBuilder {
                 this.mainWindow.webContents.send('menu-export-to-repository');
               }
             },
-            {
-              label: 'Orlas en PDF',
-              click: () => {
-                this.mainWindow.webContents.send('menu-export-orla-pdf');
-              }
-            },
-            {
-              label: 'Listado de alumnos pagados en PDF',
-              click: () => {
-                this.mainWindow.webContents.send('menu-export-paid-orla-pdf');
-              }
-            },
-            {
-              label: 'Listado de alumnos pagados en CSV',
-              click: () => {
-                this.mainWindow.webContents.send('menu-export-paid-users-csv');
-              }
-            },
             { type: 'separator' },
+            {
+              label: 'Listado en PDF con fotografías por grupo',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-photo-roster-pdf');
+              }
+            },
             {
               label: 'Listado en PDF de usuarios sin foto en el depósito',
               click: () => {
@@ -194,6 +183,19 @@ class MenuBuilder {
               label: 'Fotografías por grupo en PDF',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-group-coverage-pdf');
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Listado de alumnos pagados en PDF',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-paid-orla-pdf');
+              }
+            },
+            {
+              label: 'Listado de alumnos pagados en CSV',
+              click: () => {
+                this.mainWindow.webContents.send('menu-export-paid-users-csv');
               }
             }
           ]

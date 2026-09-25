@@ -69,7 +69,7 @@ user-capture-app/
 │   │   │   │   ├── ExportOptionsModal.js    # Modal de opciones de exportación
 │   │   │   │   ├── InfoModal.js             # Modal informativo genérico
 │   │   │   │   ├── NewProjectModal.js       # Modal de creación de proyectos
-│   │   │   │   ├── OrlaExportModal.js       # Modal de opciones de exportación de orlas
+│   │   │   │   ├── PhotoRosterModal.js      # Opciones del listado en PDF con fotografías por grupo
 │   │   │   │   ├── ProjectInfoModal.js      # Modal de información del proyecto
 │   │   │   │   ├── ReplacedArchiveModal.js  # Purgar las fotos reemplazadas del depósito
 │   │   │   │   ├── PendingRequestsModal.js  # Revisar y archivar solicitudes huérfanas o del curso anterior
@@ -87,7 +87,8 @@ user-capture-app/
 │   │   │   ├── KeyboardNavigationManager.js # Navegación por teclado en tabla de usuarios
 │   │   │   ├── LazyImageManager.js      # Carga lazy de imágenes (IntersectionObserver)
 │   │   │   ├── MenuEventManager.js      # Coordinador de eventos de menú
-│   │   │   ├── OrlaExportManager.js     # Gestión de exportación de orlas PDF
+│   │   │   ├── OrlaExportManager.js     # Listado en PDF de pagos de la orla de graduación
+│   │   │   ├── PhotoRosterExportManager.js # Listado en PDF con fotografías por grupo
 │   │   │   ├── ProgressManager.js       # Gestión de modal de progreso
 │   │   │   ├── ProjectManager.js        # Gestión de ciclo de vida de proyectos
 │   │   │   ├── SelectionModeManager.js  # Gestión de modo multi-selección
@@ -215,7 +216,8 @@ El proceso principal ha sido refactorizado en módulos organizados por responsab
   - `export-images-name`: Imágenes con formato "Apellido1 Apellido2, Nombre"
   - `export-inventory-images`: Imágenes del depósito en un ZIP plano
   - `export-to-repository`: Exporta las fotos capturadas a la carpeta del depósito
-  - `export-orla-pdf`: Genera PDF de orlas con una rejilla de 6 × 6 por página
+  - `export-photo-roster-pdf`: listado con fotografías por grupo, un PDF por
+    grupo con una rejilla de 6 × 6 por página (no es la orla de graduación)
   - `export-paid-users-list-pdf` y `export-paid-users-csv`: listados de pagos
   - `export-missing-photos-pdf` y `export-group-coverage-pdf`: listados de
     quién no tiene foto y estadísticas por grupo (ver `photoReports.js`)
@@ -363,7 +365,7 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
   tiene sin orientación, se añade una copia del primer directorio con la
   etiqueta al final de los datos EXIF (así ningún desplazamiento cambia).
   Todo lo demás ya respeta la etiqueta: Chromium en el visor, `sharp().rotate()`
-  en miniaturas, exportaciones y orla, y las exportaciones escriben la foto
+  en miniaturas, exportaciones y listados en PDF, y las exportaciones escriben la foto
   derecha. `rotateImageFile()` escribe con nombre temporal y renombra
   - El giro manual es `rotate-captured-image` (solo fotos de `imports`), que
     avisa a la ventana principal y al cuadro de capturadas con
@@ -567,7 +569,7 @@ Todos los modales extienden `BaseModal` para comportamiento consistente.
     Proyecto, como el depósito. Su fila lleva una nota si es personalizada o si
     no está disponible, y se refresca sola si se cambia con la ventana abierta
 
-- **OrlaExportModal.js**: Modal de configuración de exportación de orlas PDF
+- **PhotoRosterModal.js**: Opciones del listado en PDF con fotografías por grupo
   - Selección de fuente de fotos (capturadas vs repositorio)
   - Configuración de calidad de imagen (0-100)
   - Retorna opciones mediante Promise
@@ -782,17 +784,18 @@ de la cuadrícula, para que el flujo de enlazar sea el mismo en las dos vistas
 
 **Patrón**: Desacopla renderer.js de la gestión de eventos de menú
 
-#### OrlaExportManager.js
-**Propósito**: Gestión de exportación de orlas (class photos) en PDF
+#### PhotoRosterExportManager.js
+**Propósito**: Listado en PDF con fotografías por grupo, un documento
+administrativo para que el equipo directivo y el profesorado identifiquen a
+cada persona. **No es la orla de graduación**: «orla» en la interfaz y en el
+código queda solo para el servicio de pago
 
 **Funcionalidades**:
-- Mostrar modal de configuración de exportación
-- Seleccionar fuente de fotos (capturadas vs repositorio)
-- Generar PDFs por grupo con grid 4 columnas
-- Configuración de calidad de imagen
-- Manejo de progreso de exportación
+- Pedir grupos, fuente de fotos y calidad con `PhotoRosterModal`
+- Un PDF por grupo con todas sus personas, tengan foto o no
 
-**Patrón**: Encapsula lógica específica de exportación de orlas
+#### OrlaExportManager.js
+**Propósito**: Listado en PDF de quienes han pagado la orla de graduación
 
 #### KeyboardNavigationManager.js
 **Propósito**: Gestión de navegación por teclado en tabla de usuarios
@@ -907,7 +910,7 @@ regresiones, no un objetivo; se fijaron algo por debajo de lo medido. Hay un
 suelo propio para `src/main/`, que antes no se medía en absoluto.
 
 Áreas prioritarias sin cubrir: `menuBuilder.js`, los gestores de ventana,
-`imageManager.js`, y en el renderer `OrlaExportManager` y varios modales.
+`imageManager.js`, y en el renderer `PhotoRosterExportManager` y varios modales.
 
 ### Beneficios de la Refactorización
 
@@ -1109,7 +1112,7 @@ Aplicación completamente funcional con todas las características principales i
   - Imágenes por ID (NIA/DNI), capturadas o del depósito
   - Imágenes por nombre completo
   - Imágenes del depósito en ZIP
-  - Orlas en PDF
+  - Listado en PDF con fotografías por grupo
   - Exportación de las fotos capturadas al depósito
 - ✅ **Sistema de etiquetado**: tags personalizados para imágenes
 - ✅ **Detección de duplicados**: identificación automática
@@ -1254,7 +1257,8 @@ Todas las exportaciones eligen su carpeta con `window.electronAPI.selectExportFo
 (handler `select-export-folder`), no con `showOpenDialog`: abre el diálogo en
 la última carpeta a la que se exportó y guarda la nueva al elegirla. Una
 exportación nueva debe usarlo también. En `renderer.js`, el `showOpenDialog`
-que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
+que reciben `ExportManager`, `OrlaExportManager` y `PhotoRosterExportManager`
+ya apunta a él.
 
 ### 1. CSV para carnets
 - **Comando de menú**: Archivo > Exportar > Archivo CSV para Carnets del grupo seleccionado
@@ -1339,7 +1343,7 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
     así que con Ver > Carnets solicitados o Publicaciones solicitadas se
     exportaba gente que la pantalla no mostraba. `getUsersToExport()` conserva
     esa regla implícita como respaldo, pero los flujos usan `scope.users`
-  - El CSV de inventario y la orla no pasan por aquí: ya tenían su propio
+  - El CSV de inventario y el listado con fotografías no pasan por aquí: ya tenían su propio
     selector de ámbito en sus diálogos
 - **Formato**: `{NIA}.jpg` para alumnado y `{documento}.jpg` para el resto,
   siempre `.jpg` y en la raíz del depósito, **sobrescribiendo** lo que hubiera
@@ -1359,9 +1363,14 @@ que reciben `ExportManager` y `OrlaExportManager` ya apunta a él.
   - `clearCapturedImages(userIds)` acepta la lista de usuarios; sin ella limpia
     el proyecto entero, que es de lo que depende la restauración de una copia
 
-### 6. Orlas en PDF
-- **Comando de menú**: Archivo > Exportar > Orlas en PDF
-- **Formato**: Un PDF por grupo
+### 6. Listado en PDF con fotografías por grupo
+- **Comando de menú**: Archivo > Exportar > Listado en PDF con fotografías por grupo
+- **Qué es**: un documento administrativo para identificar a alumnado y
+  profesorado. Hasta la 1.18 se llamaba «Orlas en PDF»; se renombró para
+  dejar «orla» a la orla de graduación
+- **Formato**: Un PDF por grupo, `Listado_fotos_{código}.pdf`, todas las
+  páginas A4 (`addPage()` de PDFKit sustituye las opciones del documento, así
+  que hay que repetir `size` y `layout`)
 - **Layout**: rejilla de 6 × 6 (36 fotos por página)
 - **Contenido**: Foto + nombre completo debajo
 - **Ámbito**: todos los grupos o uno solo, elegido en su propio diálogo

@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UpdateModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, CaptureHistoryManager, ExportManager, OrlaExportManager, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UpdateModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, CaptureHistoryManager, ExportManager, OrlaExportManager, PhotoRosterExportManager, PhotoRosterModal, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
 
 // Component instances
 let userRowRenderer = null;
@@ -7,6 +7,7 @@ let imageGridManager = null;
 let captureHistoryManager = null;
 let exportManager = null;
 let orlaExportManager = null;
+let photoRosterExportManager = null;
 let imageTagsManager = null;
 let selectionModeManager = null;
 let dragDropManager = null;
@@ -99,7 +100,7 @@ let exportOptionsModalInstance = null;
 let inventoryExportOptionsModalInstance = null;
 let addTagModalInstance = null;
 let userImageModalInstance = null;
-let orlaExportModalInstance = null;
+let photoRosterModalInstance = null;
 let restoreBackupModalInstance = null;
 let replacedArchiveModalInstance = null;
 let pendingRequestsModalInstance = null;
@@ -137,6 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize orla export manager
   initializeOrlaExportManager();
+
+  initializePhotoRosterExportManager();
 
   // Initialize image tags manager
   initializeImageTagsManager();
@@ -231,8 +234,8 @@ function initializeModals() {
   userImageModalInstance = new UserImageModal();
   // UserImageModal initializes itself in constructor
 
-  orlaExportModalInstance = new OrlaExportModal();
-  orlaExportModalInstance.init();
+  photoRosterModalInstance = new PhotoRosterModal();
+  photoRosterModalInstance.init();
 
   restoreBackupModalInstance = new RestoreBackupModal();
   restoreBackupModalInstance.init();
@@ -610,7 +613,6 @@ function initializeExportManager() {
 // Initialize orla export manager
 function initializeOrlaExportManager() {
   orlaExportManager = new OrlaExportManager({
-    orlaExportModal: orlaExportModalInstance,
     showProgressModal: showProgressModal,
     closeProgressModal: closeProgressModal,
     showInfoModal: showInfoModal,
@@ -625,6 +627,20 @@ function initializeOrlaExportManager() {
     electronAPI: window.electronAPI
   });
 
+}
+
+function initializePhotoRosterExportManager() {
+  photoRosterExportManager = new PhotoRosterExportManager({
+    photoRosterModal: photoRosterModalInstance,
+    showProgressModal: showProgressModal,
+    closeProgressModal: closeProgressModal,
+    showInfoModal: showInfoModal,
+    showOpenDialog: (options) => window.electronAPI.selectExportFolder(options),
+    getProjectOpen: () => projectOpen,
+    getAllUsers: () => allUsers,
+    getAllGroups: () => currentGroups,
+    electronAPI: window.electronAPI
+  });
 }
 
 // Initialize image tags manager
@@ -797,7 +813,7 @@ function initializeMenuEventManager() {
     onExportRepositoryImages: handleExportRepositoryImages,
     onExportImagesName: handleExportImagesName,
     onExportToRepository: handleExportToRepository,
-    onExportOrlaPDF: handleExportOrlaPDF,
+    onExportPhotoRosterPDF: handleExportPhotoRosterPDF,
     onExportPaidOrlaPDF: handleExportPaidOrlaPDF,
     onExportPaidUsersCSV: handleExportPaidUsersCSV,
     onExportMissingRepositoryPhotosPDF: handleExportMissingRepositoryPhotosPDF,
@@ -2615,10 +2631,10 @@ async function handlePreferences() {
   }
 }
 
-// Export orla PDF
-async function handleExportOrlaPDF() {
-  if (orlaExportManager) {
-    await orlaExportManager.exportOrlaPDF();
+// Export the photo roster PDF
+async function handleExportPhotoRosterPDF() {
+  if (photoRosterExportManager) {
+    await photoRosterExportManager.exportPhotoRosterPDF();
   }
 }
 

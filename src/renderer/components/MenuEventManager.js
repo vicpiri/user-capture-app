@@ -50,7 +50,7 @@
       this.onExportRepositoryImages = config.onExportRepositoryImages || (() => {});
       this.onExportImagesName = config.onExportImagesName || (() => {});
       this.onExportToRepository = config.onExportToRepository || (() => {});
-      this.onExportOrlaPDF = config.onExportOrlaPDF || (() => {});
+      this.onExportPhotoRosterPDF = config.onExportPhotoRosterPDF || (() => {});
       this.onExportPaidOrlaPDF = config.onExportPaidOrlaPDF || (() => {});
       this.onExportPaidUsersCSV = config.onExportPaidUsersCSV || (() => {});
       this.onExportMissingRepositoryPhotosPDF = config.onExportMissingRepositoryPhotosPDF || (() => {});
@@ -347,8 +347,8 @@
         this.onExportToRepository();
       });
 
-      this.electronAPI.onMenuExportOrlaPDF(() => {
-        this.onExportOrlaPDF();
+      this.electronAPI.onMenuExportPhotoRosterPDF(() => {
+        this.onExportPhotoRosterPDF();
       });
 
       this.electronAPI.onMenuExportPaidOrlaPDF(() => {

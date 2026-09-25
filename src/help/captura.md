@@ -129,7 +129,7 @@ La foto se ve girada al momento en el visor, en el historial de capturas, en la 
 
 ### Qué se cambia en la foto
 
-La foto no se vuelve a comprimir: solo se cambia la anotación de cómo va girada, así que no pierde calidad. La aplicación la respeta en todas partes, y las exportaciones, la copia al depósito y las orlas sacan la foto ya derecha, de modo que los programas que las reciban no necesitan entender esa anotación.
+La foto no se vuelve a comprimir: solo se cambia la anotación de cómo va girada, así que no pierde calidad. La aplicación la respeta en todas partes, y las exportaciones, la copia al depósito y los listados en PDF sacan la foto ya derecha, de modo que los programas que las reciban no necesitan entender esa anotación.
 
 ## Arrastrar fotos a la ventana
 

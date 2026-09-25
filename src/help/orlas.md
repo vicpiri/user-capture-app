@@ -1,29 +1,8 @@
 # Orlas, pagos y recibos
 
-Con Edu User Capture puedes generar las orlas de cada grupo en PDF, llevar el registro de quién ha pagado su copia e imprimirle un recibo en una impresora térmica.
+Muchos centros ofrecen al alumnado que termina sus estudios una orla de graduación, que cada persona paga si quiere una copia. Con Edu User Capture llevas el registro de quién ha pagado la suya, le imprimes un recibo en una impresora térmica y sacas el listado de pagos.
 
-## Exportar las orlas en PDF
-
-1. Pulsa **Archivo > Exportar > Orlas en PDF**.
-2. En la ventana **Exportar Orla en PDF**, elige:
-   - **Grupos a exportar**: **Todos los grupos** o **Un solo grupo**, que eliges en la lista de debajo.
-   - **Tipo de fotografías a incluir**: **Fotografías capturadas** (las enlazadas en este proyecto) o **Fotografías del depósito**.
-   - **Calidad JPEG**: **Baja (60)**, **Alta (80)**, que es la recomendada, **Muy Alta (90)** o **Máxima (100)**. A más calidad, PDF más pesado.
-3. Pulsa **Exportar** y elige la carpeta donde guardar los PDF.
-4. Un mensaje final indica cuántos archivos PDF se han generado.
-
-Cada orla incluye a todas las personas del grupo, tengan foto o no. No depende de la búsqueda, del filtro de grupos ni de la selección de la lista.
-
-## Cómo es cada orla
-
-- Un archivo por grupo, llamado `Orla_` seguido del código del grupo; por ejemplo, `Orla_1ESO-A.pdf`.
-- Página A4 en vertical. La primera lleva el título «Orla -» seguido del código del grupo.
-- Seis fotos por fila y hasta seis filas por página. Si el grupo no cabe, sigue en páginas nuevas.
-- Las personas van por orden alfabético: primer apellido, segundo apellido y nombre.
-- Las fotos se recortan a formato retrato vertical, así que pueden perder algo de los bordes.
-- Debajo de cada foto aparece «Apellido1 Apellido2, Nombre» en letra pequeña. Los nombres que no caben se cortan con puntos suspensivos.
-- Quien no tiene foto aparece con un recuadro gris y una silueta.
-- Si has elegido un logotipo en las preferencias, aparece arriba a la izquierda de cada página. Ver [Preferencias y actualizaciones](preferencias.md).
+Esta orla no es el PDF con las fotos de cada grupo que sirve al profesorado para identificar al alumnado: ese es el [listado con fotografías por grupo](exportaciones.md#exportar-el-listado-con-fotografias-por-grupo).
 
 ## Mostrar los botones de pago
 

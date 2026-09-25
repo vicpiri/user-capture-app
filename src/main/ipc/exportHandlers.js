@@ -832,7 +832,7 @@ async function addLogoToPDFPage(doc, logger, options = {}) {
     // Calculate position
     let x, y;
     if (options.useFixedPosition) {
-      // For orlas: fixed position at top of page
+      // For the photo roster: fixed position at top of page
       x = options.alignX !== undefined ? options.alignX : 20; // Use alignX if provided, else 20pt from left edge
       y = 20; // 20pt from top edge
     } else {
@@ -1701,12 +1701,13 @@ function registerExportHandlers(context) {
     }
   });
 
-  // Export Orla PDF
-  ipcMain.handle('export-orla-pdf', async (event, { exportPath, photoSource, imageQuality, usersByGroup }) => {
+  // Photo roster PDF: everyone in a group with their photo, so staff can put a
+  // name to a face. Not the graduation orla, which is a paid service
+  ipcMain.handle('export-photo-roster-pdf', async (event, { exportPath, photoSource, imageQuality, usersByGroup }) => {
     const PDFDocument = require('pdfkit');
 
     try {
-      logger.section('ORLA PDF EXPORT');
+      logger.section('PHOTO ROSTER PDF EXPORT');
       logger.info(`Export path: ${exportPath}`);
       logger.info(`Photo source: ${photoSource}`);
       logger.info(`Image quality: ${imageQuality}`);
@@ -1718,7 +1719,7 @@ function registerExportHandlers(context) {
 
       // Resolved once: this is a project setting, and it used to be read from
       // the database again for every user without a photo path
-      const orlaRepositoryPath = photoSource === 'repository'
+      const rosterRepositoryPath = photoSource === 'repository'
         ? await getImageRepositoryPath(state.dbManager)
         : null;
 
@@ -1766,7 +1767,7 @@ function registerExportHandlers(context) {
         });
 
         // Create output file path
-        const fileName = `Orla_${groupCode}.pdf`;
+        const fileName = `Listado_fotos_${groupCode}.pdf`;
         const filePath = path.join(exportPath, fileName);
 
         // Pipe PDF to file
@@ -1784,7 +1785,7 @@ function registerExportHandlers(context) {
         // Add title
         doc.fontSize(20)
            .font('Helvetica-Bold')
-           .text(`Orla - ${groupCode}`, { align: 'center' });
+           .text(`Listado con fotografías - ${groupCode}`, { align: 'center' });
 
         doc.moveDown(0.5);
         const titleY = doc.y; // Save Y position after title
@@ -1832,14 +1833,14 @@ function registerExportHandlers(context) {
             : user.repository_image_path;
 
           // If using repository photos and path is not set, try to construct it
-          if (photoSource === 'repository' && !imagePath && orlaRepositoryPath) {
+          if (photoSource === 'repository' && !imagePath && rosterRepositoryPath) {
             const isStudent = user.type === 'student';
             const userId = isStudent ? user.nia : user.document;
             if (userId) {
               const filename = `${userId}.jpg`;
               const mirror = repositoryMirror();
               const mirrorPath = mirror ? mirror.getMirrorPath(filename) : null;
-              imagePath = mirrorPath || path.join(orlaRepositoryPath, filename);
+              imagePath = mirrorPath || path.join(rosterRepositoryPath, filename);
             }
           }
 
@@ -1922,7 +1923,7 @@ function registerExportHandlers(context) {
               getMainWindow,
               processedUsers,
               totalUsers,
-              `Generando orla de ${groupCode}`
+              `Generando el listado de ${groupCode}`
             );
             await new Promise(resolve => setImmediate(resolve));
           }
@@ -1945,12 +1946,12 @@ function registerExportHandlers(context) {
         sendProgressUpdate(getMainWindow, processedGroups, totalGroups, `PDF generado: ${fileName}`);
       }
 
-      logger.section('ORLA PDF EXPORT COMPLETED');
+      logger.section('PHOTO ROSTER PDF EXPORT COMPLETED');
       logger.success(`Generated ${generatedFiles.length} PDF file(s)`);
 
       return { success: true, generatedFiles };
     } catch (error) {
-      logger.error('Error exporting orla PDF', error);
+      logger.error('Error exporting photo roster PDF', error);
       return { success: false, error: error.message };
     }
   });

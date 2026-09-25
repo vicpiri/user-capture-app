@@ -527,52 +527,52 @@
     </div>
   </div>
 
-  <!-- Orla Export Modal -->
-  <div id="orla-export-modal" class="modal">
-    <div class="modal-content orla-modal-content">
-      <h2>Exportar Orla en PDF</h2>
+  <!-- Photo Roster Modal -->
+  <div id="photo-roster-modal" class="modal">
+    <div class="modal-content photo-roster-modal-content">
+      <h2>Listado en PDF con fotografías por grupo</h2>
 
-      <div class="orla-modal-section">
+      <div class="photo-roster-modal-section">
         <h3>Grupos a exportar</h3>
-        <div class="orla-radio-group">
+        <div class="photo-roster-radio-group">
           <label class="checkbox-label">
-            <input type="radio" name="orla-group-scope" id="orla-export-all-groups" value="all" checked>
+            <input type="radio" name="photo-roster-group-scope" id="photo-roster-all-groups" value="all" checked>
             <span>Todos los grupos</span>
           </label>
 
           <label class="checkbox-label">
-            <input type="radio" name="orla-group-scope" id="orla-export-single-group" value="single">
+            <input type="radio" name="photo-roster-group-scope" id="photo-roster-single-group" value="single">
             <span>Un solo grupo</span>
           </label>
         </div>
 
-        <div class="orla-group-select-container">
-          <select id="orla-export-group-select" class="form-control" disabled>
+        <div class="photo-roster-group-select-container">
+          <select id="photo-roster-group-select" class="form-control" disabled>
             <option value="">Seleccionar grupo...</option>
           </select>
         </div>
       </div>
 
-      <div class="orla-modal-section">
+      <div class="photo-roster-modal-section">
         <h3>Tipo de fotografías a incluir</h3>
-        <div class="orla-radio-group">
+        <div class="photo-roster-radio-group">
           <label class="checkbox-label">
-            <input type="radio" name="orla-photo-source" id="orla-export-captured" value="captured" checked>
+            <input type="radio" name="photo-roster-photo-source" id="photo-roster-captured" value="captured" checked>
             <span>Fotografías capturadas</span>
           </label>
 
           <label class="checkbox-label">
-            <input type="radio" name="orla-photo-source" id="orla-export-repository" value="repository">
+            <input type="radio" name="photo-roster-photo-source" id="photo-roster-repository" value="repository">
             <span>Fotografías del depósito</span>
           </label>
         </div>
       </div>
 
-      <div class="orla-modal-section">
+      <div class="photo-roster-modal-section">
         <h3>Calidad de imagen</h3>
         <div class="form-group">
-          <label for="orla-export-quality">Calidad JPEG:</label>
-          <select id="orla-export-quality" class="form-control">
+          <label for="photo-roster-quality">Calidad JPEG:</label>
+          <select id="photo-roster-quality" class="form-control">
             <option value="60">Baja (60) - Archivo más pequeño</option>
             <option value="80" selected>Alta (80) - Recomendado</option>
             <option value="90">Muy Alta (90) - Archivo más grande</option>
@@ -581,11 +581,11 @@
         </div>
       </div>
 
-      <div id="orla-export-error" class="modal-error" role="alert" hidden></div>
+      <div id="photo-roster-error" class="modal-error" role="alert" hidden></div>
 
       <div class="modal-buttons">
-        <button id="orla-export-cancel" data-modal-cancel class="btn btn-secondary">Cancelar</button>
-        <button id="orla-export-confirm" class="btn btn-primary">Exportar</button>
+        <button id="photo-roster-cancel" data-modal-cancel class="btn btn-secondary">Cancelar</button>
+        <button id="photo-roster-confirm" class="btn btn-primary">Exportar</button>
       </div>
     </div>
   </div>
@@ -741,7 +741,7 @@
                 <button id="pref-logo-btn" class="btn btn-secondary">Seleccionar</button>
                 <button id="pref-logo-clear-btn" class="btn btn-secondary" style="display: none;">✕</button>
               </div>
-              <small class="form-help">Este logotipo aparece en los recibos y en las orlas y listados en PDF</small>
+              <small class="form-help">Este logotipo aparece en los recibos y en los listados en PDF</small>
             </div>
           </div>
 
@@ -895,7 +895,7 @@
   </div>
 
   <script src="components/modals/UserImageModal.js"></script>
-  <script src="components/modals/OrlaExportModal.js"></script>
+  <script src="components/modals/PhotoRosterModal.js"></script>
   <script src="components/UserRowRenderer.js"></script>
   <script src="components/ThumbnailGridManager.js"></script>
   <script src="components/VirtualScrollManager.js"></script>
@@ -903,6 +903,7 @@
   <script src="components/CaptureHistoryManager.js"></script>
   <script src="components/ExportManager.js"></script>
   <script src="components/OrlaExportManager.js"></script>
+  <script src="components/PhotoRosterExportManager.js"></script>
   <script src="components/ImageTagsManager.js"></script>
   <script src="components/SelectionModeManager.js"></script>
   <script src="components/DragDropManager.js"></script>

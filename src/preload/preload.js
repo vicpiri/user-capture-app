@@ -173,8 +173,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-export-to-repository', callback);
   },
 
-  onMenuExportOrlaPDF: (callback) => {
-    ipcRenderer.on('menu-export-orla-pdf', callback);
+  onMenuExportPhotoRosterPDF: (callback) => {
+    ipcRenderer.on('menu-export-photo-roster-pdf', callback);
   },
 
   onMenuExportPaidOrlaPDF: (callback) => {
@@ -210,7 +210,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearThumbnailCache: () => ipcRenderer.invoke('clear-thumbnail-cache'),
   scanReplacedArchive: () => ipcRenderer.invoke('scan-replaced-archive'),
   purgeReplacedArchive: (before) => ipcRenderer.invoke('purge-replaced-archive', before),
-  exportOrlaPDF: (data) => ipcRenderer.invoke('export-orla-pdf', data),
+  exportPhotoRosterPDF: (data) => ipcRenderer.invoke('export-photo-roster-pdf', data),
   exportPaidUsersListPDF: (data) => ipcRenderer.invoke('export-paid-users-list-pdf', data),
   exportPaidUsersCSV: (data) => ipcRenderer.invoke('export-paid-users-csv', data),
   exportMissingPhotosPDF: (data) => ipcRenderer.invoke('export-missing-photos-pdf', data),

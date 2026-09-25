@@ -12,7 +12,7 @@ La lista de la izquierda muestra el alumnado y el personal del proyecto. Desde e
 | GRUPO | Código del grupo. El personal docente y el no docente tienen sus propios grupos. |
 | FOTOS | Miniaturas e iconos con el estado de cada usuario (ver [Iconos de cada fila](usuarios.md#iconos-de-cada-fila)). |
 
-Los usuarios aparecen ordenados por primer apellido, segundo apellido y nombre. Para ordenar no cuentan las tildes, las mayúsculas, los espacios ni los guiones («Álvarez» va con «Alvarez» y «De la Fuente» se ordena como «Delafuente»), y la `ñ` va entre la `n` y la `o`. Las orlas y los listados siguen el mismo orden. Al hacer clic en una fila, el usuario queda resaltado y su nombre aparece debajo de la lista. El número de usuarios cargados se ve en la parte inferior de la ventana.
+Los usuarios aparecen ordenados por primer apellido, segundo apellido y nombre. Para ordenar no cuentan las tildes, las mayúsculas, los espacios ni los guiones («Álvarez» va con «Alvarez» y «De la Fuente» se ordena como «Delafuente»), y la `ñ` va entre la `n` y la `o`. Los listados y las exportaciones siguen el mismo orden. Al hacer clic en una fila, el usuario queda resaltado y su nombre aparece debajo de la lista. El número de usuarios cargados se ve en la parte inferior de la ventana.
 
 ## Buscar un usuario
 

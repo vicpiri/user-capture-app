@@ -1,6 +1,6 @@
 # Primeros pasos
 
-Edu User Capture sirve para hacer las fotos de carnet del alumnado y del personal del centro, asociar cada foto a su persona y sacarlas después en el formato que necesites: listados para carnets, fotos con nombre, orlas o envío al depósito de imágenes del centro.
+Edu User Capture sirve para hacer las fotos de carnet del alumnado y del personal del centro, asociar cada foto a su persona y sacarlas después en el formato que necesites: listados para carnets, fotos con nombre, listados en PDF con las fotos de cada grupo o envío al depósito de imágenes del centro.
 
 ## La ventana principal
 
@@ -17,7 +17,7 @@ Si no hay ningún proyecto abierto, la lista muestra el mensaje «Abre o crea un
 2. **Configura el depósito de imágenes**, si el centro lo usa, en **Proyecto > Configurar depósito de imágenes**. Es la carpeta donde el centro guarda la foto oficial de cada persona. Consulta [Depósito de imágenes](deposito.md).
 3. **Haz las fotos**. Puedes usar la webcam, una cámara o un programa que deje las fotos en la carpeta de entrada del proyecto, o arrastrar archivos JPG a la ventana. Cada foto nueva aparece en el visor en unos instantes. Consulta [Captura e importación de fotos](captura.md).
 4. **Enlaza cada foto con su usuario**: selecciona a la persona en la lista, deja su foto a la vista en el visor y pulsa **Enlazar** (`Ctrl+L`). Consulta [Enlazar fotos](enlazar.md).
-5. **Exporta o envía las fotos** desde **Archivo > Exportar**: CSV para carnets, fotos con el NIA o el DNI como nombre, fotos con nombre y apellidos, orlas en PDF o **Imágenes capturadas al depósito**. Consulta [Exportaciones](exportaciones.md).
+5. **Exporta o envía las fotos** desde **Archivo > Exportar**: CSV para carnets, fotos con el NIA o el DNI como nombre, fotos con nombre y apellidos, el listado en PDF con fotografías por grupo o **Imágenes capturadas al depósito**. Consulta [Exportaciones](exportaciones.md).
 
 No hace falta guardar: cada cambio queda guardado en el proyecto en el momento.
 
@@ -48,6 +48,6 @@ La carpeta de entrada puede estar en otro sitio si la rediriges. Consulta [Redir
 - [Depósito de imágenes](deposito.md): la carpeta con las fotos oficiales del centro.
 - [Exportaciones](exportaciones.md): CSV, fotos y envío al depósito.
 - [Carnets y publicación oficial](carnets.md): solicitudes de impresión de carnets y de publicación de fotos.
-- [Orlas, pagos y recibos](orlas.md): orlas en PDF, pagos y recibos.
+- [Orlas, pagos y recibos](orlas.md): pagos de la orla de graduación y recibos.
 - [Preferencias y actualizaciones](preferencias.md): datos del centro, impresora de recibos y nuevas versiones.
 - [Atajos de teclado](atajos.md): todas las combinaciones de teclas.
