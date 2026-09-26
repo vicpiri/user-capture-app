@@ -1611,3 +1611,5 @@ manual que le corresponde.
     - Add IPC event 'repository-changed' to notify renderer when repository contents change
     ```
 - Es obligatorio preguntar si se deben ejecutar los test antes de hacer un commit (se pueden ejecutar solo los tests cercanos a los cambios realizados).
+
+<!-- sistema-contexto: v2 -->
