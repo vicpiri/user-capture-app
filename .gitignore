@@ -147,7 +147,8 @@ Desktop.ini
 # IDE
 .vscode/
 .idea/
-.claude/
+.claude/*
+!.claude/commands/
 *.swp
 *.swo
 *~

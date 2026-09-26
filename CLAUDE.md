@@ -4,6 +4,127 @@
 
 Aplicación de escritorio desarrollada con Electron para la captura de imágenes de usuarios en entornos educativos.
 
+> Para retomar el proyecto: `/abrir-sesion` (lee este archivo, `NOTES.md` y
+> `ARCHITECTURE.md`); para dejarlo, `/cerrar-sesion`. El estado del trabajo y el
+> siguiente paso viven en `NOTES.md`, no aquí.
+
+## Qué es y para quién
+
+Aplicación de escritorio para Windows con la que el personal de un centro
+educativo fotografía al alumnado y al personal (webcam o carpeta vigilada),
+enlaza cada foto a su ficha importada del XML del centro y la exporta a
+carnets, al depósito compartido de fotos, a listados en PDF y a otros
+programas. También lleva el cobro de la orla de graduación con recibo
+impreso.
+
+Se desarrolla para el **IES La Marxadella**. La usan tres grupos, cada uno con
+su propia instalación: el equipo directivo (en su estación de trabajo), el
+equipo que hace las fotos cada curso y el equipo que, por su cuenta, hace las
+fotos y diseña las orlas de recuerdo del alumnado.
+
+## Alcance y escalabilidad
+
+**Hoy es un solo centro con varias instalaciones que comparten el depósito y
+se actualizan solas desde las Releases de GitHub. Cuando se valide, se intentará
+que la usen otros centros.** Implica:
+- Cada release llega a todos: publicar solo lo comprobado, y seguir
+  `docs/ACTUALIZACIONES_Y_RELEASE_PLAN.md`.
+- Los proyectos (`data/*.sqlite`, `project_settings`) y `config.json` de
+  versiones anteriores deben seguir abriéndose: cambios de esquema o de claves
+  siempre compatibles hacia atrás, con valor por defecto si falta la clave.
+- El depósito lo comparten equipos y cursos: no borrar ni mover nada en él por
+  iniciativa de la aplicación (ver solicitudes y `Reemplazadas`).
+- Volumen: cientos o pocos miles de usuarios por proyecto; ya hay virtual
+  scroll y cachés, no hace falta optimizar más sin un problema medido.
+- Pensando en otros centros: no fijar en el código nada propio de La
+  Marxadella (nombre, logotipo, rutas, grupos); eso va en la configuración o
+  en el XML.
+
+## Stack
+
+Versiones instaladas según `package-lock.json`:
+- **Electron 44.3.0**, JavaScript CommonJS sin TypeScript ni bundler
+- **sqlite3 5.1.7** (base de datos del proyecto), **sharp 0.34.4** (imágenes)
+- **chokidar 3.6.0** (vigilancia de carpetas), **fast-xml-parser 4.5.3** (XML)
+- **pdfkit 0.17.2** (PDF), **archiver 7.0.1** (ZIP), **markdown-it 15.0.2** (manual)
+- **electron-updater 6.8.9** y **electron-builder 26.15.3** (instalador NSIS
+  y actualizaciones desde GitHub Releases)
+- **Jest 29.7.0** con `jest-environment-jsdom` (tests)
+- **commit-and-tag-version 13.2.0** (versión y CHANGELOG)
+- Auxiliar de recibos en **C#**, compilado con el `csc` de .NET Framework 4.x
+  que trae Windows
+- En ejecución, la aplicación usa el Node que lleva Electron 44 (24.20.0,
+  Chromium 152), no el del sistema
+- Para desarrollar hace falta **Node ≥ 22.12**: lo exigen `electron`
+  (`>= 22.12.0`) y `commit-and-tag-version` (`>= 22`) en su campo `engines`.
+  En local hay 24.19.0. El README (Node 16) y el workflow de GitHub Actions
+  (Node 20, desactivado) están desfasados
+
+## Comandos
+
+- **Arrancar**: `npm run dev` (desarrollo, compila antes el auxiliar de
+  recibos si puede) o `npm start`
+- **Probar**: `npm test`; `npm run test:coverage` para cobertura con umbrales
+- **Lint / typecheck**: no existen todavía (ver `NOTES.md`)
+- **Empaquetar**: `npm run dist:win`
+- **Publicar**: `npm run release` y luego `npm run release:publish` (con
+  `GH_TOKEN`); detalle en «Versionado y publicación»
+
+## Mapa de carpetas
+
+- `main.js` — arranque del proceso principal: crea ventanas y gestores y
+  conecta menú, IPC y vigilantes
+- `src/main/` — proceso principal: base de datos, depósito, vigilantes,
+  exportaciones, PDF, recibos, actualizaciones
+- `src/main/ipc/` — los manejadores IPC, un archivo por área
+- `src/preload/` — el puente `window.electronAPI` entre procesos
+- `src/renderer/` — interfaz: `renderer.js` coordina los componentes de
+  `components/` y los modales de `components/modals/`
+- `src/help/` — manual de uso en Markdown que se empaqueta con la aplicación
+- `native/receipt-printer/` — auxiliar C# que imprime los recibos con GDI
+- `scripts/` — compilación del auxiliar, notas de release y prototipos (ITACA)
+- `tests/unit/` — suite de Jest, renderer (JSDOM) y proceso principal (Node)
+- `docs/` — planes, guía de publicación y fallos pendientes
+
+## Convenciones no obvias
+
+- Código en inglés, interfaz y manual en español (tuteo)
+- Nada de `dialog.showMessageBox`, `alert()` ni `confirm()`: avisos con
+  `showAppMessage`/`askAppQuestion` (`appDialogs.js`) o los modales propios
+- Todo diálogo marca su botón de cancelar con `data-modal-cancel`, y toda
+  ventana secundaria expone `close()` y se registra en
+  `secondaryWindowManagers`; los tests fallan si no
+- La carpeta de entrada se pide con `getActiveIngestPath(state)`, nunca
+  `path.join(projectPath, 'ingest')`
+- No usar la clase CSS `visible` para estados: `utilities.css` la fuerza a
+  `display: block !important`
+- «Orla» es solo el servicio de pago; el PDF de fotos por grupo es
+  `photoRoster`
+- Toda carpeta de exportación se elige con `selectExportFolder()`
+- Toda funcionalidad visible actualiza `src/help/` en el mismo commit
+- Commits en conventional commits, en inglés, **sin atribución a Claude ni a
+  herramientas de IA**, y preguntando antes si ejecutar los tests
+
+## Decisiones con su porqué
+
+- **El depósito es una carpeta, no la API de Google Drive**: funciona con
+  cualquier servicio que sincronice archivos; la copia local
+  (`repositoryMirror.js`) evita depender de la velocidad de la unidad
+- **Los recibos se imprimen con GDI (auxiliar C#)**: Chromium rasterizaba y el
+  texto salía deformado en la térmica de 203 ppp; además es más rápido
+- **Las fotos se giran con la etiqueta EXIF, no los píxeles**: sin
+  recompresión, los datos de imagen quedan intactos
+- **El orden alfabético se hace en JavaScript**: el `ORDER BY` de SQLite
+  compara bytes y colocaba «Álvarez» tras «Zapata»
+- **Miniaturas nombradas por `sha1(ruta|tamaño)` sin fecha**: una por foto y
+  tamaño; con la fecha en el nombre, cada cambio dejaba huérfanas
+- **Las solicitudes de otros proyectos o cursos no se borran**: el depósito es
+  compartido y otro proyecto puede necesitarlas
+- **Las Releases de GitHub son el servidor de actualizaciones**; el workflow de
+  CI está desactivado («SDK compilation issues») y se publica desde local
+- **El instalador no está firmado**: se evaluó y se aplazó por coste; hoy no
+  compensa la inversión. Windows SmartScreen avisará al instalar
+
 ## Tecnologías
 
 - **Electron**: Framework para aplicaciones de escritorio
