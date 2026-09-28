@@ -931,6 +931,7 @@ function initializeProjectManager() {
     onShowProgressModal: showProgressModal,
     onCloseProgressModal: closeProgressModal,
     onUpdateLastFilterValue: updateLastFilterValue,
+    onResetGroupFilterLock: resetGroupFilterLock,
 
     // DOM elements
     searchInput: searchInput,
@@ -966,6 +967,34 @@ function cancelPendingSearch() {
   }
 }
 
+// A search looks across every group, so while there is one the group filter
+// shows "Todos los grupos" and is locked; the group chosen before is kept here
+// (null when not searching) and restored once the search is cleared. It is not
+// saved or broadcast: the other windows keep following the chosen group.
+let groupBeforeSearch = null;
+
+function syncGroupFilterWithSearch() {
+  const searching = searchInput.value.trim() !== '';
+  if (searching && groupBeforeSearch === null) {
+    groupBeforeSearch = groupFilter.value;
+    groupFilter.value = '';
+    groupFilter.disabled = true;
+  } else if (!searching && groupBeforeSearch !== null) {
+    groupFilter.value = groupBeforeSearch;
+    // The group may be gone after an XML update; fall back to all groups
+    if (groupFilter.value !== groupBeforeSearch) groupFilter.value = '';
+    lastFilterValue = groupFilter.value;
+    groupBeforeSearch = null;
+    groupFilter.disabled = false;
+  }
+}
+
+// The project was closed with a search in place: forget the saved group
+function resetGroupFilterLock() {
+  groupBeforeSearch = null;
+  groupFilter.disabled = false;
+}
+
 // Event Listeners
 function initializeEventListeners() {
   // Search and filter
@@ -974,6 +1003,7 @@ function initializeEventListeners() {
     cancelPendingSearch();
     searchDebounceTimer = setTimeout(() => {
       searchDebounceTimer = null;
+      syncGroupFilterWithSearch();
       filterUsers();
     }, SEARCH_DEBOUNCE_MS);
   });
@@ -997,6 +1027,12 @@ function initializeEventListeners() {
 
   // Listen for group filter changes from other windows
   window.electronAPI.onGroupFilterChanged(async (groupCode) => {
+    // During a search the filter is locked on all groups: the new group is
+    // the one to come back to
+    if (groupBeforeSearch !== null) {
+      groupBeforeSearch = groupCode;
+      return;
+    }
     // Only update if the value is actually different to avoid unnecessary reloads
     if (groupFilter.value !== groupCode) {
       lastFilterValue = groupCode;
@@ -1613,6 +1649,7 @@ async function clearSearch() {
   searchInput.value = '';
   clearSearchBtn.style.display = 'none';
   cancelPendingSearch();
+  syncGroupFilterWithSearch();
   await filterUsers();
 }
 

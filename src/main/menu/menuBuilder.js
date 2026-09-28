@@ -183,7 +183,7 @@ class MenuBuilder {
               }
             },
             {
-              label: 'Fotografías por grupo en PDF',
+              label: 'Estadísticas de fotografías por grupo en PDF',
               click: () => {
                 this.mainWindow.webContents.send('menu-export-group-coverage-pdf');
               }

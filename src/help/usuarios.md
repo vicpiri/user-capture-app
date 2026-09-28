@@ -20,7 +20,7 @@ Los usuarios aparecen ordenados por primer apellido, segundo apellido y nombre. 
 2. La lista se actualiza mientras escribes.
 3. Para volver a la lista completa, borra el texto o pulsa la **X** que aparece dentro del cuadro.
 
-La búsqueda encuentra el texto en el nombre, en cualquiera de los dos apellidos, en el NIA o en el documento (DNI), así que también sirve para el personal. Busca siempre en **todos los grupos**, aunque tengas uno elegido en el filtro de grupo.
+La búsqueda encuentra el texto en el nombre, en cualquiera de los dos apellidos, en el NIA o en el documento (DNI), así que también sirve para el personal. Busca siempre en **todos los grupos**: mientras hay texto en el buscador, el filtro de grupos muestra «Todos los grupos» y no se puede cambiar. Al borrar la búsqueda, vuelve el grupo que tenías elegido.
 
 - No distingue mayúsculas ni tildes: «jose» encuentra «José» y «garcia» encuentra «García».
 - Si escribes varias palabras, deben aparecer todas, cada una en cualquiera de esos datos: «ana garcia» encuentra a Ana García.
@@ -30,7 +30,7 @@ La búsqueda encuentra el texto en el nombre, en cualquiera de los dos apellidos
 1. Abre el desplegable de grupos, junto al cuadro de búsqueda. Cuando no hay ninguno elegido muestra «Todos los grupos».
 2. Elige el grupo. Cada opción muestra el código y el nombre del grupo.
 
-Para volver a ver a todo el mundo, elige **Todos los grupos**. Mientras haya texto en el cuadro de búsqueda, el filtro de grupo no se aplica.
+Para volver a ver a todo el mundo, elige **Todos los grupos**. Mientras haya texto en el cuadro de búsqueda, el filtro de grupos queda bloqueado en «Todos los grupos».
 
 La aplicación recuerda el grupo elegido para la próxima vez. El mismo grupo se usa en los cuadros de imágenes capturadas y del depósito: si lo cambias en uno de ellos, cambia también en la ventana principal.
 

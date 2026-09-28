@@ -44,6 +44,7 @@
       this.onCloseProgressModal = config.onCloseProgressModal || (() => {});
       this.onClearImages = config.onClearImages || (() => {});
       this.onUpdateLastFilterValue = config.onUpdateLastFilterValue || ((value) => {});
+      this.onResetGroupFilterLock = config.onResetGroupFilterLock || (() => {});
 
       // DOM elements
       this.searchInput = config.searchInput;
@@ -131,6 +132,8 @@
         this.groupFilter.innerHTML = '<option value="">Todos los grupos</option>';
         this.groupFilter.value = '';
       }
+      // The search was cleared above, so the group filter is no longer locked
+      this.onResetGroupFilterLock();
 
       // Set project as closed
       this.setProjectOpen(false);

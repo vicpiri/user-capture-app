@@ -17,7 +17,7 @@ El cuadro para elegir la carpeta se abre en la última carpeta a la que exportas
 | **Listado en PDF con fotografías por grupo** | Un PDF por grupo con la foto y el nombre de cada persona |
 | **Listado en PDF de usuarios sin foto en el depósito** | El archivo `Usuarios_sin_foto_en_deposito.pdf` |
 | **Listado en PDF de usuarios sin foto capturada** | El archivo `Usuarios_sin_foto_capturada.pdf` |
-| **Fotografías por grupo en PDF** | El archivo `Fotografias_por_grupo.pdf` |
+| **Estadísticas de fotografías por grupo en PDF** | El archivo `Estadisticas_fotografias_por_grupo.pdf` |
 
 Los listados de quienes han pagado la orla de graduación están en el menú **Orla** (ver [Orla de graduación](orlas.md#el-menu-orla)).
 
@@ -29,7 +29,7 @@ El CSV para carnets, **Imágenes capturadas como ID**, **Imágenes del depósito
 
 - **Los usuarios seleccionados**, si estás en modo selección y hay alguno marcado.
 - **Lo que muestra la lista**, que aparece con el nombre de lo que la está filtrando: el grupo elegido, la búsqueda escrita o el filtro del menú **Ver** que tengas activo. Es la opción marcada de entrada.
-- **Todo el grupo**, si la búsqueda o un filtro del menú **Ver** están dejando fuera a parte del grupo elegido.
+- **Todo el grupo**, si un filtro del menú **Ver** está dejando fuera a parte del grupo elegido. Con texto en el buscador no aparece, porque la búsqueda deja el filtro de grupos en «Todos los grupos».
 - **Todos los usuarios del proyecto**.
 
 Solo aparecen las opciones que en ese momento significan algo distinto. Si no tienes selección ni filtros, las cuatro serían las mismas personas: entonces no se pregunta nada y la exportación sigue directa.
@@ -40,7 +40,7 @@ Si no hay ningún usuario que exportar, la aplicación te avisa y no exporta nad
 
 Dos exportaciones no usan esta ventana porque tienen la suya: **Edu Inventory Manager** pregunta entre todos los usuarios y el grupo seleccionado, y el **Listado en PDF con fotografías por grupo** pregunta entre todos los grupos y uno solo.
 
-Las demás exportaciones (inventario, listado con fotografías y **Fotografías por grupo en PDF**) tienen su propio alcance, que se explica en cada apartado.
+Las demás exportaciones (inventario, listado con fotografías y **Estadísticas de fotografías por grupo en PDF**) tienen su propio alcance, que se explica en cada apartado.
 
 ## Copiar el original o redimensionar
 
@@ -199,8 +199,8 @@ Los dos empiezan preguntando a quién incluyen (ver [Qué usuarios se exportan](
 
 Si todos los usuarios tienen foto, la aplicación te lo dice y no genera ningún archivo.
 
-## Exportar las fotografías por grupo
+## Exportar las estadísticas de fotografías por grupo
 
-**Archivo > Exportar > Fotografías por grupo en PDF** pone en papel lo mismo que la ventana [Fotografías por grupo](enlazar.md#fotografias-por-grupo): una tabla con todos los grupos del proyecto, cuántos usuarios tiene cada uno y cuántos tienen foto capturada y foto en el depósito, con el porcentaje coloreado de rojo a verde y los totales al final.
+**Archivo > Exportar > Estadísticas de fotografías por grupo en PDF** no incluye fotos: pone en papel las mismas cifras que la ventana [Fotografías por grupo](enlazar.md#fotografias-por-grupo), en una tabla con todos los grupos del proyecto, cuántos usuarios tiene cada uno y cuántos tienen foto capturada y foto en el depósito, con el porcentaje coloreado de rojo a verde y los totales al final.
 
 Siempre abarca el proyecto entero, sin tener en cuenta la búsqueda, los filtros ni la selección. Si el depósito no está configurado o su carpeta no está disponible, el PDF sale solo con las fotos capturadas y te avisa de por qué.

@@ -446,7 +446,7 @@ async function writeGroupCoveragePdf(filePath, { captured, repository, repositor
   const repositoryByCode = repository ? new Map(repository.map((group) => [group.code, group])) : null;
 
   await report.startPage(false);
-  report.title('Fotografías por grupo');
+  report.title('Estadísticas de fotografías por grupo');
 
   const capturedTotals = summarize(captured);
   const percentOf = (totals) => (totals.total ? coveragePercent(totals.withImage / totals.total) : 0);

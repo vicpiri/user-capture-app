@@ -1543,13 +1543,13 @@ ya apunta a él.
   cada tutor), personas por `compareUsersByName` con su NIA o documento. Se
   deja fuera `ELIMINADOS`, como en la ventana de Fotografías por grupo
 
-### 6c. Fotografías por grupo en PDF
-- **Comando de menú**: Archivo > Exportar > Fotografías por grupo en PDF
+### 6c. Estadísticas de fotografías por grupo en PDF
+- **Comando de menú**: Archivo > Exportar > Estadísticas de fotografías por grupo en PDF
 - **Alcance**: el proyecto entero, sin preguntar, como la ventana
 - **Datos**: `getGroupPhotoCoverage()` dos veces, capturadas y depósito. Si el
   depósito no está configurado o no está disponible, sale solo con las
   capturadas y el PDF y el aviso final dicen por qué
-- **Formato**: `Fotografias_por_grupo.pdf`, tabla con barra de porcentaje en
+- **Formato**: `Estadisticas_fotografias_por_grupo.pdf`, tabla con barra de porcentaje en
   los colores de la ventana. `photoReports.js` importa las reglas de
   `renderer/group-coverage.js` (`coverageRatio`, `coveragePercent`,
   `heatHue`, `sortGroups`, `summarize`) para que papel y pantalla coincidan

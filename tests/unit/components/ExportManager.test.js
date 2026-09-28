@@ -1403,7 +1403,7 @@ describe('ExportManager', () => {
     beforeEach(() => {
       mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/export/path'] });
       mockElectronAPI.exportGroupCoveragePDF = jest.fn().mockResolvedValue({
-        success: true, fileName: 'Fotografias_por_grupo.pdf', includesRepository: true, repositoryNote: ''
+        success: true, fileName: 'Estadisticas_fotografias_por_grupo.pdf', includesRepository: true, repositoryNote: ''
       });
     });
 
@@ -1419,12 +1419,12 @@ describe('ExportManager', () => {
       await manager.exportGroupCoveragePDF();
 
       expect(mockElectronAPI.exportGroupCoveragePDF).toHaveBeenCalledWith({ exportPath: '/export/path' });
-      expect(mockShowInfoModal).toHaveBeenCalledWith('Exportación completada', 'Se ha generado Fotografias_por_grupo.pdf.');
+      expect(mockShowInfoModal).toHaveBeenCalledWith('Exportación completada', 'Se ha generado Estadisticas_fotografias_por_grupo.pdf.');
     });
 
     test('should say why the repository is left out', async () => {
       mockElectronAPI.exportGroupCoveragePDF.mockResolvedValue({
-        success: true, fileName: 'Fotografias_por_grupo.pdf', includesRepository: false, repositoryNote: 'no se ha configurado.'
+        success: true, fileName: 'Estadisticas_fotografias_por_grupo.pdf', includesRepository: false, repositoryNote: 'no se ha configurado.'
       });
 
       await manager.exportGroupCoveragePDF();

@@ -89,7 +89,7 @@ La ventana se actualiza sola cada vez que enlazas o quitas una foto, cuando camb
 
 > **Consejo:** Al cerrar el proyecto la ventana se cierra también, porque sus datos son los de ese proyecto.
 
-Para imprimir estas cifras o para tener la lista de quién falta en cada grupo, usa las exportaciones en PDF: ver [Exportar las fotografías por grupo](exportaciones.md#exportar-las-fotografias-por-grupo) y [Exportar los listados de usuarios sin foto](exportaciones.md#exportar-los-listados-de-usuarios-sin-foto).
+Para imprimir estas cifras o para tener la lista de quién falta en cada grupo, usa las exportaciones en PDF: ver [Exportar las estadísticas de fotografías por grupo](exportaciones.md#exportar-las-estadisticas-de-fotografias-por-grupo) y [Exportar los listados de usuarios sin foto](exportaciones.md#exportar-los-listados-de-usuarios-sin-foto).
 
 ## Cuadro de imágenes capturadas
 

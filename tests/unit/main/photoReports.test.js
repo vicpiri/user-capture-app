@@ -242,7 +242,7 @@ describe('PDF report handlers', () => {
 
       const result = await runCoverage();
 
-      expect(result).toEqual({ success: true, fileName: 'Fotografias_por_grupo.pdf', includesRepository: true, repositoryNote: '' });
+      expect(result).toEqual({ success: true, fileName: 'Estadisticas_fotografias_por_grupo.pdf', includesRepository: true, repositoryNote: '' });
       expect(state.dbManager.getGroupPhotoCoverage).toHaveBeenCalledTimes(2);
       expect(isPdf(path.join(exportPath, result.fileName))).toBe(true);
     });

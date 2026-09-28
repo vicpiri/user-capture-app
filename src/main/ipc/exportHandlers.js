@@ -2166,7 +2166,7 @@ function registerExportHandlers(context) {
         );
       }
 
-      const fileName = 'Fotografias_por_grupo.pdf';
+      const fileName = 'Estadisticas_fotografias_por_grupo.pdf';
       await writeGroupCoveragePdf(path.join(exportPath, fileName), {
         captured,
         repository,
