@@ -61,6 +61,34 @@
     }
 
     /**
+     * The card print and official publication requests, for the given users:
+     * the checked ones in selection mode, the one of the row otherwise
+     * @private
+     */
+    _appendRequestOptions(menu, userIds, { separatorBefore = true } = {}) {
+      if (separatorBefore) {
+        const separator = document.createElement('div');
+        separator.className = 'context-menu-separator';
+        menu.appendChild(separator);
+      }
+
+      const options = [
+        ['Solicitar impresión de carnet', () => this.onRequestCardPrint(userIds)],
+        ['Solicitar publicación oficial', () => this.onRequestPublication(userIds)]
+      ];
+      options.forEach(([label, request]) => {
+        const option = document.createElement('div');
+        option.className = 'context-menu-item';
+        option.textContent = label;
+        option.addEventListener('click', () => {
+          request();
+          menu.remove();
+        });
+        menu.appendChild(option);
+      });
+    }
+
+    /**
      * Show context menu for selection actions
      * @param {Event} event - Mouse event
      * @param {object} user - User object
@@ -79,7 +107,8 @@
       menu.style.left = `${event.clientX}px`;
       menu.style.top = `${event.clientY}px`;
 
-      // If not in selection mode, show "Seleccionar" option and payment/printing options
+      // If not in selection mode, show "Seleccionar", the requests and the
+      // payment/printing options, all for the user of this row
       if (!this.isActive) {
         const selectOption = document.createElement('div');
         selectOption.className = 'context-menu-item';
@@ -89,6 +118,8 @@
           menu.remove();
         });
         menu.appendChild(selectOption);
+
+        this._appendRequestOptions(menu, [user.id]);
 
         const orlaEnabled = this.getOrlaEnabled();
 
@@ -127,27 +158,8 @@
           menu.appendChild(unpayOption);
         }
       } else {
-        // If in selection mode, show selection options
-
-        // Option: Solicitar impresión de carnet
-        const requestCardPrintOption = document.createElement('div');
-        requestCardPrintOption.className = 'context-menu-item';
-        requestCardPrintOption.textContent = 'Solicitar impresión de carnet';
-        requestCardPrintOption.addEventListener('click', () => {
-          this.onRequestCardPrint(Array.from(this.selectedUsers));
-          menu.remove();
-        });
-        menu.appendChild(requestCardPrintOption);
-
-        // Option: Solicitar publicación oficial
-        const requestPublicationOption = document.createElement('div');
-        requestPublicationOption.className = 'context-menu-item';
-        requestPublicationOption.textContent = 'Solicitar publicación oficial';
-        requestPublicationOption.addEventListener('click', () => {
-          this.onRequestPublication(Array.from(this.selectedUsers));
-          menu.remove();
-        });
-        menu.appendChild(requestPublicationOption);
+        // If in selection mode, the requests go to the checked users
+        this._appendRequestOptions(menu, Array.from(this.selectedUsers), { separatorBefore: false });
 
         // Separator
         const separator = document.createElement('div');

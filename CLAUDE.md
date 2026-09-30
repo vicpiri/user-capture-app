@@ -1131,10 +1131,10 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
 
 #### Sistema de Petición de Carnets (v1.4.0)
 - **Funcionalidad**: Sistema para solicitar la impresión de carnets de usuarios
-- **Acceso**: menú contextual > "Solicitar impresión de carnet", que **solo
-  aparece en modo selección**
+- **Acceso**: menú contextual > "Solicitar impresión de carnet". Fuera del
+  modo selección se pide para el usuario de la fila; en modo selección, para
+  los marcados (`_appendRequestOptions()` de `SelectionModeManager`)
 - **Características**:
-  - Se pide para los usuarios marcados
   - Genera archivos con ID del usuario en carpeta `To-Print-ID` dentro del repositorio
   - Nombre de archivos: `{ID}` sin extensión (NIA para alumnos, DNI para personal)
   - Icono de "ID card" visible en la lista cuando existe archivo en `To-Print-ID`
@@ -1173,10 +1173,9 @@ suelo propio para `src/main/`, que antes no se medía en absoluto.
 
 #### Sistema de Petición de Publicación Oficial (v1.4.0)
 - **Funcionalidad**: Sistema para solicitar publicación oficial de fotografías
-- **Acceso**: menú contextual > "Solicitar publicación oficial", que **solo
-  aparece en modo selección**
+- **Acceso**: menú contextual > "Solicitar publicación oficial", para el
+  usuario de la fila o, en modo selección, para los marcados
 - **Características**:
-  - Se pide para los usuarios marcados
   - Copia imágenes del repositorio a carpeta `To-Publish` dentro del repositorio
   - Nombre de archivos: `{ID}.jpg` (NIA para alumnos, DNI para personal)
   - Icono de "Upload" visible en la lista cuando existe imagen en `To-Publish`

@@ -6,9 +6,13 @@ La aplicación lleva la cuenta de qué carnets hay que imprimir y qué fotos hay
 
 - El proyecto tiene que tener configurado el depósito de imágenes. Se explica en [Depósito de imágenes](deposito.md).
 - Solo se puede solicitar algo para quien ya tiene foto en el depósito, es decir, un archivo `NIA.jpg` (alumnado) o `DNI.jpg` (personal) en la carpeta del depósito. A los demás se les salta y el mensaje final dice cuántos se han omitido.
-- Las solicitudes se hacen en modo selección, aunque sea para un solo usuario. El modo selección se explica en [Lista de usuarios](usuarios.md).
+- Para un solo usuario basta con el botón derecho sobre su fila. Para varios a la vez, usa el modo selección, que se explica en [Lista de usuarios](usuarios.md#seleccionar-varios-usuarios).
 
 ## Solicitar la impresión de carnets
+
+Para un solo usuario, pulsa con el botón derecho sobre su fila y elige **Solicitar impresión de carnet**.
+
+Para varios a la vez:
 
 1. En la lista de usuarios, pulsa con el botón derecho sobre un usuario y elige **Seleccionar**. Se activa el modo selección con ese usuario marcado.
 2. Marca las casillas de los demás usuarios. La casilla de la cabecera de la tabla marca todos los que se ven en la lista.
@@ -50,6 +54,10 @@ Solo se marcan los usuarios que han entrado en el CSV. La aplicación no tiene o
 ## Solicitar la publicación oficial de fotos
 
 Sirve para pedir que la foto de una persona se publique en el sistema oficial del centro.
+
+Para un solo usuario, pulsa con el botón derecho sobre su fila y elige **Solicitar publicación oficial**.
+
+Para varios a la vez:
 
 1. Pulsa con el botón derecho sobre un usuario y elige **Seleccionar**.
 2. Marca las casillas de los demás usuarios, o la de la cabecera para marcar todos los que se ven.

@@ -222,6 +222,8 @@ Fuera del modo selección:
 | Opción | Cuándo aparece | Qué hace |
 |---|---|---|
 | **Seleccionar** | Siempre | Activa el modo selección con ese usuario marcado. |
+| **Solicitar impresión de carnet** | Siempre | Solicita el carnet de ese usuario. |
+| **Solicitar publicación oficial** | Siempre | Solicita la publicación oficial de la foto de ese usuario. |
 | **Desmarcar recibo impreso** | Si el recibo de la orla del usuario está marcado como impreso y el servicio de la orla está activado | Quita la marca de recibo impreso, tras pedir confirmación. |
 | **Desmarcar orla pagada** | Si la orla está pagada, el recibo no está impreso y el servicio de la orla está activado | Quita la marca de orla pagada, tras pedir confirmación. |
 
@@ -235,4 +237,4 @@ En modo selección las opciones actúan sobre **todos los usuarios marcados**, n
 
 Las dos solicitudes solo se aplican a los usuarios que tienen foto en el depósito. Ver [Carnets y publicación oficial](carnets.md).
 
-> **Consejo:** para solicitar el carnet de un solo usuario, haz clic derecho sobre él, elige **Seleccionar** y vuelve a hacer clic derecho para elegir **Solicitar impresión de carnet**.
+> **Consejo:** después de una sesión de fotos, activa **Ver > Ordenar por fecha de enlace** para tener arriba a los últimos fotografiados y pide su carnet o su publicación desde el botón derecho de cada fila.

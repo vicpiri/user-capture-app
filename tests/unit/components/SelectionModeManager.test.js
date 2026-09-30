@@ -344,6 +344,46 @@ describe('SelectionModeManager', () => {
       expect(existingMenu.remove).toHaveBeenCalled();
     });
 
+    describe('card print and publication requests', () => {
+      const clickOption = (label) => {
+        const menu = document.body.appendChild.mock.calls[0][0];
+        const option = Array.from(menu.querySelectorAll('.context-menu-item'))
+          .find((item) => item.textContent === label);
+        option.click();
+      };
+
+      beforeEach(() => {
+        manager = new SelectionModeManager({
+          ...mockCallbacks,
+          ...mockDOM,
+          onRequestCardPrint: jest.fn(),
+          onRequestPublication: jest.fn()
+        });
+      });
+
+      test('should be requested for the user of the row outside selection mode', () => {
+        manager.showContextMenu(mockEvent, { id: 7 });
+        clickOption('Solicitar impresión de carnet');
+
+        document.body.appendChild.mockClear();
+        manager.showContextMenu(mockEvent, { id: 7 });
+        clickOption('Solicitar publicación oficial');
+
+        expect(manager.onRequestCardPrint).toHaveBeenCalledWith([7]);
+        expect(manager.onRequestPublication).toHaveBeenCalledWith([7]);
+      });
+
+      test('should be requested for the checked users in selection mode, not the row', () => {
+        manager.enable(1);
+        manager.selectedUsers.add(2);
+
+        manager.showContextMenu(mockEvent, { id: 3 });
+        clickOption('Solicitar impresión de carnet');
+
+        expect(manager.onRequestCardPrint).toHaveBeenCalledWith([1, 2]);
+      });
+    });
+
     describe('payment options of the orla', () => {
       const paid = { id: 1, orla_paid: 1, receipt_printed: 0 };
       const printed = { id: 1, orla_paid: 1, receipt_printed: 1 };
