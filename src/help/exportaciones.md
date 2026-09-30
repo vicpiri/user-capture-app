@@ -51,6 +51,8 @@ Las demás exportaciones (inventario, listado con fotografías y **Estadísticas
   - **Tamaño del cuadro (píxeles)**: la foto se reduce hasta caber en un cuadrado de ese lado (800 por defecto), sin deformarse. Las fotos más pequeñas no se amplían.
   - **Tamaño máximo de archivo (KB)**: la aplicación baja la calidad poco a poco hasta que la foto pesa menos de ese valor (500 por defecto). Hay una calidad mínima de la que no pasa, así que alguna foto puede quedar algo por encima.
 
+La opción que sale marcada y los dos valores se pueden cambiar en **Archivo > Preferencias... > Exportación de imágenes** (ver [Exportación de imágenes](preferencias.md#exportacion-de-imagenes)). Lo que cambies en la ventana de una exportación vale solo para esa vez.
+
 En las tres exportaciones de fotos capturadas, la ventana **Opciones de Exportación** muestra antes un resumen: **Se exportará** (qué usuarios entran, según la regla anterior), cuántas imágenes se enviarán y cuántos **Usuarios sin foto capturada** hay en ese conjunto. Revísalo antes de pulsar **Exportar**.
 
 ## Exportar el CSV para carnets

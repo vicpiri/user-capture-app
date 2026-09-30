@@ -55,6 +55,7 @@ describe('preferences handlers', () => {
     receiptPrice: 20,
     receiptFooter: 'Gracias',
     orlaEnabled: true,
+    exportDefaults: { mode: 'resize', boxSize: 1200, maxSize: 300 },
     autoCheckUpdates: true
   };
 
@@ -229,8 +230,48 @@ describe('preferences handlers', () => {
         receiptPrice: 18,
         receiptFooter: '',
         orlaEnabled: true,
+        exportDefaults: { mode: 'copy', boxSize: 800, maxSize: 500 },
         autoCheckUpdates: true
       });
+    });
+  });
+
+  describe('export defaults', () => {
+    test('should save them under exportDefaults', async () => {
+      await call('save-preferences', FORM);
+
+      expect(loadGlobalConfig().exportDefaults).toEqual({ mode: 'resize', boxSize: 1200, maxSize: 300 });
+    });
+
+    test('should fill in what an older config.json lacks', async () => {
+      saveGlobalConfig({ exportDefaults: { boxSize: 1000 } });
+
+      expect((await call('get-preferences')).preferences.exportDefaults)
+        .toEqual({ mode: 'copy', boxSize: 1000, maxSize: 500 });
+    });
+
+    test('should bring out of range values inside the limits of the fields', async () => {
+      await call('save-preferences', { ...FORM, exportDefaults: { mode: 'resize', boxSize: 20, maxSize: 99999 } });
+
+      expect(loadGlobalConfig().exportDefaults).toEqual({ mode: 'resize', boxSize: 100, maxSize: 5000 });
+    });
+
+    test.each([
+      [{ mode: 'other', boxSize: NaN, maxSize: null }],
+      [{ mode: undefined, boxSize: 'abc', maxSize: '' }]
+    ])('should fall back to the built-in values for %p', async (exportDefaults) => {
+      await call('save-preferences', { ...FORM, exportDefaults });
+
+      expect(loadGlobalConfig().exportDefaults).toEqual({ mode: 'copy', boxSize: 800, maxSize: 500 });
+    });
+
+    test('should leave them alone when the window does not send them', async () => {
+      const { exportDefaults, ...withoutThem } = FORM;
+      saveGlobalConfig({ exportDefaults: { mode: 'resize', boxSize: 640, maxSize: 200 } });
+
+      await call('save-preferences', withoutThem);
+
+      expect(loadGlobalConfig().exportDefaults).toEqual({ mode: 'resize', boxSize: 640, maxSize: 200 });
     });
   });
 

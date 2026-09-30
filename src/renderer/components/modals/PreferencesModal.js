@@ -5,6 +5,7 @@
  * - Institution data, used by the receipts and the PDFs
  * - Graduation orla: the switch of the service, the receipt printer and the
  *   receipt content
+ * - What the photo export dialog starts with
  * - Update checks and thumbnail cache
  * - Resolves with the new preferences, or null if cancelled
  */
@@ -35,6 +36,11 @@
       this.testReceiptBtn = document.getElementById('pref-test-receipt-btn');
       this.printerConfigContent = document.getElementById('pref-printer-config-content');
       this.printerSystemFallback = document.getElementById('pref-printer-system-fallback');
+
+      this.exportModeCopyInput = document.getElementById('pref-export-mode-copy');
+      this.exportModeResizeInput = document.getElementById('pref-export-mode-resize');
+      this.exportBoxSizeInput = document.getElementById('pref-export-box-size');
+      this.exportMaxSizeInput = document.getElementById('pref-export-max-size');
 
       this.thumbnailCacheSize = document.getElementById('pref-thumbnail-cache-size');
       this.clearThumbnailCacheBtn = document.getElementById('pref-clear-thumbnail-cache');
@@ -260,6 +266,20 @@
       if (this.receiptFooterInput) {
         this.receiptFooterInput.value = preferences.receiptFooter || '';
       }
+
+      const exportDefaults = { ...EXPORT_DEFAULTS, ...(preferences.exportDefaults || {}) };
+      if (this.exportModeResizeInput) {
+        this.exportModeResizeInput.checked = exportDefaults.mode === 'resize';
+      }
+      if (this.exportModeCopyInput) {
+        this.exportModeCopyInput.checked = exportDefaults.mode !== 'resize';
+      }
+      if (this.exportBoxSizeInput) {
+        this.exportBoxSizeInput.value = exportDefaults.boxSize;
+      }
+      if (this.exportMaxSizeInput) {
+        this.exportMaxSizeInput.value = exportDefaults.maxSize;
+      }
     }
 
     /**
@@ -276,7 +296,13 @@
           : 18,
         receiptFooter: this.receiptFooterInput?.value?.trim() || '',
         autoCheckUpdates: this.autoCheckUpdatesInput ? this.autoCheckUpdatesInput.checked : true,
-        orlaEnabled: this.orlaEnabledInput ? this.orlaEnabledInput.checked : true
+        orlaEnabled: this.orlaEnabledInput ? this.orlaEnabledInput.checked : true,
+        // An empty or out of range field is put right by the main process
+        exportDefaults: {
+          mode: this.exportModeResizeInput?.checked ? 'resize' : 'copy',
+          boxSize: parseInt(this.exportBoxSizeInput?.value, 10),
+          maxSize: parseInt(this.exportMaxSizeInput?.value, 10)
+        }
       };
     }
 
@@ -528,6 +554,9 @@
       }
     }
   }
+
+  // What the export dialog offers when nothing was ever saved
+  const EXPORT_DEFAULTS = { mode: 'copy', boxSize: 800, maxSize: 500 };
 
   function formatBytes(bytes) {
     if (!bytes) {

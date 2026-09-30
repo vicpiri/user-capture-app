@@ -225,10 +225,16 @@ function initializeModals() {
   });
   updateModalInstance.init();
 
-  exportOptionsModalInstance = new ExportOptionsModal();
+  // Preferencias > Exportación de imágenes, read by both dialogs on opening
+  const getExportDefaults = async () => {
+    const result = await window.electronAPI.getPreferences();
+    return result.success ? result.preferences.exportDefaults : null;
+  };
+
+  exportOptionsModalInstance = new ExportOptionsModal({ getDefaults: getExportDefaults });
   exportOptionsModalInstance.init();
 
-  inventoryExportOptionsModalInstance = new InventoryExportOptionsModal();
+  inventoryExportOptionsModalInstance = new InventoryExportOptionsModal({ getDefaults: getExportDefaults });
   inventoryExportOptionsModalInstance.init();
 
   addTagModalInstance = new AddTagModal();
@@ -2688,8 +2694,8 @@ async function handlePreferences(category) {
     const saveResult = await window.electronAPI.savePreferences(newPreferences);
 
     if (saveResult.success) {
-      // Nothing to apply here: receipts and PDFs read these settings each time
-      // they are produced, the display options belong to the Ver menu, and the
+      // Nothing to apply here: receipts, PDFs and the export dialog read these
+      // settings each time they are used, the display options belong to the Ver menu, and the
       // main process shows or hides the orla service itself
       await showInfoModal('Preferencias guardadas', 'Las preferencias se han guardado correctamente.');
     } else {

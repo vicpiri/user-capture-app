@@ -161,6 +161,47 @@ function isOrlaServiceEnabled(config = loadGlobalConfig()) {
   return config.orla?.enabled !== false;
 }
 
+// What the export dialog offered before it could be changed, and the limits
+// of its fields
+const EXPORT_DEFAULTS = { mode: 'copy', boxSize: 800, maxSize: 500 };
+const EXPORT_BOX_SIZE_RANGE = [100, 4000];
+const EXPORT_MAX_SIZE_RANGE = [50, 5000];
+
+function numberInRange(value, [min, max], fallback) {
+  const number = Number(value);
+  if (value === null || value === '' || !Number.isFinite(number)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, Math.round(number)));
+}
+
+/**
+ * What the photo export dialog starts with (Preferencias > Exportación de
+ * imágenes): the mode ticked and the resize values
+ *
+ * Anything missing or not a number falls back to what the dialog always
+ * offered; a number out of the fields' limits is brought inside them.
+ *
+ * @param {Object} [value] - as stored under exportDefaults, or as sent
+ * @returns {{mode: 'copy'|'resize', boxSize: number, maxSize: number}}
+ */
+function normalizeExportDefaults(value = {}) {
+  const input = value || {};
+  return {
+    mode: input.mode === 'resize' ? 'resize' : EXPORT_DEFAULTS.mode,
+    boxSize: numberInRange(input.boxSize, EXPORT_BOX_SIZE_RANGE, EXPORT_DEFAULTS.boxSize),
+    maxSize: numberInRange(input.maxSize, EXPORT_MAX_SIZE_RANGE, EXPORT_DEFAULTS.maxSize)
+  };
+}
+
+/**
+ * @param {Object} [config] - an already loaded config, to avoid reading it again
+ * @returns {{mode: 'copy'|'resize', boxSize: number, maxSize: number}}
+ */
+function getExportDefaults(config = loadGlobalConfig()) {
+  return normalizeExportDefaults(config.exportDefaults);
+}
+
 /**
  * When the purge of replaced photos was last offered
  *
@@ -258,6 +299,8 @@ module.exports = {
   getUpdatePreferences,
   saveUpdatePreferences,
   isOrlaServiceEnabled,
+  normalizeExportDefaults,
+  getExportDefaults,
   getReplacedArchiveNotice,
   saveReplacedArchiveNotice,
   getLastExportFolder,

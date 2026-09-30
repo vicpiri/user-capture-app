@@ -19,11 +19,23 @@
     ({ BaseModal } = require('../../core/BaseModal'));
   }
 
+  // What the dialog offered before the defaults could be set in Preferencias
+  const BUILT_IN_DEFAULTS = { mode: 'copy', boxSize: 800, maxSize: 500 };
+
   class ExportOptionsModal extends BaseModal {
-  constructor() {
+  /**
+   * @param {Object} [config]
+   * @param {function(): Promise<Object>} [config.getDefaults] - What the form
+   *   starts with ({ mode, boxSize, maxSize }), read each time it opens so a
+   *   change in Preferencias applies to the next export
+   */
+  constructor({ getDefaults } = {}) {
     super('export-options-modal', {
       defaultButtonSelector: '#export-confirm-btn'
     });
+
+    this.getDefaults = getDefaults || null;
+    this.defaults = mergeDefaults();
 
     // Form elements
     this.copyOriginalRadio = null;
@@ -92,8 +104,23 @@
       this.renderSummary(summary);
       this.renderNote(note);
 
-      // Open modal
-      this.open();
+      if (!this.getDefaults) {
+        this.open();
+        return;
+      }
+
+      // Opened once the saved defaults are in, so the form never changes
+      // under the pointer. If they cannot be read, the built-in ones stay.
+      Promise.resolve()
+        .then(() => this.getDefaults())
+        .catch((error) => {
+          this._log('Could not read the export defaults', error, 'error');
+          return null;
+        })
+        .then((defaults) => {
+          this.resetForm(defaults);
+          this.open();
+        });
     });
   }
 
@@ -210,26 +237,34 @@
     return {
       mode: isResizeMode ? 'resize' : 'copy',
       resize: isResizeMode ? {
-        boxSize: parseInt(this.boxSizeInput.value, 10) || 800,
-        maxSize: parseInt(this.maxSizeInput.value, 10) || 500
+        boxSize: parseInt(this.boxSizeInput.value, 10) || this.defaults.boxSize,
+        maxSize: parseInt(this.maxSizeInput.value, 10) || this.defaults.maxSize
       } : null
     };
   }
 
   /**
    * Reset form to defaults
+   * @param {Object} [defaults] - { mode, boxSize, maxSize }; what is missing
+   *   or not a number keeps the built-in value
    */
-  resetForm() {
+  resetForm(defaults) {
+    this.defaults = mergeDefaults(defaults);
+
     if (this.copyOriginalRadio) {
-      this.copyOriginalRadio.checked = true;
+      this.copyOriginalRadio.checked = this.defaults.mode !== 'resize';
+    }
+
+    if (this.resizeRadio) {
+      this.resizeRadio.checked = this.defaults.mode === 'resize';
     }
 
     if (this.boxSizeInput) {
-      this.boxSizeInput.value = '800';
+      this.boxSizeInput.value = String(this.defaults.boxSize);
     }
 
     if (this.maxSizeInput) {
-      this.maxSizeInput.value = '500';
+      this.maxSizeInput.value = String(this.defaults.maxSize);
     }
 
     this.handleModeChange();
@@ -262,6 +297,17 @@
     }
   }
 }
+
+  function mergeDefaults(defaults) {
+    const given = defaults || {};
+    const positive = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
+
+    return {
+      mode: given.mode === 'resize' ? 'resize' : BUILT_IN_DEFAULTS.mode,
+      boxSize: positive(given.boxSize, BUILT_IN_DEFAULTS.boxSize),
+      maxSize: positive(given.maxSize, BUILT_IN_DEFAULTS.maxSize)
+    };
+  }
 
   // Export (for tests and browser)
   if (typeof module !== 'undefined' && module.exports) {

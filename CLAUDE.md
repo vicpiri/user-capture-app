@@ -430,6 +430,13 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
   - `lastExportFolder`: última carpeta de exportación, común a todas las
     exportaciones. `getLastExportFolder()` sube a la carpeta existente más
     cercana si ya no está
+  - `exportDefaults` (`{ mode, boxSize, maxSize }`, Preferencias >
+    Exportación de imágenes): con qué se abren `ExportOptionsModal` y la parte
+    de fotos de `InventoryExportOptionsModal`. `getExportDefaults()` rellena
+    lo que falte con copia, 800 px y 500 KB y lleva los números a los límites
+    de los campos. Los dos modales lo leen **en cada apertura** con el
+    `getDefaults()` que les pasa `renderer.js`; lo que se cambie en el cuadro
+    vale solo para esa exportación
 - **formatting.js**: Formateo de fechas (ISO a español) y nombres de archivo
 - **nameOrder.js**: Orden alfabético de personas, común a la lista y a las
   exportaciones: primer apellido, segundo y nombre, comparados con

@@ -1,14 +1,14 @@
 # Preferencias y actualizaciones
 
-Aquí se explica cómo ajustar los datos del centro, la impresora de recibos y lo que se ve en la lista de usuarios, y cómo sabe la aplicación que hay una versión nueva.
+Aquí se explica cómo ajustar los datos del centro, la impresora de recibos, los valores con los que se abren las exportaciones de fotos y lo que se ve en la lista de usuarios, y cómo sabe la aplicación que hay una versión nueva.
 
 ## Abrir las preferencias
 
 1. Pulsa **Archivo > Preferencias...** o `Ctrl+,`.
-2. Elige una categoría a la izquierda: **Datos de la Institución**, **Orla de graduación**, **Actualizaciones** o **Mantenimiento**.
+2. Elige una categoría a la izquierda: **Datos de la Institución**, **Orla de graduación**, **Exportación de imágenes**, **Actualizaciones** o **Mantenimiento**.
 3. Haz los cambios y pulsa **Guardar**. **Cancelar**, o la **×** de la esquina, cierra la ventana sin guardar.
 
-Los cambios se aplican en cuanto guardas, sin reiniciar: los recibos y los PDF leen estos datos cada vez que se generan. Guardar no cambia las casillas del menú **Ver**, que se explican más abajo.
+Los cambios se aplican en cuanto guardas, sin reiniciar: los recibos, los PDF y las ventanas de exportación leen estos datos cada vez que los usan. Guardar no cambia las casillas del menú **Ver**, que se explican más abajo.
 
 Las preferencias se guardan en este equipo y valen para todos los proyectos que abras en él.
 
@@ -22,6 +22,18 @@ Las preferencias se guardan en este equipo y valen para todos los proyectos que 
 ## Orla de graduación
 
 La categoría **Orla de graduación** sirve para activar o desactivar el servicio de la orla con **Gestionar la orla de graduación**, elegir la impresora térmica, imprimir un recibo de prueba y escribir el subtítulo, el precio y el pie de los recibos. También se abre desde **Orla > Configuración de la orla...**. Todo ello se explica en [Activar o desactivar la orla de graduación](orlas.md#activar-o-desactivar-la-orla-de-graduacion), [Configurar la impresora de recibos](orlas.md#configurar-la-impresora-de-recibos), [Personalizar el contenido del recibo](orlas.md#personalizar-el-contenido-del-recibo) e [Imprimir un recibo de prueba](orlas.md#imprimir-un-recibo-de-prueba).
+
+## Exportación de imágenes
+
+Aquí eliges con qué valores se abre la parte de fotos de las ventanas de exportación: **Opciones de Exportación** (imágenes capturadas como ID o como nombre y apellidos, imágenes del depósito como ID e imágenes capturadas al depósito) y la de **Archivos para Edu Inventory Manager**.
+
+- **Opción marcada al abrir**: **Copiar imagen original** o **Redimensionar imágenes**.
+- **Tamaño del cuadro (píxeles)**: entre 100 y 4000. Si no lo cambias, 800.
+- **Tamaño máximo de archivo (KB)**: entre 50 y 5000. Si no lo cambias, 500.
+
+Qué hace cada valor se explica en [Copiar el original o redimensionar](exportaciones.md#copiar-el-original-o-redimensionar). Si escribes un número fuera de los límites, se guarda el límite más cercano.
+
+> **Consejo:** en cada exportación puedes cambiar estos valores en la propia ventana. Ese cambio vale solo para esa exportación; la próxima vez vuelve a salir lo que hayas guardado aquí.
 
 ## Mantenimiento
 

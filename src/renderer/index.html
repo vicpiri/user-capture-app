@@ -718,6 +718,7 @@
         <div class="preferences-sidebar">
           <div class="preferences-category active" data-category="institution">Datos de la Institución</div>
           <div class="preferences-category" data-category="orla">Orla de graduación</div>
+          <div class="preferences-category" data-category="export">Exportación de imágenes</div>
           <div class="preferences-category" data-category="updates">Actualizaciones</div>
           <div class="preferences-category" data-category="maintenance">Mantenimiento</div>
         </div>
@@ -819,6 +820,36 @@
               <label for="pref-receipt-footer">Texto del pie del recibo:</label>
               <textarea id="pref-receipt-footer" class="form-control" rows="6" style="resize: vertical;"></textarea>
               <small class="form-help">Texto informativo que aparecerá al pie del recibo</small>
+            </div>
+          </div>
+
+          <!-- What the photo export dialog starts with -->
+          <div class="preferences-panel" data-panel="export">
+            <h3>Exportación de imágenes</h3>
+            <p class="form-help">Lo que aparece al abrir el cuadro de opciones de las exportaciones de fotos. En cada exportación puedes cambiarlo sin que se guarde aquí.</p>
+
+            <div class="form-group">
+              <label>Opción marcada al abrir:</label>
+              <label class="checkbox-label">
+                <input type="radio" name="pref-export-mode" id="pref-export-mode-copy" value="copy" checked>
+                Copiar imagen original
+              </label>
+              <label class="checkbox-label">
+                <input type="radio" name="pref-export-mode" id="pref-export-mode-resize" value="resize">
+                Redimensionar imágenes
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="pref-export-box-size">Tamaño del cuadro (píxeles):</label>
+              <input type="number" id="pref-export-box-size" class="form-control" value="800" min="100" max="4000" step="50" style="max-width: 150px;" />
+              <small class="form-help">Las fotos más grandes se reducen hasta caber en un cuadrado de este lado; las más pequeñas no se amplían. Entre 100 y 4000.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="pref-export-max-size">Tamaño máximo de archivo (KB):</label>
+              <input type="number" id="pref-export-max-size" class="form-control" value="500" min="50" max="5000" step="50" style="max-width: 150px;" />
+              <small class="form-help">Se baja la calidad para no pasar de este peso, aunque nunca por debajo de un mínimo razonable. Entre 50 y 5000.</small>
             </div>
           </div>
 

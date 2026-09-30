@@ -4,7 +4,7 @@
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
 const { getActiveIngestPath, getConfiguredIngestPath } = require('../ingestFolder');
-const { getLastExportFolder, setLastExportFolder, getUpdatePreferences, saveUpdatePreferences, isOrlaServiceEnabled } = require('../utils/config');
+const { getLastExportFolder, setLastExportFolder, getUpdatePreferences, saveUpdatePreferences, isOrlaServiceEnabled, normalizeExportDefaults, getExportDefaults } = require('../utils/config');
 const { getImageRepositoryPath, setImageRepositoryPath, getSelectedGroupFilter, setSelectedGroupFilter, loadGlobalConfig, saveGlobalConfig } = require('../utils/config');
 const VersionManager = require('../utils/version');
 const { listRequestFolder, projectRequests, reviewRequests, archiveRequests, stampRequest } = require('../pendingRequests');
@@ -1496,8 +1496,8 @@ function registerMiscHandlers(context) {
   // Preferences Handlers
   // ============================================================================
 
-  // The preferences window owns the institution and receipt data, and the
-  // switch of the orla service, only. The
+  // The preferences window owns the institution and receipt data, the switch
+  // of the orla service and what the photo export dialog starts with, only. The
   // display options live in the Ver menu and are saved from there
   // (saveDisplayPreferences); this pair must not read or write them, or saving
   // the window turns them off.
@@ -1519,6 +1519,7 @@ function registerMiscHandlers(context) {
           receiptPrice: receiptPriceOrDefault(receiptConfig.price),
           receiptFooter: receiptConfig.footerText || '',
           orlaEnabled: isOrlaServiceEnabled(config),
+          exportDefaults: getExportDefaults(config),
           // Stored with the rest of the update checker's state, which reads it
           autoCheckUpdates: getUpdatePreferences().autoCheck !== false
         }
@@ -1548,6 +1549,10 @@ function registerMiscHandlers(context) {
 
       if (typeof preferences.orlaEnabled === 'boolean') {
         config.orla = { ...(config.orla || {}), enabled: preferences.orlaEnabled };
+      }
+
+      if (preferences.exportDefaults && typeof preferences.exportDefaults === 'object') {
+        config.exportDefaults = normalizeExportDefaults(preferences.exportDefaults);
       }
 
       let success = saveGlobalConfig(config);

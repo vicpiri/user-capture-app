@@ -12,10 +12,18 @@
   'use strict';
 
   class InventoryExportOptionsModal extends BaseModal {
-    constructor() {
+    /**
+     * @param {Object} [config]
+     * @param {function(): Promise<Object>} [config.getDefaults] - The copy or
+     *   resize choice and its values ({ mode, boxSize, maxSize }) from
+     *   Preferencias, read each time it opens
+     */
+    constructor({ getDefaults } = {}) {
       super('inventory-export-options-modal', {
         defaultButtonSelector: '#inventory-export-confirm'
       });
+
+      this.getDefaults = getDefaults || null;
 
       // Get DOM elements - User scope
       this.allUsersRadio = document.getElementById('inventory-export-all-users');
@@ -83,6 +91,8 @@
       // Default to "all users"
       this.allUsersRadio.checked = true;
 
+      await this.applyImageDefaults();
+
       // Show modal using base class method
       await super.open();
 
@@ -90,6 +100,35 @@
       return new Promise((resolve) => {
         this.resolvePromise = resolve;
       });
+    }
+
+    /**
+     * Start the copy or resize choice from Preferencias > Exportación de
+     * imágenes. If they cannot be read, the form stays as it is.
+     */
+    async applyImageDefaults() {
+      if (!this.getDefaults) return;
+
+      let defaults;
+      try {
+        defaults = await this.getDefaults();
+      } catch (error) {
+        console.error('[InventoryExportOptionsModal] Could not read the export defaults', error);
+        return;
+      }
+      if (!defaults) return;
+
+      const isResize = defaults.mode === 'resize';
+      this.resizeRadio.checked = isResize;
+      this.copyOriginalRadio.checked = !isResize;
+      if (Number.isFinite(defaults.boxSize) && defaults.boxSize > 0) {
+        this.boxSizeInput.value = String(defaults.boxSize);
+      }
+      if (Number.isFinite(defaults.maxSize) && defaults.maxSize > 0) {
+        this.maxSizeInput.value = String(defaults.maxSize);
+      }
+
+      this.handleImageModeChange();
     }
 
     /**

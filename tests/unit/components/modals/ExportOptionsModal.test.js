@@ -271,6 +271,108 @@ describe('ExportOptionsModal', () => {
     });
   });
 
+  describe('defaults from Preferencias', () => {
+    // show() reads them asynchronously before opening
+    const settle = async () => {
+      for (let i = 0; i < 10; i++) {
+        await Promise.resolve();
+      }
+    };
+
+    const withDefaults = (getDefaults) => {
+      modal.destroy();
+      modal = new ExportOptionsModal({ getDefaults });
+      modal.init();
+    };
+
+    test('should start with the saved mode and values', async () => {
+      withDefaults(async () => ({ mode: 'resize', boxSize: 1200, maxSize: 300 }));
+
+      const promise = modal.show();
+      await settle();
+
+      expect(modal.resizeRadio.checked).toBe(true);
+      expect(modal.boxSizeInput.value).toBe('1200');
+      expect(modal.maxSizeInput.value).toBe('300');
+      expect(modal.boxSizeInput.disabled).toBe(false);
+
+      modal.handleConfirm();
+      expect(await promise).toEqual({ mode: 'resize', resize: { boxSize: 1200, maxSize: 300 } });
+    });
+
+    test('should open only once they are read', async () => {
+      let answer;
+      withDefaults(() => new Promise((resolve) => { answer = resolve; }));
+      const openSpy = jest.spyOn(modal, 'open');
+
+      modal.show();
+      await settle();
+      expect(openSpy).not.toHaveBeenCalled();
+
+      answer({ mode: 'copy', boxSize: 640, maxSize: 200 });
+      await settle();
+      expect(openSpy).toHaveBeenCalled();
+
+      modal.handleCancel();
+    });
+
+    test('should read them again on every opening', async () => {
+      const getDefaults = jest.fn()
+        .mockResolvedValueOnce({ mode: 'copy', boxSize: 640, maxSize: 200 })
+        .mockResolvedValueOnce({ mode: 'copy', boxSize: 1600, maxSize: 900 });
+      withDefaults(getDefaults);
+
+      modal.show();
+      await settle();
+      modal.handleCancel();
+
+      modal.show();
+      await settle();
+
+      expect(getDefaults).toHaveBeenCalledTimes(2);
+      expect(modal.boxSizeInput.value).toBe('1600');
+      modal.handleCancel();
+    });
+
+    test('should keep the built-in values when they cannot be read', async () => {
+      withDefaults(async () => { throw new Error('IPC down'); });
+      const openSpy = jest.spyOn(modal, 'open');
+
+      modal.show();
+      await settle();
+
+      expect(openSpy).toHaveBeenCalled();
+      expect(modal.copyOriginalRadio.checked).toBe(true);
+      expect(modal.boxSizeInput.value).toBe('800');
+      expect(modal.maxSizeInput.value).toBe('500');
+      modal.handleCancel();
+    });
+
+    test('should fill in what is missing with the built-in values', async () => {
+      withDefaults(async () => ({ boxSize: 1000 }));
+
+      modal.show();
+      await settle();
+
+      expect(modal.copyOriginalRadio.checked).toBe(true);
+      expect(modal.boxSizeInput.value).toBe('1000');
+      expect(modal.maxSizeInput.value).toBe('500');
+      modal.handleCancel();
+    });
+
+    test('should fall back to the saved values when a field is emptied', async () => {
+      withDefaults(async () => ({ mode: 'resize', boxSize: 1200, maxSize: 300 }));
+
+      modal.show();
+      await settle();
+      modal.boxSizeInput.value = '';
+      modal.maxSizeInput.value = '';
+
+      expect(modal.getExportOptions().resize).toEqual({ boxSize: 1200, maxSize: 300 });
+      modal.handleCancel();
+    });
+  });
+
   describe('resetForm', () => {
     beforeEach(() => {
       modal.init();

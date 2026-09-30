@@ -89,7 +89,7 @@ Para las dos últimas cifras, la aplicación consulta el depósito en ese moment
 ### Opciones de copia
 
 - **Copiar imagen original (corrige la orientación si hace falta)**: envía la foto tal cual. Solo la vuelve a guardar si hay que girarla para que quede derecha.
-- **Redimensionar imágenes**: reduce la foto para que quepa en un cuadrado del **Tamaño del cuadro (píxeles)** indicado (800 por defecto) y baja la calidad hasta acercarse al **Tamaño máximo de archivo (KB)** (500 por defecto). Las fotos más pequeñas que el cuadro no se amplían. Si ni con la calidad más baja que usa la aplicación se llega a ese peso, el archivo puede quedar algo por encima.
+- **Redimensionar imágenes**: reduce la foto para que quepa en un cuadrado del **Tamaño del cuadro (píxeles)** indicado (800 por defecto) y baja la calidad hasta acercarse al **Tamaño máximo de archivo (KB)** (500 por defecto). Las fotos más pequeñas que el cuadro no se amplían. Si ni con la calidad más baja que usa la aplicación se llega a ese peso, el archivo puede quedar algo por encima. La opción marcada y los valores con los que se abre la ventana se cambian en [Preferencias](preferencias.md#exportacion-de-imagenes).
 
 ### Usuarios que no se exportan
 
