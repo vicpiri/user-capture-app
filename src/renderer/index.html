@@ -406,6 +406,44 @@
   </div>
 
   <!-- Inventory Export Options Modal -->
+  <!-- Viewer > right click > Recortar... -->
+  <div id="crop-image-modal" class="modal">
+    <div class="modal-content crop-modal-content">
+      <h2>Recortar foto</h2>
+
+      <div class="crop-toolbar">
+        <div class="crop-ratios" role="group" aria-label="Proporción">
+          <button type="button" class="btn btn-secondary" data-crop-ratio="free">Libre</button>
+          <button type="button" class="btn btn-secondary" data-crop-ratio="3:4">3:4</button>
+          <button type="button" class="btn btn-secondary" data-crop-ratio="1:1">1:1</button>
+          <button type="button" class="btn btn-secondary" data-crop-ratio="original">Original</button>
+        </div>
+        <span id="crop-size" class="crop-size"></span>
+      </div>
+
+      <div id="crop-stage" class="crop-stage">
+        <img id="crop-image" alt="" draggable="false">
+        <div id="crop-box" class="crop-box" hidden>
+          <span class="crop-handle" data-crop-handle="nw"></span>
+          <span class="crop-handle" data-crop-handle="n"></span>
+          <span class="crop-handle" data-crop-handle="ne"></span>
+          <span class="crop-handle" data-crop-handle="e"></span>
+          <span class="crop-handle" data-crop-handle="se"></span>
+          <span class="crop-handle" data-crop-handle="s"></span>
+          <span class="crop-handle" data-crop-handle="sw"></span>
+          <span class="crop-handle" data-crop-handle="w"></span>
+        </div>
+      </div>
+
+      <p id="crop-original-note" class="crop-note" hidden>Esta foto ya se recortó. Se muestra la original completa: el nuevo recorte parte de ella.</p>
+
+      <div class="modal-buttons">
+        <button id="crop-apply-btn" class="btn btn-primary">Recortar</button>
+        <button id="crop-cancel-btn" data-modal-cancel class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="inventory-export-options-modal" class="modal">
     <div class="modal-content">
       <h2>Opciones de Exportación de Inventario</h2>
@@ -913,6 +951,7 @@
   <script src="components/modals/UpdateModal.js"></script>
   <script src="components/modals/ExportOptionsModal.js"></script>
   <script src="components/modals/InventoryExportOptionsModal.js"></script>
+  <script src="components/modals/CropModal.js"></script>
   <script src="components/modals/AddTagModal.js"></script>
   <script src="components/modals/RestoreBackupModal.js"></script>
   <script src="components/modals/ReplacedArchiveModal.js"></script>

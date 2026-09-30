@@ -131,6 +131,30 @@ La foto se ve girada al momento en el visor, en el historial de capturas, en la 
 
 La foto no se vuelve a comprimir: solo se cambia la anotación de cómo va girada, así que no pierde calidad. La aplicación la respeta en todas partes, y las exportaciones, la copia al depósito y los listados en PDF sacan la foto ya derecha, de modo que los programas que las reciban no necesitan entender esa anotación.
 
+## Recortar una foto
+
+Sirve para quitar lo que sobra alrededor de la persona, por ejemplo si salió demasiado lejos o descentrada.
+
+1. Con la foto en el visor, haz clic con el botón derecho sobre ella y elige **Recortar...**.
+2. Arriba, elige la proporción: **Libre**, **3:4** (la de las fotos de carnet), **1:1** (cuadrada) u **Original** (la de la propia foto). La aplicación recuerda la última que usaste.
+3. Ajusta el rectángulo: arrástralo desde dentro para moverlo, y desde los cuadraditos de las esquinas y los lados para cambiar su tamaño. Las líneas finas dividen el rectángulo en tercios, para ayudarte a colocar la cara. Arriba a la derecha ves el tamaño que tendrá la foto, en píxeles.
+4. Pulsa **Recortar** (o `Intro`). **Cancelar** (o `Esc`) cierra la ventana sin cambiar nada.
+
+La foto conserva su nombre, así que sigue enlazada con la misma persona, y se ve recortada al momento en el visor, en el historial de capturas, en la lista, en la vista de miniaturas y en el cuadro de imágenes capturadas.
+
+> **Consejo:** si la foto ya se exportó al depósito antes de recortarla, vuelve a exportarla para que el depósito tenga la versión recortada.
+
+### Volver a recortar o deshacer el recorte
+
+La primera vez que recortas una foto, la aplicación guarda una copia de cómo era en la subcarpeta `Originales` de `imports`. Esa copia no aparece en el visor ni en el historial.
+
+- **Volver a recortar**: al elegir otra vez **Recortar...**, la ventana muestra la foto original completa, no la recortada, con un aviso debajo. Así puedes ampliar el recorte si te quedaste corto.
+- **Deshacer el recorte**: haz clic con el botón derecho sobre la foto y elige **Restaurar original**. Esta opción solo aparece en las fotos recortadas.
+
+Si giras una foto recortada, su original se gira con ella, de modo que un recorte posterior parte ya de la foto derecha.
+
+> **Importante:** a diferencia del giro, recortar sí vuelve a comprimir la foto. Se hace con una calidad muy alta y siempre a partir del original, así que por muchas veces que recortes, la foto solo pierde calidad una vez.
+
 ## Arrastrar fotos a la ventana
 
 1. Con el proyecto abierto, selecciona una o varias fotos JPG en el Explorador de archivos.

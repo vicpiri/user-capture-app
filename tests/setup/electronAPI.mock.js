@@ -209,8 +209,8 @@ class ElectronAPIMock extends EventEmitter {
     return this._registerEvent('incoming-rotation-changed', callback);
   }
 
-  onCapturedImageRotated(callback) {
-    return this._registerEvent('captured-image-rotated', callback);
+  onCapturedImageRewritten(callback) {
+    return this._registerEvent('captured-image-rewritten', callback);
   }
 
   onMenuToggleThumbnailGrid(callback) {
@@ -366,6 +366,9 @@ class ElectronAPIMock extends EventEmitter {
   setThumbnailGridSource = jest.fn(async (source) => ({ success: true, source }));
   rotateCapturedImage = jest.fn(async () => ({ success: true, orientation: 6 }));
   getIncomingRotation = jest.fn(async () => ({ degrees: 0 }));
+  getCapturedImageCropSource = jest.fn(async (imagePath) => ({ success: true, sourcePath: imagePath, hasOriginal: false }));
+  cropCapturedImage = jest.fn(async () => ({ success: true, width: 600, height: 800 }));
+  restoreCapturedImage = jest.fn(async () => ({ success: true }));
 
   getWorkspaces = jest.fn(async () => ({ workspaces: [], activeId: null, currentView: {} }));
   applyWorkspace = jest.fn(async () => ({ success: true }));

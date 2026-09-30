@@ -1,5 +1,5 @@
 // Architecture modules are loaded via script tags in index.html
-// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UpdateModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, CaptureHistoryManager, ExportManager, OrlaExportManager, PhotoRosterExportManager, PhotoRosterModal, ExportOptionsModal, InventoryExportOptionsModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
+// Available globals: store, BaseModal, NewProjectModal, ConfirmModal, InfoModal, UpdateModal, UserImageModal, UserRowRenderer, VirtualScrollManager, ImageGridManager, CaptureHistoryManager, ExportManager, OrlaExportManager, PhotoRosterExportManager, PhotoRosterModal, ExportOptionsModal, InventoryExportOptionsModal, CropModal, AddTagModal, ImageTagsManager, SelectionModeManager, DragDropManager, ProgressManager, LazyImageManager, KeyboardNavigationManager, MenuEventManager, UserDataManager, ProjectManager
 
 // Component instances
 let userRowRenderer = null;
@@ -101,6 +101,7 @@ let appDialogManager = null;
 let updateModalInstance = null;
 let exportOptionsModalInstance = null;
 let inventoryExportOptionsModalInstance = null;
+let cropModalInstance = null;
 let addTagModalInstance = null;
 let userImageModalInstance = null;
 let photoRosterModalInstance = null;
@@ -127,6 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // The viewer's rotate buttons and Proyecto > Girar las fotos entrantes
   initializeImageRotation();
+
+  // Right click on the viewer: crop the photo, or restore its original
+  initializeViewerContextMenu();
 
   // Initialize image grid manager
   initializeImageGridManager();
@@ -236,6 +240,9 @@ function initializeModals() {
 
   inventoryExportOptionsModalInstance = new InventoryExportOptionsModal({ getDefaults: getExportDefaults });
   inventoryExportOptionsModalInstance.init();
+
+  cropModalInstance = new CropModal();
+  cropModalInstance.init();
 
   addTagModalInstance = new AddTagModal();
   addTagModalInstance.init();
@@ -476,7 +483,7 @@ function initializeImageRotation() {
     updateIncomingRotationBadge();
   });
 
-  window.electronAPI.onCapturedImageRotated(({ imagePath }) => applyImageRotation(imagePath));
+  window.electronAPI.onCapturedImageRewritten(({ imagePath }) => applyImageRewrite(imagePath));
 }
 
 /**
@@ -494,17 +501,125 @@ async function rotateCurrentImage(degrees, buttons) {
     if (!result.success) {
       showInfoModal('No se pudo girar la foto', result.error);
     }
-    // The views are refreshed by 'captured-image-rotated', sent to every window
+    // The views are refreshed by 'captured-image-rewritten', sent to every window
   } finally {
     buttons.forEach((button) => { if (button) button.disabled = false; });
   }
 }
 
+// ============================================================================
+// Cropping captured photos (the viewer's context menu)
+// ============================================================================
+
+function initializeViewerContextMenu() {
+  const container = document.getElementById('image-preview-container');
+  if (!container) return;
+
+  container.addEventListener('contextmenu', (event) => {
+    // Over the photo only, not the buttons laid on it
+    if (event.target && event.target.id !== 'current-image') return;
+    const imagePath = imageGridManager ? imageGridManager.getCurrentImagePath() : null;
+    if (!imagePath) return;
+
+    event.preventDefault();
+    showViewerContextMenu(event, imagePath);
+  });
+}
+
 /**
- * A photo was turned: every view of it loads it again
+ * Recortar..., and Restaurar original when the photo was cropped before
+ * @param {MouseEvent} event
  * @param {string} imagePath
  */
-function applyImageRotation(imagePath) {
+async function showViewerContextMenu(event, imagePath) {
+  document.querySelectorAll('.context-menu').forEach((menu) => menu.remove());
+
+  // Asked before drawing, so the menu does not grow under the pointer
+  const source = await window.electronAPI.getCapturedImageCropSource(imagePath);
+  if (!source.success) {
+    showInfoModal('No se puede recortar la foto', source.error);
+    return;
+  }
+
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+  menu.style.position = 'fixed';
+
+  const close = () => {
+    menu.remove();
+    document.removeEventListener('click', onOutsideClick);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+  const onOutsideClick = (e) => { if (!menu.contains(e.target)) close(); };
+  const onKeyDown = (e) => { if (e.key === 'Escape') close(); };
+
+  const options = [['Recortar...', () => cropImage(imagePath, source)]];
+  if (source.hasOriginal) {
+    options.push(['Restaurar original', () => restoreImageOriginal(imagePath)]);
+  }
+  options.forEach(([label, action]) => {
+    const option = document.createElement('div');
+    option.className = 'context-menu-item';
+    option.textContent = label;
+    option.addEventListener('click', () => {
+      close();
+      action();
+    });
+    menu.appendChild(option);
+  });
+
+  document.body.appendChild(menu);
+
+  // Near the right or bottom edge, open towards the inside of the window
+  const { width, height } = menu.getBoundingClientRect();
+  menu.style.left = `${Math.max(0, Math.min(event.clientX, window.innerWidth - width))}px`;
+  menu.style.top = `${Math.max(0, Math.min(event.clientY, window.innerHeight - height))}px`;
+
+  setTimeout(() => {
+    document.addEventListener('click', onOutsideClick);
+    document.addEventListener('keydown', onKeyDown);
+  }, 0);
+}
+
+/**
+ * Ask for the rectangle and crop the photo with it
+ * @param {string} imagePath
+ * @param {{sourcePath: string, width: number, height: number, hasOriginal: boolean}} source
+ */
+async function cropImage(imagePath, source) {
+  const rect = await cropModalInstance.show({
+    // Its own version: the original may have been turned since it was last
+    // drawn, and nothing else shows it
+    url: imageUrl.original(source.sourcePath, Date.now()),
+    width: source.width,
+    height: source.height,
+    hasOriginal: source.hasOriginal
+  });
+  if (!rect) return;
+
+  const result = await window.electronAPI.cropCapturedImage(imagePath, rect);
+  if (!result.success) {
+    showInfoModal('No se pudo recortar la foto', result.error);
+  }
+  // The views are refreshed by 'captured-image-rewritten'
+}
+
+/**
+ * Undo the crops of a photo
+ * @param {string} imagePath
+ */
+async function restoreImageOriginal(imagePath) {
+  const result = await window.electronAPI.restoreCapturedImage(imagePath);
+  if (!result.success) {
+    showInfoModal('No se pudo restaurar la foto original', result.error);
+  }
+}
+
+/**
+ * A photo was turned, cropped or restored: every view of it loads it again
+ * @param {string} imagePath
+ */
+function applyImageRewrite(imagePath) {
   imageUrl.bumpVersion(imagePath);
 
   if (imageGridManager) {

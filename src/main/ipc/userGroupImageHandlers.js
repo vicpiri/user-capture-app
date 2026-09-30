@@ -8,6 +8,7 @@ const { formatTimestamp } = require('../utils/formatting');
 const { getImageRepositoryPath } = require('../utils/config');
 const { getActiveIngestPath, markWebcamCapture, getIncomingRotation } = require('../ingestFolder');
 const { rotateImageFile } = require('../imageOrientation');
+const { cropImageFile, restoreOriginal, hasOriginal, originalPathFor, displaySize } = require('../imageCrop');
 const { readRepositoryFilenames, findUserRepositoryImage } = require('./exportHandlers');
 
 /**
@@ -477,8 +478,40 @@ function registerUserGroupImageHandlers(context) {
     degrees: state.dbManager ? (state.incomingRotation ?? await getIncomingRotation(state.dbManager)) : 0
   }));
 
-  // Turn a captured photo a quarter turn, by its EXIF orientation. Only the
-  // photos of the project's imports folder, which are the captured ones.
+  /**
+   * The absolute path of a captured photo: one directly in the project's
+   * imports folder, which are the captured ones. Not in a subfolder, so the
+   * originals kept by a crop are never turned or cropped themselves.
+   * @param {string} imagePath
+   * @param {string} action - what is refused, for the message ("girar")
+   * @returns {string}
+   */
+  const resolveCapturedImage = (imagePath, action) => {
+    if (!state.projectPath) {
+      throw new Error('No hay ningún proyecto abierto');
+    }
+    const importsPath = path.join(state.projectPath, 'imports');
+    const resolved = path.resolve(importsPath, String(imagePath || ''));
+    if (path.dirname(resolved).toLowerCase() !== path.resolve(importsPath).toLowerCase()) {
+      throw new Error(`Solo se pueden ${action} las fotos capturadas del proyecto`);
+    }
+    if (!fs.existsSync(resolved)) {
+      throw new Error('La foto ya no está en la carpeta imports');
+    }
+    return resolved;
+  };
+
+  // Every view of the photo has to load it again: the name is the same
+  const notifyCapturedImageRewritten = (imagePath, details = {}) => {
+    const windows = [mainWindow ? mainWindow() : null, imageGridWindow ? imageGridWindow() : null];
+    windows.forEach((win) => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('captured-image-rewritten', { imagePath, ...details });
+      }
+    });
+  };
+
+  // Turn a captured photo a quarter turn, by its EXIF orientation
   ipcMain.handle('rotate-captured-image', async (event, imagePath, degrees) => {
     try {
       if (!state.projectPath) {
@@ -487,30 +520,65 @@ function registerUserGroupImageHandlers(context) {
       if (![90, -90, 180].includes(degrees)) {
         throw new Error(`Giro no válido: ${degrees}`);
       }
-      const importsPath = path.join(state.projectPath, 'imports');
-      const resolved = path.resolve(importsPath, String(imagePath || ''));
-      const relative = path.relative(importsPath, resolved);
-      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-        throw new Error('Solo se pueden girar las fotos capturadas del proyecto');
-      }
-      if (!fs.existsSync(resolved)) {
-        throw new Error('La foto ya no está en la carpeta imports');
-      }
+      const resolved = resolveCapturedImage(imagePath, 'girar');
 
       const orientation = await rotateImageFile(resolved, degrees);
+      // A crop starts from the original: it turns with the photo, or the next
+      // crop would undo the turn
+      if (hasOriginal(resolved)) {
+        await rotateImageFile(originalPathFor(resolved), degrees);
+      }
       logger.info(`Captured image turned ${degrees}°: ${path.basename(resolved)} (EXIF orientation ${orientation})`);
 
-      // Every view of the photo has to load it again: the name is the same
-      const windows = [mainWindow ? mainWindow() : null, imageGridWindow ? imageGridWindow() : null];
-      windows.forEach((win) => {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('captured-image-rotated', { imagePath: resolved, orientation });
-        }
-      });
-
+      notifyCapturedImageRewritten(resolved, { orientation });
       return { success: true, orientation };
     } catch (error) {
       logger.error('Error rotating captured image:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // What the crop dialog starts from: the original if the photo was cropped
+  // before, the photo itself if not
+  ipcMain.handle('get-captured-image-crop-source', async (event, imagePath) => {
+    try {
+      const resolved = resolveCapturedImage(imagePath, 'recortar');
+      const cropped = hasOriginal(resolved);
+      const sourcePath = cropped ? originalPathFor(resolved) : resolved;
+      // As shown, after the EXIF orientation: the rectangle is measured on it
+      const { width, height } = await displaySize(sourcePath);
+      return { success: true, sourcePath, hasOriginal: cropped, width, height };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Crop a captured photo in place; the original is kept to start again
+  ipcMain.handle('crop-captured-image', async (event, imagePath, rect) => {
+    try {
+      const resolved = resolveCapturedImage(imagePath, 'recortar');
+      const size = await cropImageFile(resolved, rect);
+      logger.info(`Captured image cropped to ${size.width}x${size.height}: ${path.basename(resolved)}`);
+
+      notifyCapturedImageRewritten(resolved);
+      return { success: true, ...size };
+    } catch (error) {
+      logger.error('Error cropping captured image:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Undo every crop of a captured photo
+  ipcMain.handle('restore-captured-image', async (event, imagePath) => {
+    try {
+      const resolved = resolveCapturedImage(imagePath, 'restaurar');
+      await restoreOriginal(resolved);
+      logger.info(`Captured image restored to its original: ${path.basename(resolved)}`);
+
+      notifyCapturedImageRewritten(resolved);
+      return { success: true };
+    } catch (error) {
+      logger.error('Error restoring captured image:', error);
       return { success: false, error: error.message };
     }
   });

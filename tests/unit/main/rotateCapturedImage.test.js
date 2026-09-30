@@ -79,7 +79,7 @@ describe('rotate-captured-image', () => {
 
     await rotate(file, 90);
 
-    const message = ['captured-image-rotated', { imagePath: file, orientation: 6 }];
+    const message = ['captured-image-rewritten', { imagePath: file, orientation: 6 }];
     expect(mainWindow.webContents.send).toHaveBeenCalledWith(...message);
     expect(gridWindow.webContents.send).toHaveBeenCalledWith(...message);
   });

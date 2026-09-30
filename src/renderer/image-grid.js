@@ -34,8 +34,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     displayGrid();
   });
 
-  // A photo was turned: its thumbnail loads again with the new version
-  window.electronAPI.onCapturedImageRotated(({ imagePath }) => {
+  // A photo was turned, cropped or restored: its thumbnail loads again with
+  // the new version
+  window.electronAPI.onCapturedImageRewritten(({ imagePath }) => {
     imageUrl.bumpVersion(imagePath);
     displayGrid();
   });

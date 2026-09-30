@@ -10,6 +10,7 @@ El panel de la derecha muestra en grande las fotos capturadas del proyecto, es d
 - Cuando llega una foto nueva, el visor salta a ella.
 - Si la foto tiene etiquetas, aparecen debajo del visor (ver [Etiquetas de imágenes](enlazar.md#etiquetas-de-imagenes)).
 - Si una foto se ve tumbada, gírala con los botones de arriba a la derecha del visor. Ver [Fotos que llegan giradas](captura.md#fotos-que-llegan-giradas).
+- Para recortar la foto, haz clic con el botón derecho sobre ella y elige **Recortar...**. Ver [Recortar una foto](captura.md#recortar-una-foto).
 - Con **Ver > Historial de capturas** tienes al lado del visor una tira de miniaturas: al hacer clic en una, el visor salta a esa foto. Ver [Captura e importación de fotos](captura.md).
 
 El visor muestra todas las fotos de `imports`, estén enlazadas o no: enlazar una foto no la quita del visor.
@@ -18,7 +19,7 @@ El visor muestra todas las fotos de `imports`, estén enlazadas o no: enlazar un
 
 **Ver > Visor en ventana aparte** (`Ctrl+Shift+F`) abre una ventana que muestra siempre la misma foto que el visor de la ventana principal. Arrástrala a otro monitor, por ejemplo uno orientado hacia la persona fotografiada, para que vea su foto mientras trabajas.
 
-- Cambia sola cuando pasas de una foto a otra, cuando llega una foto nueva o cuando giras la que se ve. No tiene botones: todo se hace desde la ventana principal.
+- Cambia sola cuando pasas de una foto a otra, cuando llega una foto nueva o cuando giras o recortas la que se ve. No tiene botones: todo se hace desde la ventana principal.
 - Haz doble clic en ella o pulsa `F11` para verla a pantalla completa en su monitor; `Esc` o `F11` la devuelven a su tamaño.
 - Al cerrarla recuerda dónde estaba, y la siguiente vez se abre en el mismo monitor, también a pantalla completa si lo estaba. Si ese monitor ya no está conectado, se abre en el principal.
 - No necesita un proyecto abierto. Si el visor no muestra ninguna foto, la ventana dice «No hay ninguna foto en el visor».

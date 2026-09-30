@@ -1734,3 +1734,94 @@
   white-space: pre-wrap;
   color: #e0e0e0;
 }
+
+/* Crop dialog (viewer > right click > Recortar...) */
+.modal-content.crop-modal-content {
+  max-width: none;
+  width: auto;
+}
+
+.crop-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.crop-ratios {
+  display: flex;
+  gap: 6px;
+}
+
+.crop-ratios .btn.is-active {
+  color: #ffffff;
+  background-color: #4a7cc7;
+}
+
+.crop-size {
+  color: #a0a4ae;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hugs the photo, so the shade around the rectangle covers only the photo */
+.crop-stage {
+  position: relative;
+  width: fit-content;
+  margin: 0 auto;
+  /* Room for the handles on the edges of the photo */
+  padding: 8px;
+  overflow: hidden;
+  background-color: #111318;
+  user-select: none;
+  touch-action: none;
+}
+
+.crop-stage img {
+  display: block;
+  max-width: min(80vw, 1000px);
+  max-height: 62vh;
+  pointer-events: none;
+}
+
+.crop-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  cursor: move;
+  /* Rule of thirds, to place the face */
+  background-image:
+    linear-gradient(to right, transparent calc(33.333% - 0.5px), rgba(255, 255, 255, 0.35) calc(33.333% - 0.5px), rgba(255, 255, 255, 0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), rgba(255, 255, 255, 0.35) calc(66.666% - 0.5px), rgba(255, 255, 255, 0.35) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(33.333% - 0.5px), rgba(255, 255, 255, 0.35) calc(33.333% - 0.5px), rgba(255, 255, 255, 0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), rgba(255, 255, 255, 0.35) calc(66.666% - 0.5px), rgba(255, 255, 255, 0.35) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px));
+}
+
+.crop-box[hidden] {
+  display: none;
+}
+
+.crop-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  background-color: #ffffff;
+  border: 1px solid #4a7cc7;
+  border-radius: 2px;
+}
+
+.crop-handle[data-crop-handle="nw"] { left: 0;    top: 0;    cursor: nwse-resize; }
+.crop-handle[data-crop-handle="n"]  { left: 50%;  top: 0;    cursor: ns-resize; }
+.crop-handle[data-crop-handle="ne"] { left: 100%; top: 0;    cursor: nesw-resize; }
+.crop-handle[data-crop-handle="e"]  { left: 100%; top: 50%;  cursor: ew-resize; }
+.crop-handle[data-crop-handle="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+.crop-handle[data-crop-handle="s"]  { left: 50%;  top: 100%; cursor: ns-resize; }
+.crop-handle[data-crop-handle="sw"] { left: 0;    top: 100%; cursor: nesw-resize; }
+.crop-handle[data-crop-handle="w"]  { left: 0;    top: 50%;  cursor: ew-resize; }
+
+.crop-note {
+  margin-top: 12px;
+  color: #a0a4ae;
+  font-size: 13px;
+}

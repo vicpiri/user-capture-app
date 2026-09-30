@@ -114,6 +114,10 @@ Versiones instaladas según `package-lock.json`:
   texto salía deformado en la térmica de 203 ppp; además es más rápido
 - **Las fotos se giran con la etiqueta EXIF, no los píxeles**: sin
   recompresión, los datos de imagen quedan intactos
+- **Recortar sí recomprime, pero siempre desde el original**: un recorte no
+  puede hacerse sin tocar los píxeles, así que el primero guarda la foto tal
+  como era en `imports/Originales/` y todos los siguientes parten de ella. La
+  foto pierde calidad una sola vez (JPEG al 95, 4:4:4) y se puede restaurar
 - **El orden alfabético se hace en JavaScript**: el `ORDER BY` de SQLite
   compara bytes y colocaba «Álvarez» tras «Zapata»
 - **Miniaturas nombradas por `sha1(ruta|tamaño)` sin fecha**: una por foto y
@@ -168,6 +172,7 @@ user-capture-app/
 │   │   ├── folderWatcher.js     # Vigilancia de carpetas ingest/imports
 │   │   ├── helpContent.js       # Lectura, conversión y búsqueda del manual (Markdown)
 │   │   ├── imageManager.js      # Procesamiento y gestión de imágenes
+│   │   ├── imageCrop.js         # Recortar una foto capturada guardando su original, y restaurarlo
 │   │   ├── imageOrientation.js  # Leer y cambiar la orientación EXIF de un JPEG sin recomprimir
 │   │   ├── ingestFolder.js      # Carpeta de entrada (ingest) del proyecto y su vigilante
 │   │   ├── logger.js            # Sistema de logging
@@ -186,6 +191,7 @@ user-capture-app/
 │   │   │   ├── modals/                  # Componentes de modales
 │   │   │   │   ├── AddTagModal.js           # Modal para agregar etiquetas a imágenes
 │   │   │   │   ├── ChoiceModal.js           # Pregunta con varias respuestas y Cancelar
+│   │   │   │   ├── CropModal.js             # Rectángulo de recorte de una foto capturada y su geometría
 │   │   │   │   ├── ConfirmModal.js          # Modal de confirmación genérico
 │   │   │   │   ├── ExportOptionsModal.js    # Modal de opciones de exportación
 │   │   │   │   ├── InfoModal.js             # Modal informativo genérico
@@ -498,12 +504,34 @@ sin `close()`, o que no aparezca en el array de `main.js`, hace fallar la suite.
   derecha. `rotateImageFile()` escribe con nombre temporal y renombra
   - El giro manual es `rotate-captured-image` (solo fotos de `imports`), que
     avisa a la ventana principal y al cuadro de capturadas con
-    `captured-image-rotated`
+    `captured-image-rewritten`, el mismo aviso del recorte. Si la foto tiene
+    original guardado por un recorte, lo gira también
   - **La foto conserva su nombre al girarla**, y las URL `app-img://` se sirven
     con caché: `imageUrl.bumpVersion(ruta)` le da una versión que se añade a
     todas sus URL. Se guarda en `localStorage`, que comparten todas las
     ventanas y que sobrevive a un Ctrl+R. En disco, la caché de miniaturas usa
     la fecha de modificación, que cambia al reescribir el archivo
+- **imageCrop.js**: Recorte de una foto capturada desde el menú contextual del
+  visor (botón derecho sobre `#current-image`, `initializeViewerContextMenu()`
+  en `renderer.js`), con `CropModal`
+  - El primer recorte copia la foto a `imports/Originales/<nombre>` y **nunca
+    la sobrescribe**; cada recorte se hace desde esa copia. El listado de
+    `imports` solo lee el primer nivel, así que no aparece como foto
+  - El rectángulo va en píxeles de la foto **ya girada** por su EXIF:
+    `sharp().rotate().extract()` recorta en ese espacio (comprobado), y
+    `keepExif()` conserva los datos de la cámara con la orientación a 1.
+    `get-captured-image-crop-source` da al modal la ruta del original (o de la
+    foto) y sus medidas giradas (`displaySize()`), que el modal usa como
+    referencia en lugar de las de Chromium
+  - Handlers `crop-captured-image` y `restore-captured-image`, solo para
+    archivos del primer nivel de `imports` (`resolveCapturedImage()`), y los
+    dos avisan con `captured-image-rewritten`. Restaurar mueve el original a
+    su sitio, le pone la fecha actual (la caché de miniaturas va por fecha) y
+    borra `Originales` si queda vacía
+  - La geometría del rectángulo (`cropGeometry` en `CropModal.js`: mover,
+    estirar por bordes y esquinas con o sin proporción, sin salirse de la
+    foto) son funciones puras con sus tests. La proporción elegida se
+    recuerda en `localStorage`
 - **replacedArchive.js**: La carpeta `Reemplazadas` del depósito, donde cada
   exportación deja las fotos que sustituyó (`<AAAAMMDDHHMMSS>_<equipo>/`, ver
   exportHandlers). Solo crece, y como el depósito es compartido entre los

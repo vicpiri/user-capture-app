@@ -325,9 +325,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onIncomingRotationChanged: (callback) => {
     ipcRenderer.on('incoming-rotation-changed', (event, degrees) => callback(degrees));
   },
-  onCapturedImageRotated: (callback) => {
-    ipcRenderer.on('captured-image-rotated', (event, data) => callback(data));
+  // A captured photo was turned, cropped or restored: same name, new pixels
+  onCapturedImageRewritten: (callback) => {
+    ipcRenderer.on('captured-image-rewritten', (event, data) => callback(data));
   },
+
+  // Cropping captured photos (the viewer's context menu)
+  getCapturedImageCropSource: (imagePath) => ipcRenderer.invoke('get-captured-image-crop-source', imagePath),
+  cropCapturedImage: (imagePath, rect) => ipcRenderer.invoke('crop-captured-image', imagePath, rect),
+  restoreCapturedImage: (imagePath) => ipcRenderer.invoke('restore-captured-image', imagePath),
 
   // Ver > Vista de miniaturas
   onMenuToggleThumbnailGrid: (callback) => {
