@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.21.0](https://github.com/vicpiri/user-capture-app/compare/v1.20.0...v1.21.0) (2026-09-30)
+
+### Features
+
+* request a card or publication for a single user from the row menu ([dc6bc9d](https://github.com/vicpiri/user-capture-app/commit/dc6bc9dd3acd7f9df4c97a0fb3b15dd6a010ab53))
 ## [1.20.0](https://github.com/vicpiri/user-capture-app/compare/v1.19.0...v1.20.0) (2026-09-30)
 
 ### Features
