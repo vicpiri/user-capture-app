@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.20.0](https://github.com/vicpiri/user-capture-app/compare/v1.19.0...v1.20.0) (2026-09-30)
+
+### Features
+
+* lock the group filter while searching and rename the coverage PDF export ([07a0f85](https://github.com/vicpiri/user-capture-app/commit/07a0f8557f5db5efe9ed0a020de63ff747e56f2f))
+* sort the user list by the date the photo was linked ([aee25c8](https://github.com/vicpiri/user-capture-app/commit/aee25c841202e67843933c09dc4b6ee97a92e315))
 ## [1.19.0](https://github.com/vicpiri/user-capture-app/compare/v1.18.0...v1.19.0) (2026-09-25)
 
 ### Features
