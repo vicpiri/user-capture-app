@@ -23,6 +23,13 @@
     ({ imageUrl } = require('../utils/imageUrl'));
   }
 
+  let linkDate;
+  if (typeof window !== 'undefined' && window.linkDate) {
+    linkDate = window.linkDate;
+  } else if (typeof require !== 'undefined') {
+    ({ linkDate } = require('../utils/linkDate'));
+  }
+
   const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
   const PLACEHOLDER = `
@@ -45,6 +52,7 @@
      * @param {Function} config.getSelectedUsers - () => Set of user ids
      * @param {Function} config.getRepositoryVersion - () => number, changes when the repository does
      * @param {Function} config.isLoadingRepository - () => boolean
+     * @param {Function} [config.getShowLinkDate] - () => boolean, the list is sorted by link date
      * @param {Function} config.onUserSelect - (card, user) => void
      * @param {Function} config.onUserContextMenu - (event, user, card) => void
      * @param {Function} config.onImagePreview - (user, 'captured'|'repository') => void
@@ -63,6 +71,7 @@
       this.getSelectedUsers = config.getSelectedUsers || (() => new Set());
       this.getRepositoryVersion = config.getRepositoryVersion || (() => 0);
       this.isLoadingRepository = config.isLoadingRepository || (() => false);
+      this.getShowLinkDate = config.getShowLinkDate || (() => false);
       this.onUserSelect = config.onUserSelect || (() => {});
       this.onUserContextMenu = config.onUserContextMenu || (() => {});
       this.onImagePreview = config.onImagePreview || (() => {});
@@ -242,6 +251,15 @@
       card.appendChild(name);
       card.appendChild(surnames);
       card.appendChild(group);
+
+      const linkedText = this.getShowLinkDate() ? linkDate.format(user.image_linked_at) : '';
+      if (linkedText) {
+        const linked = document.createElement('div');
+        linked.className = 'link-date';
+        linked.textContent = linkedText;
+        linked.title = linkDate.describe(user.image_linked_at);
+        card.appendChild(linked);
+      }
       return card;
     }
 

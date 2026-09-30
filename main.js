@@ -130,6 +130,8 @@ let showAdditionalActions = true;
 // would show, whatever that option says
 let orlaEnabled = true;
 let showCaptureHistory = false;
+// Most recently linked photos first instead of alphabetical order
+let sortByLinkDate = false;
 // Thumbnails of every user instead of the table, of the captured photos or of
 // the repository ones
 let showThumbnailGrid = false;
@@ -236,7 +238,8 @@ function persistDisplayPreferences() {
     showRepositoryIndicators,
     showAdditionalActions,
     showCaptureHistory,
-    showThumbnailGrid
+    showThumbnailGrid,
+    sortByLinkDate
   });
 }
 
@@ -389,6 +392,7 @@ function createMenu() {
     orlaEnabled,
     showCaptureHistory,
     showThumbnailGrid,
+    sortByLinkDate,
     recentProjects,
     incomingRotation: projectPath ? sharedState.incomingRotation : null,
     workspaces: workspaceStore.visible(),
@@ -543,6 +547,12 @@ function createMenu() {
         await setShowThumbnailGrid(checked);
         refreshWorkspaces();
       },
+      // The order of the list, like the filters, is not part of a workspace
+      toggleSortByLinkDate: (checked) => {
+        sortByLinkDate = checked;
+        persistDisplayPreferences();
+        mainWindowManager.getWindow()?.webContents.send('menu-toggle-sort-by-link-date', sortByLinkDate);
+      },
       applyWorkspace: async (id) => {
         await applyWorkspace(id);
         refreshWorkspaces();
@@ -634,7 +644,8 @@ function createWindow() {
       orlaEnabled,
       showCaptureHistory,
       showThumbnailGrid,
-      thumbnailGridSource
+      thumbnailGridSource,
+      sortByLinkDate
     });
 
     // A reload (Ctrl+R) starts the renderer from scratch, and it only learns
@@ -1325,6 +1336,7 @@ app.whenReady().then(() => {
   orlaEnabled = isOrlaServiceEnabled(config);
   showCaptureHistory = config.showCaptureHistory ?? false;
   showThumbnailGrid = config.showThumbnailGrid ?? false;
+  sortByLinkDate = config.sortByLinkDate ?? false;
   thumbnailGridSource = config.thumbnailGridSource === 'repository' ? 'repository' : 'captured';
   cameraAutoStart = config.cameraAutoStart ?? false;
 

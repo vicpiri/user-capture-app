@@ -23,6 +23,13 @@ if (typeof window !== 'undefined' && window.imageUrl) {
   ({ imageUrl } = require('../utils/imageUrl'));
 }
 
+let linkDate;
+if (typeof window !== 'undefined' && window.linkDate) {
+  linkDate = window.linkDate;
+} else if (typeof require !== 'undefined') {
+  ({ linkDate } = require('../utils/linkDate'));
+}
+
 // Placeholder shown until the lazy loader swaps in the real image
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
@@ -43,7 +50,9 @@ class UserRowRenderer {
       // Requests made before the project's course started
       cardPrintPreviousCourse: config.cardPrintPreviousCourse ?? new Set(),
       publicationPreviousCourse: config.publicationPreviousCourse ?? new Set(),
-      repositoryVersion: config.repositoryVersion ?? 0
+      repositoryVersion: config.repositoryVersion ?? 0,
+      // Ver > Ordenar por fecha de enlace: the date goes under the group
+      showLinkDate: config.showLinkDate ?? false
     };
 
     // Callbacks (provided by renderer)
@@ -93,7 +102,7 @@ class UserRowRenderer {
       <td class="name">${user.first_name}</td>
       <td>${user.last_name1} ${user.last_name2 || ''}</td>
       <td>${userId}</td>
-      <td>${user.group_code}</td>
+      <td>${user.group_code}${this._buildLinkDate(user)}</td>
       <td style="display: flex; align-items: center; gap: 4px;">${photoIndicator}${repositoryIndicator}${repositoryCheckIndicator}${cardPrintIndicator}${publicationIndicator}${orlaPaidIndicator}${receiptPrintedIndicator}</td>
     `;
 
@@ -358,6 +367,17 @@ class UserRowRenderer {
    * @param {object} imageCount - Image duplication count map
    * @returns {Array<HTMLElement>} Array of row elements
    */
+  /**
+   * When the photo was last linked, with the list sorted by it
+   * @private
+   */
+  _buildLinkDate(user) {
+    if (!this.config.showLinkDate) return '';
+    const text = linkDate.format(user.image_linked_at);
+    if (!text) return '';
+    return `<div class="link-date" title="${linkDate.describe(user.image_linked_at)}">${text}</div>`;
+  }
+
   createRows(users, imageCount = {}) {
     return users.map(user => this.createRow(user, imageCount));
   }

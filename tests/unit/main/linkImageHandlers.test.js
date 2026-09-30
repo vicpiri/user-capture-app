@@ -148,7 +148,7 @@ describe('image linking', () => {
     test('should not break anything when the grid is closed', async () => {
       mockGrid = null;
 
-      await expect(link(users[0].id, 'foto.jpg')).resolves.toEqual({ success: true });
+      await expect(link(users[0].id, 'foto.jpg')).resolves.toMatchObject({ success: true });
     });
   });
 
@@ -303,6 +303,58 @@ describe('image linking', () => {
 
       expect(result.success).toBe(false);
       state.dbManager = db;
+    });
+  });
+
+  // Ver > Ordenar por fecha de enlace sorts by it
+  describe('the link date', () => {
+    const linkedAtOf = async (userId) => (await db.getUserById(userId)).image_linked_at;
+
+    test('should be recorded and returned when a photo is linked', async () => {
+      const before = Date.now();
+
+      const result = await link(users[0].id, 'foto.jpg');
+
+      expect(result.linkedAt).toBe(await linkedAtOf(users[0].id));
+      expect(Date.parse(result.linkedAt)).toBeGreaterThanOrEqual(before);
+      expect(Date.parse(result.linkedAt)).toBeLessThanOrEqual(Date.now());
+    });
+
+    test('should be recorded when a link is confirmed', async () => {
+      const result = await confirmLink(users[0].id, 'foto.jpg');
+
+      expect(result.linkedAt).toBeTruthy();
+      expect(await linkedAtOf(users[0].id)).toBe(result.linkedAt);
+    });
+
+    test('should not be recorded when the link is only being asked about', async () => {
+      await link(users[0].id, 'foto.jpg');
+
+      // Already has a photo: nothing changes until it is confirmed
+      const pending = await link(users[1].id, 'foto.jpg');
+
+      expect(pending.success).toBe(false);
+      expect(await linkedAtOf(users[1].id)).toBeNull();
+    });
+
+    test('should be kept when the photo is unlinked', async () => {
+      const { linkedAt } = await link(users[0].id, 'foto.jpg');
+
+      await unlink(users[0].id);
+
+      expect(await linkedAtOf(users[0].id)).toBe(linkedAt);
+    });
+
+    test('should be kept when the links are cleared after an export', async () => {
+      const { linkedAt } = await link(users[0].id, 'foto.jpg');
+
+      await db.clearCapturedImages([users[0].id]);
+
+      expect(await linkedAtOf(users[0].id)).toBe(linkedAt);
+    });
+
+    test('should be missing for users never linked', async () => {
+      expect(await linkedAtOf(users[1].id)).toBeNull();
     });
   });
 

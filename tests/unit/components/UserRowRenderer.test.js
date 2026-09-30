@@ -284,6 +284,37 @@ describe('UserRowRenderer', () => {
     });
   });
 
+  // Ver > Ordenar por fecha de enlace
+  describe('link date', () => {
+    const linkedAt = new Date(2026, 8, 28, 10, 42).toISOString();
+
+    test('should not be shown with the list in alphabetical order', () => {
+      const row = renderer.createRow({ ...mockUser, image_linked_at: linkedAt });
+
+      expect(row.querySelector('.link-date')).toBeNull();
+    });
+
+    test('should go under the group with the list sorted by it', () => {
+      renderer.updateConfig({ showLinkDate: true });
+
+      const row = renderer.createRow({ ...mockUser, image_linked_at: linkedAt });
+      const date = row.querySelector('.link-date');
+
+      expect(date).not.toBeNull();
+      expect(date.parentElement.textContent).toContain('A1');
+      expect(date.textContent).toContain('10:42');
+      expect(date.getAttribute('title')).toBe('Último enlace: 28/09/2026 10:42');
+    });
+
+    test('should be left out for a user never linked', () => {
+      renderer.updateConfig({ showLinkDate: true });
+
+      const row = renderer.createRow({ ...mockUser, image_linked_at: null });
+
+      expect(row.querySelector('.link-date')).toBeNull();
+    });
+  });
+
   describe('Event Listeners', () => {
     test('should call onUserSelect when row is clicked', () => {
       const row = renderer.createRow(mockUser);

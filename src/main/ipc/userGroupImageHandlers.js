@@ -290,9 +290,9 @@ function registerUserGroupImageHandlers(context) {
         return { success: false, needsConfirmation: true, currentImage };
       }
 
-      await state.dbManager.linkImageToUser(userId, relativeImagePath);
+      const linkedAt = await state.dbManager.linkImageToUser(userId, relativeImagePath);
       notifyCapturedImagesChanged();
-      return { success: true };
+      return { success: true, linkedAt };
     } catch (error) {
       console.error('Error linking image:', error);
       return { success: false, error: error.message };
@@ -313,9 +313,9 @@ function registerUserGroupImageHandlers(context) {
         ? path.basename(imagePath)
         : imagePath;
 
-      await state.dbManager.linkImageToUser(userId, relativeImagePath);
+      const linkedAt = await state.dbManager.linkImageToUser(userId, relativeImagePath);
       notifyCapturedImagesChanged();
-      return { success: true };
+      return { success: true, linkedAt };
     } catch (error) {
       console.error('Error confirming link:', error);
       return { success: false, error: error.message };

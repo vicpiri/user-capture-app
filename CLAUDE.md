@@ -831,6 +831,23 @@ de la cuadrícula, para que el flujo de enlazar sea el mismo en las dos vistas
   de los espacios de trabajo; `thumbnailGridSource` se guarda en `config.json`
   aparte (`set-thumbnail-grid-source`)
 
+#### Ordenar por fecha de enlace
+**Ver > Ordenar por fecha de enlace** pone arriba a los usuarios enlazados más
+recientemente, con la fecha bajo el grupo (fila y ficha de miniaturas)
+- La fecha es `users.image_linked_at` (ISO en UTC), añadida con `ALTER TABLE`
+  como `orla_paid`: los proyectos antiguos la tienen vacía y esos usuarios van
+  al final. La escribe solo `linkImageToUser()`, que la devuelve y los
+  handlers la mandan como `linkedAt`
+- **No se borra al desvincular** (`unlinkImageFromUser()`,
+  `clearCapturedImages()`): el repaso para pedir carnet o publicación suele
+  hacerse después de exportar al depósito, que desvincula
+- El orden se aplica en `displayUsers()` con `linkDate.sortUsers()`
+  (`utils/linkDate.js`), después de los filtros; con él activo,
+  `applyCapturedImageChange()` vuelve a pintar la lista en lugar de parchear
+  filas, porque el usuario enlazado cambia de sitio
+- Preferencia `sortByLinkDate` en `config.json`. Como los filtros, no forma
+  parte de los espacios de trabajo
+
 #### ImageGridManager.js
 **Propósito**: Gestión del grid de imágenes capturadas del usuario seleccionado
 

@@ -118,6 +118,7 @@ function saveDisplayPreferences(preferences) {
   config.showAdditionalActions = preferences.showAdditionalActions;
   config.showCaptureHistory = preferences.showCaptureHistory;
   config.showThumbnailGrid = preferences.showThumbnailGrid;
+  config.sortByLinkDate = preferences.sortByLinkDate;
   return saveGlobalConfig(config);
 }
 

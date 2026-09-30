@@ -25,6 +25,7 @@ class MenuBuilder {
     // Preferencias > Orla de graduación; off, there is no Orla menu
     this.orlaEnabled = context.orlaEnabled !== false;
     this.showCaptureHistory = context.showCaptureHistory;
+    this.sortByLinkDate = context.sortByLinkDate;
     this.showThumbnailGrid = context.showThumbnailGrid;
     this.recentProjects = context.recentProjects;
     // null without a project, when the choice is not available
@@ -478,6 +479,14 @@ class MenuBuilder {
           checked: this.showPublicationRequestsOnly,
           click: (menuItem) => {
             this.callbacks.togglePublicationRequests(menuItem.checked);
+          }
+        },
+        {
+          label: 'Ordenar por fecha de enlace',
+          type: 'checkbox',
+          checked: this.sortByLinkDate,
+          click: (menuItem) => {
+            this.callbacks.toggleSortByLinkDate(menuItem.checked);
           }
         },
         { type: 'separator' },

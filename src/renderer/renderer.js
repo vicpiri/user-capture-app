@@ -35,6 +35,8 @@ let orlaEnabled = true;  // Preferencias > Orla de graduación
 let showCaptureHistory = false;  // Show/hide the capture history strip beside the viewer
 // Ver > Vista de miniaturas, and whose photos it shows: 'captured' or 'repository'
 let showThumbnailGrid = false;
+// Ver > Ordenar por fecha de enlace: most recently linked first, with the date
+let sortByLinkDate = false;
 let thumbnailGridSource = 'captured';
 let thumbnailGridManager = null;
 // Proyecto > Girar las fotos entrantes, for the notice over the viewer
@@ -333,6 +335,7 @@ function initializeThumbnailGrid() {
     getSelectedUsers: () => selectedUsers,
     getRepositoryVersion: () => repositoryImageVersion,
     isLoadingRepository: () => isLoadingRepositoryPhotos,
+    getShowLinkDate: () => sortByLinkDate,
     // A card is selected exactly like a row
     onUserSelect: (card, user) => selectUserRow(card, user),
     onUserContextMenu: (event, user, card) => showContextMenu(event, user, card),
@@ -360,7 +363,18 @@ function initializeThumbnailGrid() {
   window.electronAPI.onInitialDisplayPreferences((prefs) => {
     showThumbnailGrid = Boolean(prefs.showThumbnailGrid);
     thumbnailGridSource = prefs.thumbnailGridSource === 'repository' ? 'repository' : 'captured';
+    sortByLinkDate = Boolean(prefs.sortByLinkDate);
     applyUsersViewMode();
+  });
+
+  // Only the order changes: the users shown are the same, so no reload. The
+  // top is where the point of the new order is
+  window.electronAPI.onMenuToggleSortByLinkDate(async (enabled) => {
+    sortByLinkDate = enabled;
+    await displayUsers(currentUsers, allUsers);
+    if (virtualScrollManager) virtualScrollManager.scrollToTop();
+    const grid = document.getElementById('thumbnail-grid');
+    if (grid) grid.scrollTop = 0;
   });
 }
 
@@ -1407,6 +1421,10 @@ async function displayUsers(users, allUsers = null) {
     });
   }
 
+  if (sortByLinkDate) {
+    usersToDisplay = linkDate.sortUsers(usersToDisplay);
+  }
+
   // Store displayed users and image count for virtual scrolling
   displayedUsers = usersToDisplay;
 
@@ -1447,7 +1465,8 @@ function syncUserRowRendererConfig() {
     isLoadingRepositoryPhotos: isLoadingRepositoryPhotos,
     isLoadingRepositoryIndicators: isLoadingRepositoryIndicators,
     selectionMode: selectionMode,
-    selectedUsers: selectedUsers
+    selectedUsers: selectedUsers,
+    showLinkDate: sortByLinkDate
   });
 }
 
@@ -1864,7 +1883,7 @@ function navigateUsers(direction) {
  * @param {number} userId
  * @param {string|null} imagePath - Absolute path of the photo, or null to unlink
  */
-async function applyCapturedImageChange(userId, imagePath) {
+async function applyCapturedImageChange(userId, imagePath, linkedAt = null) {
   // The duplicates view is defined by the very thing that changed, so its
   // membership has to be computed again. Without the full user list there is
   // nothing to patch either.
@@ -1876,15 +1895,22 @@ async function applyCapturedImageChange(userId, imagePath) {
   const userInAll = allUsers.find(u => u.id === userId);
   const previousPath = userInAll ? userInAll.image_path : null;
 
-  if (userInAll) {
-    userInAll.image_path = imagePath;
-  }
   const userInCurrent = currentUsers.find(u => u.id === userId);
-  if (userInCurrent) {
-    userInCurrent.image_path = imagePath;
-  }
-  if (selectedUser && selectedUser.id === userId) {
-    selectedUser.image_path = imagePath;
+  const selected = selectedUser && selectedUser.id === userId ? selectedUser : null;
+  [userInAll, userInCurrent, selected].forEach(user => {
+    if (!user) return;
+    user.image_path = imagePath;
+    // An unlink keeps the date of the last link
+    if (linkedAt) user.image_linked_at = linkedAt;
+  });
+
+  // Sorted by link date, the user just linked moves to the top: the order
+  // changes, not just a row
+  if (sortByLinkDate && linkedAt) {
+    await displayUsers(currentUsers, allUsers);
+    observeLazyImages();
+    updateAlertBadges();
+    return;
   }
 
   window._imageCountCache = countImageUsage(allUsers);
@@ -1938,7 +1964,7 @@ async function handleLinkImage() {
   });
 
   if (result.success) {
-    await applyCapturedImageChange(selectedUser.id, imagePath);
+    await applyCapturedImageChange(selectedUser.id, imagePath, result.linkedAt);
   } else if (result.imageAlreadyAssigned) {
     // Image is already assigned to other user(s)
     const userList = result.assignedUsers.map(u => `${u.name} (${u.nia || 'Sin NIA'})`).join(', ');
@@ -1957,7 +1983,7 @@ async function handleLinkImage() {
       });
 
       if (confirmResult.success) {
-        await applyCapturedImageChange(selectedUser.id, imagePath);
+        await applyCapturedImageChange(selectedUser.id, imagePath, confirmResult.linkedAt);
       } else {
         showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
       }
@@ -1974,7 +2000,7 @@ async function handleLinkImage() {
       });
 
       if (confirmResult.success) {
-        await applyCapturedImageChange(selectedUser.id, imagePath);
+        await applyCapturedImageChange(selectedUser.id, imagePath, confirmResult.linkedAt);
       } else {
         showInfoModal('Error', 'Error al enlazar la imagen: ' + confirmResult.error);
       }

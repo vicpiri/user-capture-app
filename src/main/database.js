@@ -161,9 +161,21 @@ class DatabaseManager {
             // Ignore error if column already exists
             if (err && !err.message.includes('duplicate column')) {
               reject(err);
-            } else {
-              resolve();
+              return;
             }
+
+            // When the captured photo was last linked (ISO, UTC), to sort the
+            // list by it. Kept when the photo is unlinked, as exporting to the
+            // repository does; links made before this column have none
+            this.db.run(`
+              ALTER TABLE users ADD COLUMN image_linked_at TEXT
+            `, (err) => {
+              if (err && !err.message.includes('duplicate column')) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            });
           });
         });
       });
@@ -529,12 +541,20 @@ class DatabaseManager {
     });
   }
 
+  /**
+   * @returns {Promise<string>} When it was linked, as stored in image_linked_at
+   */
   async linkImageToUser(userId, imagePath) {
+    const linkedAt = new Date().toISOString();
     return new Promise((resolve, reject) => {
-      this.db.run('UPDATE users SET image_path = ? WHERE id = ?', [imagePath, userId], (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
+      this.db.run(
+        'UPDATE users SET image_path = ?, image_linked_at = ? WHERE id = ?',
+        [imagePath, linkedAt, userId],
+        (err) => {
+          if (err) reject(err);
+          else resolve(linkedAt);
+        }
+      );
     });
   }
 

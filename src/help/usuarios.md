@@ -63,6 +63,19 @@ Encima de la lista pueden aparecer hasta tres avisos de colores con un número:
 
 Cada aviso solo se muestra cuando su número es mayor que cero. Al hacer clic en un aviso se activa el filtro correspondiente, igual que desde el menú **Ver**, y el aviso queda remarcado. Otro clic lo desactiva.
 
+## Ordenar por fecha de enlace
+
+Normalmente la lista va por orden alfabético. Con **Ver > Ordenar por fecha de enlace** pasan arriba los usuarios a los que se ha enlazado una foto más recientemente, y debajo del grupo de cada uno aparece cuándo: «hoy 10:42», «ayer 17:05» o la fecha. Si dejas el ratón encima ves la fecha y la hora completas.
+
+Sirve para revisar enseguida a quién acabas de hacer foto: comprobar que cada foto es de la persona correcta y pedir el carnet o la publicación oficial (ver [Carnets y publicación oficial](carnets.md)).
+
+- Respeta el grupo, la búsqueda y los filtros del menú **Ver**: con **Todos los grupos** ves los últimos enlaces de todo el proyecto.
+- Al enlazar una foto con este orden activo, ese usuario sube al principio de la lista.
+- La fecha se conserva aunque luego se desvincule la foto, por ejemplo al exportar las fotos al depósito. Así, después de exportar, sigues viendo a quién se fotografió por última vez.
+- Los usuarios a los que nunca se ha enlazado una foto van al final, por orden alfabético. También los enlazados con una versión anterior de la aplicación, que no guardaba la fecha.
+- La opción se recuerda al cerrar la aplicación. No forma parte de los [espacios de trabajo](#espacios-de-trabajo), igual que los filtros.
+- Funciona también en la [vista de miniaturas](#vista-de-miniaturas).
+
 ## Iconos de cada fila
 
 En la columna FOTOS cada usuario puede mostrar estos elementos, de izquierda a derecha:

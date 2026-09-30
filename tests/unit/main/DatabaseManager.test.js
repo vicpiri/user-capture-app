@@ -104,6 +104,19 @@ describe('DatabaseManager', () => {
       expect(indexes).not.toContain('idx_users_name');
     });
 
+    test('should reopen a project that already has the link date column', async () => {
+      await importUsers([student(1)]);
+      const [user] = await db.getUsers({});
+      const linkedAt = await db.linkImageToUser(user.id, 'photo.jpg');
+      const file = db.dbPath;
+      await db.close();
+
+      db = new DatabaseManager(file);
+      await db.initialize();
+
+      expect((await db.getUserById(user.id)).image_linked_at).toBe(linkedAt);
+    });
+
     test('should drop the index that could never serve a search', async () => {
       const indexes = (await query("SELECT name FROM sqlite_master WHERE type = 'index'"))
         .map(row => row.name);
