@@ -26,7 +26,10 @@ describe('pendingRequests', () => {
   let db;
 
   const LAST_COURSE = new Date(2026, 5, 15);
-  const THIS_COURSE = new Date(2026, 9, 1);
+  // Always ahead of the files' creation time, which is when the test runs: a
+  // date that has come (2026-10-01 used to be here) ties with it and leaves
+  // the oldest-first order to chance
+  const THIS_COURSE = new Date(2999, 9, 1);
 
   // Creation time cannot be set, and a request's date is the later of
   // creation and modification: files dated in the past only look old to a
