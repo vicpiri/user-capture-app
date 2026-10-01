@@ -112,3 +112,45 @@
   outline: none;
   border-color: #4a7cc7;
 }
+
+/* Customizable select (Chromium 135+): the list is drawn by the page, not by
+   Windows. It opens under the control with the chosen group in the middle of
+   the list, so the ones before and after it are in view; the native one put
+   it at the bottom, with the next group always out of sight. Still a real
+   <select>: value, change, disabled and the keyboard work as before. Shared
+   by the three windows that have the group filter. */
+.group-filter,
+.group-filter::picker(select) {
+  appearance: base-select;
+}
+
+.group-filter:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.group-filter::picker(select) {
+  max-height: min(60vh, 520px);
+  padding: 4px 0;
+  background-color: #2a2f3e;
+  border: 1px solid #3a3f4e;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  scrollbar-color: #4a4f5e #2a2f3e;
+}
+
+.group-filter option {
+  padding: 6px 12px;
+  color: #e0e0e0;
+}
+
+.group-filter option:hover,
+.group-filter option:focus-visible {
+  background-color: #3a3f4e;
+  outline: none;
+}
+
+.group-filter option:checked {
+  background-color: #4a7cc7;
+  color: #ffffff;
+}

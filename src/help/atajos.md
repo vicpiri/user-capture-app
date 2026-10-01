@@ -61,8 +61,10 @@ En la ventana principal puedes moverte con las flechas del teclado, sin usar el 
 | `↓` | Seleccionar el usuario siguiente de la lista |
 | `←` | Ver la foto anterior en el visor (más reciente) |
 | `→` | Ver la foto siguiente en el visor (más antigua) |
+| `Alt+↑` | Pasar al grupo anterior del filtro de grupos |
+| `Alt+↓` | Pasar al grupo siguiente del filtro de grupos |
 
-- Al llegar al final de la lista o de las fotos, la navegación vuelve a empezar por el otro extremo.
+- Al llegar al final de la lista o de las fotos, la navegación vuelve a empezar por el otro extremo. Con los grupos no: `Alt+↑` y `Alt+↓` se detienen en el primero y en el último, y también funcionan en los cuadros de imágenes. Ver [Pasar al grupo anterior o al siguiente](usuarios.md#pasar-al-grupo-anterior-o-al-siguiente).
 - Las flechas solo recorren los usuarios que se ven en la lista, con la búsqueda y los filtros aplicados.
 - Las flechas no actúan mientras escribes en un cuadro de texto, como el buscador, ni con cualquier ventana de diálogo abierta: mensajes, confirmaciones, opciones de exportación, preferencias, etc.
 

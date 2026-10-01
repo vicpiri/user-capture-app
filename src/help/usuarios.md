@@ -30,6 +30,17 @@ La búsqueda encuentra el texto en el nombre, en cualquiera de los dos apellidos
 1. Abre el desplegable de grupos, junto al cuadro de búsqueda. Cuando no hay ninguno elegido muestra «Todos los grupos».
 2. Elige el grupo. Cada opción muestra el código y el nombre del grupo.
 
+Al abrir el desplegable, el grupo elegido aparece en el centro de la lista, con el anterior y el siguiente a la vista.
+
+### Pasar al grupo anterior o al siguiente
+
+Para recorrer los grupos en orden no hace falta abrir el desplegable:
+
+- **Con la rueda del ratón**: pon el puntero encima del desplegable cerrado y gira la rueda. Cada paso hacia abajo pasa al grupo siguiente; hacia arriba, al anterior.
+- **Con el teclado**: `Alt+↓` pasa al grupo siguiente y `Alt+↑` al anterior, estés donde estés de la ventana.
+
+Al llegar al primero o al último se detiene. Si das varios pasos seguidos, el desplegable los muestra según pasan y la lista cambia al grupo en el que te pares. Funciona igual en los cuadros de imágenes capturadas y del depósito, y no hace nada mientras haya texto en el buscador o una ventana de diálogo abierta.
+
 Para volver a ver a todo el mundo, elige **Todos los grupos**. Mientras haya texto en el cuadro de búsqueda, el filtro de grupos queda bloqueado en «Todos los grupos».
 
 La aplicación recuerda el grupo elegido para la próxima vez. El mismo grupo se usa en los cuadros de imágenes capturadas y del depósito: si lo cambias en uno de ellos, cambia también en la ventana principal.

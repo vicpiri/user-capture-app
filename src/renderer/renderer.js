@@ -1160,6 +1160,9 @@ function initializeEventListeners() {
     await filterUsers();
   });
 
+  // Previous or next group with the wheel over the filter or Alt+↑/↓
+  groupFilterStepper.attachGroupFilterStepper(groupFilter);
+
   // Listen for group filter changes from other windows
   window.electronAPI.onGroupFilterChanged(async (groupCode) => {
     // During a search the filter is locked on all groups: the new group is

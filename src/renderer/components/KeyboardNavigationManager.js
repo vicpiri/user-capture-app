@@ -75,6 +75,11 @@
         return;
       }
 
+      // Alt+↑/↓ change the group (utils/groupFilterStepper.js), not the row
+      if (event.altKey) {
+        return;
+      }
+
       // Handle arrow keys
       switch (event.key) {
         case 'ArrowLeft':

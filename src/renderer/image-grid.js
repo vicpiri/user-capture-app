@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     displayGrid();
   });
 
+  // Previous or next group with the wheel over the filter or Alt+↑/↓
+  groupFilterStepper.attachGroupFilterStepper(groupFilter);
+
   // A photo was turned, cropped or restored: its thumbnail loads again with
   // the new version
   window.electronAPI.onCapturedImageRewritten(({ imagePath }) => {
@@ -84,7 +87,12 @@ function populateGroupFilter() {
 }
 
 // Load users from main process
+// Identifies the newest loadUsers() call: changing group quickly, or another
+// window changing it meanwhile, must not leave an older answer on screen
+let usersRequest = 0;
+
 async function loadUsers() {
+  const request = ++usersRequest;
   try {
     // Build filters based on selected group
     const filters = {};
@@ -93,6 +101,7 @@ async function loadUsers() {
     }
 
     const result = await window.electronAPI.getUsers(filters);
+    if (request !== usersRequest) return;
 
     if (result.success) {
       allUsers = result.users;

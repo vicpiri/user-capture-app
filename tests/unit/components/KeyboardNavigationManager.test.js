@@ -222,6 +222,14 @@ describe('KeyboardNavigationManager', () => {
       expect(mockCallbacks.onNavigateUserPrev).not.toHaveBeenCalled();
     });
 
+    test.each(['ArrowUp', 'ArrowDown'])('should leave Alt+%s to the group filter', (key) => {
+      const event = new KeyboardEvent('keydown', { key, altKey: true });
+      manager.handleKeyDown(event);
+
+      expect(mockCallbacks.onNavigateUserPrev).not.toHaveBeenCalled();
+      expect(mockCallbacks.onNavigateUserNext).not.toHaveBeenCalled();
+    });
+
     test('should ignore non-arrow keys', () => {
       const event = new KeyboardEvent('keydown', { key: 'Enter' });
       manager.handleKeyDown(event);

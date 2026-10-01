@@ -1028,6 +1028,23 @@ de los métodos IPC a los que llamaba ya no existían en el preload.
 ### Utilidades (utils/)
 
 - **imageUrl.js**: Construcción de las URLs `app-img://` de las fotos
+- **groupFilterStepper.js**: grupo anterior o siguiente del filtro sin abrir
+  la lista, con la rueda sobre el desplegable cerrado o `Alt+↑/↓` desde
+  cualquier parte. Lo usan las tres ventanas con filtro de grupos (principal
+  y los dos cuadros). El desplegable cambia al instante, pero el `change` se
+  agrupa (`CHANGE_DELAY`, 150 ms) para no guardar ni difundir cada grupo
+  intermedio, y no se envía si una búsqueda bloqueó el filtro mientras tanto.
+  Se detiene en los extremos; no actúa con el filtro deshabilitado ni con
+  `.modal.show`. `KeyboardNavigationManager` ignora ↑/↓ con `Alt`
+  - El desplegable es un **select personalizable** (`appearance:
+    base-select`, en `forms.css`): Chromium lo abre debajo y con la opción
+    elegida centrada, cosa que la lista nativa de Windows no hacía. Sigue
+    siendo un `<select>`, así que `value`, `change` y `disabled` no cambian
+  - Los cuadros descartan respuestas viejas de `loadUsers()` con un contador,
+    como `UserDataManager` en la ventana principal
+  - En pruebas por CDP con la ventana tapada, Chromium frena los
+    temporizadores y no procesa la entrada simulada: el `change` llega tarde
+    y `Input.dispatchMouseEvent` se queda esperando
 
 Hubo aquí un `formatters.js` con formateo de fechas, nombres y edades. Se
 eliminó junto con sus 39 tests: no lo importaba nadie, y sus funciones esperaban

@@ -81,6 +81,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await reloadUsersWithPhotos();
   });
 
+  // Previous or next group with the wheel over the filter or Alt+↑/↓
+  groupFilterStepper.attachGroupFilterStepper(groupFilter);
+
   // Listen for group filter changes from other windows
   window.electronAPI.onGroupFilterChanged(async (groupCode) => {
     selectedGroupCode = groupCode;
@@ -163,7 +166,15 @@ function populateGroupFilter() {
 }
 
 // Load users from main process (WITHOUT repository images)
+// Identifies the newest loadUsers() call: changing group quickly, or another
+// window changing it meanwhile, must not leave an older answer on screen
+let usersRequest = 0;
+
+/**
+ * @returns {Promise<boolean>} false when a newer call took over meanwhile
+ */
 async function loadUsers() {
+  const request = ++usersRequest;
   try {
     // Build filters based on selected group
     const filters = {};
@@ -175,6 +186,7 @@ async function loadUsers() {
     const result = await window.electronAPI.getUsers(filters, {
       loadRepositoryImages: false // Always false - repository data loaded separately
     });
+    if (request !== usersRequest) return false;
 
     if (result.success) {
       // Show ALL users (with or without repository image)
@@ -200,7 +212,8 @@ async function loadUsers() {
  * the first group showed nothing either.
  */
 async function reloadUsersWithPhotos() {
-  await loadUsers();
+  // A newer reload is on its way and will draw the grid
+  if (await loadUsers() === false) return;
 
   // Show the grid straight away with placeholders, then fill the photos in
   isSyncing = true;
