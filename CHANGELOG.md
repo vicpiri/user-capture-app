@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.22.0](https://github.com/vicpiri/user-capture-app/compare/v1.21.0...v1.22.0) (2026-10-01)
+
+### Features
+
+* crop captured photos from the viewer, keeping the original to restore it ([e08b5e3](https://github.com/vicpiri/user-capture-app/commit/e08b5e3735514f47e9487c6bbbc79e4567fe0be2))
+* open the group filter on the chosen group and step through groups with the wheel or Alt+arrows ([354c3c0](https://github.com/vicpiri/user-capture-app/commit/354c3c0b82dd280c76d89c792533e5875aa88e85))
+* set the default resize options of the photo exports in Preferences ([500bbc1](https://github.com/vicpiri/user-capture-app/commit/500bbc1b4f03d6c8536dbbb2ce7a1a05416a8a59))
 ## [1.21.0](https://github.com/vicpiri/user-capture-app/compare/v1.20.0...v1.21.0) (2026-09-30)
 
 ### Features
