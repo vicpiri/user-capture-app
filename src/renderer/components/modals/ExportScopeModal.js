@@ -21,7 +21,10 @@
 
   class ExportScopeModal extends BaseModal {
     constructor() {
-      super('export-scope-modal');
+      // Intro continues with the scope marked, the group of the list by default
+      super('export-scope-modal', {
+        defaultButtonSelector: '#export-scope-confirm-btn'
+      });
 
       this.optionsEl = document.getElementById('export-scope-options');
       this.confirmBtn = document.getElementById('export-scope-confirm-btn');

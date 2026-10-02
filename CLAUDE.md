@@ -991,7 +991,14 @@ código queda solo para el servicio de pago
 
 **Funcionalidades**:
 - Gestión de apertura/cierre
-- `Intro` pulsa el botón indicado en `defaultButtonSelector`
+- `Intro` pulsa el botón indicado en `defaultButtonSelector`. Sin él, `Intro`
+  no hace nada en el diálogo: se lo dejan sin poner los que harían algo
+  irreversible (purgar, archivar, restaurar) o tienen texto de varias líneas
+- Al abrir, quita el foco a cualquier control de **detrás** del diálogo
+  (`releaseFocusBehind()`) y no lo devuelve al cerrar (el `keyup` del mismo
+  `Intro` caería en él). Con el filtro de grupos enfocado, que desde la
+  1.22.0 es un select personalizable, `Intro` abría su lista en lugar de
+  contestar el diálogo, y las flechas cambiaban el grupo por debajo
 - Prevención de cierre durante loading
 - Soporte para Promise-based workflows
 

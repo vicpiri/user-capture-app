@@ -118,6 +118,28 @@ describe('BaseModal', () => {
       expect(onOpenSpy).toHaveBeenCalled();
     });
 
+    test('should take the focus from a control behind the dialog', () => {
+      const behind = document.createElement('input');
+      document.body.appendChild(behind);
+      behind.focus();
+      modal.init();
+
+      modal.open();
+
+      expect(document.activeElement).not.toBe(behind);
+    });
+
+    test('should leave the focus on a control of the dialog itself', () => {
+      const inside = document.createElement('input');
+      mockElement.appendChild(inside);
+      inside.focus();
+      modal.init();
+
+      modal.open();
+
+      expect(document.activeElement).toBe(inside);
+    });
+
     test('should not open if not initialized', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const uninitModal = new BaseModal('test-modal');

@@ -35,7 +35,30 @@ describe('ExportScopeModal', () => {
   });
 
   afterEach(() => {
+    // Its Enter listener is on the document: it must not outlive the test
+    modal.destroy();
     document.body.innerHTML = '';
+  });
+
+  test('Enter continues with the marked scope', async () => {
+    const chosen = modal.show(SCOPES, 'displayed');
+
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    document.dispatchEvent(enter);
+
+    expect(enter.defaultPrevented).toBe(true);
+    await expect(chosen).resolves.toBe('displayed');
+  });
+
+  test('takes the focus from the group filter behind it, so Enter does not open its list', () => {
+    document.body.insertAdjacentHTML('afterbegin', '<select id="group-filter"><option value="">Todos</option></select>');
+    const filter = document.getElementById('group-filter');
+    filter.focus();
+    expect(document.activeElement).toBe(filter);
+
+    modal.show(SCOPES, 'displayed');
+
+    expect(document.activeElement).not.toBe(filter);
   });
 
   test('shows every scope with how many users it covers', () => {

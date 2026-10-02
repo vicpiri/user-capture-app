@@ -93,6 +93,13 @@ class BaseModal {
     this.isOpen = true;
     this._log('Opened');
 
+    // Keys must not reach what is behind the dialog. With the group filter
+    // still focused, Enter opened its list instead of answering the dialog,
+    // and the arrows changed the group under it. The focus is not given back
+    // on closing: the dialog usually closes on that same Enter, whose keyup
+    // would then land on the filter. The list's keys work without it.
+    this.releaseFocusBehind();
+
     // Add Enter key listener to document if default button configured
     if (this.defaultButtonSelector) {
       this.addEventListener(document, 'keydown', this.handleEnterKey);
@@ -125,6 +132,21 @@ class BaseModal {
     // Trigger onClose hook if exists
     if (typeof this.onClose === 'function') {
       this.onClose();
+    }
+  }
+
+  /**
+   * Take the focus from a control outside the dialog
+   * @private
+   */
+  releaseFocusBehind() {
+    const active = document.activeElement;
+
+    if (!active || active === document.body || this.modal.contains(active)) {
+      return;
+    }
+    if (typeof active.blur === 'function') {
+      active.blur();
     }
   }
 
