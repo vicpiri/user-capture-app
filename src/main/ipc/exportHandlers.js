@@ -155,6 +155,18 @@ function formatRunStamp(date) {
 }
 
 /**
+ * PDF file name with the moment it was generated, so a list already handed
+ * to someone is not overwritten by the next one. CSVs keep fixed names:
+ * other programs read them
+ * @param {string} baseName - Name without extension
+ * @param {Date} [date]
+ * @returns {string} `{baseName}_{YYYYMMDDHHMMSS}.pdf`
+ */
+function stampedPdfName(baseName, date = new Date()) {
+  return `${baseName}_${formatRunStamp(date)}.pdf`;
+}
+
+/**
  * Keeps the photos an export replaces, instead of letting them be overwritten
  *
  * Moves rather than copies. A copy would have to come from somewhere, and the
@@ -1714,6 +1726,8 @@ function registerExportHandlers(context) {
       logger.info(`Groups with users: ${Object.keys(usersByGroup).length}`);
 
       const generatedFiles = [];
+      // One stamp for the whole run, so the groups of an export go together
+      const generatedAt = new Date();
       const totalGroups = Object.keys(usersByGroup).length;
       let processedGroups = 0;
 
@@ -1767,7 +1781,7 @@ function registerExportHandlers(context) {
         });
 
         // Create output file path
-        const fileName = `Listado_fotos_${groupCode}.pdf`;
+        const fileName = stampedPdfName(`Listado_fotos_${groupCode}`, generatedAt);
         const filePath = path.join(exportPath, fileName);
 
         // Pipe PDF to file
@@ -1973,7 +1987,7 @@ function registerExportHandlers(context) {
         margins: { top: 50, bottom: 50, left: 50, right: 50 }
       });
 
-      const fileName = 'Alumnos_Pagados.pdf';
+      const fileName = stampedPdfName('Alumnos_Pagados');
       const filePath = path.join(exportPath, fileName);
       const stream = fs.createWriteStream(filePath);
       doc.pipe(stream);
@@ -2089,7 +2103,7 @@ function registerExportHandlers(context) {
       }
 
       let hasPhoto = (user) => Boolean(user.image_path);
-      let fileName = 'Usuarios_sin_foto_capturada.pdf';
+      let baseName = 'Usuarios_sin_foto_capturada';
 
       if (source === 'repository') {
         const repositoryPath = await getImageRepositoryPath(state.dbManager);
@@ -2101,7 +2115,7 @@ function registerExportHandlers(context) {
         }
         const repositoryFiles = await readRepositoryFilenames(repositoryPath, logger);
         hasPhoto = (user) => findUserRepositoryImage(user, repositoryFiles) !== null;
-        fileName = 'Usuarios_sin_foto_en_deposito.pdf';
+        baseName = 'Usuarios_sin_foto_en_deposito';
       }
 
       const groupNames = new Map((await state.dbManager.getGroups()).map((group) => [group.code, group.name]));
@@ -2116,6 +2130,7 @@ function registerExportHandlers(context) {
         return { success: true, fileName: null, total, missing };
       }
 
+      const fileName = stampedPdfName(baseName);
       await writeMissingPhotosPdf(path.join(exportPath, fileName), {
         source,
         groups,
@@ -2166,7 +2181,7 @@ function registerExportHandlers(context) {
         );
       }
 
-      const fileName = 'Estadisticas_fotografias_por_grupo.pdf';
+      const fileName = stampedPdfName('Estadisticas_fotografias_por_grupo');
       await writeGroupCoveragePdf(path.join(exportPath, fileName), {
         captured,
         repository,
@@ -2310,5 +2325,6 @@ module.exports = {
   writeFileAtomically,
   renameWithRetry,
   removeOrphanTempExports,
-  createReplacedArchive
+  createReplacedArchive,
+  stampedPdfName
 };

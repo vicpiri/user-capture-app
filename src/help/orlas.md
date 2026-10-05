@@ -23,7 +23,7 @@ Todo lo del servicio está reunido en el menú **Orla**:
 |---|---|
 | **Registrar el pago del usuario seleccionado** | Lo mismo que el botón **Pagar Orla**. Ver [Registrar el pago de la orla](#registrar-el-pago-de-la-orla) |
 | **Imprimir el recibo del usuario seleccionado** | Lo mismo que el botón **Imp. Recibo**. Ver [Imprimir el recibo de un alumno](#imprimir-el-recibo-de-un-alumno) |
-| **Listado de alumnos pagados en PDF** | El archivo `Alumnos_Pagados.pdf`. Ver [Exportar el listado de alumnos pagados](#exportar-el-listado-de-alumnos-pagados) |
+| **Listado de alumnos pagados en PDF** | El archivo `Alumnos_Pagados_` seguido de la fecha y la hora, en PDF. Ver [Exportar el listado de alumnos pagados](#exportar-el-listado-de-alumnos-pagados) |
 | **Listado de alumnos pagados en CSV** | El archivo `Alumnos_Pagados.csv` |
 | **Configuración de la orla...** | Abre las preferencias en la categoría **Orla de graduación**: el servicio, la impresora y el contenido del recibo |
 
@@ -81,7 +81,7 @@ Para tener la relación completa, exporta el listado de pagados, como se explica
 
 Ambos listados incluyen a todas las personas del proyecto con la orla pagada, sin tener en cuenta la búsqueda, el filtro de grupos ni la selección. Si no ha pagado nadie, la aplicación lo avisa y no genera nada.
 
-- **Orla > Listado de alumnos pagados en PDF** genera `Alumnos_Pagados.pdf`: un único documento titulado «Alumnos con Orla Pagada», con un apartado por grupo, una lista numerada de «Apellido1 Apellido2, Nombre», el subtotal de cada grupo y una última página de resumen con el total de grupos y de alumnos. Si hay logotipo, aparece en cada página.
+- **Orla > Listado de alumnos pagados en PDF** genera `Alumnos_Pagados_` seguido de la fecha y la hora en la forma `AAAAMMDDHHMMSS` (por ejemplo, `Alumnos_Pagados_20261005143012.pdf`): un único documento titulado «Alumnos con Orla Pagada», con un apartado por grupo, una lista numerada de «Apellido1 Apellido2, Nombre», el subtotal de cada grupo y una última página de resumen con el total de grupos y de alumnos. Si hay logotipo, aparece en cada página.
 - **Orla > Listado de alumnos pagados en CSV** genera `Alumnos_Pagados.csv`, separado por comas, con las columnas `Grupo`, `Apellido1`, `Apellido2` y `Nombre`, ordenado por grupo y apellidos.
 
 En los dos casos, la aplicación te pide la carpeta de destino.

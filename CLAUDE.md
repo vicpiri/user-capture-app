@@ -1478,6 +1478,11 @@ código es `photoRoster`, nunca `orla`.
 
 ## Exportación de datos
 
+**Los PDF llevan la marca de tiempo en el nombre** (`stampedPdfName()` en
+`exportHandlers.js`, `{base}_AAAAMMDDHHMMSS.pdf`) para no pisar un listado ya
+entregado; los CSV y ZIP conservan su nombre fijo porque los leen otros
+programas (`carnets.csv`, los de Edu Inventory Manager) y se sobrescriben.
+
 Todas las exportaciones eligen su carpeta con `window.electronAPI.selectExportFolder()`
 (handler `select-export-folder`), no con `showOpenDialog`: abre el diálogo en
 la última carpeta a la que se exportó y guarda la nueva al elegirla. Una
@@ -1593,7 +1598,8 @@ ya apunta a él.
 - **Qué es**: un documento administrativo para identificar a alumnado y
   profesorado. Hasta la 1.18 se llamaba «Orlas en PDF»; se renombró para
   dejar «orla» a la orla de graduación
-- **Formato**: Un PDF por grupo, `Listado_fotos_{código}.pdf`, todas las
+- **Formato**: Un PDF por grupo, `Listado_fotos_{código}_{AAAAMMDDHHMMSS}.pdf`
+  (la misma marca para todos los grupos de una exportación), todas las
   páginas A4 (`addPage()` de PDFKit sustituye las opciones del documento, así
   que hay que repetir `size` y `layout`)
 - **Layout**: rejilla de 6 × 6 (36 fotos por página)
@@ -1612,8 +1618,8 @@ ya apunta a él.
   antes de pedir carpeta (con `count-repository-images` para el depósito) y,
   si no falta nadie, avisa sin generar nada; el handler tampoco escribe el
   archivo en ese caso (`fileName: null`)
-- **Formato**: `Usuarios_sin_foto_en_deposito.pdf` /
-  `Usuarios_sin_foto_capturada.pdf`. Primera página con un resumen por grupo;
+- **Formato**: `Usuarios_sin_foto_en_deposito_{marca}.pdf` /
+  `Usuarios_sin_foto_capturada_{marca}.pdf`. Primera página con un resumen por grupo;
   después una página nueva por grupo con alguien pendiente (para entregar a
   cada tutor), personas por `compareUsersByName` con su NIA o documento. Se
   deja fuera `ELIMINADOS`, como en la ventana de Fotografías por grupo
@@ -1624,7 +1630,7 @@ ya apunta a él.
 - **Datos**: `getGroupPhotoCoverage()` dos veces, capturadas y depósito. Si el
   depósito no está configurado o no está disponible, sale solo con las
   capturadas y el PDF y el aviso final dicen por qué
-- **Formato**: `Estadisticas_fotografias_por_grupo.pdf`, tabla con barra de porcentaje en
+- **Formato**: `Estadisticas_fotografias_por_grupo_{marca}.pdf`, tabla con barra de porcentaje en
   los colores de la ventana. `photoReports.js` importa las reglas de
   `renderer/group-coverage.js` (`coverageRatio`, `coveragePercent`,
   `heatHue`, `sortGroups`, `summarize`) para que papel y pantalla coincidan

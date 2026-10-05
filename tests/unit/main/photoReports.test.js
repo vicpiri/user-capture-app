@@ -190,7 +190,7 @@ describe('PDF report handlers', () => {
         student(1001), student(1002, '1ESOA', { image_path: 'a.jpg' }), student(1003, '2ESOA')
       ], 'captured');
 
-      expect(result).toEqual({ success: true, fileName: 'Usuarios_sin_foto_capturada.pdf', total: 3, missing: 2, groups: 2 });
+      expect(result).toEqual({ success: true, fileName: expect.stringMatching(/^Usuarios_sin_foto_capturada_\d{14}\.pdf$/), total: 3, missing: 2, groups: 2 });
       expect(isPdf(path.join(exportPath, result.fileName))).toBe(true);
     });
 
@@ -203,7 +203,7 @@ describe('PDF report handlers', () => {
       ], 'repository');
 
       expect(result).toEqual(expect.objectContaining({
-        success: true, fileName: 'Usuarios_sin_foto_en_deposito.pdf', total: 3, missing: 1
+        success: true, fileName: expect.stringMatching(/^Usuarios_sin_foto_en_deposito_\d{14}\.pdf$/), total: 3, missing: 1
       }));
       expect(isPdf(path.join(exportPath, result.fileName))).toBe(true);
     });
@@ -242,7 +242,7 @@ describe('PDF report handlers', () => {
 
       const result = await runCoverage();
 
-      expect(result).toEqual({ success: true, fileName: 'Estadisticas_fotografias_por_grupo.pdf', includesRepository: true, repositoryNote: '' });
+      expect(result).toEqual({ success: true, fileName: expect.stringMatching(/^Estadisticas_fotografias_por_grupo_\d{14}\.pdf$/), includesRepository: true, repositoryNote: '' });
       expect(state.dbManager.getGroupPhotoCoverage).toHaveBeenCalledTimes(2);
       expect(isPdf(path.join(exportPath, result.fileName))).toBe(true);
     });

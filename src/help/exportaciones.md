@@ -15,13 +15,15 @@ El cuadro para elegir la carpeta se abre en la última carpeta a la que exportas
 | **Imágenes capturadas como nombre y apellidos** | Las fotos capturadas, con los apellidos y el nombre como nombre de archivo |
 | **Imágenes capturadas al depósito** | Las fotos capturadas, copiadas al depósito de imágenes |
 | **Listado en PDF con fotografías por grupo** | Un PDF por grupo con la foto y el nombre de cada persona |
-| **Listado en PDF de usuarios sin foto en el depósito** | El archivo `Usuarios_sin_foto_en_deposito.pdf` |
-| **Listado en PDF de usuarios sin foto capturada** | El archivo `Usuarios_sin_foto_capturada.pdf` |
-| **Estadísticas de fotografías por grupo en PDF** | El archivo `Estadisticas_fotografias_por_grupo.pdf` |
+| **Listado en PDF de usuarios sin foto en el depósito** | El archivo `Usuarios_sin_foto_en_deposito_` seguido de la fecha y la hora, en PDF |
+| **Listado en PDF de usuarios sin foto capturada** | El archivo `Usuarios_sin_foto_capturada_` seguido de la fecha y la hora, en PDF |
+| **Estadísticas de fotografías por grupo en PDF** | El archivo `Estadisticas_fotografias_por_grupo_` seguido de la fecha y la hora, en PDF |
 
 Los listados de quienes han pagado la orla de graduación están en el menú **Orla** (ver [Orla de graduación](orlas.md#el-menu-orla)).
 
-Si en la carpeta elegida ya hay un archivo con el mismo nombre, la exportación lo sustituye.
+Los nombres de los PDF terminan con la fecha y la hora en que se generaron, en la forma `AAAAMMDDHHMMSS`: por ejemplo, `Usuarios_sin_foto_capturada_20261005143012.pdf` es del 5 de octubre de 2026 a las 14:30:12. Así, un listado nuevo no sustituye a uno que ya hayas entregado.
+
+Los archivos CSV, en cambio, se llaman siempre igual, porque los leen otros programas: si en la carpeta elegida ya hay uno con el mismo nombre, la exportación lo sustituye.
 
 ## Qué usuarios se exportan
 
@@ -181,7 +183,7 @@ Cada listado incluye a todas las personas del grupo, tengan foto o no. No depend
 
 Así es cada listado:
 
-- Un archivo por grupo, llamado `Listado_fotos_` seguido del código del grupo; por ejemplo, `Listado_fotos_1ESO-A.pdf`.
+- Un archivo por grupo, llamado `Listado_fotos_` seguido del código del grupo y de la fecha y la hora; por ejemplo, `Listado_fotos_1ESO-A_20261005143012.pdf`. Todos los archivos de una misma exportación llevan la misma fecha y hora.
 - Páginas A4 en vertical. La primera lleva el título «Listado con fotografías -» seguido del código del grupo.
 - Seis fotos por fila y hasta seis filas por página. Si el grupo no cabe, sigue en páginas nuevas.
 - Las personas van por orden alfabético: primer apellido, segundo apellido y nombre.

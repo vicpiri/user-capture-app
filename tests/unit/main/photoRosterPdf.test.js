@@ -98,9 +98,22 @@ describe('export-photo-roster-pdf', () => {
 
     expect(result).toEqual({
       success: true,
-      generatedFiles: ['Listado_fotos_1ESOA.pdf', 'Listado_fotos_2ESOB.pdf']
+      generatedFiles: [
+        expect.stringMatching(/^Listado_fotos_1ESOA_\d{14}\.pdf$/),
+        expect.stringMatching(/^Listado_fotos_2ESOB_\d{14}\.pdf$/)
+      ]
     });
     expect(fs.readdirSync(exportPath).some(name => name.startsWith('Orla_'))).toBe(false);
+  });
+
+  test('stamps every group of one export with the same moment', async () => {
+    const result = await exportRoster({
+      '1ESOA': [user(1)],
+      '2ESOB': [user(2, { group_code: '2ESOB' })]
+    });
+
+    const stamps = result.generatedFiles.map(name => name.match(/_(\d{14})\.pdf$/)[1]);
+    expect(new Set(stamps).size).toBe(1);
   });
 
   test('keeps every page A4 when a group runs over several pages', async () => {
@@ -110,7 +123,7 @@ describe('export-photo-roster-pdf', () => {
     const result = await exportRoster({ '1ESOA': users });
 
     expect(result.success).toBe(true);
-    const boxes = mediaBoxes('Listado_fotos_1ESOA.pdf');
+    const boxes = mediaBoxes(result.generatedFiles[0]);
     expect(boxes.length).toBeGreaterThanOrEqual(3);
     expect(boxes.every(box => box === A4_MEDIA_BOX)).toBe(true);
   });
