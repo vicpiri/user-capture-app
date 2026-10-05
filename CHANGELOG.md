@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.23.0](https://github.com/vicpiri/user-capture-app/compare/v1.22.1...v1.23.0) (2026-10-05)
+
+### Features
+
+* stamp exported PDF file names with the generation time ([07babdb](https://github.com/vicpiri/user-capture-app/commit/07babdb7c9b910a9de28eb0b64e708fa29c9d7cb))
 ## [1.22.1](https://github.com/vicpiri/user-capture-app/compare/v1.22.0...v1.22.1) (2026-10-02)
 
 ### Bug Fixes
