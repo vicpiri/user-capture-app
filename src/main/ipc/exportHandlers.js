@@ -869,6 +869,30 @@ async function addLogoToPDFPage(doc, logger, options = {}) {
   }
 }
 
+// Whether exporting the captured photos to the repository also files the
+// card print and publication requests of whoever was exported. A choice of
+// the team taking the photos, so it is kept per project; projects that never
+// set it start with both off.
+const REPOSITORY_EXPORT_REQUESTS_KEY = 'repositoryExportRequests';
+
+/**
+ * @param {string|null} value - As saved in project_settings
+ * @returns {{cards: boolean, publications: boolean}}
+ */
+function parseRepositoryExportRequests(value) {
+  let saved = null;
+  try {
+    saved = value ? JSON.parse(value) : null;
+  } catch {
+    saved = null;
+  }
+
+  return {
+    cards: Boolean(saved && saved.cards === true),
+    publications: Boolean(saved && saved.publications === true)
+  };
+}
+
 /**
  * Register export-related IPC handlers
  * @param {Object} context - Shared context object
@@ -1045,6 +1069,42 @@ function registerExportHandlers(context) {
       return { success: true, results };
     } catch (error) {
       logger.error('Error exporting images', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Export options dialog, when the destination is the repository: whether
+  // to also request the cards and the publication of what gets exported
+  ipcMain.handle('get-repository-export-requests', async () => {
+    try {
+      if (!state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+
+      const value = await state.dbManager.getProjectSetting(REPOSITORY_EXPORT_REQUESTS_KEY);
+      return { success: true, requests: parseRepositoryExportRequests(value) };
+    } catch (error) {
+      logger.error('Error reading the repository export requests setting', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('set-repository-export-requests', async (event, requests) => {
+    try {
+      if (!state.dbManager) {
+        return { success: false, error: 'No hay ningún proyecto abierto' };
+      }
+
+      const value = {
+        cards: Boolean(requests && requests.cards === true),
+        publications: Boolean(requests && requests.publications === true)
+      };
+      await state.dbManager.setProjectSetting(REPOSITORY_EXPORT_REQUESTS_KEY, JSON.stringify(value));
+      logger.info(`Repository export requests set to cards=${value.cards}, publications=${value.publications}`);
+
+      return { success: true, requests: value };
+    } catch (error) {
+      logger.error('Error saving the repository export requests setting', error);
       return { success: false, error: error.message };
     }
   });
@@ -2326,5 +2386,6 @@ module.exports = {
   renameWithRetry,
   removeOrphanTempExports,
   createReplacedArchive,
-  stampedPdfName
+  stampedPdfName,
+  parseRepositoryExportRequests
 };

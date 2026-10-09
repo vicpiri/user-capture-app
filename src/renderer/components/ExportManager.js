@@ -745,12 +745,18 @@
         repositoryCount,
         scopeLabel: scope.label
       });
-      const options = await this.exportOptionsModal.show(summary.rows, summary.note);
+      const savedRequests = await this.loadRepositoryExportRequests();
+      const options = await this.exportOptionsModal.show(summary.rows, summary.note, {
+        requests: savedRequests
+      });
 
       if (!options) {
         // User cancelled
         return;
       }
+
+      const requests = options.requests || { cards: false, publications: false };
+      await this.saveRepositoryExportRequests(savedRequests, requests);
 
       // Convert modal format to API format
       const apiOptions = this.convertOptionsToAPI(options);
@@ -775,6 +781,12 @@
         if (results.replaced > 0) {
           message += `\nSe han sustituido ${results.replaced} fotos que ya estaban en el depósito.\n`;
           message += `Las anteriores se conservan en la carpeta "Reemplazadas" del depósito.\n`;
+        }
+
+        // Filed after the copy, so the publication takes the new photo
+        const requestLines = await this.fileRepositoryExportRequests(requests, results.exportedUserIds || []);
+        if (requestLines.length > 0) {
+          message += `\n${requestLines.join('\n')}\n`;
         }
 
         if (results.errors.length > 0) {
@@ -815,6 +827,90 @@
       } else {
         this.showInfoModal('Error', 'Error al exportar imágenes: ' + exportResult.error);
       }
+    }
+
+    /**
+     * Whether this project files requests when exporting to the repository
+     *
+     * Read on each export, so a change made from another window applies. If it
+     * cannot be read, both start unticked, as in a project that never set it.
+     *
+     * @returns {Promise<{cards: boolean, publications: boolean}>}
+     */
+    async loadRepositoryExportRequests() {
+      const none = { cards: false, publications: false };
+      if (!this.electronAPI.getRepositoryExportRequests) return none;
+
+      try {
+        const result = await this.electronAPI.getRepositoryExportRequests();
+        return result && result.success && result.requests ? result.requests : none;
+      } catch (error) {
+        console.error('Error reading the repository export requests:', error);
+        return none;
+      }
+    }
+
+    /**
+     * Remember the ticks for the next export, when they changed
+     * @param {{cards: boolean, publications: boolean}} saved
+     * @param {{cards: boolean, publications: boolean}} chosen
+     */
+    async saveRepositoryExportRequests(saved, chosen) {
+      if (!this.electronAPI.setRepositoryExportRequests) return;
+      if (saved.cards === chosen.cards && saved.publications === chosen.publications) return;
+
+      try {
+        await this.electronAPI.setRepositoryExportRequests(chosen);
+      } catch (error) {
+        // Not worth stopping the export: the ticks just come back as they were
+        console.error('Error saving the repository export requests:', error);
+      }
+    }
+
+    /**
+     * Request the cards and the publication of the users just exported
+     *
+     * Only those whose photo reached the repository: for the rest the
+     * repository still holds the old photo, or none.
+     *
+     * @param {{cards: boolean, publications: boolean}} requests
+     * @param {number[]} exportedUserIds
+     * @returns {Promise<string[]>} Lines for the result message
+     */
+    async fileRepositoryExportRequests(requests, exportedUserIds) {
+      const lines = [];
+      if (exportedUserIds.length === 0) return lines;
+
+      const file = async (call, done, what) => {
+        try {
+          const result = await call(exportedUserIds);
+          if (result && result.success) {
+            let line = done(result.count);
+            if (result.skipped > 0) {
+              line += ` ${result.skipped} omitidos por no tener foto en el depósito.`;
+            }
+            lines.push(line);
+          } else {
+            lines.push(`No se ha podido solicitar ${what}: ${(result && result.error) || 'error desconocido'}`);
+          }
+        } catch (error) {
+          lines.push(`No se ha podido solicitar ${what}: ${error.message}`);
+        }
+      };
+
+      if (requests.cards) {
+        await file(ids => this.electronAPI.requestCardPrint(ids),
+          count => `Se ha solicitado la impresión de ${count} carnets.`,
+          'la impresión de los carnets');
+      }
+
+      if (requests.publications) {
+        await file(ids => this.electronAPI.requestPublication(ids),
+          count => `Se ha solicitado la publicación oficial de ${count} fotos.`,
+          'la publicación oficial');
+      }
+
+      return lines;
     }
 
     /**

@@ -19,6 +19,8 @@ Para varios a la vez:
 3. Pulsa con el botón derecho sobre cualquiera de los usuarios y elige **Solicitar impresión de carnet**.
 4. Un mensaje indica cuántos archivos se han generado en la carpeta `To-Print-ID` y cuántos usuarios se han omitido por no tener imagen en el depósito.
 
+También se pueden pedir solos al exportar las fotos capturadas al depósito, marcando **Solicitar la impresión del carnet** en la ventana de opciones (ver [Solicitar carnets y publicación al exportar](deposito.md#solicitar-carnets-y-publicacion-al-exportar)).
+
 Por cada usuario, la aplicación crea en la carpeta `To-Print-ID` del depósito un archivo vacío cuyo nombre es su NIA o su DNI, sin extensión. Si la carpeta no existe, la crea. Volver a solicitar el carnet de alguien que ya lo tiene pedido no duplica nada: la solicitud pasa a tener la fecha de hoy.
 
 ## Ver los carnets pendientes
@@ -70,7 +72,9 @@ Por cada usuario, la aplicación copia su foto del depósito a la carpeta `To-Pu
 - Encima de la lista aparece un contador con el número de **fotos pendientes** de usuarios del proyecto. Al pulsarlo se activa o se desactiva el filtro.
 - **Ver > Publicaciones solicitadas** muestra solo a los usuarios con publicación pendiente, de todos los grupos.
 
-> **Importante:** en `To-Publish` queda la foto tal como estaba en el depósito en el momento de la solicitud. Si después exportas una foto nueva al depósito, la copia de `To-Publish` no se actualiza: vuelve a solicitar la publicación para sustituirla.
+También se puede pedir sola al exportar las fotos capturadas al depósito, marcando **Solicitar la publicación oficial** en la ventana de opciones (ver [Solicitar carnets y publicación al exportar](deposito.md#solicitar-carnets-y-publicacion-al-exportar)).
+
+> **Importante:** en `To-Publish` queda la foto tal como estaba en el depósito en el momento de la solicitud. Si después exportas una foto nueva al depósito sin marcar **Solicitar la publicación oficial**, la copia de `To-Publish` no se actualiza: vuelve a solicitar la publicación para sustituirla.
 
 La aplicación no marca las publicaciones como hechas: la solicitud desaparece cuando alguien retira la foto de `To-Publish` fuera de la aplicación.
 

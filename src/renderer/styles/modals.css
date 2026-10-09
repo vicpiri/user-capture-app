@@ -806,6 +806,20 @@
   color: #8a8f9a;
 }
 
+/* Export Options Modal: card and publication requests, repository only */
+.export-request-options {
+  display: none;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #2a2f3e;
+}
+
+.export-request-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #8a8f9a;
+}
+
 /* Project Information Modal Styles */
 .project-info-modal-content {
   min-width: 640px;

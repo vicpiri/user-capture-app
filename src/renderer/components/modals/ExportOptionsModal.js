@@ -47,8 +47,12 @@
     this.cancelBtn = null;
     this.summaryEl = null;
     this.noteEl = null;
+    this.requestsEl = null;
+    this.requestCardsInput = null;
+    this.requestPublicationsInput = null;
 
     // State
+    this.requestsShown = false;
     this.resolvePromise = null;
     this.rejectPromise = null;
   }
@@ -71,6 +75,9 @@
     this.cancelBtn = this.modal.querySelector('#export-cancel-btn');
     this.summaryEl = this.modal.querySelector('#export-options-modal-summary');
     this.noteEl = this.modal.querySelector('#export-options-modal-note');
+    this.requestsEl = this.modal.querySelector('#export-request-options');
+    this.requestCardsInput = this.modal.querySelector('#export-request-cards');
+    this.requestPublicationsInput = this.modal.querySelector('#export-request-publications');
 
     // Setup event listeners
     this.addEventListener(this.copyOriginalRadio, 'change', () => this.handleModeChange());
@@ -92,9 +99,14 @@
    *   confirming; omit it and the section stays hidden.
    * @param {string} [note] - Caveat shown under the summary, for figures that
    *   cannot be promised to be exact
+   * @param {Object} [extra]
+   * @param {{cards: boolean, publications: boolean}} [extra.requests] - Offer
+   *   to request the cards and the publication of the exported photos, ticked
+   *   as given. Only the repository export passes it; without it the section
+   *   stays hidden and the options carry no requests.
    * @returns {Promise<object|null>} Promise that resolves with export options or null if cancelled
    */
-  show(summary, note) {
+  show(summary, note, { requests } = {}) {
     return new Promise((resolve, reject) => {
       this.resolvePromise = resolve;
       this.rejectPromise = reject;
@@ -103,6 +115,7 @@
       this.resetForm();
       this.renderSummary(summary);
       this.renderNote(note);
+      this.renderRequests(requests);
 
       if (!this.getDefaults) {
         this.open();
@@ -171,6 +184,28 @@
   }
 
   /**
+   * Show the request checkboxes ticked as given, or hide them
+   * @param {{cards: boolean, publications: boolean}} [requests]
+   */
+  renderRequests(requests) {
+    this.requestsShown = Boolean(requests && this.requestsEl);
+
+    if (this.requestsEl) {
+      this.requestsEl.style.display = this.requestsShown ? 'block' : 'none';
+    }
+
+    if (!this.requestsShown) return;
+
+    if (this.requestCardsInput) {
+      this.requestCardsInput.checked = requests.cards === true;
+    }
+
+    if (this.requestPublicationsInput) {
+      this.requestPublicationsInput.checked = requests.publications === true;
+    }
+  }
+
+  /**
    * Handle mode change (copy vs resize)
    */
   handleModeChange() {
@@ -234,13 +269,22 @@
   getExportOptions() {
     const isResizeMode = this.resizeRadio && this.resizeRadio.checked;
 
-    return {
+    const options = {
       mode: isResizeMode ? 'resize' : 'copy',
       resize: isResizeMode ? {
         boxSize: parseInt(this.boxSizeInput.value, 10) || this.defaults.boxSize,
         maxSize: parseInt(this.maxSizeInput.value, 10) || this.defaults.maxSize
       } : null
     };
+
+    if (this.requestsShown) {
+      options.requests = {
+        cards: Boolean(this.requestCardsInput && this.requestCardsInput.checked),
+        publications: Boolean(this.requestPublicationsInput && this.requestPublicationsInput.checked)
+      };
+    }
+
+    return options;
   }
 
   /**

@@ -392,4 +392,60 @@ describe('ExportOptionsModal', () => {
       expect(modal.maxSizeInput.value).toBe('500');
     });
   });
+
+  /**
+   * Only the export to the repository offers the requests. The dialog is
+   * shared, so the other exports must neither see the section nor get
+   * requests back in their options.
+   */
+  describe('card and publication requests', () => {
+    beforeEach(() => {
+      mockElement.insertAdjacentHTML('beforeend', `
+        <div id="export-request-options">
+          <input type="checkbox" id="export-request-cards">
+          <input type="checkbox" id="export-request-publications">
+        </div>
+      `);
+      modal.init();
+    });
+
+    test('should hide the section and return no requests when not offered', () => {
+      modal.show([], null);
+
+      expect(modal.requestsEl.style.display).toBe('none');
+      expect(modal.getExportOptions()).not.toHaveProperty('requests');
+      modal.handleCancel();
+    });
+
+    test('should show the section ticked as given', () => {
+      modal.show([], null, { requests: { cards: true, publications: false } });
+
+      expect(modal.requestsEl.style.display).toBe('block');
+      expect(modal.requestCardsInput.checked).toBe(true);
+      expect(modal.requestPublicationsInput.checked).toBe(false);
+      modal.handleCancel();
+    });
+
+    test('should return what is ticked when confirming', async () => {
+      const promise = modal.show([], null, { requests: { cards: false, publications: false } });
+      modal.requestCardsInput.checked = true;
+      modal.requestPublicationsInput.checked = true;
+      modal.handleConfirm();
+
+      await expect(promise).resolves.toEqual(expect.objectContaining({
+        requests: { cards: true, publications: true }
+      }));
+    });
+
+    test('should not carry the ticks over to an export that does not offer them', () => {
+      modal.show([], null, { requests: { cards: true, publications: true } });
+      modal.handleCancel();
+
+      modal.show([], null);
+
+      expect(modal.requestsEl.style.display).toBe('none');
+      expect(modal.getExportOptions()).not.toHaveProperty('requests');
+      modal.handleCancel();
+    });
+  });
 });

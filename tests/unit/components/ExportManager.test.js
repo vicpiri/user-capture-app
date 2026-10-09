@@ -1002,6 +1002,139 @@ describe('ExportManager', () => {
       expect(onExportComplete).toHaveBeenCalledTimes(2); // Once after export, once after clearing
     });
 
+    describe('card and publication requests', () => {
+      const exportedResult = {
+        success: true,
+        results: { total: 3, exported: 2, exportedUserIds: [1, 2], errors: [] }
+      };
+
+      const run = async () => {
+        const promise = manager.exportToRepository();
+        await jest.runAllTimersAsync();
+        await promise;
+      };
+
+      beforeEach(() => {
+        mockConfirmModal.show.mockResolvedValue(false);
+        mockElectronAPI.exportToRepository.mockResolvedValue(exportedResult);
+        mockElectronAPI.getRepositoryExportRequests = jest.fn()
+          .mockResolvedValue({ success: true, requests: { cards: true, publications: false } });
+        mockElectronAPI.setRepositoryExportRequests = jest.fn().mockResolvedValue({ success: true });
+        mockElectronAPI.requestCardPrint = jest.fn().mockResolvedValue({ success: true, count: 2, skipped: 0 });
+        mockElectronAPI.requestPublication = jest.fn().mockResolvedValue({ success: true, count: 2, skipped: 0 });
+      });
+
+      test('should offer the requests ticked as the project saved them', async () => {
+        mockExportOptionsModal.show.mockResolvedValue(null);
+
+        await manager.exportToRepository();
+
+        expect(mockExportOptionsModal.show).toHaveBeenCalledWith(
+          expect.anything(), expect.anything(),
+          { requests: { cards: true, publications: false } }
+        );
+      });
+
+      test('should offer them unticked when the setting cannot be read', async () => {
+        mockElectronAPI.getRepositoryExportRequests.mockResolvedValue({ success: false, error: 'x' });
+        mockExportOptionsModal.show.mockResolvedValue(null);
+
+        await manager.exportToRepository();
+
+        expect(mockExportOptionsModal.show.mock.calls[0][2]).toEqual({
+          requests: { cards: false, publications: false }
+        });
+      });
+
+      test('should request only for the users whose photo was exported', async () => {
+        mockExportOptionsModal.show.mockResolvedValue({
+          mode: 'copy', resize: null, requests: { cards: true, publications: true }
+        });
+
+        await run();
+
+        expect(mockElectronAPI.requestCardPrint).toHaveBeenCalledWith([1, 2]);
+        expect(mockElectronAPI.requestPublication).toHaveBeenCalledWith([1, 2]);
+        const message = mockShowInfoModal.mock.calls[0][1];
+        expect(message).toContain('Se ha solicitado la impresión de 2 carnets.');
+        expect(message).toContain('Se ha solicitado la publicación oficial de 2 fotos.');
+      });
+
+      test('should file the requests after the photos are in the repository', async () => {
+        mockExportOptionsModal.show.mockResolvedValue({
+          mode: 'copy', resize: null, requests: { cards: false, publications: true }
+        });
+
+        await run();
+
+        expect(mockElectronAPI.exportToRepository.mock.invocationCallOrder[0])
+          .toBeLessThan(mockElectronAPI.requestPublication.mock.invocationCallOrder[0]);
+        expect(mockElectronAPI.requestCardPrint).not.toHaveBeenCalled();
+      });
+
+      test('should request nothing when both are unticked', async () => {
+        mockExportOptionsModal.show.mockResolvedValue({
+          mode: 'copy', resize: null, requests: { cards: false, publications: false }
+        });
+
+        await run();
+
+        expect(mockElectronAPI.requestCardPrint).not.toHaveBeenCalled();
+        expect(mockElectronAPI.requestPublication).not.toHaveBeenCalled();
+        expect(mockShowInfoModal.mock.calls[0][1]).not.toContain('solicitado');
+      });
+
+      test('should request nothing when no photo was exported', async () => {
+        mockExportOptionsModal.show.mockResolvedValue({
+          mode: 'copy', resize: null, requests: { cards: true, publications: true }
+        });
+        mockElectronAPI.exportToRepository.mockResolvedValue({
+          success: true,
+          results: { total: 1, exported: 0, exportedUserIds: [], errors: [{ user: 'A', error: 'Imagen no encontrada' }] }
+        });
+
+        await run();
+
+        expect(mockElectronAPI.requestCardPrint).not.toHaveBeenCalled();
+        expect(mockElectronAPI.requestPublication).not.toHaveBeenCalled();
+      });
+
+      test('should say in the result when a request could not be filed', async () => {
+        mockExportOptionsModal.show.mockResolvedValue({
+          mode: 'copy', resize: null, requests: { cards: true, publications: false }
+        });
+        mockElectronAPI.requestCardPrint.mockResolvedValue({ success: false, error: 'Sin acceso' });
+
+        await run();
+
+        expect(mockShowInfoModal.mock.calls[0][1])
+          .toContain('No se ha podido solicitar la impresión de los carnets: Sin acceso');
+      });
+
+      test('should remember the ticks only when they changed', async () => {
+        mockExportOptionsModal.show.mockResolvedValue({
+          mode: 'copy', resize: null, requests: { cards: true, publications: false }
+        });
+        await run();
+        expect(mockElectronAPI.setRepositoryExportRequests).not.toHaveBeenCalled();
+
+        mockExportOptionsModal.show.mockResolvedValue({
+          mode: 'copy', resize: null, requests: { cards: false, publications: true }
+        });
+        await run();
+        expect(mockElectronAPI.setRepositoryExportRequests)
+          .toHaveBeenCalledWith({ cards: false, publications: true });
+      });
+
+      test('should not remember anything when the dialog is cancelled', async () => {
+        mockExportOptionsModal.show.mockResolvedValue(null);
+
+        await manager.exportToRepository();
+
+        expect(mockElectronAPI.setRepositoryExportRequests).not.toHaveBeenCalled();
+      });
+    });
+
     /**
      * Unlinking used to run over the whole project. Since the export normally
      * covers only the group on screen, answering yes dropped the links of

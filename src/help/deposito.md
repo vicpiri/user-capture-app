@@ -55,9 +55,10 @@ Esta exportación envía al depósito las fotos capturadas y enlazadas, con el n
 2. Elige **Archivo > Exportar > Imágenes capturadas al depósito**.
 3. Revisa el resumen de la ventana «Opciones de Exportación».
 4. Elige cómo copiar las fotos (ver [Opciones de copia](deposito.md#opciones-de-copia)).
-5. Pulsa **Exportar** y espera a que termine la barra de progreso.
-6. Lee el resultado, «Exportación completada»: cuántos usuarios tenían imagen, cuántas fotos se exportaron, cuántas sustituyeron a otras y los errores, si los hay.
-7. Si se exportó alguna foto, la aplicación te ofrece desvincularlas (ver [Desvincular las fotos después de exportar](deposito.md#desvincular-las-fotos-despues-de-exportar)).
+5. Si quieres, marca **Solicitar la impresión del carnet** y **Solicitar la publicación oficial** (ver [Solicitar carnets y publicación al exportar](deposito.md#solicitar-carnets-y-publicacion-al-exportar)).
+6. Pulsa **Exportar** y espera a que termine la barra de progreso.
+7. Lee el resultado, «Exportación completada»: cuántos usuarios tenían imagen, cuántas fotos se exportaron, cuántas sustituyeron a otras, las solicitudes creadas y los errores, si los hay.
+8. Si se exportó alguna foto, la aplicación te ofrece desvincularlas (ver [Desvincular las fotos después de exportar](deposito.md#desvincular-las-fotos-despues-de-exportar)).
 
 Para las demás exportaciones, ver [Exportaciones](exportaciones.md).
 
@@ -90,6 +91,19 @@ Para las dos últimas cifras, la aplicación consulta el depósito en ese moment
 
 - **Copiar imagen original (corrige la orientación si hace falta)**: envía la foto tal cual. Solo la vuelve a guardar si hay que girarla para que quede derecha.
 - **Redimensionar imágenes**: reduce la foto para que quepa en un cuadrado del **Tamaño del cuadro (píxeles)** indicado (800 por defecto) y baja la calidad hasta acercarse al **Tamaño máximo de archivo (KB)** (500 por defecto). Las fotos más pequeñas que el cuadro no se amplían. Si ni con la calidad más baja que usa la aplicación se llega a ese peso, el archivo puede quedar algo por encima. La opción marcada y los valores con los que se abre la ventana se cambian en [Preferencias](preferencias.md#exportacion-de-imagenes).
+
+### Solicitar carnets y publicación al exportar
+
+Debajo de las opciones de copia, la ventana ofrece dos casillas para **las fotos que se exporten**:
+
+- **Solicitar la impresión del carnet**: pide el carnet de cada usuario exportado, igual que la opción del botón derecho (ver [Solicitar la impresión de carnets](carnets.md#solicitar-la-impresion-de-carnets)).
+- **Solicitar la publicación oficial**: pide la publicación de su foto. Como se hace después de copiarla, en `To-Publish` queda la foto nueva (ver [Solicitar la publicación oficial de fotos](carnets.md#solicitar-la-publicacion-oficial-de-fotos)).
+
+Valen tanto para las fotos nuevas en el depósito como para las que sustituyen a otra: si la foto cambia, el carnet y la foto publicada se quedan antiguos. Solo se solicitan para los usuarios cuya foto ha llegado al depósito; los que fallan no reciben solicitud.
+
+El proyecto recuerda cómo las dejaste y las marca igual en la siguiente exportación. En un proyecto nuevo empiezan desmarcadas. Si un día exportas solo para corregir una foto y no quieres pedir otro carnet, desmárcalas para esa exportación y vuelve a marcarlas en la siguiente.
+
+> **Consejo:** con la impresión del carnet marcada, quien imprime los carnets puede trabajar con **Ver > Carnets solicitados** en lugar de grupo a grupo. Al exportar el CSV, solo se marcan como impresos los que han entrado en él, así que si a alguien se le queda fuera, su solicitud sigue pendiente y saldrá en la siguiente tanda.
 
 ### Usuarios que no se exportan
 
