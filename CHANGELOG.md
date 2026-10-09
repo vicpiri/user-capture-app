@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.24.0](https://github.com/moon-brain/user-capture-app/compare/v1.23.0...v1.24.0) (2026-10-09)
+
+### Features
+
+* request cards and publication when exporting photos to the repository ([c6501fa](https://github.com/moon-brain/user-capture-app/commit/c6501fa57d5940cfec14413237d4162730fa3c17))
+
+### Bug Fixes
+
+* keep the progress bar from shrinking while an operation advances ([5a99e4d](https://github.com/moon-brain/user-capture-app/commit/5a99e4d963321f072a2b4d0c7903328823ccf6a2))
+* show repository photos when filtering by card or publication requests ([0d28bdf](https://github.com/moon-brain/user-capture-app/commit/0d28bdf84aff70348368c0415bba05483f96d2c3))
 ## [1.23.0](https://github.com/vicpiri/user-capture-app/compare/v1.22.1...v1.23.0) (2026-10-05)
 
 ### Features
