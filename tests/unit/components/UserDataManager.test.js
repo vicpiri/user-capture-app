@@ -489,6 +489,67 @@ describe('UserDataManager', () => {
     });
   });
 
+  describe('repository data for the whole project', () => {
+    // The request and duplicate filters show users from the whole project,
+    // which are separate objects from the list's
+    let currentUsers;
+    let allUsers;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      currentUsers = [{ id: 1, type: 'student', nia: '111', first_name: 'Ana' }];
+      allUsers = [
+        { id: 1, type: 'student', nia: '111', first_name: 'Ana' },
+        { id: 2, type: 'teacher', document: '222X', first_name: 'Luis' }
+      ];
+      mockConfig.getCurrentUsers.mockReturnValue(currentUsers);
+      mockConfig.getAllUsers.mockReturnValue(allUsers);
+      mockElectronAPI.loadRepositoryImages.mockResolvedValue({
+        success: true,
+        repositoryData: {
+          1: { has_repository_image: true, repository_image_path: '/repo/111.jpg' },
+          2: { has_repository_image: true, repository_image_path: '/repo/222X.jpg' }
+        }
+      });
+    });
+
+    test('should look up every user of the project, sending only what identifies them', async () => {
+      await manager.loadRepositoryDataInBackground(currentUsers);
+
+      expect(mockElectronAPI.loadRepositoryImages).toHaveBeenCalledWith([
+        { id: 1, type: 'student', nia: '111', document: undefined },
+        { id: 2, type: 'teacher', nia: undefined, document: '222X' }
+      ]);
+    });
+
+    test('should give the whole-project copies their repository photo', async () => {
+      await manager.loadRepositoryDataInBackground(currentUsers);
+
+      expect(currentUsers[0].repository_image_path).toBe('/repo/111.jpg');
+      expect(allUsers[0].repository_image_path).toBe('/repo/111.jpg');
+      expect(allUsers[1].repository_image_path).toBe('/repo/222X.jpg');
+      expect(allUsers[1].has_repository_image).toBe(true);
+    });
+
+    test('should refresh the rows of users outside the list too', async () => {
+      const onRefreshed = jest.fn();
+
+      await manager.refreshRepositoryIndicators(onRefreshed);
+
+      expect(allUsers[1].repository_image_path).toBe('/repo/222X.jpg');
+      expect(onRefreshed.mock.calls[0][0].map(user => user.id)).toEqual([1, 2]);
+    });
+
+    test('should refresh even when the list is empty but a filter shows others', async () => {
+      currentUsers.length = 0;
+
+      await manager.refreshRepositoryIndicators(jest.fn());
+
+      expect(mockElectronAPI.loadRepositoryImages).toHaveBeenCalled();
+      expect(allUsers[0].repository_image_path).toBe('/repo/111.jpg');
+    });
+  });
+
   describe('updateRepositoryDataInDisplay()', () => {
     test('should stop loading states', () => {
       manager.updateRepositoryDataInDisplay();

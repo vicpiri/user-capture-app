@@ -198,18 +198,10 @@
       const startTime = Date.now();
 
       try {
-        const result = await this.electronAPI.loadRepositoryImages(users);
+        const result = await this.electronAPI.loadRepositoryImages(this.repositoryLookupUsers(users));
 
         if (result.success) {
-          // Merge repository data into currentUsers
-          const currentUsers = this.getCurrentUsers();
-          currentUsers.forEach(user => {
-            const repoData = result.repositoryData[user.id];
-            if (repoData) {
-              user.has_repository_image = repoData.has_repository_image;
-              user.repository_image_path = repoData.repository_image_path;
-            }
-          });
+          this.applyRepositoryData(result.repositoryData);
 
           // Ensure spinners are visible for at least minSpinnerDisplayTime
           const elapsedTime = Date.now() - startTime;
@@ -228,6 +220,56 @@
         console.error('Error loading repository data in background:', error);
         // Stop loading states even on error
         this.updateRepositoryDataInDisplay();
+      }
+    }
+
+    /**
+     * The given users plus the rest of the project, each id once
+     *
+     * The list and the request and duplicate filters hold separate copies of
+     * the users: the list's come from the filtered query, the filters' from
+     * the whole project. Repository data used to reach only the list's, so
+     * with Ver > Carnets solicitados the rows had no repository photo.
+     *
+     * @param {Array} users
+     * @returns {Array}
+     */
+    knownUsers(users = []) {
+      const byId = new Map();
+      for (const list of [users, this.getAllUsers()]) {
+        if (!Array.isArray(list)) continue;
+        list.forEach(user => {
+          if (user && !byId.has(user.id)) byId.set(user.id, user);
+        });
+      }
+      return Array.from(byId.values());
+    }
+
+    /**
+     * What the main process needs to find each user's repository photo,
+     * for the whole project, without sending every field over IPC
+     * @param {Array} users
+     * @returns {Array<{id, type, nia, document}>}
+     */
+    repositoryLookupUsers(users) {
+      return this.knownUsers(users).map(({ id, type, nia, document }) => ({ id, type, nia, document }));
+    }
+
+    /**
+     * Copy repository data into every copy of each user: the list's and the
+     * whole project's
+     * @param {Object} repositoryData - By user id
+     */
+    applyRepositoryData(repositoryData = {}) {
+      for (const list of [this.getCurrentUsers(), this.getAllUsers()]) {
+        if (!Array.isArray(list)) continue;
+        list.forEach(user => {
+          const repoData = repositoryData[user.id];
+          if (repoData) {
+            user.has_repository_image = repoData.has_repository_image;
+            user.repository_image_path = repoData.repository_image_path;
+          }
+        });
       }
     }
 
@@ -366,8 +408,8 @@
 
       try {
         // Get current users to refresh their repository data
-        const currentUsers = this.getCurrentUsers();
-        if (!currentUsers || currentUsers.length === 0) {
+        const currentUsers = this.getCurrentUsers() || [];
+        if (this.knownUsers(currentUsers).length === 0) {
           console.log('[UserDataManager] No users loaded, skipping refresh');
           return;
         }
@@ -376,18 +418,10 @@
         this.setIsLoadingRepositoryPhotos(true);
         this.setIsLoadingRepositoryIndicators(true);
 
-        // Load repository data for current users
-        const result = await this.electronAPI.loadRepositoryImages(currentUsers);
+        const result = await this.electronAPI.loadRepositoryImages(this.repositoryLookupUsers(currentUsers));
 
         if (result.success) {
-          // Update repository data in the existing user objects
-          currentUsers.forEach(user => {
-            const repoData = result.repositoryData[user.id];
-            if (repoData) {
-              user.has_repository_image = repoData.has_repository_image;
-              user.repository_image_path = repoData.repository_image_path;
-            }
-          });
+          this.applyRepositoryData(result.repositoryData);
 
           // Update the current users state
           this.setCurrentUsers(currentUsers);
@@ -397,9 +431,11 @@
           this.setIsLoadingRepositoryIndicators(false);
           this.setRepositorySyncCompleted(true);
 
-          // Call the callback to update the UI (without full re-render)
+          // Call the callback to update the UI (without full re-render). The
+          // request filters draw rows from the whole project, so those users
+          // go too
           if (userRowRendererUpdateCallback) {
-            userRowRendererUpdateCallback(currentUsers);
+            userRowRendererUpdateCallback(this.knownUsers(currentUsers));
           }
 
           console.log('[UserDataManager] Repository indicators refreshed successfully');
