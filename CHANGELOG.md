@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.24.1](https://github.com/moon-brain/user-capture-app/compare/v1.24.0...v1.24.1) (2026-10-09)
+
+### Bug Fixes
+
+* point updates and release links at the moved repository ([c1a81fe](https://github.com/moon-brain/user-capture-app/commit/c1a81fe9e56d4da03a9d576fcd63a6494b6ff251))
 ## [1.24.0](https://github.com/moon-brain/user-capture-app/compare/v1.23.0...v1.24.0) (2026-10-09)
 
 ### Features
