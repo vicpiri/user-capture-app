@@ -63,7 +63,7 @@ if (existing.status === 0) {
   console.log(`[release-notes] Release ${tag} exists${release.isDraft ? ' (draft)' : ''}; updating its notes from CHANGELOG.md`);
   const edit = gh(['release', 'edit', tag, '--notes-file', notesFile], { stdio: 'inherit' });
   if (edit.status !== 0) {
-    console.error(`[release-notes] gh release edit failed for ${tag}. If GitHub answers "tag_name already exists", there are two releases for the tag: list them with "gh api repos/vicpiri/user-capture-app/releases" and delete the extra one.`);
+    console.error(`[release-notes] gh release edit failed for ${tag}. If GitHub answers "tag_name already exists", there are two releases for the tag: list them with "gh api repos/moon-brain/user-capture-app/releases" and delete the extra one.`);
     process.exit(edit.status ?? 1);
   }
 } else {
@@ -81,4 +81,4 @@ if (existing.status === 0) {
     process.exit(create.status ?? 1);
   }
 }
-console.log(`[release-notes] Done: https://github.com/vicpiri/user-capture-app/releases/tag/${tag}`);
+console.log(`[release-notes] Done: https://github.com/moon-brain/user-capture-app/releases/tag/${tag}`);

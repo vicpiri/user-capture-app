@@ -29,7 +29,7 @@ describe('UpdateManager', () => {
     savePreferences: (partial) => { Object.assign(preferences, partial); },
     getMainWindow: () => ({ isDestroyed: () => false, webContents }),
     openExternal,
-    releasesUrl: 'https://github.com/vicpiri/user-capture-app/releases',
+    releasesUrl: 'https://github.com/moon-brain/user-capture-app/releases',
     ...overrides
   });
 
@@ -92,7 +92,7 @@ describe('UpdateManager', () => {
         manual: false,
         version: '1.8.0',
         releaseNotes: '### Features\n* x',
-        releaseUrl: 'https://github.com/vicpiri/user-capture-app/releases/tag/v1.8.0'
+        releaseUrl: 'https://github.com/moon-brain/user-capture-app/releases/tag/v1.8.0'
       });
       expect(preferences.lastCheck).toEqual(expect.any(String));
     });
@@ -267,7 +267,7 @@ describe('UpdateManager', () => {
 
     test('openReleasePage opens the tag page of that version', async () => {
       await manager.openReleasePage('1.8.0');
-      expect(openExternal).toHaveBeenCalledWith('https://github.com/vicpiri/user-capture-app/releases/tag/v1.8.0');
+      expect(openExternal).toHaveBeenCalledWith('https://github.com/moon-brain/user-capture-app/releases/tag/v1.8.0');
     });
 
     test('does not send to a destroyed window', async () => {

@@ -706,7 +706,7 @@ function createWindow() {
 // package.json inside a packaged app has no "build" field (electron-builder
 // strips it), and reading build.publish from it made 1.7.0 fail before it
 // could open a window. Must match build.publish in package.json.
-const GITHUB_RELEASES_URL = 'https://github.com/vicpiri/user-capture-app/releases';
+const GITHUB_RELEASES_URL = 'https://github.com/moon-brain/user-capture-app/releases';
 
 /**
  * Update checker against the GitHub Releases of the project

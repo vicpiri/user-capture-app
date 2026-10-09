@@ -110,7 +110,7 @@ latest.yml
 Y esto es lo que consultará cada aplicación instalada:
 
 ```
-curl -L https://github.com/vicpiri/user-capture-app/releases/latest/download/latest.yml
+curl -L https://github.com/moon-brain/user-capture-app/releases/latest/download/latest.yml
 ```
 
 Tiene que responder con `version: X.Y.Z`. Si responde con la versión anterior
@@ -152,9 +152,9 @@ nada.
   parte de los adjuntos, o `gh release edit` responde "tag_name already
   exists"). Es la carrera descrita en 1.4 y no debería repetirse con el paso
   2, pero si ocurre: lista las releases con
-  `gh api repos/vicpiri/user-capture-app/releases --jq '.[] | {id, tag_name, assets: [.assets[].name]}'`,
+  `gh api repos/moon-brain/user-capture-app/releases --jq '.[] | {id, tag_name, assets: [.assets[].name]}'`,
   borra la que tenga menos adjuntos con
-  `gh api -X DELETE repos/vicpiri/user-capture-app/releases/<id>` y sube a
+  `gh api -X DELETE repos/moon-brain/user-capture-app/releases/<id>` y sube a
   la que queda lo que le falte. El instalador se sube con el nombre **con
   guiones** que declara `latest.yml`, y `gh` usa el nombre del archivo:
   ```
@@ -180,7 +180,7 @@ nada.
 | La aplicación instalada aparece en el Administrador de tareas pero no muestra ventana | Excepción dentro de `app.whenReady()` antes de `createWindow()` (en 1.7.0, leer `build.publish` del `package.json` recortado) | Lanzarla desde una consola con `ELECTRON_ENABLE_LOGGING=1` para ver la excepción; publicar un patch |
 | En `dist\win-unpacked` la comprobación de actualizaciones dice "no such file or directory, open ...app-update.yml" | El target `dir` no escribe `app-update.yml`; solo lo hace el NSIS | Es normal en esa comprobación. Para probar el actualizador ahí, copiar el `app-update.yml` de `resources/` de una instalación y reiniciar la aplicación |
 | El empaquetado falla con `EBUSY: resource busy or locked, unlink '...dist\win-unpacked\resources\app.asar'` (o `default_app.asar`, en `win-unpacked.tmp`), y al reintentar se bloquea otro `.asar` | Hay una `npm run dev` abierta. Con `--dev` la aplicación vigila la carpeta del proyecto para recargarse, y Electron trata los `.asar` como carpetas: abre los de `dist/` en cuanto aparecen y no los suelta. No es el antivirus. Pasó en la 1.22.0 | Cerrar la aplicación de desarrollo, borrar `dist\win-unpacked` y `dist\win-unpacked.tmp` y volver a lanzar. Si `release:publish` ya hizo el push, seguir el tercer caso de 1.7 |
-| `releases/latest` apunta a una versión vieja | Se creó una Release para un tag antiguo: GitHub elige "latest" **por fecha de creación**, no por número | Borrarla con `gh api -X DELETE repos/vicpiri/user-capture-app/releases/<id>`. Nunca crear Releases de versiones ya pasadas; el script se niega |
+| `releases/latest` apunta a una versión vieja | Se creó una Release para un tag antiguo: GitHub elige "latest" **por fecha de creación**, no por número | Borrarla con `gh api -X DELETE repos/moon-brain/user-capture-app/releases/<id>`. Nunca crear Releases de versiones ya pasadas; el script se niega |
 
 ---
 
@@ -238,7 +238,7 @@ versión limpia.
   ```json
   "publish": {
     "provider": "github",
-    "owner": "vicpiri",
+    "owner": "moon-brain",
     "repo": "user-capture-app",
     "releaseType": "release"
   }
@@ -247,6 +247,14 @@ versión limpia.
   y el actualizador **ignora los borradores**. Un borrador olvidado durante
   meses es una release que nadie recibe. Con `release` la publicación es
   inmediata y la verificación es la de la sección 1.5.
+- **El repositorio pasó de `vicpiri` a `moon-brain`** después de la 1.24.0.
+  Cada instalación lleva el propietario grabado en el `app-update.yml` de su
+  carpeta, así que las instaladas con la 1.24.0 o antes siguen preguntando a
+  `vicpiri/user-capture-app` y llegan por la redirección de GitHub hasta que
+  se actualizan a una versión posterior. Mientras quede alguna, **no se puede
+  crear un repositorio con ese nombre**: la redirección se perdería y esos
+  equipos dejarían de recibir actualizaciones. `GITHUB_RELEASES_URL` en
+  `main.js` debe coincidir con `build.publish`.
 
 ### 4.2 Scripts
 
@@ -437,7 +445,7 @@ Ayuda > Acerca de muestra además "Última comprobación: fecha" y un enlace
    contenido que el que genera electron-builder:
    ```yaml
    provider: github
-   owner: vicpiri
+   owner: moon-brain
    repo: user-capture-app
    ```
 2. En `updateManager`, si `process.argv.includes('--dev-updates')` poner
