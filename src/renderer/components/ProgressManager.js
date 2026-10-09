@@ -32,6 +32,8 @@
 
       // State
       this.isVisible = false;
+      // Set by resetBar() until the next width is set
+      this.barResetPending = false;
     }
 
     /**
@@ -71,7 +73,7 @@
       }
 
       // Reset progress
-      this.setProgress(0);
+      this.resetBar();
 
       // Clear details
       if (this.detailsElement) {
@@ -116,14 +118,40 @@
      * @param {number} percentage - Progress percentage (0-100)
      */
     setProgress(percentage) {
-      const roundedPercentage = Math.round(percentage);
+      const clamped = Math.max(0, Math.min(100, Number(percentage) || 0));
+      const roundedPercentage = Math.round(clamped);
 
       if (this.barElement) {
-        this.barElement.style.width = percentage + '%';
+        if (this.barResetPending) {
+          // The modal is visible by now: commit the 0% without animating, and
+          // only then let the bar animate again from there
+          void this.barElement.offsetWidth;
+          this.barElement.style.transition = '';
+          this.barResetPending = false;
+        }
+        this.barElement.style.width = clamped + '%';
       }
 
       if (this.percentageElement) {
         this.percentageElement.textContent = roundedPercentage + '%';
+      }
+    }
+
+    /**
+     * Put the bar back at 0% without the width transition. With it, a second
+     * operation started with the bar shrinking from where the previous one
+     * left it, and each update retargeted that shrinking, so the bar went
+     * down while the percentage went up
+     */
+    resetBar() {
+      if (this.barElement) {
+        this.barElement.style.transition = 'none';
+        this.barElement.style.width = '0%';
+        this.barResetPending = true;
+      }
+
+      if (this.percentageElement) {
+        this.percentageElement.textContent = '0%';
       }
     }
 
@@ -183,7 +211,7 @@
      * Reset progress to 0
      */
     reset() {
-      this.setProgress(0);
+      this.resetBar();
 
       if (this.detailsElement) {
         this.detailsElement.textContent = '';

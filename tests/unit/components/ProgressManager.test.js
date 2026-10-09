@@ -297,6 +297,36 @@ describe('ProgressManager', () => {
     });
   });
 
+  describe('bar animation between operations', () => {
+    test('should go back to 0% without animating when shown again', () => {
+      manager.show();
+      manager.update(100);
+      manager.close();
+
+      manager.show();
+
+      expect(mockDOM.barElement.style.width).toBe('0%');
+      expect(mockDOM.barElement.style.transition).toBe('none');
+    });
+
+    test('should animate again from the first update on', () => {
+      manager.show();
+      manager.update(5);
+
+      expect(mockDOM.barElement.style.transition).toBe('');
+      expect(mockDOM.barElement.style.width).toBe('5%');
+    });
+
+    test('should keep the bar inside 0-100%', () => {
+      manager.setProgress(130);
+      expect(mockDOM.barElement.style.width).toBe('100%');
+      expect(mockDOM.percentageElement.textContent).toBe('100%');
+
+      manager.setProgress(-4);
+      expect(mockDOM.barElement.style.width).toBe('0%');
+    });
+  });
+
   describe('isShowing()', () => {
     test('should return false initially', () => {
       expect(manager.isShowing()).toBe(false);

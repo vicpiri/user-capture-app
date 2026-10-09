@@ -1268,7 +1268,6 @@ function registerExportHandlers(context) {
               user: `${user.first_name} ${user.last_name1}`,
               error: 'Usuario sin identificador (NIA/DNI)'
             });
-            processedCount++;
             continue;
           }
 
@@ -1283,7 +1282,6 @@ function registerExportHandlers(context) {
               user: `${user.first_name} ${user.last_name1}`,
               error: 'Imagen no encontrada'
             });
-            processedCount++;
             continue;
           }
 
@@ -1304,7 +1302,8 @@ function registerExportHandlers(context) {
           });
           logger.error(`Error exporting image for user ${user.first_name} ${user.last_name1}`, error);
         } finally {
-          // Always update progress, regardless of success or failure
+          // Always update progress, regardless of success or failure. This also
+          // runs on `continue`, so the skips above must not count on their own
           processedCount++;
           sendProgressUpdate(getMainWindow, processedCount, results.total, 'Exportando imágenes al depósito...');
         }
@@ -1432,7 +1431,6 @@ function registerExportHandlers(context) {
 
           if (!userId) {
             results.skipped++;
-            processedCount++;
             continue;
           }
 
@@ -1441,7 +1439,6 @@ function registerExportHandlers(context) {
 
           if (!repositoryFilename) {
             results.skipped++;
-            processedCount++;
             continue;
           }
 
@@ -1788,8 +1785,6 @@ function registerExportHandlers(context) {
       const generatedFiles = [];
       // One stamp for the whole run, so the groups of an export go together
       const generatedAt = new Date();
-      const totalGroups = Object.keys(usersByGroup).length;
-      let processedGroups = 0;
 
       // Resolved once: this is a project setting, and it used to be read from
       // the database again for every user without a photo path
@@ -2015,9 +2010,9 @@ function registerExportHandlers(context) {
         logger.success(`Generated PDF: ${fileName}`);
         generatedFiles.push(fileName);
 
-        // Update progress
-        processedGroups++;
-        sendProgressUpdate(getMainWindow, processedGroups, totalGroups, `PDF generado: ${fileName}`);
+        // Same scale as the updates inside the group: counting groups here
+        // made the bar jump back and forth between the two
+        sendProgressUpdate(getMainWindow, processedUsers, totalUsers, `PDF generado: ${fileName}`);
       }
 
       logger.section('PHOTO ROSTER PDF EXPORT COMPLETED');
